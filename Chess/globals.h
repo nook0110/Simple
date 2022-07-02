@@ -1,10 +1,5 @@
 #pragma once
-#include<array>
 #include<string>
-#undef class
-#undef new
-#undef struct
-#undef delete
 
 extern std::string board;
 
