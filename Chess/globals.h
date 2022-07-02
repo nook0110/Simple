@@ -10,6 +10,6 @@ extern std::string board;
 
 extern std::string info;
 
-inline constexpr unsigned int sideToMove = 0;
+extern unsigned char sideToMove;
 inline constexpr unsigned int enPassantTargetColumn = 2;
 inline constexpr unsigned int enPassantTargetRow = 3;

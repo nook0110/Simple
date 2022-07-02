@@ -24,7 +24,7 @@ void init(const std::string& FEN)
 			}
 			else
 			{
-				board[row][column] = *current;
+				board[(row << 3) | column] = *current;
 			}
 
 			++column;
