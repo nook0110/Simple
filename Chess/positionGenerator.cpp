@@ -1,4 +1,7 @@
-#undef class
-#undef new
-#undef struct
-#undef delete
+#include "positionGenerator.h"
+
+inline void generateMoves()
+{
+	position.movesSize = 0;
+	
+}

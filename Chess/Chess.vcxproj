@@ -116,7 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -143,11 +143,15 @@
     <ClCompile Include="eval.cpp" />
     <ClCompile Include="globals.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="position.cpp" />
     <ClCompile Include="positionGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="eval.h" />
     <ClInclude Include="globals.h" />
+    <ClInclude Include="move.h" />
+    <ClInclude Include="pieceSquareTables.hpp" />
+    <ClInclude Include="position.h" />
     <ClInclude Include="positionGenerator.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

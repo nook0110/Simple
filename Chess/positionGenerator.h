@@ -1,6 +1,5 @@
 #pragma once
-#undef class
-#undef new
-#undef struct
-#undef delete
+#include "position.h"
+#include "move.h"
 
+inline void generateMoves();

@@ -1,5 +1,5 @@
 #include "globals.h"
 
-extern std::string board = "----------------------------------------------------------------";
 extern unsigned char sideToMove = 0;
-extern std::string info = std::string();
+extern unsigned char enPassantTargetColumn = -1;
+extern unsigned char enPassantTargetRow = -1;
