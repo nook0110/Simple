@@ -2,10 +2,11 @@
 #include "globals.h"
 
 struct Square {
-    unsigned char x, y;
-    Square(unsigned char x, unsigned char y) :x(x), y(y) {}
-    Square(const int ind) : x(ind >> 3), y(ind & 7) {}
-    inline const size_t getInd() const noexcept { return SQUARE(x, y); }
+    Square() {};
+    square rank, file;
+    Square(square rank, square file) :rank(rank), file(file) {}
+    Square(square ind) : rank(ind >> 3), file(ind & 7) {}
+    inline const square getInd() const noexcept { return SQUARE(rank, file); }
 };
 
 enum MoveType {

@@ -14,10 +14,9 @@ inline void generateMoves()
 		while (movablePieces.any())
 		{
 			piece = findSquare(movablePieces);
-
+			movablePieces.set(piece, 0);
 			if (getColor(position.board[dest]) == position.sideToMove) //trying to eat a figure of the same color
 			{
-				movablePieces.set(piece, 0);
 				continue;
 			}
 
@@ -26,14 +25,12 @@ inline void generateMoves()
 				if (dest == position.enPassantSquare) //en passant
 				{
 					position.moves[position.movesSize++] = Move({ Square(piece), Square(dest), EN_PASSANT, position.board[dest] });
-					movablePieces.set(piece, 0);
 					continue;
 				}
 				if (dest - piece == 8 || dest - piece == -8)
 				{
 					if (position.board[dest] != '-')
 					{
-						movablePieces.set(piece, 0);
 						continue;
 					}
 				}
@@ -41,34 +38,28 @@ inline void generateMoves()
 				{
 					if (position.board[dest + 8] != '-' || position.board[dest] != '-')
 					{
-						movablePieces.set(piece, 0);
 						continue;
 					}
 					position.moves[position.movesSize++] = Move({ Square(piece), Square(dest), DEFAULT, '-' });
-					movablePieces.set(piece, 0);
 					continue;
 				}
 				if (dest - piece == -16) // double square move 
 				{
 					if (position.board[dest - 8] != '-' || position.board[dest] != '-')
 					{
-						movablePieces.set(piece, 0);
 						continue;
 					}
 					position.moves[position.movesSize++] = Move({ Square(piece), Square(dest), DEFAULT, '-' });
-					movablePieces.set(piece, 0);
 					continue;
 				}
 				if (dest < 8 || dest >= 56)
 				{
 					position.moves[position.movesSize++] = Move({ Square(piece), Square(dest), PROMOTION, position.board[dest] });
-					movablePieces.set(piece, 0);
 					continue;
 				}
 			}
 
 			position.moves[position.movesSize++] = Move({ Square(piece), Square(dest), DEFAULT, position.board[dest] });
-			movablePieces.set(piece, 0);
 			continue;
 		}
 	}

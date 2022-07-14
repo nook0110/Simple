@@ -1,55 +1,636 @@
 #include "position.h"
 #include "pieceSquareTables.hpp"
 
-inline void  Position::updateAllAttackers(const Square& sq)
+inline void Position::updatePiece(const Square& sq)
 {
-	auto attackers = attackMap[sq.getInd()];
+	square piece = sq.getInd();
+	square dest = piece;
+	square delta;
+	switch (board[dest])
+	{
+	case 'r':
+	case 'R':
+		delta = 1;
+		dest += delta;
+		while (delta % 8 != 0 && board[dest] == '-')
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = -1;
+		dest = piece + delta;
+		while (delta % 8 != 7 && board[dest] == '-' && delta > 0)
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = 8;
+		dest = piece + delta;
+		while (dest < 64 && board[dest] == '-')
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = -8;
+		dest = piece + delta;
+		while (dest >= 0 && board[dest] == '-')
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		break;
+	case 'B':
+	case 'b':
+		/*
+		|-9 -8 -7|
+		|-1  0  1|
+		|7   8  9|
+		*/
+		delta = -7;
+		dest += delta;
+		while ((dest % 8) != 0 && board[dest] == '-')
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = -9;
+		dest += delta;
+		while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = 9;
+		dest += delta;
+		while ((dest % 8) != 0 && board[dest] == '-')
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = 7;
+		dest += delta;
+		while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		break;
+	case 'q':
+	case 'Q':
+		delta = 1;
+		dest += delta;
+		while (delta % 8 != 0 && board[dest] == '-')
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = -1;
+		dest = piece + delta;
+		while (delta % 8 != 7 && board[dest] == '-' && delta > 0)
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = 8;
+		dest = piece + delta;
+		while (dest < 64 && board[dest] == '-')
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = -8;
+		dest = piece + delta;
+		while (dest >= 0 && board[dest] == '-')
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		/*
+		|-9 -8 -7|
+		|-1  0  1|
+		|7   8  9|
+		*/
+		delta = -7;
+		dest += delta;
+		while ((dest % 8) != 0 && board[dest] == '-')
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = -9;
+		dest += delta;
+		while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = 9;
+		dest += delta;
+		while ((dest % 8) != 0 && board[dest] == '-')
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		delta = 7;
+		dest += delta;
+		while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+		{
+			attackMap[dest].set(piece, 1);
+			dest += delta;
+		}
+		break;
+	case 'k':
+	case 'K':
+		/*
+		|-9 -8 -7|
+		|-1  0  1|
+		|7   8  9|
+		*/
+	{
+		constexpr std::array<square, 8> deltas = { -9,-8,-7,-1,1,7,8,9 };
+		for (auto d : deltas)
+		{
+			square current = dest + d;
+			if (current >= 0 && current < 64)
+				attackMap[current].set(piece, 1);
+		}
+	}
+	break;
+	case 'n':
+	case 'N':
+		/*
+		|-18 -17 -16 -15 -14|
+		|-10  -9  -8  -7  -6|
+		| -2  -1   0   1   2|
+		|  6   7   8   9  10|
+		| 14  15  16  17  18|
+		*/
 
+	{
+		constexpr std::array<square, 8> deltas = { -17,-15,-10,-6,6,10,15,17 };
+		for (auto d : deltas)
+		{
+			dest = piece + d;
+			if (dest >= 0 && dest < 64)
+				attackMap[dest].set(piece, 1);
+		}
+	}
+	break;
+	case 'p':
+		if (piece >> 3 == 1)
+		{
+			attackMap[SQUARE(3, piece & 7)].set(piece, 1);
+		}
+		attackMap[piece + 8].set(piece, 1);
+		break;
+	case 'P':
+		if (piece >> 3 == 6)
+		{
+			attackMap[SQUARE(4, piece & 7)].set(piece, 1);
+		}
+		attackMap[piece - 8].set(piece, 1);
+		break;
+	case '-':
+		for (auto& attack : attackMap)
+		{
+			attack.set(piece, 0);
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+inline void  Position::updateEmptySquare(const Square& sq)
+{
+	square dest = sq.getInd();
+	auto attackers = attackMap[dest];
+	attackers.set(dest, 0);
 	square piece;
 	while (attackers.any())
 	{
-
+		piece = findSquare(attackers);
+		attackers.set(piece, 0);
+		square delta = dest - piece;
+		switch (board[piece])
+		{
+		case 'r':
+		case 'R':
+			if (delta % (SQUARE(1, 0) - SQUARE(0, 0)) != 0)
+			{
+				square sign = (delta > 0) - (delta < 0);
+				if (sign > 0)
+				{
+					while (delta % 8 != 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 1);
+						dest += 1;
+					}
+				}
+				else
+				{
+					while (delta % 8 != 7 && board[dest] == '-' && dest > 0)
+					{
+						attackMap[dest].set(piece, 1);
+						dest -= 1;
+					}
+				}
+			}
+			else
+			{
+				square sign = (delta > 0) - (delta < 0);
+				if (sign > 0)
+				{
+					while (dest < 64 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 1);
+						dest += 8;
+					}
+				}
+				else
+				{
+					while (dest >= 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 1);
+						dest -= 8;
+					}
+				}
+			}
+			break;
+		case 'B':
+		case 'b':
+			/*
+			|-9 -8 -7|
+			|-1  0  1|
+			|7   8  9|
+			*/
+			if (delta < 0)
+			{
+				if (delta % 7 == 0)
+				{
+					while ((dest % 8) != 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 1);
+						dest -= 7;
+					}
+				}
+				else
+				{
+					while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+					{
+						attackMap[dest].set(piece, 1);
+						dest -= 9;
+					}
+				}
+			}
+			else
+			{
+				if (delta % 9 == 0)
+				{
+					while ((dest % 8) != 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 1);
+						dest += 9;
+					}
+				}
+				else
+				{
+					while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+					{
+						attackMap[dest].set(piece, 1);
+						dest += 7;
+					}
+				}
+			}
+		case 'q':
+		case 'Q':
+			if (delta % 8 == 0)
+			{
+				square sign = (delta > 0) - (delta < 0);
+				if (sign > 0)
+				{
+					while (dest < 64 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 1);
+						dest += 8;
+					}
+				}
+				else
+				{
+					while (dest >= 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 1);
+						dest -= 8;
+					}
+				}
+			}
+			else if (dest >> 3 == piece >> 3)
+			{
+				square sign = (delta > 0) - (delta < 0);
+				if (sign > 0)
+				{
+					while (delta % 8 != 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 1);
+						dest += 1;
+					}
+				}
+				else
+				{
+					while (delta % 8 != 7 && board[dest] == '-' && dest > 0)
+					{
+						attackMap[dest].set(piece, 1);
+						dest -= 1;
+					}
+				}
+			}
+			else
+			{
+				if (delta < 0)
+				{
+					if (delta % 7 == 0)
+					{
+						while (delta % 8 != 0 && board[dest] == '-')
+						{
+							attackMap[dest].set(piece, 1);
+							dest -= 7;
+						}
+					}
+					else
+					{
+						while (delta % 8 != 7 && board[dest] == '-' && dest > 0)
+						{
+							attackMap[dest].set(piece, 1);
+							dest -= 9;
+						}
+					}
+				}
+				else
+				{
+					if (delta % 9 == 0)
+					{
+						while (delta % 8 != 0 && board[dest] == '-')
+						{
+							attackMap[dest].set(piece, 1);
+							dest += 9;
+						}
+					}
+					else
+					{
+						while (delta % 8 != 7 && board[dest] == '-' && dest > 0)
+						{
+							attackMap[dest].set(piece, 1);
+							dest += 7;
+						}
+					}
+				}
+			}
+		default:
+			break;
+		}
 	}
-
 }
 
-inline void Position::doMove(const Move& move)
+inline void  Position::updateOccupiedSquare(const Square& sq)
+{
+	square dest = sq.getInd();
+	auto attackers = attackMap[dest];
+	square piece;
+	while (attackers.any())
+	{
+		piece = findSquare(attackers);
+		attackers.set(piece, 0);
+		square delta = dest - piece;
+		switch (board[piece])
+		{
+		case 'r':
+		case 'R':
+			if (delta % 8 != 0)
+			{
+				square sign = (delta > 0) - (delta < 0);
+				if (sign > 0)
+				{
+					while (dest & 8 != 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 0);
+						dest += 1;
+					}
+				}
+				else
+				{
+					while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+					{
+						attackMap[dest].set(piece, 0);
+						dest -= 1;
+					}
+				}
+			}
+			else
+			{
+				square sign = (delta > 0) - (delta < 0);
+				if (sign > 0)
+				{
+					while (dest < 64 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 0);
+						dest += 8;
+					}
+				}
+				else
+				{
+					while (dest >= 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 0);
+						dest -= 8;
+					}
+				}
+			}
+			break;
+		case 'B':
+		case 'b':
+			if (delta < 0)
+			{
+				if (delta % 7 == 0)
+				{
+					while (dest & 8 != 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 0);
+						dest -= 7;
+					}
+				}
+				else
+				{
+					while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+					{
+						attackMap[dest].set(piece, 0);
+						dest -= 9;
+					}
+				}
+			}
+			else
+			{
+				if (delta % 9 == 0)
+				{
+					while (dest & 8 != 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 0);
+						dest += 9;
+					}
+				}
+				else
+				{
+					while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+					{
+						attackMap[dest].set(piece, 0);
+						dest += 7;
+					}
+				}
+			}
+		case 'q':
+		case 'Q':
+			if (delta % 8 == 0)
+			{
+				square sign = (delta > 0) - (delta < 0);
+				if (sign > 0)
+				{
+					while (dest < 64 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 0);
+						dest += 8;
+					}
+				}
+				else
+				{
+					while (dest >= 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 0);
+						dest -= 8;
+					}
+				}
+			}
+			else if (dest >> 3 == piece >> 3)
+			{
+				square sign = (delta > 0) - (delta < 0);
+				if (sign > 0)
+				{
+					while (dest & 8 != 0 && board[dest] == '-')
+					{
+						attackMap[dest].set(piece, 0);
+						dest += 1;
+					}
+				}
+				else
+				{
+					while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+					{
+						attackMap[dest].set(piece, 0);
+						dest -= 1;
+					}
+				}
+			}
+			else
+			{
+				if (delta < 0)
+				{
+					if (delta % 7 == 0)
+					{
+						while (dest & 8 != 0 && board[dest] == '-')
+						{
+							attackMap[dest].set(piece, 0);
+							dest -= 7;
+						}
+					}
+					else
+					{
+						while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+						{
+							attackMap[dest].set(piece, 0);
+							dest -= 9;
+						}
+					}
+				}
+				else
+				{
+					if (delta % 9 == 0)
+					{
+						while (dest & 8 != 0 && board[dest] == '-')
+						{
+							attackMap[dest].set(piece, 0);
+							dest += 9;
+						}
+					}
+					else
+					{
+						while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+						{
+							attackMap[dest].set(piece, 0);
+							dest += 7;
+						}
+					}
+				}
+			}
+		default:
+			break;
+		}
+		dest = sq.getInd();
+		attackMap[dest].set(piece, 1);
+	}
+}
+
+inline void Position::place(const Square& square, const char piece)
+{
+	board[square.getInd()] = piece;
+	for (auto phase : { MG, EG })
+	{
+		pieceValuesSum[phase] += pieceValues[PIECES[piece]][phase];
+		psqtBonusSum[phase] += PSQT[PIECES[piece]][square.rank][square.file][phase];
+	}
+
+	if (nonPawn(piece)) nonPawnMaterial[colorOf(piece)] += pieceValues[PIECES[piece]][MG];
+
+	updateOccupiedSquare(square);
+	updatePiece(square);
+}
+
+inline void Position::remove(const Square& square)
+{
+	const char removedPiece = board[square.getInd()];
+	for (auto phase : { MG, EG })
+	{
+		pieceValuesSum[phase] -= pieceValues[PIECES[removedPiece]][phase];
+		psqtBonusSum[phase] -= PSQT[PIECES[removedPiece]][square.rank][square.file][phase];
+	}
+	board[square.getInd()] = '-';
+
+	if (nonPawn(removedPiece)) nonPawnMaterial[colorOf(removedPiece)] -= pieceValues[PIECES[removedPiece]][MG];
+
+	updateEmptySquare(square);
+	updatePiece(square);
+}
+
+void Position::doMove(const Move& move)
 {
 	const char pieceToMove = board[move.from.getInd()];
-	for (const auto phase : {MG, EG}) psqtBonusSum[phase] -= PSQT[PIECES[pieceToMove]][move.from.x][move.from.y][phase];
 	const char capturedPiece = move.captured;
-	Square captureSquare = { move.to.x, move.to.y };
+	Square captureSquare = { move.to.rank, move.to.file };
+	remove(move.from);
 	switch (move.moveType)
 	{
 	case DEFAULT:
-		board[move.to.getInd()] = pieceToMove;
-		for (const auto phase : {MG, EG}) psqtBonusSum[phase] += PSQT[PIECES[pieceToMove]][move.to.x][move.to.y][phase];
+		if (capturedPiece != '-')
+			remove(captureSquare);
+		place(move.to, pieceToMove);
 		break;
 	case EN_PASSANT:
-		board[move.to.getInd()] = pieceToMove;
-		board[SQUARE(move.to.x, sideToMove ? 3 : 4)] = '-';
-		captureSquare.y = sideToMove ? 3 : 4;
-		for (const auto phase : {MG, EG}) psqtBonusSum[phase] += PSQT[PIECES[pieceToMove]][move.to.x][move.to.y][phase];
+		captureSquare.file = sideToMove ? 3 : 4; // one of the central lines
+		remove(captureSquare);
+		place(move.to, pieceToMove);
 		break;
 	case PROMOTION:
-		board[move.to.getInd()] = (sideToMove ? 'Q' : 'q');
-		for (const auto phase : {MG, EG})
-		{
-			// substract value of the promoted pawn, add new queen value
-			pieceValuesSum[phase] -= pieceValues[PIECES[pieceToMove]][phase];
-			pieceValuesSum[phase] += pieceValues[PIECES[sideToMove ? 'Q' : 'q']][phase];
-			psqtBonusSum[phase] += PSQT[PIECES[sideToMove ? 'Q' : 'q']][move.to.x][move.to.y][phase];
-		}
+		if (capturedPiece != '-')
+			remove(captureSquare);
+		place(move.to, sideToMove ? 'Q' : 'q');
 		break;
-	}
-	board[move.from.getInd()] = '-';
-	for (auto phase : {MG, EG})
-	{
-		// substract value of the captured piece
-		pieceValuesSum[phase] -= pieceValues[PIECES[capturedPiece]][phase];
-		psqtBonusSum[phase] -= PSQT[PIECES[capturedPiece]][captureSquare.x][captureSquare.y][phase];
-		// substract bonus value of the moved piece
-		psqtBonusSum[phase] -= PSQT[PIECES[pieceToMove]][move.from.x][move.from.y][phase];
 	}
 	sideToMove = !sideToMove;
 }
@@ -57,27 +638,29 @@ inline void Position::doMove(const Move& move)
 inline void Position::undoMove(const Move& move)
 {
 	sideToMove = !sideToMove;
+	const char pieceToMoveBack = board[move.to.getInd()];
+	remove(move.to);
 	switch (move.moveType)
 	{
 	case DEFAULT:
-		board[move.from.getInd()] = board[move.to.getInd()];
+		place(move.from, pieceToMoveBack);
 		break;
 	case EN_PASSANT:
-		board[move.from.getInd()] = board[move.to.getInd()];
+		place(move.from, pieceToMoveBack);
 		if (sideToMove)
 		{
-			board[SQUARE(3, move.to.x)] = 'p';
+			place({ 3, move.to.rank }, 'p');
 		}
 		else
 		{
-			board[SQUARE(4, move.to.x)] = 'P';
+			place({ 4, move.to.rank }, 'P');
 		}
 		break;
 	case PROMOTION:
-		board[move.from.getInd()] = (sideToMove ? 'P' : 'p');
+		place(move.from, sideToMove ? 'P' : 'p');
 		break;
 	}
-	board[move.to.getInd()] = move.captured;
+	place(move.to, move.captured);
 }
 
-extern Position position = { std::string("----------------------------------------------------------------") };
+extern Position position = Position();

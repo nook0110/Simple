@@ -1,18 +1,19 @@
 #pragma once
+#pragma once
 #include "move.h"
 #include <fstream>
 #include <bitset>
 #include <array>
 #include <string>
 
-inline bool getColor(char& piece)
+inline bool getColor(const char piece)
 {
 	return piece <= 'Z';
 }
 
 inline square findSquare(const std::bitset<64>& bitset) // function that finds '1' in bitset
 {
-	for (int i; i < bitset.size(); ++i)
+	for (square i = 0; i < bitset.size(); ++i)
 	{
 		if (bitset.test(i))
 			return i;
@@ -21,7 +22,7 @@ inline square findSquare(const std::bitset<64>& bitset) // function that finds '
 }
 
 struct Position {
-	std::string board;
+	std::string board = "----------------------------------------------------------------";
 	unsigned char sideToMove;
 	square enPassantSquare;
 
@@ -30,19 +31,27 @@ struct Position {
 
 	std::array<std::bitset<64>, 64> attackMap;
 	std::array<std::bitset<64>, 2> color;
-	std::array<int, COLOR_NONE> nonPawnMaterial; // = ... (starting non-pawn material)
+	std::array<int, COLOR_NONE> nonPawnMaterial = {8302, -8302, 0};
 
 	// tapered evaluation data
 
-	std::array<int, PHASE_NONE> pieceValuesSum = {0, 0};
-	std::array<int, PHASE_NONE> psqtBonusSum = {0, 0};
+	std::array<int, PHASE_NONE> pieceValuesSum = { 0, 0 };
+	std::array<int, PHASE_NONE> psqtBonusSum = { 0, 0 };
 
 	char& operator[](const size_t ind) { return board[ind]; }
 	const char& operator[](const size_t ind) const { return board[ind]; }
-	inline void doMove(const Move& move);
+
+	// helpers
+
+	inline void place(const Square& square, const char piece);
+	inline void remove(const Square& square);
+
+	void doMove(const Move& move);
 	inline void undoMove(const Move& move);
 
-	inline void updateAllAttackers(const Square& square);
+	inline void updatePiece(const Square& square);
+	inline void updateEmptySquare(const Square& square);
+	inline void updateOccupiedSquare(const Square& square);
 
 	inline void initAttackMap()
 	{
@@ -227,7 +236,7 @@ struct Position {
 			attackMapTXT << dest << std::endl;
 			auto str = attackMap[dest].to_string();
 			std::reverse(str.begin(), str.end());
-			for(int c=0; c<64;++c)
+			for (int c = 0; c < 64; ++c)
 			{
 				if (c % 8 == 0)
 					attackMapTXT << std::endl;
@@ -241,7 +250,3 @@ struct Position {
 };
 
 extern Position position;
-
-
-
-
