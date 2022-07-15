@@ -19,7 +19,7 @@ inline void Position::updatePiece(const Square& sq)
 		}
 		delta = -1;
 		dest = piece + delta;
-		while (delta % 8 != 7 && board[dest] == '-' && delta > 0)
+		while (delta % 8 != 7 && delta > 0 && board[dest] == '-')
 		{
 			attackMap[dest].set(piece, 1);
 			dest += delta;
@@ -47,29 +47,29 @@ inline void Position::updatePiece(const Square& sq)
 		|7   8  9|
 		*/
 		delta = -7;
-		dest += delta;
-		while ((dest % 8) != 0 && board[dest] == '-')
+		dest = piece + delta;
+		while (dest % 8 != 0 && dest > 0 && board[dest] == '-')
 		{
 			attackMap[dest].set(piece, 1);
 			dest += delta;
 		}
 		delta = -9;
-		dest += delta;
-		while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+		dest = piece + delta;
+		while (dest % 8 != 7 && dest > 0 && board[dest] == '-')
 		{
 			attackMap[dest].set(piece, 1);
 			dest += delta;
 		}
 		delta = 9;
-		dest += delta;
-		while ((dest % 8) != 0 && board[dest] == '-')
+		dest = piece + delta;
+		while (dest % 8 != 0 && dest < 64 && board[dest] == '-')
 		{
 			attackMap[dest].set(piece, 1);
 			dest += delta;
 		}
 		delta = 7;
-		dest += delta;
-		while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+		dest = piece + delta;
+		while (dest % 8 != 7 && dest < 64 && board[dest] == '-')
 		{
 			attackMap[dest].set(piece, 1);
 			dest += delta;
@@ -86,7 +86,7 @@ inline void Position::updatePiece(const Square& sq)
 		}
 		delta = -1;
 		dest = piece + delta;
-		while (delta % 8 != 7 && board[dest] == '-' && delta > 0)
+		while (delta % 8 != 7 && delta > 0 && board[dest] == '-')
 		{
 			attackMap[dest].set(piece, 1);
 			dest += delta;
@@ -110,30 +110,35 @@ inline void Position::updatePiece(const Square& sq)
 		|-1  0  1|
 		|7   8  9|
 		*/
+		/*
+		|-9 -8 -7|
+		|-1  0  1|
+		|7   8  9|
+		*/
 		delta = -7;
-		dest += delta;
-		while ((dest % 8) != 0 && board[dest] == '-')
+		dest = piece + delta;
+		while (dest % 8 != 0 && dest > 0 && board[dest] == '-')
 		{
 			attackMap[dest].set(piece, 1);
 			dest += delta;
 		}
 		delta = -9;
-		dest += delta;
-		while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+		dest = piece + delta;
+		while (dest % 8 != 7 && dest > 0 && board[dest] == '-')
 		{
 			attackMap[dest].set(piece, 1);
 			dest += delta;
 		}
 		delta = 9;
-		dest += delta;
-		while ((dest % 8) != 0 && board[dest] == '-')
+		dest = piece + delta;
+		while (dest % 8 != 0 && dest < 64 && board[dest] == '-')
 		{
 			attackMap[dest].set(piece, 1);
 			dest += delta;
 		}
 		delta = 7;
-		dest += delta;
-		while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+		dest = piece + delta;
+		while (dest % 8 != 7 && dest < 64 && board[dest] == '-')
 		{
 			attackMap[dest].set(piece, 1);
 			dest += delta;
@@ -229,7 +234,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 				}
 				else
 				{
-					while (delta % 8 != 7 && board[dest] == '-' && dest > 0)
+					while (delta % 8 != 7 && dest > 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 1);
 						dest -= 1;
@@ -268,7 +273,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 			{
 				if (delta % 7 == 0)
 				{
-					while ((dest % 8) != 0 && board[dest] == '-')
+					while (dest % 8 != 0 && dest > 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 1);
 						dest -= 7;
@@ -276,7 +281,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 				}
 				else
 				{
-					while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+					while (dest % 8 != 7 && dest > 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 1);
 						dest -= 9;
@@ -287,7 +292,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 			{
 				if (delta % 9 == 0)
 				{
-					while ((dest % 8) != 0 && board[dest] == '-')
+					while (dest % 8 != 0 && dest < 64 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 1);
 						dest += 9;
@@ -295,7 +300,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 				}
 				else
 				{
-					while ((dest % 8) != 7 && board[dest] == '-' && dest > 0)
+					while (dest % 8 != 7 && dest < 64 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 1);
 						dest += 7;
@@ -337,7 +342,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 				}
 				else
 				{
-					while (delta % 8 != 7 && board[dest] == '-' && dest > 0)
+					while (delta % 8 != 7 && dest > 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 1);
 						dest -= 1;
@@ -350,7 +355,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 				{
 					if (delta % 7 == 0)
 					{
-						while (delta % 8 != 0 && board[dest] == '-')
+						while (dest % 8 != 0 && dest > 0 && board[dest] == '-')
 						{
 							attackMap[dest].set(piece, 1);
 							dest -= 7;
@@ -358,7 +363,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 					}
 					else
 					{
-						while (delta % 8 != 7 && board[dest] == '-' && dest > 0)
+						while (dest % 8 != 7 && dest > 0 && board[dest] == '-')
 						{
 							attackMap[dest].set(piece, 1);
 							dest -= 9;
@@ -369,7 +374,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 				{
 					if (delta % 9 == 0)
 					{
-						while (delta % 8 != 0 && board[dest] == '-')
+						while (dest % 8 != 0 && dest < 64 && board[dest] == '-')
 						{
 							attackMap[dest].set(piece, 1);
 							dest += 9;
@@ -377,7 +382,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 					}
 					else
 					{
-						while (delta % 8 != 7 && board[dest] == '-' && dest > 0)
+						while (dest % 8 != 7 && dest < 64 && board[dest] == '-')
 						{
 							attackMap[dest].set(piece, 1);
 							dest += 7;
@@ -410,7 +415,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 				square sign = (delta > 0) - (delta < 0);
 				if (sign > 0)
 				{
-					while (dest & 8 != 0 && board[dest] == '-')
+					while (dest % 8 != 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 0);
 						dest += 1;
@@ -418,7 +423,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 				}
 				else
 				{
-					while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+					while (dest % 8 != 7 && dest > 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 0);
 						dest -= 1;
@@ -452,7 +457,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 			{
 				if (delta % 7 == 0)
 				{
-					while (dest & 8 != 0 && board[dest] == '-')
+					while (dest % 8 != 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 0);
 						dest -= 7;
@@ -460,7 +465,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 				}
 				else
 				{
-					while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+					while (dest % 8 != 7 && dest > 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 0);
 						dest -= 9;
@@ -471,7 +476,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 			{
 				if (delta % 9 == 0)
 				{
-					while (dest & 8 != 0 && board[dest] == '-')
+					while (dest % 8 != 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 0);
 						dest += 9;
@@ -479,7 +484,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 				}
 				else
 				{
-					while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+					while (dest % 8 != 7 && dest > 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 0);
 						dest += 7;
@@ -513,7 +518,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 				square sign = (delta > 0) - (delta < 0);
 				if (sign > 0)
 				{
-					while (dest & 8 != 0 && board[dest] == '-')
+					while (dest % 8 != 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 0);
 						dest += 1;
@@ -521,7 +526,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 				}
 				else
 				{
-					while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+					while (dest % 8 != 7 && dest > 0 && board[dest] == '-')
 					{
 						attackMap[dest].set(piece, 0);
 						dest -= 1;
@@ -534,7 +539,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					if (delta % 7 == 0)
 					{
-						while (dest & 8 != 0 && board[dest] == '-')
+						while (dest % 8 != 0 && board[dest] == '-')
 						{
 							attackMap[dest].set(piece, 0);
 							dest -= 7;
@@ -542,7 +547,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 					}
 					else
 					{
-						while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+						while (dest % 8 != 7 && dest > 0 && board[dest] == '-')
 						{
 							attackMap[dest].set(piece, 0);
 							dest -= 9;
@@ -553,7 +558,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					if (delta % 9 == 0)
 					{
-						while (dest & 8 != 0 && board[dest] == '-')
+						while (dest % 8 != 0 && board[dest] == '-')
 						{
 							attackMap[dest].set(piece, 0);
 							dest += 9;
@@ -561,7 +566,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 					}
 					else
 					{
-						while (dest & 8 != 7 && board[dest] == '-' && dest > 0)
+						while (dest % 8 != 7 && dest > 0 && board[dest] == '-')
 						{
 							attackMap[dest].set(piece, 0);
 							dest += 7;
@@ -586,15 +591,21 @@ inline void Position::place(const Square& square, const char piece)
 		psqtBonusSum[phase] += PSQT[PIECES[piece]][square.rank][square.file][phase];
 	}
 
-	if (nonPawn(piece)) nonPawnMaterial[colorOf(piece)] += pieceValues[PIECES[piece]][MG];
+	const Color pieceColor = colorOf(piece);
+	if (nonPawn(piece))
+		nonPawnMaterial[pieceColor] += pieceValues[PIECES[piece]][MG];
+	pieces[PIECES[piece]].set(square.getInd());
 
 	updateOccupiedSquare(square);
 	updatePiece(square);
+	color[pieceColor].set(square.getInd());
 }
 
 inline void Position::remove(const Square& square)
 {
 	const char removedPiece = board[square.getInd()];
+	if (removedPiece == '-')
+		return;
 	for (auto phase : { MG, EG })
 	{
 		pieceValuesSum[phase] -= pieceValues[PIECES[removedPiece]][phase];
@@ -602,10 +613,14 @@ inline void Position::remove(const Square& square)
 	}
 	board[square.getInd()] = '-';
 
-	if (nonPawn(removedPiece)) nonPawnMaterial[colorOf(removedPiece)] -= pieceValues[PIECES[removedPiece]][MG];
+	const Color pieceColor = colorOf(removedPiece);
+	if (nonPawn(removedPiece)) 
+		nonPawnMaterial[pieceColor] -= pieceValues[PIECES[removedPiece]][MG];
+	pieces[PIECES[removedPiece]].reset(square.getInd());
 
 	updateEmptySquare(square);
 	updatePiece(square);
+	color[pieceColor].reset(square.getInd());
 }
 
 void Position::doMove(const Move& move)
@@ -661,6 +676,24 @@ inline void Position::undoMove(const Move& move)
 		break;
 	}
 	place(move.to, move.captured);
+}
+
+inline std::bitset<64> Position::pawns(const Color color)
+{
+	return pieces[color * 6];
+}
+
+std::bitset<64> Position::pawnAttacks(const Color color)
+{
+	std::bitset<64> pawnsPushed = pawns(color);
+	if (color == COLOR_W)
+		pawnsPushed >>= 8;
+	else
+		pawnsPushed <<= 8;
+	const std::bitset<64> nonEdgePawns = pawnsPushed & ~FILES[0] & ~FILES[7];
+	const std::bitset<64> leftEdgePawns = pawnsPushed & FILES[0];
+	const std::bitset<64> rightEdgePawns = pawnsPushed & FILES[7];
+	return (nonEdgePawns << 1) | (nonEdgePawns >> 1) | (leftEdgePawns << 1) | (rightEdgePawns >> 1);
 }
 
 extern Position position = Position();

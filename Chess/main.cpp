@@ -12,6 +12,7 @@ int main()
 	std::string FEN;
 	std::getline(std::cin, FEN);
 	position.init(FEN);
+	std::cout << position.pawnAttacks(COLOR_W) << std::endl;
 	while (true)
 	{
 		std::string move;
@@ -27,6 +28,8 @@ int main()
 		};
 		position.doMove(_move);
 		std::cout << position.board << std::endl;
+		std::cout << position.pawns(COLOR_W) << std::endl;
+ 		std::cout << position.pawnAttacks(COLOR_W) << std::endl;
 	}
 	position.logAttackMap();
 	return 0;

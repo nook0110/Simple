@@ -1,6 +1,7 @@
 #pragma once
 #pragma once
 #include "move.h"
+#include "eval.h"
 #include <fstream>
 #include <bitset>
 #include <array>
@@ -30,8 +31,9 @@ struct Position {
 	unsigned char movesSize = 0;
 
 	std::array<std::bitset<64>, 64> attackMap;
-	std::array<std::bitset<64>, 2> color;
-	std::array<int, COLOR_NONE> nonPawnMaterial = {8302, -8302, 0};
+	std::array<std::bitset<64>, COLOR_NONE> color;
+	std::array<std::bitset<64>, 12> pieces;
+	std::array<int, COLOR_NONE> nonPawnMaterial = {8302, -8302};
 
 	// tapered evaluation data
 
@@ -53,6 +55,13 @@ struct Position {
 	inline void updateEmptySquare(const Square& square);
 	inline void updateOccupiedSquare(const Square& square);
 
+	inline std::bitset<64> pawns(const Color color);
+	std::bitset<64> pawnAttacks(const Color color);
+
+	// evaluation
+
+	const value evaluate() const;
+
 	inline void initAttackMap()
 	{
 		std::ifstream attackMapTXT;
@@ -61,6 +70,13 @@ struct Position {
 		attackMapTXT >> isAlreadyInited;
 		if (isAlreadyInited == '0' || 1)
 		{
+			for (square ind = 0; ind < 64; ++ind)
+			{
+				if (board[ind] == '-')
+					continue;
+				place(Square(ind), board[ind]);
+			}
+			/*
 			for (unsigned char ind = 0; ind < 8; ++ind)
 			{
 				switch (board[SQUARE(0, ind)])
@@ -181,6 +197,7 @@ struct Position {
 				attackMap[SQUARE(5, ind)].set(SQUARE(6, ind));
 				attackMap[SQUARE(4, ind)].set(SQUARE(6, ind));
 			}
+			*/
 		}
 		else
 		{

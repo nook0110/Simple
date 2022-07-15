@@ -1,6 +1,6 @@
 #ifndef EVAL_H
 #define EVAL_H
 
-#include "pieceSquareTables.h"
+using value = int;
 
 #endif // !EVAL_H
