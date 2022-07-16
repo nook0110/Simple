@@ -63,6 +63,7 @@ struct Position {
 	// evaluation
 
 	std::array<std::bitset<64>, COLOR_NONE> avaliableArea;
+	std::array<std::array<value, PHASE_NONE>, COLOR_NONE> mobility;
 	std::array<value, PHASE_NONE> eval = { 0, 0 };
 
 	const value evaluate();
