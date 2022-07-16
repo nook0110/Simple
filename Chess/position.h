@@ -56,11 +56,16 @@ struct Position {
 	inline void updateOccupiedSquare(const Square& square);
 
 	inline std::bitset<64> pawns(const Color color);
+	inline std::bitset<64> queen(const Color color);
+	inline std::bitset<64> king(const Color color);
 	std::bitset<64> pawnAttacks(const Color color);
 
 	// evaluation
 
-	const value evaluate() const;
+	std::array<std::bitset<64>, COLOR_NONE> avaliableArea;
+	std::array<value, PHASE_NONE> eval = {0, 0};
+
+	const value evaluate();
 
 	inline void initAttackMap()
 	{

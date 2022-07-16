@@ -32,6 +32,13 @@ enum Color
     COLOR_NONE
 };
 
+inline Color flip(const Color c)
+{
+	if (c == COLOR_NONE)
+		return COLOR_NONE;
+	return static_cast<Color>(!c);
+}
+
 inline Color colorOf(const char piece)
 {
 	if (PIECES[piece] == 12)
@@ -58,18 +65,18 @@ inline constexpr std::array<std::bitset<64>, 8> FILES =
 	file_a >> 7
 };
 
-constexpr uint_fast64_t rank_1 = (1 << 8) - 1;
+constexpr uint_fast64_t lowestRank = (1 << 8) - 1;
 
 inline constexpr std::array<std::bitset<64>, 8> RANKS =
 {
-	rank_1,
-	rank_1 << (8 * 1),
-	rank_1 << (8 * 2),
-	rank_1 << (8 * 3),
-	rank_1 << (8 * 4),
-	rank_1 << (8 * 5),
-	rank_1 << (8 * 6),
-	rank_1 << (8 * 7)
+	lowestRank,
+	lowestRank << (8 * 1),
+	lowestRank << (8 * 2),
+	lowestRank << (8 * 3),
+	lowestRank << (8 * 4),
+	lowestRank << (8 * 5),
+	lowestRank << (8 * 6),
+	lowestRank << (8 * 7)
 };
 
 #endif // !GLOBALS_H

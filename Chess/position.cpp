@@ -683,6 +683,16 @@ inline std::bitset<64> Position::pawns(const Color color)
 	return pieces[color * 6];
 }
 
+inline std::bitset<64> Position::queen(const Color color)
+{
+	return pieces[color * 6 + 4];
+}
+
+inline std::bitset<64> Position::king(const Color color)
+{
+	return pieces[color * 6 + 5];
+}
+
 std::bitset<64> Position::pawnAttacks(const Color color)
 {
 	std::bitset<64> pawnsPushed = pawns(color);
