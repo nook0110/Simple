@@ -187,8 +187,8 @@ void Position::updatePiece(const Square& sq)
 		constexpr std::array<square, 8> deltas = { -9,-8,-7,-1,1,7,8,9 };
 		for (auto d : deltas)
 		{
-			square current = dest + d;
-			if (current >= 0 && current < 64)
+			square current = piece + d;
+			if (current >= 0 && current < 64 && (abs(current >> 3 - piece >> 3) <= 1 && abs(current & 7 - piece & 7) <= 1))
 				attackMap[current].set(piece, 1);
 		}
 	}
@@ -208,7 +208,7 @@ void Position::updatePiece(const Square& sq)
 		for (auto d : deltas)
 		{
 			dest = piece + d;
-			if (dest >= 0 && dest < 64)
+			if (dest >= 0 && dest < 64 && (abs(dest >> 3 - piece >> 3) <= 1 && abs(dest & 7 - piece & 7) <= 1))
 				attackMap[dest].set(piece, 1);
 		}
 	}
