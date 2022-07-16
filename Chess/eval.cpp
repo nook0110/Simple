@@ -40,6 +40,13 @@ const value Position::evaluate()
 			if (!avaliableArea[us].test(sq))
 				continue;
 			const bitboard attackers = attackMap[sq] & (color[us] ^ pawns(us));
+			for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
+			{
+				for (auto phase : { MG, EG })
+				{
+					mobility[us][phase] += mobilityBonus[piece - 1][(attackers & pieces[shift[us] + piece]).count()][phase];
+				}
+			}
 		}
 	}
 	return 0;
