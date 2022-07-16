@@ -230,9 +230,9 @@ void Position::updatePiece(const Square& sq)
 			attackMap[SQUARE(4, piece & 7)].set(piece, 1);
 		}
 		attackMap[piece - 8].set(piece, 1);
-		if ((piece & 7) != 0)
-			attackMap[piece - 7].set(piece, 1);
 		if ((piece & 7) != 7)
+			attackMap[piece - 7].set(piece, 1);
+		if ((piece & 7) != 0)
 			attackMap[piece - 9].set(piece, 1);
 		break;
 	case '-':
