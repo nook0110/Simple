@@ -784,17 +784,17 @@ void Position::undoMove(const Move& move)
 
 std::bitset<64>& Position::pawns(const Color color)
 {
-	return pieces[color * 6];
+	return pieces[shift[color] + PAWN];
 }
 
 std::bitset<64>& Position::queen(const Color color)
 {
-	return pieces[color * 6 + 4];
+	return pieces[shift[color] + QUEEN];
 }
 
 std::bitset<64>& Position::king(const Color color)
 {
-	return pieces[color * 6 + 5];
+	return pieces[shift[color] + KING];
 }
 
 std::bitset<64> Position::pawnAttacks(const Color color)
