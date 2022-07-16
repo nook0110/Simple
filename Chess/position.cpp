@@ -219,6 +219,10 @@ void Position::updatePiece(const Square& sq)
 			attackMap[SQUARE(3, piece & 7)].set(piece, 1);
 		}
 		attackMap[piece + 8].set(piece, 1);
+		if ((piece >> 3) != 0)
+			attackMap[piece + 7].set(piece, 1);
+		if ((piece >> 3) != 7)
+			attackMap[piece + 9].set(piece, 1);
 		break;
 	case 'P':
 		if (piece >> 3 == 6)
@@ -226,6 +230,10 @@ void Position::updatePiece(const Square& sq)
 			attackMap[SQUARE(4, piece & 7)].set(piece, 1);
 		}
 		attackMap[piece - 8].set(piece, 1);
+		if ((piece >> 3) != 0)
+			attackMap[piece - 7].set(piece, 1);
+		if ((piece >> 3) != 7)
+			attackMap[piece - 9].set(piece, 1);
 		break;
 	case '-':
 		for (auto& attack : attackMap)
