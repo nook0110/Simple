@@ -1,7 +1,7 @@
 #include "position.h"
 #include "pieceSquareTables.hpp"
 
-inline void Position::updatePiece(const Square& sq)
+void Position::updatePiece(const Square& sq)
 {
 	square piece = sq.getInd();
 	square dest = piece;
@@ -206,7 +206,7 @@ inline void Position::updatePiece(const Square& sq)
 	}
 }
 
-inline void  Position::updateEmptySquare(const Square& sq)
+void  Position::updateEmptySquare(const Square& sq)
 {
 	square dest = sq.getInd();
 	auto attackers = attackMap[dest];
@@ -396,7 +396,7 @@ inline void  Position::updateEmptySquare(const Square& sq)
 	}
 }
 
-inline void  Position::updateOccupiedSquare(const Square& sq)
+void  Position::updateOccupiedSquare(const Square& sq)
 {
 	square dest = sq.getInd();
 	auto attackers = attackMap[dest];
@@ -582,7 +582,7 @@ inline void  Position::updateOccupiedSquare(const Square& sq)
 	}
 }
 
-inline void Position::place(const Square& square, const char piece)
+void Position::place(const Square& square, const char piece)
 {
 	board[square.getInd()] = piece;
 	for (auto phase : { MG, EG })
@@ -601,7 +601,7 @@ inline void Position::place(const Square& square, const char piece)
 	color[pieceColor].set(square.getInd());
 }
 
-inline void Position::remove(const Square& square)
+void Position::remove(const Square& square)
 {
 	const char removedPiece = board[square.getInd()];
 	if (removedPiece == '-')
@@ -614,7 +614,7 @@ inline void Position::remove(const Square& square)
 	board[square.getInd()] = '-';
 
 	const Color pieceColor = colorOf(removedPiece);
-	if (nonPawn(removedPiece)) 
+	if (nonPawn(removedPiece))
 		nonPawnMaterial[pieceColor] -= pieceValues[PIECES[removedPiece]][MG];
 	pieces[PIECES[removedPiece]].reset(square.getInd());
 
@@ -650,7 +650,7 @@ void Position::doMove(const Move& move)
 	sideToMove = !sideToMove;
 }
 
-inline void Position::undoMove(const Move& move)
+void Position::undoMove(const Move& move)
 {
 	sideToMove = !sideToMove;
 	const char pieceToMoveBack = board[move.to.getInd()];
@@ -678,17 +678,17 @@ inline void Position::undoMove(const Move& move)
 	place(move.to, move.captured);
 }
 
-inline std::bitset<64> Position::pawns(const Color color)
+std::bitset<64>& Position::pawns(const Color color)
 {
 	return pieces[color * 6];
 }
 
-inline std::bitset<64> Position::queen(const Color color)
+std::bitset<64>& Position::queen(const Color color)
 {
 	return pieces[color * 6 + 4];
 }
 
-inline std::bitset<64> Position::king(const Color color)
+std::bitset<64>& Position::king(const Color color)
 {
 	return pieces[color * 6 + 5];
 }

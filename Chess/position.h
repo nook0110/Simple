@@ -33,7 +33,7 @@ struct Position {
 	std::array<std::bitset<64>, 64> attackMap;
 	std::array<std::bitset<64>, COLOR_NONE> color;
 	std::array<std::bitset<64>, 12> pieces;
-	std::array<int, COLOR_NONE> nonPawnMaterial = {8302, -8302};
+	std::array<int, COLOR_NONE> nonPawnMaterial = { 8302, -8302 };
 
 	// tapered evaluation data
 
@@ -45,29 +45,29 @@ struct Position {
 
 	// helpers
 
-	inline void place(const Square& square, const char piece);
-	inline void remove(const Square& square);
+	void place(const Square& square, const char piece);
+	void remove(const Square& square);
 
 	void doMove(const Move& move);
-	inline void undoMove(const Move& move);
+	void undoMove(const Move& move);
 
-	inline void updatePiece(const Square& square);
-	inline void updateEmptySquare(const Square& square);
-	inline void updateOccupiedSquare(const Square& square);
+	void updatePiece(const Square& square);
+	void updateEmptySquare(const Square& square);
+	void updateOccupiedSquare(const Square& square);
 
-	inline std::bitset<64> pawns(const Color color);
-	inline std::bitset<64> queen(const Color color);
-	inline std::bitset<64> king(const Color color);
+	std::bitset<64>& pawns(const Color color);
+	std::bitset<64>& queen(const Color color);
+	std::bitset<64>& king(const Color color);
 	std::bitset<64> pawnAttacks(const Color color);
 
 	// evaluation
 
 	std::array<std::bitset<64>, COLOR_NONE> avaliableArea;
-	std::array<value, PHASE_NONE> eval = {0, 0};
+	std::array<value, PHASE_NONE> eval = { 0, 0 };
 
 	const value evaluate();
 
-	inline void initAttackMap()
+	void initAttackMap()
 	{
 		std::ifstream attackMapTXT;
 		attackMapTXT.open("attackMap.txt");
@@ -215,7 +215,7 @@ struct Position {
 		}
 	}
 
-	inline void init(std::string FEN)
+	void init(std::string FEN)
 	{
 		auto current = FEN.begin();
 		for (int row = 0; row < 8; ++row, ++current)
@@ -248,7 +248,7 @@ struct Position {
 		initAttackMap();
 	}
 
-	inline void logAttackMap()
+	void logAttackMap()
 	{
 		std::ofstream  attackMapTXT;
 		attackMapTXT.open("attackMap.txt", std::ofstream::out | std::ofstream::trunc);
