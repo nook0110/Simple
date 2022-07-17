@@ -35,18 +35,22 @@ const value Position::evaluate()
 		const Color them = flip(us);
 		const bitboard low = (us == COLOR_W ? RANKS[1] | RANKS[2] : RANKS[6] | RANKS[5]);
 		avaliableArea[us] = ~(pawnAttacks(them) | queen(us) | king(us) | (pawns(us) & low));
+		mobility[us] = {0, 0, 0, 0};
 		for (unsigned sq = 0; sq < 64; ++sq)
 		{
 			if (!avaliableArea[us].test(sq))
 				continue;
 			const bitboard attackers = attackMap[sq] & (color[us] ^ pawns(us));
 			for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
-			{
-				for (auto phase : { MG, EG })
-				{
-					mobility[us][phase] += mobilityBonus[piece - 1][(attackers & pieces[shift[us] + piece]).count()][phase];
-				}
-			}
+				mobility[us][piece - 1] += (attackers & pieces[shift[us] + piece]).count();
+		}
+	}
+	for (auto phase : { MG, EG })
+	{
+		for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
+		{
+			eval[phase] += mobilityBonus[piece - 1][mobility[COLOR_W][piece - 1]][phase];
+			eval[phase] -= mobilityBonus[piece - 1][mobility[COLOR_B][piece - 1]][phase];
 		}
 	}
 	return 0;
