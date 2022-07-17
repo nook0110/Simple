@@ -5,13 +5,15 @@
 #include "globals.h"
 
 
-// rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w -- 0 1
+// rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w -- 1
 
 int main()
 {
 	std::string FEN;
+	std::string MOVE;
 	std::getline(std::cin, FEN);
-	position.init(FEN);
+	std::getline(std::cin, MOVE);
+	position.init(FEN, MOVE);
 	while (true)
 	{
 		std::cout << position.evaluate() << std::endl;
@@ -29,6 +31,6 @@ int main()
 		position.doMove(_move);
 		std::cout << position.board << std::endl;
 	}
-	position.logAttackMap();
+	position.log();
 	return 0;
 }
