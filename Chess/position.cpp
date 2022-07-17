@@ -847,18 +847,15 @@ void Position::init(std::string FEN, std::string move)
 		++current;
 		auto enPassantTargetRow = *current;
 		enPassantSquare = SQUARE(enPassantTargetColumn - 'a' + 1, enPassantTargetRow - '0');
-
-		for (square ind = 0; ind < 64; ++ind)
-		{
-			if (board[ind] != 'p' || board[ind] != 'P')
-				continue;
-			place(Square(ind), board[ind]);
-		}
 		for (square ind = 0; ind < 64; ++ind)
 		{
 			if (board[ind] == '-')
 				continue;
 			place(Square(ind), board[ind]);
+		}
+		for (auto color : { COLOR_W, COLOR_B })
+		{
+			nonPawnMaterial[color] -= pieceValues[shift[color] + KING][MG];
 		}
 	}
 	else
