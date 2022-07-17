@@ -5,10 +5,11 @@
 #include <array>
 #include <bitset>
 #include <unordered_map>
+#include <cmath>
 
 using square = char;
 
-#define SQUARE(x,y) (x << 3 | y)
+#define SQUARE(x,y) ((x) << 3 | (y))
 
 enum Piece
 {
@@ -19,6 +20,13 @@ enum Piece
 	QUEEN,
 	KING,
 	PIECE_NONE
+};
+
+enum Color
+{
+	COLOR_W = 0,
+	COLOR_B,
+	COLOR_NONE
 };
 
 inline std::unordered_map<char, const int> PIECES = { {'P', 0}, {'N', 1}, {'B', 2}, {'R', 3}, {'Q', 4}, {'K', 5},
@@ -37,13 +45,6 @@ enum DiscretePhase
 inline constexpr signed pieceValues[13][PHASE_NONE] = { {126, 208}, {781, 854}, {825, 915}, {1276, 1380}, {2538, 2682}, {(int)1e7, (int)1e7},
 												        {-126, -208}, {-781, -854}, {-825, -915}, {-1276, -1380}, {-2538, -2682}, {(int) - 1e7, (int) - 1e7},
 												        {0, 0} };
-
-enum Color
-{
-	COLOR_W = 0,
-	COLOR_B,
-    COLOR_NONE
-};
 
 inline Color flip(const Color c)
 {
@@ -78,18 +79,18 @@ inline constexpr std::array<std::bitset<64>, 8> FILES =
 	file_a >> 7
 };
 
-constexpr uint_fast64_t lowestRank = (1 << 8) - 1;
+constexpr uint_fast64_t highestRank = (1 << 8) - 1;
 
 inline constexpr std::array<std::bitset<64>, 8> RANKS =
 {
-	lowestRank,
-	lowestRank << (8 * 1),
-	lowestRank << (8 * 2),
-	lowestRank << (8 * 3),
-	lowestRank << (8 * 4),
-	lowestRank << (8 * 5),
-	lowestRank << (8 * 6),
-	lowestRank << (8 * 7)
+	highestRank << (8 * 7),
+	highestRank << (8 * 6),
+	highestRank << (8 * 5),
+	highestRank << (8 * 4),
+	highestRank << (8 * 3),
+	highestRank << (8 * 2),
+	highestRank << (8 * 1),
+	highestRank
 };
 
 #endif // !GLOBALS_H

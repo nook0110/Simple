@@ -804,10 +804,10 @@ std::bitset<64> Position::pawnAttacks(const Color color)
 		pawnsPushed >>= 8;
 	else
 		pawnsPushed <<= 8;
-	const std::bitset<64> nonEdgePawns = pawnsPushed & ~FILES[0] & ~FILES[7];
+	const std::bitset<64> nonEdgePawns = pawnsPushed & ~(FILES[0] | FILES[7]);
 	const std::bitset<64> leftEdgePawns = pawnsPushed & FILES[0];
 	const std::bitset<64> rightEdgePawns = pawnsPushed & FILES[7];
-	return (nonEdgePawns << 1) | (nonEdgePawns >> 1) | (leftEdgePawns << 1) | (rightEdgePawns >> 1);
+	return (nonEdgePawns << 1) | (nonEdgePawns >> 1) | (leftEdgePawns >> 1) | (rightEdgePawns << 1);
 }
 
 extern Position position = Position();

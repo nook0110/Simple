@@ -1,7 +1,8 @@
 #include "position.h"
 
-constexpr value mobilityBonus[4][32][PHASE_NONE] =
+constexpr value mobilityBonus[5][32][PHASE_NONE] =
 {
+	{}, // P
 	{
 		{-62, -79}, {-53, -57}, {-12, -31}, {-3, -17}, 
 	    {3, 7}, {12, 13}, {21, 16}, {28, 21}, {37, 26} // N
@@ -22,6 +23,10 @@ constexpr value mobilityBonus[4][32][PHASE_NONE] =
 	}
 };
 
+constexpr std::array<value, PHASE_NONE> limits = {15258, 3915};
+constexpr value rangeLength = limits[MG] - limits[EG];
+constexpr value tempoBonus = 28;
+
 const value Position::evaluate()
 {
 	eval = {0, 0};
@@ -35,23 +40,29 @@ const value Position::evaluate()
 		const Color them = flip(us);
 		const bitboard low = (us == COLOR_W ? RANKS[1] | RANKS[2] : RANKS[6] | RANKS[5]);
 		avaliableArea[us] = ~(pawnAttacks(them) | queen(us) | king(us) | (pawns(us) & low));
-		mobility[us] = {0, 0, 0, 0};
+		mobility[us] = {0, 0, 0, 0, 0};
+		const bitboard allAttackers = color[us] ^ pawns(us);
 		for (unsigned sq = 0; sq < 64; ++sq)
 		{
 			if (!avaliableArea[us].test(sq))
 				continue;
-			const bitboard attackers = attackMap[sq] & (color[us] ^ pawns(us));
+			const bitboard attackers = attackMap[sq] & allAttackers;
 			for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
-				mobility[us][piece - 1] += (attackers & pieces[shift[us] + piece]).count();
+				mobility[us][piece] += (attackers & pieces[shift[us] + piece]).count();
 		}
 	}
 	for (auto phase : { MG, EG })
 	{
 		for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
 		{
-			eval[phase] += mobilityBonus[piece - 1][mobility[COLOR_W][piece - 1]][phase];
-			eval[phase] -= mobilityBonus[piece - 1][mobility[COLOR_B][piece - 1]][phase];
+			eval[phase] += mobilityBonus[piece][mobility[COLOR_W][piece]][phase];
+			eval[phase] -= mobilityBonus[piece][mobility[COLOR_B][piece]][phase];
 		}
 	}
-	return 0;
+	value npm = nonPawnMaterial[COLOR_W] - nonPawnMaterial[COLOR_B];
+	npm = std::max(limits[EG], std::min(limits[MG], npm));
+	value phase = npm - limits[EG];
+	value tapered = (eval[MG] * phase + eval[EG] * (rangeLength - phase)) / rangeLength;
+	value tempo = tempoBonus * rangeLength * (sideToMove? 1 : -1);
+	return tapered; //+ tempo;
 }

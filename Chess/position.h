@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 #include "move.h"
 #include "eval.h"
 #include <fstream>
@@ -33,12 +32,12 @@ struct Position {
 	std::array<std::bitset<64>, 64> attackMap;
 	std::array<std::bitset<64>, COLOR_NONE> color;
 	std::array<std::bitset<64>, 12> pieces;
-	std::array<int, COLOR_NONE> nonPawnMaterial = { 8302, -8302 };
 
 	// tapered evaluation data
 
-	std::array<int, PHASE_NONE> pieceValuesSum = { 0, 0 };
-	std::array<int, PHASE_NONE> psqtBonusSum = { 0, 0 };
+	std::array<value, COLOR_NONE> nonPawnMaterial = { 0, 0 };
+	std::array<value, PHASE_NONE> pieceValuesSum = { 0, 0 };
+	std::array<value, PHASE_NONE> psqtBonusSum = { 0, 0 };
 
 	char& operator[](const size_t ind) { return board[ind]; }
 	const char& operator[](const size_t ind) const { return board[ind]; }
@@ -63,8 +62,8 @@ struct Position {
 	// evaluation
 
 	std::array<std::bitset<64>, COLOR_NONE> avaliableArea;
-	std::array<std::array<unsigned, 4>, COLOR_NONE> mobility;
-	std::array<value, PHASE_NONE> eval = { 0, 0 };
+	std::array<std::array<unsigned, 5>, COLOR_NONE> mobility;
+	std::array<value, PHASE_NONE> eval;
 
 	const value evaluate();
 
@@ -229,10 +228,11 @@ struct Position {
 				}
 				else
 				{
+					//place(Square(row, column), *current);
 					board[SQUARE(row, column)] = *current;
-					color[getColor(*current)] = 1;
+					color[colorOf(*current)].set(SQUARE(row, column));
+					pieces[PIECES[*current]].set(SQUARE(row, column));
 				}
-
 				++column;
 			}
 			if (current == FEN.end())
