@@ -477,7 +477,6 @@ void  Position::updateOccupiedSquare(const Square& sq)
 	square piece;
 	while (attackers.any())
 	{
-		dest = sq.getInd();
 		piece = findSquare(attackers);
 		attackers.set(piece, 0);
 		square delta = dest - piece;
@@ -492,20 +491,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest % 8 != 0)
 					{
+						dest += 1;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest += 1;
 					}
 				}
 				else
 				{
 					while (dest % 8 != 7 && dest > 0)
 					{
+						dest -= 1;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest -= 1;
 					}
 				}
 			}
@@ -516,20 +515,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest < 64)
 					{
+						dest += 8;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest += 8;
 					}
 				}
 				else
 				{
 					while (dest >= 0)
 					{
+						dest -= 8;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest -= 8;
 					}
 				}
 			}
@@ -542,20 +541,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest % 8 != 0)
 					{
+						dest -= 7;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest -= 7;
 					}
 				}
 				else
 				{
+					dest -= 9;
 					while (dest % 8 != 7 && dest > 0)
 					{
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest -= 9;
 					}
 				}
 			}
@@ -565,20 +564,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest % 8 != 0)
 					{
+						dest += 9;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest += 9;
 					}
 				}
 				else
 				{
 					while (dest % 8 != 7 && dest > 0)
 					{
+						dest += 7;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest += 7;
 					}
 				}
 			}
@@ -591,20 +590,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest < 64)
 					{
+						dest += 8;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest += 8;
 					}
 				}
 				else
 				{
 					while (dest >= 0)
 					{
+						dest -= 8;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest -= 8;
 					}
 				}
 			}
@@ -615,20 +614,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest % 8 != 0)
 					{
+						dest += 1;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest += 1;
 					}
 				}
 				else
 				{
 					while (dest % 8 != 7 && dest > 0)
 					{
+						dest -= 1;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
-						dest -= 1;
 					}
 				}
 			}
@@ -640,20 +639,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 					{
 						while (dest % 8 != 0)
 						{
+							dest -= 7;
 							attackMap[dest].set(piece, 0);
 							if (board[dest] != '-')
 								break;
-							dest -= 7;
 						}
 					}
 					else
 					{
 						while (dest % 8 != 7 && dest > 0)
 						{
+							dest -= 9;
 							attackMap[dest].set(piece, 0);
 							if (board[dest] != '-')
 								break;
-							dest -= 9;
 						}
 					}
 				}
@@ -663,20 +662,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 					{
 						while (dest % 8 != 0)
 						{
+							dest += 9;
 							attackMap[dest].set(piece, 0);
 							if (board[dest] != '-')
 								break;
-							dest += 9;
 						}
 					}
 					else
 					{
 						while (dest % 8 != 7 && dest > 0)
 						{
+							dest += 7;
 							attackMap[dest].set(piece, 0);
 							if (board[dest] != '-')
 								break;
-							dest += 7;
 						}
 					}
 				}
@@ -684,6 +683,8 @@ void  Position::updateOccupiedSquare(const Square& sq)
 		default:
 			break;
 		}
+		dest = sq.getInd();
+		attackMap[dest].set(piece, 1);
 	}
 }
 
