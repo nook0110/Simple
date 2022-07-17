@@ -1,5 +1,6 @@
 #pragma once
 #include "position.h"
 #include "move.h"
+#include <vector>
 
-inline void generateMoves();
+inline std::vector<Move> generateMoves();

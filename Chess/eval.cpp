@@ -51,3 +51,14 @@ const value Position::evaluate()
 	}
 	return 0;
 }
+
+std::pair<value, value> Position::findAlphaBeta(int depth, Move move)
+{
+	const int maxDepth = 20;
+	if (depth > maxDepth && move.captured == '-')
+	{
+
+	}
+
+	return std::pair<value, value>();
+}
