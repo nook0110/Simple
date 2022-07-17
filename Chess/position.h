@@ -26,9 +26,6 @@ struct Position {
 	unsigned char sideToMove;
 	square enPassantSquare;
 
-	std::array<Move, 256> moves;
-	unsigned char movesSize = 0;
-
 	std::array<std::bitset<64>, 64> attackMap;
 	std::array<std::bitset<64>, COLOR_NONE> color;
 	std::array<std::bitset<64>, 12> pieces;
@@ -270,6 +267,8 @@ struct Position {
 		}
 		attackMapTXT.close();
 	}
+
+	std::pair<value, value> findAlphaBeta(int depth, Move previous = Move());
 };
 
 extern Position position;
