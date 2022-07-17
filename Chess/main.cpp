@@ -26,7 +26,7 @@ int main()
 		Move _move = { SQUARE(8 - (move[1] - '0'), move[0] - 'a'),
 			SQUARE(8 - (move[4] - '0'), move[3] - 'a'),
 			static_cast<MoveType>(move[6]-'0'),
-			position.board[SQUARE(move[3] - 'a' + 1, move[4] - '0')]
+			position.board[SQUARE(8 - (move[4] - '0'), move[3] - 'a')]
 		};
 		position.doMove(_move);
 		std::cout << position.board << std::endl;
