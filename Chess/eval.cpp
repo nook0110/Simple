@@ -1,4 +1,5 @@
 #include "position.h"
+#include <iostream>
 
 constexpr value mobilityBonus[5][32][PHASE_NONE] =
 {
@@ -44,7 +45,7 @@ const value Position::evaluate()
 		const bitboard allAttackers = color[us] ^ pawns(us);
 		for (unsigned sq = 0; sq < 64; ++sq)
 		{
-			if (!avaliableArea[us].test(sq))
+			if (!avaliableArea[us][sq])
 				continue;
 			const bitboard attackers = attackMap[sq] & allAttackers;
 			for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
@@ -63,6 +64,6 @@ const value Position::evaluate()
 	npm = std::max(limits[EG], std::min(limits[MG], npm));
 	value phase = npm - limits[EG];
 	value tapered = (eval[MG] * phase + eval[EG] * (rangeLength - phase)) / rangeLength;
-	value tempo = tempoBonus * rangeLength * (sideToMove? 1 : -1);
-	return tapered; //+ tempo;
+	value tempo = tempoBonus * (sideToMove? 1 : -1);
+	return tapered + tempo;
 }
