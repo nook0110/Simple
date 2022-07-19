@@ -257,11 +257,11 @@ void  Position::updateEmptySquare(const Square& sq)
 	square dest = sq.getInd();
 	auto attackers = attackMap[dest];
 	attackers.set(dest, 0);
-	square piece=0;
+	square piece = 0;
 	while (attackers.any())
 	{
 		dest = sq.getInd();
-		piece = findSquare(attackers,piece);
+		piece = findSquare(attackers, piece);
 		attackers.set(piece, 0);
 		square delta = dest - piece;
 		switch (board[piece])
@@ -480,7 +480,9 @@ void  Position::updateOccupiedSquare(const Square& sq)
 
 	square dest = sq.getInd();
 	auto attackers = attackMap[dest];
-	square piece=0;
+	square piece = 0;
+	auto type = board[dest];
+	board[dest] = '-';
 	while (attackers.any())
 	{
 		piece = findSquare(attackers, piece);
@@ -545,7 +547,7 @@ void  Position::updateOccupiedSquare(const Square& sq)
 			{
 				if (delta % 7 == 0)
 				{
-					while (dest % 8 != 0)
+					while (dest % 8 != 0 && dest >= 0)
 					{
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
@@ -568,7 +570,7 @@ void  Position::updateOccupiedSquare(const Square& sq)
 			{
 				if (delta % 9 == 0)
 				{
-					while (dest % 8 != 0)
+					while (dest % 8 != 0 && dest < 64)
 					{
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
@@ -587,6 +589,7 @@ void  Position::updateOccupiedSquare(const Square& sq)
 					}
 				}
 			}
+			break;
 		case 'q':
 		case 'Q':
 			if (delta % 8 == 0)
@@ -643,7 +646,7 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					if (delta % 7 == 0)
 					{
-						while (dest % 8 != 0)
+						while (dest % 8 != 0 && dest >= 0)
 						{
 							attackMap[dest].set(piece, 0);
 							if (board[dest] != '-')
@@ -666,7 +669,7 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					if (delta % 9 == 0)
 					{
-						while (dest % 8 != 0)
+						while (dest % 8 != 0 && dest < 64)
 						{
 							attackMap[dest].set(piece, 0);
 							if (board[dest] != '-')
@@ -686,12 +689,14 @@ void  Position::updateOccupiedSquare(const Square& sq)
 					}
 				}
 			}
+			break;
 		default:
 			break;
 		}
 		dest = sq.getInd();
 		attackMap[dest].set(piece, 1);
 	}
+	board[dest] = type;
 }
 
 void Position::place(const Square& square, const char piece)
@@ -700,6 +705,14 @@ void Position::place(const Square& square, const char piece)
 	{
 		remove(square);
 		return;
+	}
+	if (piece == 'k')
+	{
+		kingPos[COLOR_B] = square.getInd();
+	}
+	if (piece == 'K')
+	{
+		kingPos[COLOR_W] = square.getInd();
 	}
 	board[square.getInd()] = piece;
 	for (auto phase : { MG, EG })
@@ -999,7 +1012,7 @@ void Position::logPieces()
 }
 
 
-void findMove(Position& pos,const std::vector<Move>& moves, value& alpha, value& beta, Move& bestMove)
+void findMove(Position& pos, const std::vector<Move>& moves, value& alpha, value& beta, Move& bestMove)
 {
 	for (int i = 0; i < moves.size(); ++i)
 	{
@@ -1018,19 +1031,19 @@ void findMove(Position& pos,const std::vector<Move>& moves, value& alpha, value&
 
 Move Position::findBestMove()
 {
-	Move bestMove;
 	auto moves = generateMoves();
+	Move bestMove = moves[0];
 	value alpha = INT_MIN;
 	value beta = INT_MAX;
 
 	Position c1 = *this, c2 = *this, c3 = *this, c4 = *this, c5 = *this;
 	auto shift = moves.size() / 6;
 	std::vector<Move>::const_iterator it1 = moves.begin(), it2 = moves.begin() + shift, it3 = moves.begin() + shift * 2, it4 = moves.begin() + shift * 3, it5 = moves.begin() + shift * 4, it6 = moves.begin() + shift * 5, it7 = moves.end();
-#pragma omp parallel sections
+#pragma omp parallel sections num_threads(6)
 	{
 #pragma omp section
 		{
-			findMove(*this,std::vector<Move>(it1, it2), alpha, beta, bestMove);
+			findMove(*this, std::vector<Move>(it1, it2), alpha, beta, bestMove);
 		}
 #pragma omp section
 		{
@@ -1053,115 +1066,7 @@ Move Position::findBestMove()
 			findMove(c5, std::vector<Move>(it6, it7), alpha, beta, bestMove);
 		}
 	}
-/*#pragma omp parallel sections
-	{
-#pragma omp section
-		{
-
-			for (int i = 0; i < moves.size()/6; ++i)
-			{
-				std::cout << 1;
-				value tempAlpha = findAlphaBeta(1, alpha, beta, moves[i]);
-				undoMove(moves[i]);
-				//std::cout << std::to_string(tempAlpha) + " ";
-				if (alpha < tempAlpha)
-				{
-					bestMove = &moves[i];
-					alpha = tempAlpha;
-				}
-				if (alpha >= beta)
-					break;
-				
-			}
-		}
-#pragma omp section
-		{
-			for (int i = moves.size() / 6; i < (moves.size() / 6) * 2; ++i)
-			{
-				std::cout << 2;
-				value tempAlpha = c1.findAlphaBeta(1, alpha, beta, moves[i]);
-				c1.undoMove(moves[i]);
-				//std::cout << std::to_string(tempAlpha) + " ";
-				if (alpha < tempAlpha)
-				{
-					bestMove = &moves[i];
-					alpha = tempAlpha;
-				}
-				if (alpha >= beta)
-					break;
-				
-			}
-		}
-#pragma omp section
-		{
-			for (int i = (moves.size() / 6) * 2; i < (moves.size() / 6) * 3; ++i)
-			{
-				value tempAlpha = c2.findAlphaBeta(1, alpha, beta, moves[i]);
-				c2.undoMove(moves[i]);
-				//std::cout << std::to_string(tempAlpha) + " ";
-				if (alpha < tempAlpha)
-				{
-					bestMove = &moves[i];
-					alpha = tempAlpha;
-				}
-				if (alpha >= beta)
-					break;
-				
-			}
-		}
-#pragma omp section
-		{
-			for (int i = (moves.size() / 6) * 3; i < (moves.size() / 6) * 4; ++i)
-			{
-				value tempAlpha = c3.findAlphaBeta(1, alpha, beta, moves[i]);
-				c3.undoMove(moves[i]);
-				//std::cout << std::to_string(tempAlpha) + " ";
-				if (alpha < tempAlpha)
-				{
-					bestMove = &moves[i];
-					alpha = tempAlpha;
-				}
-				if (alpha >= beta)
-					break;
-				
-			}
-		}
-#pragma omp section
-		{
-			for (int i = (moves.size() / 6) * 4; i < (moves.size() / 6) * 5; ++i)
-			{
-				value tempAlpha = c4.findAlphaBeta(1, alpha, beta, moves[i]);
-				c4.undoMove(moves[i]);
-				//std::cout << std::to_string(tempAlpha) + " ";
-				if (alpha < tempAlpha)
-				{
-					bestMove = &moves[i];
-					alpha = tempAlpha;
-				}
-				if (alpha >= beta)
-					break;
-				
-			}
-		}
-#pragma omp section
-		{
-			for (int i = (moves.size() / 6) * 5; i < moves.size(); ++i)
-			{
-				value tempAlpha = c5.findAlphaBeta(1, alpha, beta, moves[i]);
-				c5.undoMove(moves[i]);
-				//std::cout << std::to_string(tempAlpha) + " ";
-				if (alpha < tempAlpha)
-				{
-					bestMove = &moves[i];
-					alpha = tempAlpha;
-				}
-				if (alpha >= beta)
-					break;
-				
-			}
-		}
-	}*/
-
+	//std::cout << alpha << std::endl;
 
 	return bestMove;
 }
@@ -1169,11 +1074,15 @@ Move Position::findBestMove()
 value Position::findAlphaBeta(int depth, value alpha, value beta, const Move& previous)
 {
 	doMove(previous);
-	if ((depth > 5 && previous.captured == '-') || depth > 5)
+	if ((attackMap[kingPos[!sideToMove]] & color[sideToMove]).any())
+	{
+		return(depth % 2 ? -1e7 : 1e7);
+	}
+	if ((depth > 4 && previous.captured == '-') || depth > 4)
 	{
 		return (sideToMove == depth % 2 ? -evaluate() : evaluate());
 	}
-	if (depth % 2)
+	if (depth % 2 == 0)
 	{
 		value tempAlpha;
 		auto moves = generateMoves();

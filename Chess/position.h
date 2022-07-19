@@ -36,6 +36,8 @@ struct Position {
 	char& operator[](const size_t ind) { return board[ind]; }
 	const char& operator[](const size_t ind) const { return board[ind]; }
 
+	std::array<square, 2> kingPos;
+
 	// helpers
 
 	void place(const Square& square, const char piece);
@@ -78,7 +80,7 @@ struct Position {
 
 	Move findBestMove();
 
-	value findAlphaBeta(int depth = 1, value alpha = INT_MIN, value beta = INT_MAX, const Move& previous = Move());
+	value findAlphaBeta(int depth, value alpha, value beta , const Move& previous);
 };
 
 extern Position position;
