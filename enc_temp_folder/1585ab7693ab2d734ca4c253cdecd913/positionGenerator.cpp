@@ -18,7 +18,7 @@ std::vector<Move> Position::generateMoves()
 			if (colorOf(board[dest]) == sideToMove) //trying to eat a figure of the same color
 			{
 				continue;
-			}	
+			}
 
 			if (board[piece] == 'p' || board[piece] == 'P') // if piece is a pawn
 			{

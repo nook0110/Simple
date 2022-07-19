@@ -1,6 +1,6 @@
 #include "position.h"
 #include "pieceSquareTables.hpp"
-
+#include <iostream>
 void Position::updatePiece(const Square& sq)
 {
 	square piece = sq.getInd();
@@ -21,7 +21,7 @@ void Position::updatePiece(const Square& sq)
 		}
 		delta = -1;
 		dest = piece + delta;
-		while (dest % 8 != 7 && dest > 0)
+		while (dest % 8 != 7 && dest >= 0)
 		{
 			attackMap[dest].set(piece, 1);
 			if (board[dest] != '-')
@@ -56,7 +56,7 @@ void Position::updatePiece(const Square& sq)
 		*/
 		delta = -7;
 		dest = piece + delta;
-		while (dest % 8 != 0 && dest > 0)
+		while (dest % 8 != 0 && dest >= 0)
 		{
 			attackMap[dest].set(piece, 1);
 			if (board[dest] != '-')
@@ -65,7 +65,7 @@ void Position::updatePiece(const Square& sq)
 		}
 		delta = -9;
 		dest = piece + delta;
-		while (dest % 8 != 7 && dest > 0)
+		while (dest % 8 != 7 && dest >= 0)
 		{
 			attackMap[dest].set(piece, 1);
 			if (board[dest] != '-')
@@ -94,7 +94,7 @@ void Position::updatePiece(const Square& sq)
 	case 'q':
 	case 'Q':
 		delta = 1;
-		dest += delta;
+		dest = piece + delta;
 		while (dest % 8 != 0)
 		{
 			attackMap[dest].set(piece, 1);
@@ -104,7 +104,7 @@ void Position::updatePiece(const Square& sq)
 		}
 		delta = -1;
 		dest = piece + delta;
-		while (dest % 8 != 7 && dest > 0)
+		while (dest % 8 != 7 && dest >= 0)
 		{
 			attackMap[dest].set(piece, 1);
 			if (board[dest] != '-')
@@ -141,7 +141,7 @@ void Position::updatePiece(const Square& sq)
 		*/
 		delta = -7;
 		dest = piece + delta;
-		while (dest % 8 != 0 && dest > 0)
+		while (dest % 8 != 0 && dest >= 0)
 		{
 			attackMap[dest].set(piece, 1);
 			if (board[dest] != '-')
@@ -150,7 +150,7 @@ void Position::updatePiece(const Square& sq)
 		}
 		delta = -9;
 		dest = piece + delta;
-		while (dest % 8 != 7 && dest > 0)
+		while (dest % 8 != 7 && dest >= 0)
 		{
 			attackMap[dest].set(piece, 1);
 			if (board[dest] != '-')
@@ -218,22 +218,28 @@ void Position::updatePiece(const Square& sq)
 		{
 			attackMap[SQUARE(3, piece & 7)].set(piece, 1);
 		}
-		attackMap[piece + 8].set(piece, 1);
+		if (piece + 8 < 64)
+			attackMap[piece + 8].set(piece, 1);
 		if ((piece & 7) != 0)
-			attackMap[piece + 7].set(piece, 1);
+			if (piece + 7 < 64)
+				attackMap[piece + 7].set(piece, 1);
 		if ((piece & 7) != 7)
-			attackMap[piece + 9].set(piece, 1);
+			if (piece + 9 < 64)
+				attackMap[piece + 9].set(piece, 1);
 		break;
 	case 'P':
 		if (piece >> 3 == 6)
 		{
 			attackMap[SQUARE(4, piece & 7)].set(piece, 1);
 		}
-		attackMap[piece - 8].set(piece, 1);
+		if (piece - 8 >= 0)
+			attackMap[piece - 8].set(piece, 1);
 		if ((piece & 7) != 7)
-			attackMap[piece - 7].set(piece, 1);
+			if (piece - 7 >= 0)
+				attackMap[piece - 7].set(piece, 1);
 		if ((piece & 7) != 0)
-			attackMap[piece - 9].set(piece, 1);
+			if (piece - 9 >= 0)
+				attackMap[piece - 9].set(piece, 1);
 		break;
 	case '-':
 		for (auto& attack : attackMap)
@@ -277,7 +283,7 @@ void  Position::updateEmptySquare(const Square& sq)
 				}
 				else
 				{
-					while (dest % 8 != 7 && dest > 0)
+					while (dest % 8 != 7 && dest >= 0)
 					{
 						attackMap[dest].set(piece, 1);
 						if (board[dest] != '-')
@@ -322,7 +328,7 @@ void  Position::updateEmptySquare(const Square& sq)
 			{
 				if (delta % 7 == 0)
 				{
-					while (dest % 8 != 0 && dest > 0)
+					while (dest % 8 != 0 && dest >= 0)
 					{
 						attackMap[dest].set(piece, 1);
 						if (board[dest] != '-')
@@ -332,7 +338,7 @@ void  Position::updateEmptySquare(const Square& sq)
 				}
 				else
 				{
-					while (dest % 8 != 7 && dest > 0)
+					while (dest % 8 != 7 && dest >= 0)
 					{
 						attackMap[dest].set(piece, 1);
 						if (board[dest] != '-')
@@ -405,7 +411,7 @@ void  Position::updateEmptySquare(const Square& sq)
 				}
 				else
 				{
-					while (dest % 8 != 7 && dest > 0)
+					while (dest % 8 != 7 && dest >= 0)
 					{
 						attackMap[dest].set(piece, 1);
 						if (board[dest] != '-')
@@ -420,7 +426,7 @@ void  Position::updateEmptySquare(const Square& sq)
 				{
 					if (delta % 7 == 0)
 					{
-						while (dest % 8 != 0 && dest > 0)
+						while (dest % 8 != 0 && dest >= 0)
 						{
 							attackMap[dest].set(piece, 1);
 							if (board[dest] != '-')
@@ -430,7 +436,7 @@ void  Position::updateEmptySquare(const Square& sq)
 					}
 					else
 					{
-						while (dest % 8 != 7 && dest > 0)
+						while (dest % 8 != 7 && dest >= 0)
 						{
 							attackMap[dest].set(piece, 1);
 							if (board[dest] != '-')
@@ -491,20 +497,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest % 8 != 0)
 					{
-						dest += 1;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest += 1;
 					}
 				}
 				else
 				{
-					while (dest % 8 != 7 && dest > 0)
+					while (dest % 8 != 7 && dest >= 0)
 					{
-						dest -= 1;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest -= 1;
 					}
 				}
 			}
@@ -515,20 +521,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest < 64)
 					{
-						dest += 8;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest += 8;
 					}
 				}
 				else
 				{
 					while (dest >= 0)
 					{
-						dest -= 8;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest -= 8;
 					}
 				}
 			}
@@ -541,20 +547,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest % 8 != 0)
 					{
-						dest -= 7;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest -= 7;
 					}
 				}
 				else
 				{
-					dest -= 9;
-					while (dest % 8 != 7 && dest > 0)
+					while (dest % 8 != 7 && dest >= 0)
 					{
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest -= 9;
 					}
 				}
 			}
@@ -564,20 +570,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest % 8 != 0)
 					{
-						dest += 9;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest += 9;
 					}
 				}
 				else
 				{
-					while (dest % 8 != 7 && dest > 0)
+					while (dest % 8 != 7 && dest < 64)
 					{
-						dest += 7;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest += 7;
 					}
 				}
 			}
@@ -590,20 +596,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest < 64)
 					{
-						dest += 8;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest += 8;
 					}
 				}
 				else
 				{
 					while (dest >= 0)
 					{
-						dest -= 8;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest -= 8;
 					}
 				}
 			}
@@ -614,20 +620,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 				{
 					while (dest % 8 != 0)
 					{
-						dest += 1;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest += 1;
 					}
 				}
 				else
 				{
-					while (dest % 8 != 7 && dest > 0)
+					while (dest % 8 != 7 && dest >= 0)
 					{
-						dest -= 1;
 						attackMap[dest].set(piece, 0);
 						if (board[dest] != '-')
 							break;
+						dest -= 1;
 					}
 				}
 			}
@@ -639,20 +645,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 					{
 						while (dest % 8 != 0)
 						{
-							dest -= 7;
 							attackMap[dest].set(piece, 0);
 							if (board[dest] != '-')
 								break;
+							dest -= 7;
 						}
 					}
 					else
 					{
-						while (dest % 8 != 7 && dest > 0)
+						while (dest % 8 != 7 && dest >= 0)
 						{
-							dest -= 9;
 							attackMap[dest].set(piece, 0);
 							if (board[dest] != '-')
 								break;
+							dest -= 9;
 						}
 					}
 				}
@@ -662,20 +668,20 @@ void  Position::updateOccupiedSquare(const Square& sq)
 					{
 						while (dest % 8 != 0)
 						{
-							dest += 9;
 							attackMap[dest].set(piece, 0);
 							if (board[dest] != '-')
 								break;
+							dest += 9;
 						}
 					}
 					else
 					{
-						while (dest % 8 != 7 && dest > 0)
+						while (dest % 8 != 7 && dest < 64)
 						{
-							dest += 7;
 							attackMap[dest].set(piece, 0);
 							if (board[dest] != '-')
 								break;
+							dest += 7;
 						}
 					}
 				}
@@ -690,6 +696,11 @@ void  Position::updateOccupiedSquare(const Square& sq)
 
 void Position::place(const Square& square, const char piece)
 {
+	if (piece == '-')
+	{
+		remove(square);
+		return;
+	}
 	board[square.getInd()] = piece;
 	for (auto phase : { MG, EG })
 	{
@@ -781,7 +792,8 @@ void Position::undoMove(const Move& move)
 		place(move.from, sideToMove ? 'P' : 'p');
 		break;
 	}
-	place(move.to, move.captured);
+	if (move.captured != '-')
+		place(move.to, move.captured);
 }
 
 std::bitset<64>& Position::pawns(const Color color)
@@ -867,10 +879,10 @@ void Position::init(std::string FEN, std::string move)
 			_move = { SQUARE(8 - (move[1] - '0'), move[0] - 'a'),
 			SQUARE(8 - (move[4] - '0'), move[3] - 'a'),
 			PROMOTION,
-			position.board[SQUARE(move[3] - 'a' + 1, move[4] - '0')]
+			board[SQUARE(move[3] - 'a' + 1, move[4] - '0')]
 			};
 		}
-		else if(position.board[SQUARE(move[1] - 'a' + 1, move[0] - '0')] == 'p' || position.board[SQUARE(move[1] - 'a' + 1, move[0] - '0')] == 'P')
+		else if (board[SQUARE(move[1] - 'a' + 1, move[0] - '0')] == 'p' || board[SQUARE(move[1] - 'a' + 1, move[0] - '0')] == 'P')
 		{
 
 		}
@@ -879,7 +891,7 @@ void Position::init(std::string FEN, std::string move)
 			_move = { SQUARE(8 - (move[1] - '0'), move[0] - 'a'),
 			SQUARE(8 - (move[4] - '0'), move[3] - 'a'),
 			DEFAULT,
-			position.board[SQUARE(move[3] - 'a' + 1, move[4] - '0')]
+			board[SQUARE(move[3] - 'a' + 1, move[4] - '0')]
 			};
 		}
 	}
@@ -985,5 +997,218 @@ void Position::logPieces()
 	}
 	piecesTXT.close();
 }
+
+
+void findMove(Position& pos,const std::vector<Move>& moves, value& alpha, value& beta, Move& bestMove)
+{
+	for (int i = 0; i < moves.size(); ++i)
+	{
+		value tempAlpha = pos.findAlphaBeta(1, alpha, beta, moves[i]);
+		pos.undoMove(moves[i]);
+		if (alpha < tempAlpha)
+		{
+			bestMove = moves[i];
+			alpha = tempAlpha;
+		}
+		if (alpha >= beta)
+			break;
+
+	}
+}
+
+Move Position::findBestMove()
+{
+	Move bestMove;
+	auto moves = generateMoves();
+	value alpha = INT_MIN;
+	value beta = INT_MAX;
+
+	Position c1 = *this, c2 = *this, c3 = *this, c4 = *this, c5 = *this;
+	auto shift = moves.size() / 6;
+	std::vector<Move>::const_iterator it1 = moves.begin(), it2 = moves.begin() + shift, it3 = moves.begin() + shift * 2, it4 = moves.begin() + shift * 3, it5 = moves.begin() + shift * 4, it6 = moves.begin() + shift * 5, it7 = moves.end();
+#pragma omp parallel sections
+	{
+#pragma omp section
+		{
+			findMove(*this,std::vector<Move>(it1, it2), alpha, beta, bestMove);
+		}
+#pragma omp section
+		{
+			findMove(c1, std::vector<Move>(it2, it3), alpha, beta, bestMove);
+		}
+#pragma omp section
+		{
+			findMove(c2, std::vector<Move>(it3, it4), alpha, beta, bestMove);
+		}
+#pragma omp section
+		{
+			findMove(c3, std::vector<Move>(it4, it5), alpha, beta, bestMove);
+		}
+#pragma omp section
+		{
+			findMove(c4, std::vector<Move>(it5, it6), alpha, beta, bestMove);
+		}
+#pragma omp section
+		{
+			findMove(c5, std::vector<Move>(it6, it7), alpha, beta, bestMove);
+		}
+	}
+/*#pragma omp parallel sections
+	{
+#pragma omp section
+		{
+
+			for (int i = 0; i < moves.size()/6; ++i)
+			{
+				std::cout << 1;
+				value tempAlpha = findAlphaBeta(1, alpha, beta, moves[i]);
+				undoMove(moves[i]);
+				//std::cout << std::to_string(tempAlpha) + " ";
+				if (alpha < tempAlpha)
+				{
+					bestMove = &moves[i];
+					alpha = tempAlpha;
+				}
+				if (alpha >= beta)
+					break;
+				
+			}
+		}
+#pragma omp section
+		{
+			for (int i = moves.size() / 6; i < (moves.size() / 6) * 2; ++i)
+			{
+				std::cout << 2;
+				value tempAlpha = c1.findAlphaBeta(1, alpha, beta, moves[i]);
+				c1.undoMove(moves[i]);
+				//std::cout << std::to_string(tempAlpha) + " ";
+				if (alpha < tempAlpha)
+				{
+					bestMove = &moves[i];
+					alpha = tempAlpha;
+				}
+				if (alpha >= beta)
+					break;
+				
+			}
+		}
+#pragma omp section
+		{
+			for (int i = (moves.size() / 6) * 2; i < (moves.size() / 6) * 3; ++i)
+			{
+				value tempAlpha = c2.findAlphaBeta(1, alpha, beta, moves[i]);
+				c2.undoMove(moves[i]);
+				//std::cout << std::to_string(tempAlpha) + " ";
+				if (alpha < tempAlpha)
+				{
+					bestMove = &moves[i];
+					alpha = tempAlpha;
+				}
+				if (alpha >= beta)
+					break;
+				
+			}
+		}
+#pragma omp section
+		{
+			for (int i = (moves.size() / 6) * 3; i < (moves.size() / 6) * 4; ++i)
+			{
+				value tempAlpha = c3.findAlphaBeta(1, alpha, beta, moves[i]);
+				c3.undoMove(moves[i]);
+				//std::cout << std::to_string(tempAlpha) + " ";
+				if (alpha < tempAlpha)
+				{
+					bestMove = &moves[i];
+					alpha = tempAlpha;
+				}
+				if (alpha >= beta)
+					break;
+				
+			}
+		}
+#pragma omp section
+		{
+			for (int i = (moves.size() / 6) * 4; i < (moves.size() / 6) * 5; ++i)
+			{
+				value tempAlpha = c4.findAlphaBeta(1, alpha, beta, moves[i]);
+				c4.undoMove(moves[i]);
+				//std::cout << std::to_string(tempAlpha) + " ";
+				if (alpha < tempAlpha)
+				{
+					bestMove = &moves[i];
+					alpha = tempAlpha;
+				}
+				if (alpha >= beta)
+					break;
+				
+			}
+		}
+#pragma omp section
+		{
+			for (int i = (moves.size() / 6) * 5; i < moves.size(); ++i)
+			{
+				value tempAlpha = c5.findAlphaBeta(1, alpha, beta, moves[i]);
+				c5.undoMove(moves[i]);
+				//std::cout << std::to_string(tempAlpha) + " ";
+				if (alpha < tempAlpha)
+				{
+					bestMove = &moves[i];
+					alpha = tempAlpha;
+				}
+				if (alpha >= beta)
+					break;
+				
+			}
+		}
+	}*/
+
+
+	return bestMove;
+}
+
+value Position::findAlphaBeta(int depth, value alpha, value beta, const Move& previous)
+{
+	doMove(previous);
+	if (depth > 3 && previous.captured == '-' || depth > 5)
+	{
+		return (sideToMove == depth % 2 ? evaluate() : -evaluate());
+	}
+	if (depth % 2)
+	{
+		value tempAlpha;
+		auto moves = generateMoves();
+		for (const auto& move : moves)
+		{
+			tempAlpha = findAlphaBeta(depth + 1, alpha, beta, move);
+			undoMove(move);
+			if (alpha < tempAlpha)
+			{
+				alpha = tempAlpha;
+			}
+			if (alpha >= beta)
+				break;
+		}
+		return alpha;
+	}
+	else
+	{
+		value tempBeta;
+		auto moves = generateMoves();
+		for (auto& move : moves)
+		{
+			tempBeta = findAlphaBeta(depth + 1, alpha, beta, move);
+			undoMove(move);
+			if (beta > tempBeta)
+			{
+				beta = tempBeta;
+			}
+			if (alpha >= beta)
+				break;
+		}
+		return beta;
+	}
+
+}
+
 
 extern Position position = Position();

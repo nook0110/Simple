@@ -5,11 +5,8 @@
 #include <bitset>
 #include <array>
 #include <string>
-
-inline bool getColor(const char piece)
-{
-	return piece <= 'Z';
-}
+#include "positionGenerator.h"
+#include <omp.h>
 
 inline square findSquare(const std::bitset<64>& bitset) // function that finds '1' in bitset
 {
@@ -77,7 +74,11 @@ struct Position {
 	void readPieces();
 	void logPieces();
 
-	value findAlphaBeta(int depth, value alpha, value beta, Move previous = Move());
+	std::vector<Move> generateMoves();
+
+	Move findBestMove();
+
+	value findAlphaBeta(int depth = 1, value alpha = INT_MIN, value beta = INT_MAX,const Move& previous = Move());
 };
 
 extern Position position;

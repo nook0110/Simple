@@ -24,8 +24,8 @@ enum Piece
 
 enum Color
 {
-	COLOR_W = 0,
-	COLOR_B,
+	COLOR_B = 0,
+	COLOR_W,
 	COLOR_NONE
 };
 
@@ -92,5 +92,8 @@ inline constexpr std::array<std::bitset<64>, 8> RANKS =
 	highestRank << (8 * 1),
 	highestRank
 };
+
+
+extern unsigned long long counter;
 
 #endif // !GLOBALS_H
