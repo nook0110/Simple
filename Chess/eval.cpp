@@ -64,6 +64,10 @@ const value Position::evaluate()
 	npm = std::max(limits[EG], std::min(limits[MG], npm));
 	value phase = npm - limits[EG];
 	value tapered = (eval[MG] * phase + eval[EG] * (rangeLength - phase)) / rangeLength;
+	if (tapered > 1e5 && tapered<1e6)
+	{
+		int a = 10;
+	}
 	value tempo = tempoBonus * (sideToMove? 1 : -1);
 	return tapered + tempo;
 }

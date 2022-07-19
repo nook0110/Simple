@@ -14,6 +14,33 @@ int main()
 	std::getline(std::cin, FEN);
 	std::getline(std::cin, MOVE);
 	position.init(FEN, MOVE);
+	/*
+	std::string move = "e2 e4 0";
+	Move _move = { SQUARE(8 - (move[1] - '0'), move[0] - 'a'),
+			SQUARE(8 - (move[4] - '0'), move[3] - 'a'),
+			static_cast<MoveType>(move[6] - '0'),
+			position.board[SQUARE(8 - (move[4] - '0'), move[3] - 'a')] };
+	position.doMove(_move);
+	move = "e7 e5 0";
+	_move = { SQUARE(8 - (move[1] - '0'), move[0] - 'a'),
+			SQUARE(8 - (move[4] - '0'), move[3] - 'a'),
+			static_cast<MoveType>(move[6] - '0'),
+			position.board[SQUARE(8 - (move[4] - '0'), move[3] - 'a')] };
+	position.doMove(_move);
+	position.undoMove(_move);
+	move = "e7 e6 0";
+	_move = { SQUARE(8 - (move[1] - '0'), move[0] - 'a'),
+			SQUARE(8 - (move[4] - '0'), move[3] - 'a'),
+			static_cast<MoveType>(move[6] - '0'),
+			position.board[SQUARE(8 - (move[4] - '0'), move[3] - 'a')] };
+	position.doMove(_move);
+	auto moves = position.generateMoves();
+	for (auto& m : moves)
+	{
+		std::cout << m.toStr() << std::endl;
+	}
+	return 0;
+	*/
 	while (true)
 	{
 
@@ -21,7 +48,7 @@ int main()
 		position.doMove(bm);
 		//std::cout << position.board << std::endl;
 		std::cout << (char)(bm.from.file + 'a') << 8 - bm.from.rank << " " << (char)(bm.to.file + 'a') << 8 - bm.to.rank << " " << std::endl;
-		//std::cout << position.evaluate() << std::endl;
+		std::cout << position.evaluate() << std::endl;
 		++counter;
 	}
 	while (true)
