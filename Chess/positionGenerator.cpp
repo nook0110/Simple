@@ -10,10 +10,11 @@ std::vector<Move> Position::generateMoves()
 
 	for (square dest = 0; dest < 64; dest++)
 	{
+		piece = 0;
 		movablePieces = attackMap[dest] & color[sideToMove]; // picks from all pieces of color[sideToMove] and pieces which attack dest
 		while (movablePieces.any())
 		{
-			piece = findSquare(movablePieces);
+			piece = findSquare(movablePieces, piece);
 			movablePieces.set(piece, 0);
 			if (colorOf(board[dest]) == sideToMove) //trying to eat a figure of the same color
 			{

@@ -8,9 +8,9 @@
 #include "positionGenerator.h"
 #include <omp.h>
 
-inline square findSquare(const std::bitset<64>& bitset) // function that finds '1' in bitset
+inline square findSquare(const std::bitset<64>& bitset, square pos) // function that finds '1' in bitset
 {
-	for (square i = 0; i < bitset.size(); ++i)
+	for (square i = pos; i < bitset.size(); ++i)
 	{
 		if (bitset.test(i))
 			return i;
@@ -78,7 +78,7 @@ struct Position {
 
 	Move findBestMove();
 
-	value findAlphaBeta(int depth = 1, value alpha = INT_MIN, value beta = INT_MAX,const Move& previous = Move());
+	value findAlphaBeta(int depth = 1, value alpha = INT_MIN, value beta = INT_MAX, const Move& previous = Move());
 };
 
 extern Position position;

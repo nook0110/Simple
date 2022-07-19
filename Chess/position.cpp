@@ -257,11 +257,11 @@ void  Position::updateEmptySquare(const Square& sq)
 	square dest = sq.getInd();
 	auto attackers = attackMap[dest];
 	attackers.set(dest, 0);
-	square piece;
+	square piece=0;
 	while (attackers.any())
 	{
 		dest = sq.getInd();
-		piece = findSquare(attackers);
+		piece = findSquare(attackers,piece);
 		attackers.set(piece, 0);
 		square delta = dest - piece;
 		switch (board[piece])
@@ -480,10 +480,10 @@ void  Position::updateOccupiedSquare(const Square& sq)
 
 	square dest = sq.getInd();
 	auto attackers = attackMap[dest];
-	square piece;
+	square piece=0;
 	while (attackers.any())
 	{
-		piece = findSquare(attackers);
+		piece = findSquare(attackers, piece);
 		attackers.set(piece, 0);
 		square delta = dest - piece;
 		switch (board[piece])
@@ -1169,9 +1169,9 @@ Move Position::findBestMove()
 value Position::findAlphaBeta(int depth, value alpha, value beta, const Move& previous)
 {
 	doMove(previous);
-	if (depth > 3 && previous.captured == '-' || depth > 5)
+	if ((depth > 5 && previous.captured == '-') || depth > 5)
 	{
-		return (sideToMove == depth % 2 ? evaluate() : -evaluate());
+		return (sideToMove == depth % 2 ? -evaluate() : evaluate());
 	}
 	if (depth % 2)
 	{

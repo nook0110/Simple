@@ -44,8 +44,8 @@ inline constexpr signed pieceValues[13][PHASE_NONE] = { {126, 208}, {781, 854}, 
 												        {-126, -208}, {-781, -854}, {-825, -915}, {-1276, -1380}, {-2538, -2682}, {(int) - 1e7, (int) - 1e7},
 												        {0, 0} };
 
-inline constexpr std::array<const int, COLOR_NONE> shift = { 0, 6 };
-
+inline constexpr std::array<const int, COLOR_NONE> shift = { 6, 0 };
+	
 inline Color flip(const Color c)
 {
 	if (c == COLOR_NONE)
