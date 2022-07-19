@@ -1078,7 +1078,7 @@ value Position::findAlphaBeta(int depth, value alpha, value beta, const Move& pr
 	{
 		return(depth % 2 ? -1e7 : 1e7);
 	}
-	if ((depth > 5 && previous.captured == '-') || depth > 7)
+	if ((depth > 4 && previous.captured == '-') || depth > 5)
 	{
 		return (sideToMove == depth % 2 ? -evaluate() : evaluate());
 	}

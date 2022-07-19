@@ -61,7 +61,6 @@ const value Position::evaluate()
 			eval[phase] -= mobilityBonus[piece][mobility[COLOR_B][piece]][phase];
 		}
 	}
-	
 	value npm = nonPawnMaterial[COLOR_W] - nonPawnMaterial[COLOR_B];
 	npm = std::max(limits[EG], std::min(limits[MG], npm));
 	value phase = npm - limits[EG];
