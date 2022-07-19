@@ -1,2 +1,2 @@
-brnbknrq/pppppppp/8/8/1P6/8/P1PPPPPP/BRNBKNRQ b b3 2
-b2 b4 
+rnbqkbnr/pppppppp/8/8/8/2N5/PPPPPPPP/R1BQKBNR b -- 1 2
+b1 c3 

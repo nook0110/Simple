@@ -21,7 +21,7 @@ inline square findSquare(const std::bitset<64>& bitset, square pos) // function 
 struct Position {
 	std::string board = "----------------------------------------------------------------";
 	unsigned char sideToMove;
-	square enPassantSquare;
+	square enPassantSquare=-1;
 
 	std::array<std::bitset<64>, 64> attackMap;
 	std::array<std::bitset<64>, COLOR_NONE> color;
