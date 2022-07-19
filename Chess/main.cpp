@@ -15,6 +15,15 @@ int main()
 	std::getline(std::cin, MOVE);
 	position.init(FEN, MOVE);
 	/*
+	const Square from(8 - (move[1] - '0'), move[0] - 'a');
+	const Square to(8 - (move[4] - '0'), move[3] - 'a');
+	if (nonPawn(board[from.getInd()]))
+		return DEFAULT;
+	if (from.file == to.file)
+		return DEFAULT;
+	if (to.rank == 0 || to.rank == 7)
+		return PROMOTION;
+	return (board[to.getInd()] == '-' ? EN_PASSANT : DEFAULT);
 	std::string move = "e2 e4 0";
 	Move _move = { SQUARE(8 - (move[1] - '0'), move[0] - 'a'),
 			SQUARE(8 - (move[4] - '0'), move[3] - 'a'),

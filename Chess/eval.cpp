@@ -49,7 +49,8 @@ const value Position::evaluate()
 				continue;
 			const bitboard attackers = attackMap[sq] & allAttackers;
 			for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
-				mobility[us][piece] += (attackers & pieces[shift[us] + piece]).count();
+				if ((attackers & pieces[shift[us] + piece]).any())
+					mobility[us][piece] += (attackers & pieces[shift[us] + piece]).count();
 		}
 	}
 	for (auto phase : { MG, EG })
@@ -60,14 +61,11 @@ const value Position::evaluate()
 			eval[phase] -= mobilityBonus[piece][mobility[COLOR_B][piece]][phase];
 		}
 	}
+	
 	value npm = nonPawnMaterial[COLOR_W] - nonPawnMaterial[COLOR_B];
 	npm = std::max(limits[EG], std::min(limits[MG], npm));
 	value phase = npm - limits[EG];
 	value tapered = (eval[MG] * phase + eval[EG] * (rangeLength - phase)) / rangeLength;
-	if (tapered > 1e5 && tapered<1e6)
-	{
-		int a = 10;
-	}
 	value tempo = tempoBonus * (sideToMove? 1 : -1);
 	return tapered + tempo;
 }
