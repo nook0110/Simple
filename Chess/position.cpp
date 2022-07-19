@@ -844,7 +844,7 @@ void Position::init(std::string FEN, std::string move)
 	char isAlreadyInited;
 	initTXT >> isAlreadyInited;
 	initTXT.close();
-	if (isAlreadyInited == '0' || 1)
+	if (isAlreadyInited == '0')
 	{
 		auto current = FEN.begin();
 		for (int row = 0; row < 8; ++row, ++current)
@@ -885,28 +885,31 @@ void Position::init(std::string FEN, std::string move)
 	}
 	else
 	{
-		read();
-		Move _move;
-		if (move.size() == 7)
+		std::ifstream pos("Position.txt");
+		pos >> board;
+		pos.close();
+		for (square ind = 0; ind < 64; ++ind)
 		{
-			_move = { SQUARE(8 - (move[1] - '0'), move[0] - 'a'),
-			SQUARE(8 - (move[4] - '0'), move[3] - 'a'),
-			PROMOTION,
-			board[SQUARE(move[3] - 'a' + 1, move[4] - '0')]
-			};
+			if (board[ind] == '-')
+				continue;
+			place(Square(ind), board[ind]);
 		}
-		else if (board[SQUARE(move[1] - 'a' + 1, move[0] - '0')] == 'p' || board[SQUARE(move[1] - 'a' + 1, move[0] - '0')] == 'P')
-		{
 
-		}
+		read();
+		Move prevMove;
+		const Square from(8 - (move[1] - '0'), move[0] - 'a');
+		const Square to(8 - (move[4] - '0'), move[3] - 'a');
+		if (nonPawn(board[from.getInd()]))
+			prevMove.moveType = DEFAULT;
+		if (from.file == to.file)
+			prevMove.moveType = DEFAULT;
+		if (to.rank == 0 || to.rank == 7)
+			prevMove.moveType = PROMOTION;
 		else
-		{
-			_move = { SQUARE(8 - (move[1] - '0'), move[0] - 'a'),
-			SQUARE(8 - (move[4] - '0'), move[3] - 'a'),
-			DEFAULT,
-			board[SQUARE(move[3] - 'a' + 1, move[4] - '0')]
-			};
-		}
+			prevMove.moveType = (board[to.getInd()] == '-' ? EN_PASSANT : DEFAULT);
+		prevMove.from = from;
+		prevMove.to = to;
+		doMove(prevMove);
 	}
 
 }
@@ -914,6 +917,8 @@ void Position::init(std::string FEN, std::string move)
 void Position::read()
 {
 	readAttackMap();
+	readColor();
+	readPieces();
 }
 
 void Position::log()
@@ -921,6 +926,11 @@ void Position::log()
 	logAttackMap();
 	logColor();
 	logPieces();
+	std::ofstream pos("Position.txt", std::ofstream::trunc);
+	std::ofstream init("Init.txt", std::ofstream::trunc);
+	init << 1;
+	pos << board;
+	pos.close();
 }
 
 void Position::readAttackMap()
@@ -942,7 +952,7 @@ void Position::logAttackMap()
 	attackMapTXT.open("attackMap.txt", std::ofstream::out | std::ofstream::trunc);
 	for (int dest = 0; dest < 64; ++dest)
 	{
-		attackMapTXT << dest << std::endl;
+		/*attackMapTXT << dest << std::endl;
 		auto str = attackMap[dest].to_string();
 		std::reverse(str.begin(), str.end());
 		for (int c = 0; c < 64; ++c)
@@ -950,8 +960,8 @@ void Position::logAttackMap()
 			if (c % 8 == 0)
 				attackMapTXT << std::endl;
 			attackMapTXT << str[c];
-		}
-		attackMapTXT << std::endl << attackMap[dest].to_string() << std::endl;
+		}*/
+		attackMapTXT << attackMap[dest].to_string() << std::endl;
 
 	}
 	attackMapTXT.close();
@@ -1078,7 +1088,7 @@ value Position::findAlphaBeta(int depth, value alpha, value beta, const Move& pr
 	{
 		return(depth % 2 ? -1e7 : 1e7);
 	}
-	if ((depth > 5 && previous.captured == '-') || depth > 7)
+	if ((depth > 3 && previous.captured == '-') || depth > 3)
 	{
 		return (sideToMove == depth % 2 ? -evaluate() : evaluate());
 	}

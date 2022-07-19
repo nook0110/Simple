@@ -7,13 +7,44 @@
 
 // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w -- 1
 
-int main()
+int main(int argc, char** argv)
 {
+	if (argc > 2)
+	{
+		std::ifstream in(argv[1]);
+		std::string FEN;
+		std::string MOVE;
+		std::getline(in, FEN);
+		std::getline(in, MOVE);
+		position.init(FEN, MOVE);
+		std::ofstream out(argv[2]);
+
+		auto bm = position.findBestMove();
+		out << bm.toStr();
+		out.close();
+		return 0;
+	}
+
+	std::ifstream in("Moves\\Imove3.txt");
 	std::string FEN;
 	std::string MOVE;
-	std::getline(std::cin, FEN);
-	std::getline(std::cin, MOVE);
+	std::getline(in, FEN);
+	std::getline(in, MOVE);
 	position.init(FEN, MOVE);
+	std::ofstream out("Moves\\Omove3.txt");
+
+	auto bm = position.findBestMove();
+	out << bm.toStr();
+	out.close();
+	position.doMove(bm);
+	position.log();
+	return 0;
+
+
+
+
+
+
 	/*
 	const Square from(8 - (move[1] - '0'), move[0] - 'a');
 	const Square to(8 - (move[4] - '0'), move[3] - 'a');
