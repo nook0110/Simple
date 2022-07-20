@@ -64,17 +64,8 @@ struct Position {
 	const value evaluate();
 
 	void init(std::string FEN, std::string move);
-	void read();
-	void log();
 
-	void readAttackMap();
-	void logAttackMap();
 
-	void readColor();
-	void logColor();
-
-	void readPieces();
-	void logPieces();
 
 	std::vector<Move> generateMoves();
 

@@ -839,184 +839,45 @@ std::bitset<64> Position::pawnAttacks(const Color color)
 
 void Position::init(std::string FEN, std::string move)
 {
-	std::ifstream initTXT;
-	initTXT.open("Init.txt");
-	char isAlreadyInited;
-	initTXT >> isAlreadyInited;
-	initTXT.close();
-	if (isAlreadyInited == '0' || 1)
+
+	auto current = FEN.begin();
+	for (int row = 0; row < 8; ++row, ++current)
 	{
-		auto current = FEN.begin();
-		for (int row = 0; row < 8; ++row, ++current)
+		for (int column = 0; current != FEN.end() && *current != '/' && column < 8; ++current)
 		{
-			for (int column = 0; current != FEN.end() && *current != '/' && column < 8; ++current)
+			if (*current >= '0' && *current <= '9')
 			{
-				if (*current >= '0' && *current <= '9')
-				{
-					column += *current - '1';
-				}
-				else
-				{
-					board[SQUARE(row, column)] = *current;
-				}
-				++column;
+				column += *current - '1';
 			}
-			if (current == FEN.end())
+			else
 			{
-				break;
+				board[SQUARE(row, column)] = *current;
 			}
+			++column;
 		}
-		sideToMove = (*current == 'w');
-		current += 2;
-		auto enPassantTargetColumn = *current;
-		++current;
-		auto enPassantTargetRow = *current;
-		enPassantSquare = SQUARE(enPassantTargetColumn - 'a' + 1, enPassantTargetRow - '0');
-		for (square ind = 0; ind < 64; ++ind)
+		if (current == FEN.end())
 		{
-			if (board[ind] == '-')
-				continue;
-			place(Square(ind), board[ind]);
-		}
-		for (auto color : { COLOR_W, COLOR_B })
-		{
-			nonPawnMaterial[color] -= pieceValues[shift[color] + KING][MG];
+			break;
 		}
 	}
-	else
+	sideToMove = (*current == 'w');
+	current += 2;
+	auto enPassantTargetColumn = *current;
+	++current;
+	auto enPassantTargetRow = *current;
+	enPassantSquare = SQUARE(enPassantTargetColumn - 'a' + 1, enPassantTargetRow - '0');
+	for (square ind = 0; ind < 64; ++ind)
 	{
-		std::ifstream pos("Position.txt");
-		pos >> board;
-		pos.close();
-		for (square ind = 0; ind < 64; ++ind)
-		{
-			if (board[ind] == '-')
-				continue;
-			place(Square(ind), board[ind]);
-		}
-		Move prevMove;
-		const Square from(8 - (move[1] - '0'), move[0] - 'a');
-		const Square to(8 - (move[4] - '0'), move[3] - 'a');
-		if (nonPawn(board[from.getInd()]))
-			prevMove.moveType = DEFAULT;
-		if (from.file == to.file)
-			prevMove.moveType = DEFAULT;
-		if (to.rank == 0 || to.rank == 7)
-			prevMove.moveType = PROMOTION;
-		else
-			prevMove.moveType = (board[to.getInd()] == '-' ? EN_PASSANT : DEFAULT);
-		prevMove.from = from;
-		prevMove.to = to;
-		doMove(prevMove);
+		if (board[ind] == '-')
+			continue;
+		place(Square(ind), board[ind]);
+	}
+	for (auto color : { COLOR_W, COLOR_B })
+	{
+		nonPawnMaterial[color] -= pieceValues[shift[color] + KING][MG];
 	}
 
-}
 
-void Position::read()
-{
-	readAttackMap();
-	readColor();
-	readPieces();
-}
-
-void Position::log()
-{
-	//logAttackMap();
-	//logColor();
-	//logPieces();
-	std::ofstream pos("Position.txt", std::ofstream::trunc);
-	std::ofstream init("Init.txt", std::ofstream::trunc);
-	init << 1;
-	pos << board;
-	pos.close();
-}
-
-void Position::readAttackMap()
-{
-	std::ifstream attackMapTXT;
-	attackMapTXT.open("AttackMap.txt");
-	std::string bitset;
-	for (int i = 0; i < 64; ++i)
-	{
-		attackMapTXT >> bitset;
-		attackMap[i] = std::bitset<64>(bitset);
-	}
-	attackMapTXT.close();
-}
-
-void Position::logAttackMap()
-{
-	std::ofstream  attackMapTXT;
-	attackMapTXT.open("attackMap.txt", std::ofstream::out | std::ofstream::trunc);
-	for (int dest = 0; dest < 64; ++dest)
-	{
-		/*attackMapTXT << dest << std::endl;
-		auto str = attackMap[dest].to_string();
-		std::reverse(str.begin(), str.end());
-		for (int c = 0; c < 64; ++c)
-		{
-			if (c % 8 == 0)
-				attackMapTXT << std::endl;
-			attackMapTXT << str[c];
-		}*/
-		attackMapTXT << attackMap[dest].to_string() << std::endl;
-
-	}
-	attackMapTXT.close();
-}
-
-void Position::readColor()
-{
-	std::ifstream colorTXT;
-	colorTXT.open("Color.txt");
-	std::string bitset;
-	for (auto phase : { COLOR_W, COLOR_B })
-	{
-		colorTXT >> bitset;
-		color[phase] = std::bitset<64>(bitset);
-	}
-	colorTXT.close();
-}
-
-void Position::logColor()
-{
-	std::ofstream  colorTXT;
-	colorTXT.open("Color.txt", std::ofstream::out | std::ofstream::trunc);
-	for (auto phase : { COLOR_W, COLOR_B })
-	{
-		colorTXT << color[phase].to_string() << std::endl;
-	}
-	colorTXT.close();
-}
-
-void Position::readPieces()
-{
-	std::ifstream  piecesTXT;
-	piecesTXT.open("Pieces.txt");
-	std::string bitset;
-	for (auto piece : { PAWN, KNIGHT, BISHOP, ROOK, KING, QUEEN })
-	{
-		for (auto color : { COLOR_W, COLOR_B })
-		{
-			piecesTXT >> bitset;
-			pieces[shift[color] + piece] = std::bitset<64>(bitset);
-		}
-	}
-	piecesTXT.close();
-}
-
-void Position::logPieces()
-{
-	std::ofstream  piecesTXT;
-	piecesTXT.open("Pieces.txt", std::ofstream::out | std::ofstream::trunc);
-	for (auto piece : { PAWN, KNIGHT, BISHOP, ROOK, KING, QUEEN })
-	{
-		for (auto color : { COLOR_W, COLOR_B })
-		{
-			piecesTXT << pieces[shift[color] + piece].to_string() << std::endl;
-		}
-	}
-	piecesTXT.close();
 }
 
 
