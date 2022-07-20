@@ -11,6 +11,7 @@ int main(int argc, char** argv)
 {
 	if (argc > 2)
 	{
+		std::cout << argc << std::endl;
 		std::ifstream in(argv[1]);
 		std::string FEN;
 		std::string MOVE;
@@ -21,24 +22,26 @@ int main(int argc, char** argv)
 
 		auto bm = position.findBestMove();
 		out << bm.toStr();
+		position.doMove(bm);
+		position.log();
 		out.close();
 		return 0;
 	}
 
-	std::ifstream in("Moves\\Imove3.txt");
+	std::ifstream in("Moves\\Imove0.txt");
 	std::string FEN;
 	std::string MOVE;
 	std::getline(in, FEN);
 	std::getline(in, MOVE);
 	position.init(FEN, MOVE);
-	std::ofstream out("Moves\\Omove3.txt");
+	std::ofstream out("Moves\\Omove0.txt");
 
-	auto bm = position.findBestMove();
-	out << bm.toStr();
-	out.close();
-	position.doMove(bm);
-	position.log();
-	return 0;
+	//auto bm = position.findBestMove();
+	//out << bm.toStr();
+	//out.close();
+	//position.doMove(bm);
+	//position.log();
+	//return 0;
 
 
 

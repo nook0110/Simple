@@ -844,7 +844,7 @@ void Position::init(std::string FEN, std::string move)
 	char isAlreadyInited;
 	initTXT >> isAlreadyInited;
 	initTXT.close();
-	if (isAlreadyInited == '0')
+	if (isAlreadyInited == '0' || 1)
 	{
 		auto current = FEN.begin();
 		for (int row = 0; row < 8; ++row, ++current)
@@ -894,8 +894,6 @@ void Position::init(std::string FEN, std::string move)
 				continue;
 			place(Square(ind), board[ind]);
 		}
-
-		read();
 		Move prevMove;
 		const Square from(8 - (move[1] - '0'), move[0] - 'a');
 		const Square to(8 - (move[4] - '0'), move[3] - 'a');
@@ -923,9 +921,9 @@ void Position::read()
 
 void Position::log()
 {
-	logAttackMap();
-	logColor();
-	logPieces();
+	//logAttackMap();
+	//logColor();
+	//logPieces();
 	std::ofstream pos("Position.txt", std::ofstream::trunc);
 	std::ofstream init("Init.txt", std::ofstream::trunc);
 	init << 1;
@@ -1088,7 +1086,7 @@ value Position::findAlphaBeta(int depth, value alpha, value beta, const Move& pr
 	{
 		return(depth % 2 ? -1e7 : 1e7);
 	}
-	if ((depth > 5 && previous.captured == '-') || depth > 5)
+	if ((depth > 3 && previous.captured == '-') || depth > 7)
 	{
 		return (sideToMove == depth % 2 ? -evaluate() : evaluate());
 	}
