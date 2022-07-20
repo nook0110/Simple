@@ -7,6 +7,7 @@
 #include <string>
 #include "positionGenerator.h"
 #include <omp.h>
+#include <optional>
 
 inline square findSquare(const std::bitset<64>& bitset, square pos) // function that finds '1' in bitset
 {
@@ -71,7 +72,7 @@ struct Position {
 
 	Move findBestMove();
 
-	value findAlphaBeta(int depth, value alpha, value beta , const Move& previous);
+	std::optional<value> findAlphaBeta(int depth, value alpha, value beta , const Move& previous);
 };
 
 extern Position position;

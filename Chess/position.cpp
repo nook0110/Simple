@@ -885,12 +885,17 @@ void findMove(Position& pos, const std::vector<Move>& moves, value& alpha, value
 {
 	for (int i = 0; i < moves.size(); ++i)
 	{
-		value tempAlpha = pos.findAlphaBeta(1, alpha, beta, moves[i]);
+		pos.doMove(moves[i]);
+		auto tempAlpha = pos.findAlphaBeta(1, alpha, beta, moves[i]);
 		pos.undoMove(moves[i]);
-		if (alpha < tempAlpha)
+		if (!tempAlpha.has_value())
+		{
+			continue;
+		}
+		if (alpha < tempAlpha.value())
 		{
 			bestMove = moves[i];
-			alpha = tempAlpha;
+			alpha = tempAlpha.value();
 		}
 		if (alpha >= beta)
 			break;
@@ -908,7 +913,7 @@ Move Position::findBestMove()
 	Position c1 = *this, c2 = *this, c3 = *this, c4 = *this, c5 = *this;
 	auto shift = moves.size() / 6;
 	std::vector<Move>::const_iterator it1 = moves.begin(), it2 = moves.begin() + shift, it3 = moves.begin() + shift * 2, it4 = moves.begin() + shift * 3, it5 = moves.begin() + shift * 4, it6 = moves.begin() + shift * 5, it7 = moves.end();
-#pragma omp parallel sections num_threads(6)
+#pragma omp parallel sections num_threads(1)
 	{
 #pragma omp section
 		{
@@ -940,48 +945,82 @@ Move Position::findBestMove()
 	return bestMove;
 }
 
-value Position::findAlphaBeta(int depth, value alpha, value beta, const Move& previous)
+std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta, const Move& previous)
 {
-	doMove(previous);
 	if ((attackMap[kingPos[!sideToMove]] & color[sideToMove]).any())
 	{
-		return(depth % 2 ? -1e7 : 1e7);
+		return std::nullopt;
 	}
-	if ((depth > 3 && previous.captured == '-') || depth > 7)
+	if ((depth > 4 && previous.captured == '-') || depth > 7)
 	{
 		return (sideToMove == depth % 2 ? -evaluate() : evaluate());
 	}
+	value unc = 0;
 	if (depth % 2 == 0)
 	{
-		value tempAlpha;
+		std::optional<value> tempAlpha;
 		auto moves = generateMoves();
 		for (const auto& move : moves)
 		{
-			tempAlpha = findAlphaBeta(depth + 1, alpha, beta, move);
-			undoMove(move);
-			if (alpha < tempAlpha)
-			{
-				alpha = tempAlpha;
-			}
 			if (alpha >= beta)
 				break;
+			doMove(move);
+			tempAlpha = findAlphaBeta(depth + 1, alpha, beta, move);
+			undoMove(move);
+			if (!tempAlpha.has_value())
+			{
+				++unc;
+				continue;
+			}
+			if (alpha < tempAlpha.value())
+			{
+				alpha = tempAlpha.value();
+			}
+		}
+		if (unc == moves.size())
+		{
+			if ((attackMap[kingPos[sideToMove]] & color[!sideToMove]).any())
+			{
+				return -2e7;
+			}
+			else
+			{
+				return 0;
+			}
 		}
 		return alpha;
 	}
 	else
 	{
-		value tempBeta;
+		std::optional<value> tempBeta;
 		auto moves = generateMoves();
 		for (auto& move : moves)
 		{
-			tempBeta = findAlphaBeta(depth + 1, alpha, beta, move);
-			undoMove(move);
-			if (beta > tempBeta)
-			{
-				beta = tempBeta;
-			}
 			if (alpha >= beta)
 				break;
+			doMove(move);
+			tempBeta = findAlphaBeta(depth + 1, alpha, beta, move);
+			undoMove(move);
+			if (!tempBeta.has_value())
+			{
+				++unc;
+				continue;
+			}
+			if (beta > tempBeta.value())
+			{
+				beta = tempBeta.value();
+			}
+		}
+		if (unc == moves.size())
+		{
+			if ((attackMap[kingPos[sideToMove]] & color[!sideToMove]).any())
+			{
+				return 2e7;
+			}
+			else
+			{
+				return 0;
+			}
 		}
 		return beta;
 	}

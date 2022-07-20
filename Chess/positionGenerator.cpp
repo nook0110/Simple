@@ -28,6 +28,21 @@ std::vector<Move> Position::generateMoves()
 					moves.push_back(Move({ Square(piece), Square(dest), EN_PASSANT, board[dest] }));
 					continue;
 				}
+				square delta = dest - piece;
+				if (dest < 8 || dest >= 56)
+				{
+					if (delta == 8 || delta == -8 && board[dest]=='-')
+					{
+						moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, '-'}));
+						continue;
+					}
+					if (board[dest] == '-')
+					{
+						continue;
+					}
+					moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, board[dest]}));
+					continue;
+				}
 				if (dest - piece == 8 || dest - piece == -8)
 				{
 					if (board[dest] != '-')
@@ -53,11 +68,6 @@ std::vector<Move> Position::generateMoves()
 						continue;
 					}
 					moves.push_back(Move({ Square(piece), Square(dest), DEFAULT, '-' }));
-					continue;
-				}
-				if (dest < 8 || dest >= 56)
-				{
-					moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, board[dest] }));
 					continue;
 				}
 				if (board[dest] == '-')
