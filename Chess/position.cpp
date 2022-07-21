@@ -953,7 +953,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 	{
 		return std::nullopt;
 	}
-	if ((depth > 3 && previous.captured == '-') || depth > 7)
+	if ((depth > 5 && previous.captured == '-') || depth > 7)
 	{
 		return (sideToMove == (depth % 2) ? -evaluate() : evaluate());
 	}
@@ -981,9 +981,9 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		}
 		if (unc == moves.size())
 		{
-			if ((attackMap[kingPos[sideToMove]] & color[!sideToMove]).any())
+			if ((attackMap[kingPos[sideToMove]] & (color[!sideToMove] ^ pawns(them))).any() || (king(us) & pawnAttacks(them)).any())
 			{
-				return -2e7;
+				return -100000 + depth << 4;
 			}
 			else
 			{
@@ -1016,9 +1016,9 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		}
 		if (unc == moves.size())
 		{
-			if ((attackMap[kingPos[sideToMove]] & color[!sideToMove]).any())
+			if ((attackMap[kingPos[sideToMove]] & (color[!sideToMove] ^ pawns(them))).any() || (king(us) & pawnAttacks(them)).any())
 			{
-				return 2e7;
+				return 100000 - depth << 4;
 			}
 			else
 			{

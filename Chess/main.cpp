@@ -9,6 +9,7 @@
 
 int main(int argc, char** argv)
 {
+	/*
 	if (argc > 2)
 	{
 		std::cout << "Start!";
@@ -27,8 +28,9 @@ int main(int argc, char** argv)
 		std::cout << "End!";
 		return 0;
 	}
+	*/
 
-	std::string FEN = "r3k2r/5p1p/1p3p2/4b3/1p1p1P2/1B1K4/PPP3PP/R3R3 b -- 2";
+	std::string FEN = "1n2K3/5B2/8/1R1RB3/brk1p3/1p1Nr3/3P4/2b5 w -- 1";
 	std::string MOVE;
 	position.init(FEN, MOVE);
 

@@ -40,8 +40,8 @@ enum DiscretePhase
 	PHASE_NONE
 };
 
-inline constexpr signed pieceValues[13][PHASE_NONE] = { {126, 208}, {781, 854}, {825, 915}, {1276, 1380}, {2538, 2682}, {(int)1e7, (int)1e7},
-												        {-126, -208}, {-781, -854}, {-825, -915}, {-1276, -1380}, {-2538, -2682}, {(int) - 1e7, (int) - 1e7},
+inline constexpr signed pieceValues[13][PHASE_NONE] = { {126, 208}, {781, 854}, {825, 915}, {1276, 1380}, {2538, 2682}, {0, 0},
+												        {-126, -208}, {-781, -854}, {-825, -915}, {-1276, -1380}, {-2538, -2682}, {0, 0},
 												        {0, 0} };
 
 inline constexpr std::array<const int, COLOR_NONE> shift = { 6, 0 };
