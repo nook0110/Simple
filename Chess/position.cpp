@@ -983,7 +983,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		{
 			if ((attackMap[kingPos[sideToMove]] & color[!sideToMove]).any())
 			{
-				return -2e7;
+				return -100000 + depth << 4;
 			}
 			else
 			{
@@ -1018,7 +1018,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		{
 			if ((attackMap[kingPos[sideToMove]] & color[!sideToMove]).any())
 			{
-				return 2e7;
+				return 100000 - depth << 4;
 			}
 			else
 			{
