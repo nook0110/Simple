@@ -75,4 +75,6 @@ struct Position {
 	std::optional<value> findAlphaBeta(int depth, value alpha, value beta , const Move& previous);
 };
 
+void findMove(Position& pos, const std::vector<Move>& moves, value& alpha, value& beta, Move& bestMove);
+
 extern Position position;

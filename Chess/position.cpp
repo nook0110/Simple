@@ -913,7 +913,7 @@ Move Position::findBestMove()
 	Position c1 = *this, c2 = *this, c3 = *this, c4 = *this, c5 = *this;
 	auto shift = moves.size() / 6;
 	std::vector<Move>::const_iterator it1 = moves.begin(), it2 = moves.begin() + shift, it3 = moves.begin() + shift * 2, it4 = moves.begin() + shift * 3, it5 = moves.begin() + shift * 4, it6 = moves.begin() + shift * 5, it7 = moves.end();
-#pragma omp parallel sections num_threads(1)
+#pragma omp parallel sections num_threads(6)
 	{
 #pragma omp section
 		{
@@ -947,13 +947,15 @@ Move Position::findBestMove()
 
 std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta, const Move& previous)
 {
-	if ((attackMap[kingPos[!sideToMove]] & color[sideToMove]).any())
+	auto us = static_cast<Color>(sideToMove);
+	auto them = flip(us);
+	if ((attackMap[kingPos[!sideToMove]] & (color[sideToMove] ^ pawns(us))).any() || (king(them) & pawnAttacks(us)).any())
 	{
 		return std::nullopt;
 	}
-	if ((depth > 4 && previous.captured == '-') || depth > 7)
+	if ((depth > 3 && previous.captured == '-') || depth > 7)
 	{
-		return (sideToMove == depth % 2 ? -evaluate() : evaluate());
+		return (sideToMove == (depth % 2) ? -evaluate() : evaluate());
 	}
 	value unc = 0;
 	if (depth % 2 == 0)
@@ -994,6 +996,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 	{
 		std::optional<value> tempBeta;
 		auto moves = generateMoves();
+
 		for (auto& move : moves)
 		{
 			if (alpha >= beta)

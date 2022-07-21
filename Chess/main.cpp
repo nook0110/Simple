@@ -28,11 +28,12 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	std::string FEN = "3B2R1/2Pk4/Q6P/8/4K3/8/8/8 w -- 1";
+	std::string FEN = "r3k2r/5p1p/1p3p2/4b3/1p1p1P2/1B1K4/PPP3PP/R3R3 b -- 2";
 	std::string MOVE;
 	position.init(FEN, MOVE);
 
 	auto bm = position.findBestMove();
+
 	std::cout << bm.toStr();
 	return 0;
 
