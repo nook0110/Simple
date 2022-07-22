@@ -64,7 +64,7 @@ const value Position::evaluate()
 	value npm = nonPawnMaterial[COLOR_W] - nonPawnMaterial[COLOR_B];
 	npm = std::max(limits[EG], std::min(limits[MG], npm));
 	value phase = npm - limits[EG];
-	value tapered = (eval[MG] * phase + eval[EG] * (rangeLength - phase)) / rangeLength;
-	value tempo = tempoBonus * (sideToMove? 1 : -1);
+	value tapered = (eval[MG] * phase + eval[EG] * (rangeLength - phase));
+	value tempo = tempoBonus * rangeLength * (sideToMove? 1 : -1);
 	return tapered + tempo;
 }

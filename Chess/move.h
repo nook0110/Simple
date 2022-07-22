@@ -45,7 +45,7 @@ struct Move {
 			return moveType > other.moveType;
 		if (captured != other.captured)
 			if (captured != '-' && other.captured != '-')
-				return PIECES[captured] > PIECES[other.captured];
+				return std::abs(pieceValues[PIECES[captured]][MG]) > std::abs(pieceValues[PIECES[other.captured]][MG]);
 			else
 				return PIECES[captured] < PIECES[other.captured];
 		return abs(7 - 2 * to.file) + abs(7 - 2 * to.rank) < abs(7 - 2 * other.to.file) + abs(7 - 2 * other.to.rank);
