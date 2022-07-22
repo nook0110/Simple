@@ -31,9 +31,10 @@ std::vector<Move> Position::generateMoves()
 				square delta = dest - piece;
 				if (dest < 8 || dest >= 56)
 				{
-					if (delta == 8 || delta == -8 && board[dest]=='-')
+					if (delta == 8 || delta == -8)
 					{
-						moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, '-'}));
+						if(board[dest] == '-')
+							moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, '-'}));
 						continue;
 					}
 					if (board[dest] == '-')
@@ -58,7 +59,7 @@ std::vector<Move> Position::generateMoves()
 					{
 						continue;
 					}
-					moves.push_back(Move({ Square(piece), Square(dest), DEFAULT, '-' }));
+					moves.push_back(Move({ Square(piece), Square(dest), DOUBLE, '-' }));
 					continue;
 				}
 				if (dest - piece == -16) // double square move 

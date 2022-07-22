@@ -10,8 +10,9 @@ struct Square {
 };
 
 enum MoveType {
-	DEFAULT,
+	DOUBLE,
 	EN_PASSANT,
+	DEFAULT,
 	PROMOTION,
 };
 
@@ -36,5 +37,17 @@ struct Move {
 			}
 		}
 		return str;
+	}
+
+	const bool operator< (const Move& other) const
+	{
+		if (moveType != other.moveType)
+			return moveType > other.moveType;
+		if (captured != other.captured)
+			if (captured != '-' && other.captured != '-')
+				return PIECES[captured] > PIECES[other.captured];
+			else
+				return PIECES[captured] < PIECES[other.captured];
+		return abs(7 - 2 * to.file) + abs(7 - 2 * to.rank) < abs(7 - 2 * other.to.file) + abs(7 - 2 * other.to.rank);
 	}
 };

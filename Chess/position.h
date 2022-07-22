@@ -8,6 +8,7 @@
 #include "positionGenerator.h"
 #include <omp.h>
 #include <optional>
+#include <mutex>
 
 inline square findSquare(const std::bitset<64>& bitset, square pos) // function that finds '1' in bitset
 {
@@ -18,6 +19,7 @@ inline square findSquare(const std::bitset<64>& bitset, square pos) // function 
 	}
 	return 64;
 }
+
 
 struct Position {
 	std::string board = "----------------------------------------------------------------";
@@ -51,10 +53,12 @@ struct Position {
 	void updateEmptySquare(const Square& square);
 	void updateOccupiedSquare(const Square& square);
 
-	std::bitset<64>& pawns(const Color color);
-	std::bitset<64>& queen(const Color color);
-	std::bitset<64>& king(const Color color);
-	std::bitset<64> pawnAttacks(const Color color);
+	const std::bitset<64>& pawns(const Color color) const;
+	const std::bitset<64>& queen(const Color color) const;
+	const std::bitset<64>& king(const Color color) const;
+	std::bitset<64> pawnAttacks(const Color color) const;
+
+	const bool underCheck(const Color us) const;
 
 	// evaluation
 

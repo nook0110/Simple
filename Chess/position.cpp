@@ -761,17 +761,24 @@ void Position::doMove(const Move& move)
 	remove(move.from);
 	switch (move.moveType)
 	{
+	case DOUBLE:
+		place(move.to, pieceToMove);
+		enPassantSquare = (move.to.getInd() + move.from.getInd()) / 2;
+		break;
 	case DEFAULT:
+		enPassantSquare = -1;
 		if (capturedPiece != '-')
 			remove(captureSquare);
 		place(move.to, pieceToMove);
 		break;
 	case EN_PASSANT:
+		enPassantSquare = -1;
 		captureSquare.file = sideToMove ? 3 : 4; // one of the central lines
 		remove(captureSquare);
 		place(move.to, pieceToMove);
 		break;
 	case PROMOTION:
+		enPassantSquare = -1;
 		if (capturedPiece != '-')
 			remove(captureSquare);
 		place(move.to, sideToMove ? 'Q' : 'q');
@@ -809,22 +816,22 @@ void Position::undoMove(const Move& move)
 		place(move.to, move.captured);
 }
 
-std::bitset<64>& Position::pawns(const Color color)
+const std::bitset<64>& Position::pawns(const Color color) const
 {
 	return pieces[shift[color] + PAWN];
 }
 
-std::bitset<64>& Position::queen(const Color color)
+const std::bitset<64>& Position::queen(const Color color) const
 {
 	return pieces[shift[color] + QUEEN];
 }
 
-std::bitset<64>& Position::king(const Color color)
+const std::bitset<64>& Position::king(const Color color) const
 {
 	return pieces[shift[color] + KING];
 }
 
-std::bitset<64> Position::pawnAttacks(const Color color)
+std::bitset<64> Position::pawnAttacks(const Color color) const
 {
 	std::bitset<64> pawnsPushed = pawns(color);
 	if (color == COLOR_W)
@@ -835,6 +842,12 @@ std::bitset<64> Position::pawnAttacks(const Color color)
 	const std::bitset<64> leftEdgePawns = pawnsPushed & FILES[0];
 	const std::bitset<64> rightEdgePawns = pawnsPushed & FILES[7];
 	return (nonEdgePawns << 1) | (nonEdgePawns >> 1) | (leftEdgePawns >> 1) | (rightEdgePawns << 1);
+}
+
+const bool Position::underCheck(const Color us) const
+{
+	const Color them = flip(us);
+	return (attackMap[kingPos[us]] & (color[them] ^ pawns(them))).any() || (king(us) & pawnAttacks(them)).any();
 }
 
 void Position::init(std::string FEN, std::string move)
@@ -865,7 +878,7 @@ void Position::init(std::string FEN, std::string move)
 	auto enPassantTargetColumn = *current;
 	++current;
 	auto enPassantTargetRow = *current;
-	enPassantSquare = SQUARE(enPassantTargetColumn - 'a' + 1, enPassantTargetRow - '0');
+	enPassantSquare = SQUARE(8 - (enPassantTargetRow - '0'), enPassantTargetColumn - 'a');
 	for (square ind = 0; ind < 64; ++ind)
 	{
 		if (board[ind] == '-')
@@ -880,6 +893,7 @@ void Position::init(std::string FEN, std::string move)
 
 }
 
+std::mutex updateBM;
 
 void findMove(Position& pos, const std::vector<Move>& moves, value& alpha, value& beta, Move& bestMove)
 {
@@ -894,8 +908,10 @@ void findMove(Position& pos, const std::vector<Move>& moves, value& alpha, value
 		}
 		if (alpha < tempAlpha.value())
 		{
+			updateBM.lock();
 			bestMove = moves[i];
 			alpha = tempAlpha.value();
+			updateBM.unlock();
 		}
 		if (alpha >= beta)
 			break;
@@ -909,35 +925,64 @@ Move Position::findBestMove()
 	Move bestMove = moves[0];
 	value alpha = INT_MIN;
 	value beta = INT_MAX;
+	Position c1 = *this, c2 = *this, c3 = *this, c4 = *this, c5 = *this, c6 = *this, c7 = *this;
+	auto shift = moves.size() / 8;
+	auto remainder = moves.size() % 8;
+	std::array<std::vector<Move>::iterator, 9> its;
+	
+	its[0] = moves.begin();
+	for (unsigned long long i = 1; i < 8; ++i)
+	{
+		its[i] = moves.begin() + shift*i;
+		its[i] += std::min(i, remainder);
+	}
+	its[8] = moves.end();
+	for (int i = 0; i < 8; ++i)
+	{
+		std::sort(its[i], its[i + 1]);
+	}
 
-	Position c1 = *this, c2 = *this, c3 = *this, c4 = *this, c5 = *this;
-	auto shift = moves.size() / 6;
-	std::vector<Move>::const_iterator it1 = moves.begin(), it2 = moves.begin() + shift, it3 = moves.begin() + shift * 2, it4 = moves.begin() + shift * 3, it5 = moves.begin() + shift * 4, it6 = moves.begin() + shift * 5, it7 = moves.end();
-#pragma omp parallel sections num_threads(6)
+#pragma omp parallel sections num_threads(8)
 	{
 #pragma omp section
 		{
-			findMove(*this, std::vector<Move>(it1, it2), alpha, beta, bestMove);
+			std::cout << 1;
+			findMove(*this, std::vector<Move>(its[0], its[1]), alpha, beta, bestMove);
 		}
 #pragma omp section
 		{
-			findMove(c1, std::vector<Move>(it2, it3), alpha, beta, bestMove);
+			std::cout << 2;
+			findMove(c1, std::vector<Move>(its[1], its[2]), alpha, beta, bestMove);
 		}
 #pragma omp section
 		{
-			findMove(c2, std::vector<Move>(it3, it4), alpha, beta, bestMove);
+			std::cout << 3;
+			findMove(c2, std::vector<Move>(its[2], its[3]), alpha, beta, bestMove);
 		}
 #pragma omp section
 		{
-			findMove(c3, std::vector<Move>(it4, it5), alpha, beta, bestMove);
+			std::cout << 4;
+			findMove(c3, std::vector<Move>(its[3], its[4]), alpha, beta, bestMove);
 		}
 #pragma omp section
 		{
-			findMove(c4, std::vector<Move>(it5, it6), alpha, beta, bestMove);
+			std::cout << 5;
+			findMove(c4, std::vector<Move>(its[4], its[5]), alpha, beta, bestMove);
 		}
 #pragma omp section
 		{
-			findMove(c5, std::vector<Move>(it6, it7), alpha, beta, bestMove);
+			std::cout << 6;
+			findMove(c5, std::vector<Move>(its[5], its[6]), alpha, beta, bestMove);
+		}
+#pragma omp section
+		{
+			std::cout << 7;
+			findMove(c6, std::vector<Move>(its[6], its[7]), alpha, beta, bestMove);
+		}
+#pragma omp section
+		{
+			std::cout << 8;
+			findMove(c7, std::vector<Move>(its[7], its[8]), alpha, beta, bestMove);
 		}
 	}
 	//std::cout << alpha << std::endl;
@@ -949,11 +994,11 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 {
 	auto us = static_cast<Color>(sideToMove);
 	auto them = flip(us);
-	if ((attackMap[kingPos[!sideToMove]] & (color[sideToMove] ^ pawns(us))).any() || (king(them) & pawnAttacks(us)).any())
+	if (underCheck(them))
 	{
 		return std::nullopt;
 	}
-	if ((depth > 5 && previous.captured == '-') || depth > 7)
+	if (((depth > 5 && previous.captured == '-') && !underCheck(us)) || (depth > 7))
 	{
 		return (sideToMove == (depth % 2) ? -evaluate() : evaluate());
 	}
@@ -962,6 +1007,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 	{
 		std::optional<value> tempAlpha;
 		auto moves = generateMoves();
+		std::sort(moves.begin(), moves.end());
 		for (const auto& move : moves)
 		{
 			if (alpha >= beta)
@@ -996,7 +1042,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 	{
 		std::optional<value> tempBeta;
 		auto moves = generateMoves();
-
+		std::sort(moves.begin(), moves.end());
 		for (auto& move : moves)
 		{
 			if (alpha >= beta)
