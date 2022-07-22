@@ -14,9 +14,9 @@ using key_t = uint_fast64_t;
 
 // Zobrist hash keys
 
-key_t psq_keys[12][64]; // filled randomly
-key_t enpass[8];        // during initialization
-key_t sideToMoveKey;
+//extern key_t psq_keys[12][64]; // filled randomly
+//extern key_t enpass[8];        // during initialization
+//extern key_t sideToMoveKey;
 
 struct Position {
 	std::string board = "----------------------------------------------------------------";
@@ -79,6 +79,16 @@ struct Position {
 
 	std::optional<value> findAlphaBeta(int depth, value alpha, value beta , const Move& previous);
 };
+
+inline square findSquare(const std::bitset<64>& bitset, square pos) // function that finds '1' in bitset
+{
+	for (square i = pos; i < bitset.size(); ++i)
+	{
+		if (bitset.test(i))
+			return i;
+	}
+	return 64;
+}
 
 void findMove(Position& pos, const std::vector<Move>& moves, value& alpha, value& beta, Move& bestMove);
 

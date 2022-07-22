@@ -1,16 +1,6 @@
 #include "position.h"
 #include "pieceSquareTables.hpp"
 
-inline square findSquare(const std::bitset<64>& bitset, square pos) // function that finds '1' in bitset
-{
-	for (square i = pos; i < bitset.size(); ++i)
-	{
-		if (bitset.test(i))
-			return i;
-	}
-	return 64;
-}
-
 void Position::updatePiece(const Square& sq)
 {
 	square piece = sq.getInd();
@@ -741,7 +731,7 @@ void Position::place(const Square& square, const char piece)
 	color[pieceColor].set(square.getInd());
 
 	// hash key updating
-	hash ^= psq_keys[PIECES[piece]][square.getInd()];
+	//hash ^= psq_keys[PIECES[piece]][square.getInd()];
 }
 
 void Position::remove(const Square& square)
@@ -766,7 +756,7 @@ void Position::remove(const Square& square)
 	color[pieceColor].reset(square.getInd());
 
 	// hash key updating
-	hash ^= psq_keys[PIECES[removedPiece]][square.getInd()];
+	//hash ^= psq_keys[PIECES[removedPiece]][square.getInd()];
 }
 
 void Position::doMove(const Move& move)
@@ -785,7 +775,7 @@ void Position::doMove(const Move& move)
 	case DOUBLE:
 		place(move.to, pieceToMove);
 		enPassantSquare = (move.to.getInd() + move.from.getInd()) >> 1;
-		hash ^= enpass[move.from.file];
+		//hash ^= enpass[move.from.file];
 		break;
 	case DEFAULT:
 		if (capturedPiece != '-')
@@ -805,7 +795,7 @@ void Position::doMove(const Move& move)
 	}
 	sideToMove = !sideToMove;
 
-	hash ^= sideToMoveKey;
+	//hash ^= sideToMoveKey;
 }
 
 void Position::undoMove(const Move& move)
@@ -836,7 +826,7 @@ void Position::undoMove(const Move& move)
 	if (move.captured != '-')
 		place(move.to, move.captured);
 
-	hash ^= sideToMoveKey;
+	//hash ^= sideToMoveKey;
 }
 
 const std::bitset<64>& Position::pawns(const Color color) const
@@ -912,8 +902,6 @@ void Position::init(std::string FEN, std::string move)
 	{
 		nonPawnMaterial[color] -= pieceValues[shift[color] + KING][MG];
 	}
-
-
 }
 
 extern Position position = Position();

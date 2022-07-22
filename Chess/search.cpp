@@ -101,7 +101,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 	{
 		return (sideToMove == (depth % 2) ? -evaluate() : evaluate());
 	}
-	value unc = 0;
+	size_t incorrect = 0;
 	if (depth % 2 == 0)
 	{
 		std::optional<value> tempAlpha;
@@ -109,26 +109,28 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		std::sort(moves.begin(), moves.end());
 		for (const auto& move : moves)
 		{
-			if (alpha >= beta)
-				break;
 			doMove(move);
 			tempAlpha = findAlphaBeta(depth + 1, alpha, beta, move);
 			undoMove(move);
 			if (!tempAlpha.has_value())
 			{
-				++unc;
+				++incorrect;
 				continue;
+			}
+			if (beta <= tempAlpha.value())
+			{
+				return beta;
 			}
 			if (alpha < tempAlpha.value())
 			{
 				alpha = tempAlpha.value();
 			}
 		}
-		if (unc == moves.size())
+		if (incorrect == moves.size())
 		{
 			if ((attackMap[kingPos[sideToMove]] & (color[!sideToMove] ^ pawns(them))).any() || (king(us) & pawnAttacks(them)).any())
 			{
-				return -100000 + depth << 4;
+				return -1e9 + (depth << 4);
 			}
 			else
 			{
@@ -142,28 +144,30 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		std::optional<value> tempBeta;
 		auto moves = generateMoves();
 		std::sort(moves.begin(), moves.end());
-		for (auto& move : moves)
+		for (const auto& move : moves)
 		{
-			if (alpha >= beta)
-				break;
 			doMove(move);
 			tempBeta = findAlphaBeta(depth + 1, alpha, beta, move);
 			undoMove(move);
 			if (!tempBeta.has_value())
 			{
-				++unc;
+				++incorrect;
 				continue;
+			}
+			if (alpha >= tempBeta.value())
+			{
+				return alpha;
 			}
 			if (beta > tempBeta.value())
 			{
 				beta = tempBeta.value();
 			}
 		}
-		if (unc == moves.size())
+		if (incorrect == moves.size())
 		{
 			if ((attackMap[kingPos[sideToMove]] & (color[!sideToMove] ^ pawns(them))).any() || (king(us) & pawnAttacks(them)).any())
 			{
-				return 100000 - depth << 4;
+				return 1e9 - (depth << 4);
 			}
 			else
 			{
