@@ -97,7 +97,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 	{
 		return std::nullopt;
 	}
-	if (((depth > 5 && previous.captured == '-') && !underCheck(us)) || depth > 8)
+	if ((depth > 5 && previous.captured == '-'))
 	{
 		return (sideToMove == (depth % 2) ? -evaluate() : evaluate());
 	}

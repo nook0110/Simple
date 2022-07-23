@@ -1,5 +1,6 @@
 #include "position.h"
 #include <iostream>
+#include <intrin.h>
 
 constexpr value mobilityBonus[5][32][PHASE_NONE] =
 {
@@ -36,6 +37,7 @@ const value Position::evaluate()
 		eval[phase] += pieceValuesSum[phase];
 		eval[phase] += psqtBonusSum[phase];
 	}
+	/*
 	for (auto us : { COLOR_W, COLOR_B })
 	{
 		const Color them = flip(us);
@@ -43,14 +45,14 @@ const value Position::evaluate()
 		avaliableArea[us] = ~(pawnAttacks(them) | queen(us) | king(us) | (pawns(us) & low));
 		mobility[us] = {0, 0, 0, 0, 0};
 		const bitboard allAttackers = color[us] ^ pawns(us);
-		for (unsigned sq = 0; sq < 64; ++sq)
+		auto mask = avaliableArea[us].to_ullong();
+		while (mask)
 		{
-			if (!avaliableArea[us][sq])
-				continue;
-			const bitboard attackers = attackMap[sq] & allAttackers;
+			const bitboard attackers = attackMap[_mm_popcnt_u64((mask ^ (mask - 1)) >> 1)] & allAttackers;
 			for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
 				if ((attackers & pieces[shift[us] + piece]).any())
 					mobility[us][piece] += (attackers & pieces[shift[us] + piece]).count();
+			mask &= (mask - 1);
 		}
 	}
 	for (auto phase : { MG, EG })
@@ -61,6 +63,7 @@ const value Position::evaluate()
 			eval[phase] -= mobilityBonus[piece][mobility[COLOR_B][piece]][phase];
 		}
 	}
+	*/
 	value npm = nonPawnMaterial[COLOR_W] - nonPawnMaterial[COLOR_B];
 	npm = std::max(limits[EG], std::min(limits[MG], npm));
 	value phase = npm - limits[EG];
