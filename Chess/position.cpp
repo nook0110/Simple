@@ -724,11 +724,11 @@ void Position::place(const Square& square, const char piece)
 	const Color pieceColor = colorOf(piece);
 	if (nonPawn(piece))
 		nonPawnMaterial[pieceColor] += pieceValues[PIECES[piece]][MG];
-	pieces[PIECES[piece]].set(square.getInd());
+	pieces[PIECES[piece]] |= SQUAREBB(square.getInd());
 
 	updateOccupiedSquare(square);
 	updatePiece(square);
-	color[pieceColor].set(square.getInd());
+	color[pieceColor] |= SQUAREBB(square.getInd());
 
 	// hash key updating
 	//hash ^= psq_keys[PIECES[piece]][square.getInd()];
@@ -749,11 +749,11 @@ void Position::remove(const Square& square)
 	const Color pieceColor = colorOf(removedPiece);
 	if (nonPawn(removedPiece))
 		nonPawnMaterial[pieceColor] -= pieceValues[PIECES[removedPiece]][MG];
-	pieces[PIECES[removedPiece]].reset(square.getInd());
+	pieces[PIECES[removedPiece]] &= ~SQUAREBB(square.getInd());
 
 	updateEmptySquare(square);
 	updatePiece(square);
-	color[pieceColor].reset(square.getInd());
+	color[pieceColor] &= ~SQUAREBB(square.getInd());
 
 	// hash key updating
 	//hash ^= psq_keys[PIECES[removedPiece]][square.getInd()];
@@ -829,31 +829,31 @@ void Position::undoMove(const Move& move)
 	//hash ^= sideToMoveKey;
 }
 
-const std::bitset<64>& Position::pawns(const Color color) const
+const bitboard Position::pawns(const Color color) const
 {
 	return pieces[shift[color] + PAWN];
 }
 
-const std::bitset<64>& Position::queen(const Color color) const
+const bitboard Position::queen(const Color color) const
 {
 	return pieces[shift[color] + QUEEN];
 }
 
-const std::bitset<64>& Position::king(const Color color) const
+const bitboard Position::king(const Color color) const
 {
 	return pieces[shift[color] + KING];
 }
 
-std::bitset<64> Position::pawnAttacks(const Color color) const
+bitboard Position::pawnAttacks(const Color color) const
 {
-	std::bitset<64> pawnsPushed = pawns(color);
+	bitboard pawnsPushed = pawns(color);
 	if (color == COLOR_W)
 		pawnsPushed >>= 8;
 	else
 		pawnsPushed <<= 8;
-	const std::bitset<64> nonEdgePawns = pawnsPushed & ~(FILES[0] | FILES[7]);
-	const std::bitset<64> leftEdgePawns = pawnsPushed & FILES[0];
-	const std::bitset<64> rightEdgePawns = pawnsPushed & FILES[7];
+	const bitboard nonEdgePawns = pawnsPushed & ~(FILES[0] | FILES[7]);
+	const bitboard leftEdgePawns = pawnsPushed & FILES[0];
+	const bitboard rightEdgePawns = pawnsPushed & FILES[7];
 	return (nonEdgePawns << 1) | (nonEdgePawns >> 1) | (leftEdgePawns >> 1) | (rightEdgePawns << 1);
 }
 
@@ -865,7 +865,6 @@ const bool Position::underCheck(const Color us) const
 
 void Position::init(std::string FEN, std::string move)
 {
-
 	auto current = FEN.begin();
 	for (int row = 0; row < 8; ++row, ++current)
 	{

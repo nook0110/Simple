@@ -62,7 +62,7 @@ void init_sliding_maps()
 		size = 0;
 		do
 		{
-			bishop_attacks[_pext_u64(submask, mask)] = bishop_attack(sq, submask);
+			bishop_attacks[bishopBase[sq] + _pext_u64(submask, mask)] = bishop_attack(sq, submask);
 			submask = (submask - mask) & mask;
 			++size;
 		} while (submask);
@@ -73,14 +73,40 @@ void init_sliding_maps()
 	{
 		rookBase[sq] = (sq == 0 ? 0 : rookBase[sq - 1] + size);
 		submask = EMPTY_BOARD;
-		bitboard mask = bishopMask[sq];
+		bitboard mask = rookMask[sq];
 		size = 0;
 		do
 		{
-			bitboard bb = _pext_u64(submask, mask);
-			rook_attacks[_pext_u64(submask, mask)] = rook_attack(sq, submask);
+			rook_attacks[rookBase[sq] + _pext_u64(submask, mask)] = rook_attack(sq, submask);
 			submask = (submask - mask) & mask;
 			++size;
 		} while (submask);
 	}
+}
+
+std::string prettyBB(bitboard b, bitboard occ)
+{
+
+	std::string s = "+---+---+---+---+---+---+---+---+\n";
+
+	for (int r = 0; r < 8; ++r)
+	{
+		for (int f = 0; f < 8; ++f)
+		{
+			s += "| ";
+			bool at = b & (1ull << SQUARE(r, f));
+			bool oc = occ & (1ull << SQUARE(r, f));
+			if (at)
+				s += "X ";
+			else if (oc)
+				s += "O ";
+			else
+				s += "  ";
+		}
+
+		s += "| " + std::to_string(1 + r) + "\n+---+---+---+---+---+---+---+---+\n";
+	}
+	s += "  a   b   c   d   e   f   g   h\n";
+
+	return s;
 }

@@ -19,17 +19,18 @@ using key_t = uint_fast64_t;
 //extern key_t sideToMoveKey;
 
 struct Position {
+
 	std::string board = "----------------------------------------------------------------";
 	unsigned char sideToMove;
-	square enPassantSquare=-1;
+	square enPassantSquare = -1;
 
 	key_t hash = 0;
 
 	inline size_t address() const;
 
 	std::array<std::bitset<64>, 64> attackMap;
-	std::array<std::bitset<64>, COLOR_NONE> color;
-	std::array<std::bitset<64>, 12> pieces;
+	std::array<bitboard, COLOR_NONE> color;
+	std::array<bitboard, 12> pieces;
 
 	// tapered evaluation data
 
@@ -54,17 +55,16 @@ struct Position {
 	void updateEmptySquare(const Square& square);
 	void updateOccupiedSquare(const Square& square);
 
-	const std::bitset<64>& pawns(const Color color) const;
-	const std::bitset<64>& queen(const Color color) const;
-	const std::bitset<64>& king(const Color color) const;
-	std::bitset<64> pawnAttacks(const Color color) const;
+	const bitboard pawns(const Color color) const;
+	const bitboard queen(const Color color) const;
+	const bitboard king(const Color color) const;
+	bitboard pawnAttacks(const Color color) const;
 
 	const bool underCheck(const Color us) const;
 
 	// evaluation
 
 	std::array<std::bitset<64>, COLOR_NONE> avaliableArea;
-	std::array<std::array<unsigned, 5>, COLOR_NONE> mobility;
 	std::array<value, PHASE_NONE> eval;
 
 	const value evaluate();
@@ -77,7 +77,7 @@ struct Position {
 
 	Move findBestMove();
 
-	std::optional<value> findAlphaBeta(int depth, value alpha, value beta , const Move& previous);
+	std::optional<value> findAlphaBeta(int depth, value alpha, value beta, const Move& previous);
 };
 
 inline square findSquare(const std::bitset<64>& bitset, square pos) // function that finds '1' in bitset

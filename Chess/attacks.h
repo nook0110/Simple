@@ -66,21 +66,23 @@ void init_sliding_maps();
 
 inline bitboard attack_map(const Piece piece, const square sq, const bitboard occ = EMPTY_BOARD)
 {
-	switch (piece)
-	{
+    switch (piece)
+    {
     case KNIGHT:
         return knight_attacks[sq];
-	case BISHOP:
-		return bishop_attacks[bishopBase[sq] + _pext_u64(occ, bishopMask[sq])];
-	case ROOK:
-		return rook_attacks[rookBase[sq] + _pext_u64(occ, rookMask[sq])];
-	case QUEEN:
-		return attack_map(BISHOP, sq, occ) | attack_map(ROOK, sq, occ);
+    case BISHOP:
+        return bishop_attacks[bishopBase[sq] + _pext_u64(occ, bishopMask[sq])];
+    case ROOK:
+        return rook_attacks[rookBase[sq] + _pext_u64(occ, rookMask[sq])];
+    case QUEEN:
+        return attack_map(BISHOP, sq, occ) | attack_map(ROOK, sq, occ);
     case KING:
         return king_attacks[sq];
-	default:
-		break;
-	}
+    default:
+        break;
+    }
 }
+
+std::string prettyBB(bitboard b, bitboard occ = EMPTY_BOARD);
 
 #endif // !ATTACKS_H

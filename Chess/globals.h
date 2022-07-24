@@ -6,6 +6,7 @@
 #include <bitset>
 #include <unordered_map>
 #include <cmath>
+#include <cassert>
 
 #ifdef _MSC_VER
 #pragma warning(disable : 26812)
@@ -15,6 +16,7 @@ using bitboard = uint_fast64_t;
 using square = char;
 
 #define SQUARE(x,y) ((x) << 3 | (y))
+#define SQUAREBB(sq) (1ull << (sq))
 
 constexpr bitboard EMPTY_BOARD = 0;
 
@@ -90,23 +92,23 @@ inline const bool nonPawn(const char piece)
     return !(piece == 'P' || piece == 'p');
 }
 
-constexpr uint_fast64_t file_a = 9259542123273814144;
+constexpr uint_fast64_t h = 9259542123273814144;
 
-inline constexpr std::array<std::bitset<64>, 8> FILES = 
+inline constexpr std::array<bitboard, 8> FILES = 
 {
-	file_a,
-	file_a >> 1,
-	file_a >> 2,
-	file_a >> 3,
-	file_a >> 4,
-	file_a >> 5,
-	file_a >> 6,
-	file_a >> 7
+	h >> 7,
+	h >> 6,
+	h >> 5,
+	h >> 4,
+	h >> 3,
+	h >> 2,
+	h >> 1,
+	h
 };
 
 constexpr uint_fast64_t highestRank = (1 << 8) - 1;
 
-inline constexpr std::array<std::bitset<64>, 8> RANKS =
+inline constexpr std::array<bitboard, 8> RANKS =
 {
 	highestRank << (8 * 7),
 	highestRank << (8 * 6),

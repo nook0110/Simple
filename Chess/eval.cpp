@@ -32,38 +32,27 @@ constexpr value tempoBonus = 28;
 const value Position::evaluate()
 {
 	eval = {0, 0};
+
 	for (auto phase : { MG, EG })
 	{
 		eval[phase] += pieceValuesSum[phase];
 		eval[phase] += psqtBonusSum[phase];
 	}
-	/*
+
+	const bitboard all = color[COLOR_W] | color[COLOR_B];
+
 	for (auto us : { COLOR_W, COLOR_B })
 	{
 		const Color them = flip(us);
 		const bitboard low = (us == COLOR_W ? RANKS[1] | RANKS[2] : RANKS[6] | RANKS[5]);
-		avaliableArea[us] = ~(pawnAttacks(them) | queen(us) | king(us) | (pawns(us) & low));
-		mobility[us] = {0, 0, 0, 0, 0};
-		const bitboard allAttackers = color[us] ^ pawns(us);
-		auto mask = avaliableArea[us].to_ullong();
-		while (mask)
-		{
-			const bitboard attackers = attackMap[_mm_popcnt_u64((mask ^ (mask - 1)) >> 1)] & allAttackers;
-			for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
-				if ((attackers & pieces[shift[us] + piece]).any())
-					mobility[us][piece] += (attackers & pieces[shift[us] + piece]).count();
-			mask &= (mask - 1);
-		}
-	}
-	for (auto phase : { MG, EG })
-	{
+		const bitboard blocked = (us == COLOR_W ? all << 8 : all >> 8) & pawns(us);
+		avaliableArea[us] = ~(pawnAttacks(them) | queen(us) | king(us) | (pawns(us) & low) | blocked);
 		for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
 		{
-			eval[phase] += mobilityBonus[piece][mobility[COLOR_W][piece]][phase];
-			eval[phase] -= mobilityBonus[piece][mobility[COLOR_B][piece]][phase];
+
 		}
 	}
-	*/
+
 	value npm = nonPawnMaterial[COLOR_W] - nonPawnMaterial[COLOR_B];
 	npm = std::max(limits[EG], std::min(limits[MG], npm));
 	value phase = npm - limits[EG];

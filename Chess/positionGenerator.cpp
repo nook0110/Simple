@@ -1,4 +1,5 @@
 #include "position.h"
+#include "attacks.h"
 
 std::vector<Move> Position::generateMoves()
 {
@@ -6,8 +7,22 @@ std::vector<Move> Position::generateMoves()
 	moves.reserve(256);
 	std::bitset<64> movablePieces;
 
-	square piece;
+	/*unsigned long long sq;
+	auto pieces = color[sideToMove];
+	while (_BitScanForward(&sq, pieces))
+	{
+		piece = board[sq];
+		pieces &= ~SQUAREBB(sq);
+		if (piece == 'p' || piece == 'P')
+		{
 
+			continue;
+		}
+		auto attacks = attack_map(static_cast<Piece>(PIECES[piece] - shift[colorOf(piece)]), sq, color[sideToMove] | color[!sideToMove]);
+
+		unsigned long long dest;
+
+	}*/
 	for (square dest = 0; dest < 64; dest++)
 	{
 		piece = 0;
@@ -19,7 +34,7 @@ std::vector<Move> Position::generateMoves()
 			if (colorOf(board[dest]) == sideToMove) //trying to eat a figure of the same color
 			{
 				continue;
-			}	
+			}
 
 			if (board[piece] == 'p' || board[piece] == 'P') // if piece is a pawn
 			{
@@ -33,15 +48,15 @@ std::vector<Move> Position::generateMoves()
 				{
 					if (delta == 8 || delta == -8)
 					{
-						if(board[dest] == '-')
-							moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, '-'}));
+						if (board[dest] == '-')
+							moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, '-' }));
 						continue;
 					}
 					if (board[dest] == '-')
 					{
 						continue;
 					}
-					moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, board[dest]}));
+					moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, board[dest] }));
 					continue;
 				}
 				if (dest - piece == 8 || dest - piece == -8)
