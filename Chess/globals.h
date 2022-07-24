@@ -7,9 +7,16 @@
 #include <unordered_map>
 #include <cmath>
 
+#ifdef _MSC_VER
+#pragma warning(disable : 26812)
+#endif // _MSC_VER
+
+using bitboard = uint_fast64_t;
 using square = char;
 
 #define SQUARE(x,y) ((x) << 3 | (y))
+
+constexpr bitboard EMPTY_BOARD = 0;
 
 enum Piece
 {
@@ -28,6 +35,24 @@ enum Color
 	COLOR_W,
 	COLOR_NONE
 };
+
+/*
+enum square
+{
+	A8, B8, C8, D8, E8, F8, G8, H8,
+	A7, B7, C7, D7, E7, F7, G7, H7,
+	A6, B6, C6, D6, E6, F6, G6, H6,
+	A5, B5, C5, D5, E5, F5, G5, H5,
+	A4, B4, C4, D4, E4, F4, G4, H4,
+	A3, B3, C3, D3, E3, F3, G3, H3,
+	A2, B2, C2, D2, E2, F2, G2, H2,
+	A1, B1, C1, D1, E1, F1, G1, H1,
+	SQ_NONE
+};
+
+inline square& operator++(square& sq) { return sq = (square)((int)sq + 1); }
+inline square operator+=(square& sq, square& oth) { return sq = (square)(sq + (int)oth); }
+*/
 
 inline std::unordered_map<char, const int> PIECES = { {'P', 0}, {'N', 1}, {'B', 2}, {'R', 3}, {'Q', 4}, {'K', 5},
 													  {'p', 6}, {'n', 7}, {'b', 8}, {'r', 9}, {'q', 10}, {'k', 11},

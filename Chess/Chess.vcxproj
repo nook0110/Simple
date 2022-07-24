@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="attacks.cpp" />
     <ClCompile Include="eval.cpp" />
     <ClCompile Include="globals.cpp" />
     <ClCompile Include="main.cpp" />
@@ -151,6 +152,7 @@
     <ClCompile Include="search.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="attacks.h" />
     <ClInclude Include="eval.h" />
     <ClInclude Include="globals.h" />
     <ClInclude Include="move.h" />
