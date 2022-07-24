@@ -99,7 +99,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		return std::nullopt;
 	}
 
-	if ((depth > 3 && previous.captured == '-') || depth > 7)
+	if ((depth > 3 && previous.captured != '-') || depth > 7)
 	{
 		return (sideToMove == (depth % 2) ? -evaluate() : evaluate());
 	}
@@ -232,6 +232,11 @@ std::optional<value> Position::quiesce(int depth, value alpha, value beta)
 			}
 		}
 
+		if (moves.size() == 0)
+		{
+			return alpha;
+		}
+
 		if (incorrect == moves.size())
 		{
 			if (underCheck(us))
@@ -269,6 +274,11 @@ std::optional<value> Position::quiesce(int depth, value alpha, value beta)
 			{
 				beta = tempBeta.value();
 			}
+		}
+
+		if (moves.size() == 0)
+		{
+			return beta;
 		}
 
 		if (incorrect == moves.size())

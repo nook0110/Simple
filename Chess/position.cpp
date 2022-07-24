@@ -861,7 +861,7 @@ const bool Position::underCheck(const Color us) const
 	const bitboard all = color[us] | color[them];
 	if (pawnAttacks(them) & SQUAREBB(kp))
 		return true;
-	for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
+	for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN, KING })
 	{
 		if (attack_map(piece, kp, all) & pieces[piece + shift[them]])
 			return true;
