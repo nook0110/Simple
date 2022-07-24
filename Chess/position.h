@@ -72,12 +72,13 @@ struct Position {
 	void init(std::string FEN, std::string move);
 
 
-
+	std::vector<Move> generateAttacks();
 	std::vector<Move> generateMoves();
 
 	Move findBestMove();
 
 	std::optional<value> findAlphaBeta(int depth, value alpha, value beta, const Move& previous);
+	std::optional<value> quiesce(int depth, value alpha, value beta);
 };
 
 inline square findSquare(const std::bitset<64>& bitset, square pos) // function that finds '1' in bitset

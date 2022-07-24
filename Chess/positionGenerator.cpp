@@ -1,98 +1,271 @@
 #include "position.h"
 #include "attacks.h"
+#include <intrin.h>
+
+#pragma intrinsic(_BitScanForward)
+
+std::vector<Move> Position::generateAttacks()
+{
+	std::vector<Move> moves;
+	moves.reserve(256);
+
+	unsigned long sq;
+	auto pieces = color[sideToMove] & ~pawns(static_cast<Color>(sideToMove));
+	auto _pawns = pawns(static_cast<Color>(sideToMove));
+	while (_BitScanForward64(&sq, pieces))
+	{
+		char piece;
+		piece = board[sq];
+		pieces &= ~SQUAREBB(sq);
+
+		unsigned long dest;
+
+		auto attacks = attack_map(static_cast<Piece>(PIECES[piece] - shift[sideToMove]), sq, color[sideToMove] | color[!sideToMove]) & color[!sideToMove];
+
+		while (_BitScanForward64(&dest, attacks))
+		{
+			auto consumable = board[dest];
+			attacks &= ~SQUAREBB(dest);
+			moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, consumable }));
+		}
+
+	}
+	while (_BitScanForward64(&sq, _pawns))
+	{
+		char pawn = board[sq];
+		_pawns &= ~SQUAREBB(sq);
+
+		unsigned long dest;
+		auto column = sq & 7;
+		auto row = sq >> 3;
+
+		if (pawn == 'p')
+		{
+			if (row == 6)
+			{
+				if (column > 0)
+				{
+					dest = sq + 7;
+					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
+				}
+				if (column < 7)
+				{
+					dest = sq + 9;
+					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
+				}
+				continue;
+			}
+
+
+			if (column > 0)
+			{
+				dest = sq + 7;
+				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
+				if (dest == enPassantSquare)
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+			}
+			if (column < 7)
+			{
+				dest = sq + 9;
+				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
+				if (dest == enPassantSquare)
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+			}
+			continue;
+		}
+		else
+		{
+			if (row == 1)
+			{
+				if (column < 7)
+				{
+					dest = sq - 7;
+					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
+				}
+				if (column > 0)
+				{
+					dest = sq - 9;
+					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
+				}
+
+				continue;
+			}
+
+
+			if (column < 7)
+			{
+				dest = sq - 7;
+				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
+				if (dest == enPassantSquare)
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+			}
+			if (column > 0)
+			{
+				dest = sq - 9;
+				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
+				if (dest == enPassantSquare)
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+			}
+
+			continue;
+		}
+	}
+	return moves;
+}
+
 
 std::vector<Move> Position::generateMoves()
 {
 	std::vector<Move> moves;
 	moves.reserve(256);
-	std::bitset<64> movablePieces;
 
-	/*unsigned long long sq;
-	auto pieces = color[sideToMove];
-	while (_BitScanForward(&sq, pieces))
+	unsigned long sq;
+	auto pieces = color[sideToMove] & ~pawns(static_cast<Color>(sideToMove));
+	auto _pawns = pawns(static_cast<Color>(sideToMove));
+	while (_BitScanForward64(&sq, pieces))
 	{
-		piece = board[sq];
+		char piece = board[sq];
 		pieces &= ~SQUAREBB(sq);
-		if (piece == 'p' || piece == 'P')
-		{
 
-			continue;
+		unsigned long dest;
+
+		auto attacks = attack_map(static_cast<Piece>(PIECES[piece] - shift[sideToMove]), sq, color[sideToMove] | color[!sideToMove]);
+
+		while (_BitScanForward64(&dest, attacks))
+		{
+			auto consumable = board[dest];
+			attacks &= ~SQUAREBB(dest);
+			if (colorOf(consumable) != sideToMove)
+				moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, consumable }));
 		}
-		auto attacks = attack_map(static_cast<Piece>(PIECES[piece] - shift[colorOf(piece)]), sq, color[sideToMove] | color[!sideToMove]);
 
-		unsigned long long dest;
-
-	}*/
-	for (square dest = 0; dest < 64; dest++)
+	}
+	while (_BitScanForward64(&sq, _pawns))
 	{
-		piece = 0;
-		movablePieces = attackMap[dest] & color[sideToMove]; // picks from all pieces of color[sideToMove] and pieces which attack dest
-		while (movablePieces.any())
+		char pawn = board[sq];
+		_pawns &= ~SQUAREBB(sq);
+
+		unsigned long dest;
+		auto column = sq & 7;
+		auto row = sq >> 3;
+
+		if (pawn == 'p')
 		{
-			piece = findSquare(movablePieces, piece);
-			movablePieces.set(piece, 0);
-			if (colorOf(board[dest]) == sideToMove) //trying to eat a figure of the same color
+			if (row == 6)
 			{
+				if (column > 0)
+				{
+					dest = sq + 7;
+					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
+				}
+				if (column < 7)
+				{
+					dest = sq + 9;
+					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
+				}
+
+				dest = sq + 8;
+				if (board[dest] == '-')
+					moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, '-' }));
 				continue;
 			}
 
-			if (board[piece] == 'p' || board[piece] == 'P') // if piece is a pawn
+
+			if (column > 0)
 			{
-				if (dest == enPassantSquare) //en passant
-				{
-					moves.push_back(Move({ Square(piece), Square(dest), EN_PASSANT, board[dest] }));
-					continue;
-				}
-				square delta = dest - piece;
-				if (dest < 8 || dest >= 56)
-				{
-					if (delta == 8 || delta == -8)
-					{
-						if (board[dest] == '-')
-							moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, '-' }));
-						continue;
-					}
-					if (board[dest] == '-')
-					{
-						continue;
-					}
-					moves.push_back(Move({ Square(piece), Square(dest), PROMOTION, board[dest] }));
-					continue;
-				}
-				if (dest - piece == 8 || dest - piece == -8)
-				{
-					if (board[dest] != '-')
-					{
-						continue;
-					}
-					moves.push_back(Move({ Square(piece), Square(dest), DEFAULT, '-' }));
-					continue;
-				}
-				if (dest - piece == 16) // double square move 
-				{
-					if (board[dest - 8] != '-' || board[dest] != '-')
-					{
-						continue;
-					}
-					moves.push_back(Move({ Square(piece), Square(dest), DOUBLE, '-' }));
-					continue;
-				}
-				if (dest - piece == -16) // double square move 
-				{
-					if (board[dest + 8] != '-' || board[dest] != '-')
-					{
-						continue;
-					}
-					moves.push_back(Move({ Square(piece), Square(dest), DEFAULT, '-' }));
-					continue;
-				}
-				if (board[dest] == '-')
-				{
-					continue;
-				}
+				dest = sq + 7;
+				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
+				if (dest == enPassantSquare)
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+			}
+			if (column < 7)
+			{
+				dest = sq + 9;
+				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
+				if (dest == enPassantSquare)
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
 			}
 
-			moves.push_back(Move({ Square(piece), Square(dest), DEFAULT, board[dest] }));
+			dest = sq + 8;
+			if (board[dest] != '-')
+				continue;
+			moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, '-' }));
+
+			if (row == 1)
+			{
+				dest = sq + 16;
+				if (board[dest] != '-')
+					continue;
+				moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, '-' }));
+			}
+
+			continue;
+		}
+		else
+		{
+			if (row == 1)
+			{
+				if (column < 7)
+				{
+					dest = sq - 7;
+					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
+				}
+				if (column > 0)
+				{
+					dest = sq - 9;
+					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
+				}
+
+				dest = sq - 8;
+				if (board[dest] == '-')
+					moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, '-' }));
+				continue;
+			}
+
+
+			if (column < 7)
+			{
+				dest = sq - 7;
+				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
+				if (dest == enPassantSquare)
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+			}
+			if (column > 0)
+			{
+				dest = sq - 9;
+				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
+				if (dest == enPassantSquare)
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+			}
+
+			dest = sq - 8;
+			if (board[dest] != '-')
+				continue;
+			moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, '-' }));
+
+			if (row == 6)
+			{
+				dest = sq - 16;
+				if (board[dest] != '-')
+					continue;
+				moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, '-' }));
+			}
 			continue;
 		}
 	}

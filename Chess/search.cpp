@@ -93,20 +93,25 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 {
 	auto us = static_cast<Color>(sideToMove);
 	auto them = flip(us);
+
 	if (underCheck(them))
 	{
 		return std::nullopt;
 	}
-	if ((depth > 5 && previous.captured == '-'))
+
+	if ((depth > 3 && previous.captured == '-') || depth > 7)
 	{
 		return (sideToMove == (depth % 2) ? -evaluate() : evaluate());
 	}
+
 	size_t incorrect = 0;
+	auto moves = generateMoves();
+
 	if (depth % 2 == 0)
 	{
 		std::optional<value> tempAlpha;
-		auto moves = generateMoves();
 		std::sort(moves.begin(), moves.end());
+
 		for (const auto& move : moves)
 		{
 			doMove(move);
@@ -126,9 +131,10 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 				alpha = tempAlpha.value();
 			}
 		}
+
 		if (incorrect == moves.size())
 		{
-			if ((attackMap[kingPos[sideToMove]] & (color[!sideToMove] ^ pawns(them))).any() || (king(us) & pawnAttacks(them)).any())
+			if (underCheck(us))
 			{
 				return -1e9 + (depth << 4);
 			}
@@ -137,13 +143,14 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 				return 0;
 			}
 		}
+
 		return alpha;
 	}
 	else
 	{
 		std::optional<value> tempBeta;
-		auto moves = generateMoves();
 		std::sort(moves.begin(), moves.end());
+
 		for (const auto& move : moves)
 		{
 			doMove(move);
@@ -163,9 +170,10 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 				beta = tempBeta.value();
 			}
 		}
+
 		if (incorrect == moves.size())
 		{
-			if ((attackMap[kingPos[sideToMove]] & (color[!sideToMove] ^ pawns(them))).any() || (king(us) & pawnAttacks(them)).any())
+			if (underCheck(us))
 			{
 				return 1e9 - (depth << 4);
 			}
@@ -174,7 +182,107 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 				return 0;
 			}
 		}
+
 		return beta;
 	}
 
+}
+
+std::optional<value> Position::quiesce(int depth, value alpha, value beta)
+{
+	value standingPat = (depth % 2) ? -evaluate() : evaluate();
+	alpha = std::max(alpha, standingPat);
+
+	if (alpha >= beta)
+		return depth % 2 ? beta : alpha;
+
+	auto us = static_cast<Color>(sideToMove);
+	auto them = flip(us);
+
+	if (underCheck(them))
+	{
+		return std::nullopt;
+	}
+
+	size_t incorrect = 0;
+	auto moves = generateAttacks();
+
+	if (depth % 2 == 0)
+	{
+		std::optional<value> tempAlpha;
+		std::sort(moves.begin(), moves.end());
+
+		for (const auto& move : moves)
+		{
+			doMove(move);
+			tempAlpha = quiesce(depth + 1, alpha, beta);
+			undoMove(move);
+			if (!tempAlpha.has_value())
+			{
+				++incorrect;
+				continue;
+			}
+			if (beta <= tempAlpha.value())
+			{
+				return beta;
+			}
+			if (alpha < tempAlpha.value())
+			{
+				alpha = tempAlpha.value();
+			}
+		}
+
+		if (incorrect == moves.size())
+		{
+			if (underCheck(us))
+			{
+				return -1e9 + (depth << 4);
+			}
+			else
+			{
+				return 0;
+			}
+		}
+
+		return alpha;
+	}
+	else
+	{
+		std::optional<value> tempBeta;
+		std::sort(moves.begin(), moves.end());
+
+		for (const auto& move : moves)
+		{
+			doMove(move);
+			tempBeta = quiesce(depth + 1, alpha, beta);
+			undoMove(move);
+			if (!tempBeta.has_value())
+			{
+				++incorrect;
+				continue;
+			}
+			if (alpha >= tempBeta.value())
+			{
+				return alpha;
+			}
+			if (beta > tempBeta.value())
+			{
+				beta = tempBeta.value();
+			}
+		}
+
+		if (incorrect == moves.size())
+		{
+			if (underCheck(us))
+			{
+				return 1e9 - (depth << 4);
+			}
+			else
+			{
+				return 0;
+			}
+		}
+
+		return beta;
+	}
 }
