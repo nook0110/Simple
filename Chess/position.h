@@ -41,7 +41,7 @@ struct Position {
 	char& operator[](const size_t ind) { return board[ind]; }
 	const char& operator[](const size_t ind) const { return board[ind]; }
 
-	std::array<square, 2> kingPos;
+	std::array<square, COLOR_NONE> kingPos;
 
 	// helpers
 
@@ -64,7 +64,7 @@ struct Position {
 
 	// evaluation
 
-	std::array<std::bitset<64>, COLOR_NONE> avaliableArea;
+	std::array<bitboard, COLOR_NONE> avaliableArea;
 	std::array<value, PHASE_NONE> eval;
 
 	const value evaluate();

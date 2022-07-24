@@ -31,9 +31,6 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	std::cout << prettyBB(FILES[0]) << std::endl;
-
-	/*
 	std::string FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w -- 1";
 	//				  "r1bqkb1r/ppp1pppp/2n2n2/3p4/4P3/2N2N2/PPPP1PPP/R1BQKB1R"
 	std::string MOVE;
@@ -42,7 +39,7 @@ int main(int argc, char** argv)
 	auto bm = position.findBestMove();
 
 	std::cout << bm.toStr();
-	*/
+
 	return 0;
 
 }

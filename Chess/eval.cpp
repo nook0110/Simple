@@ -1,6 +1,8 @@
 #include "position.h"
+#include "attacks.h"
 #include <iostream>
 #include <intrin.h>
+#include <nmmintrin.h>
 
 constexpr value mobilityBonus[5][32][PHASE_NONE] =
 {
@@ -25,6 +27,8 @@ constexpr value mobilityBonus[5][32][PHASE_NONE] =
 	}
 };
 
+value mob[COLOR_NONE][PHASE_NONE];
+
 constexpr std::array<value, PHASE_NONE> limits = {15258, 3915};
 constexpr value rangeLength = limits[MG] - limits[EG];
 constexpr value tempoBonus = 28;
@@ -41,7 +45,7 @@ const value Position::evaluate()
 
 	const bitboard all = color[COLOR_W] | color[COLOR_B];
 
-	for (auto us : { COLOR_W, COLOR_B })
+	for (const auto us : { COLOR_W, COLOR_B })
 	{
 		const Color them = flip(us);
 		const bitboard low = (us == COLOR_W ? RANKS[1] | RANKS[2] : RANKS[6] | RANKS[5]);
@@ -49,9 +53,24 @@ const value Position::evaluate()
 		avaliableArea[us] = ~(pawnAttacks(them) | queen(us) | king(us) | (pawns(us) & low) | blocked);
 		for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
 		{
-
+			bitboard units = pieces[piece + shift[us]];
+			while (units)
+			{
+			    unsigned long sq = 0;
+			    _BitScanForward64(&sq, units);
+				units &= (units - 1);
+				bitboard xray = (piece == ROOK? pieces[ROOK + shift[us]] | queen(us) | queen(them) : 
+					            (piece == BISHOP? queen(us) | queen(them): EMPTY_BOARD));
+				bitboard attacks = attack_map(piece, sq, all ^ xray);
+				unsigned mobility = _mm_popcnt_u64(attacks & avaliableArea[us]);
+				mob[us][MG] = mobilityBonus[piece][mobility][MG];
+				mob[us][EG] = mobilityBonus[piece][mobility][EG];
+			}
 		}
 	}
+
+	eval[MG] += (mob[COLOR_W][MG] - mob[COLOR_B][MG]);
+	eval[EG] += (mob[COLOR_W][EG] - mob[COLOR_B][EG]);
 
 	value npm = nonPawnMaterial[COLOR_W] - nonPawnMaterial[COLOR_B];
 	npm = std::max(limits[EG], std::min(limits[MG], npm));

@@ -1,4 +1,5 @@
 #include "position.h"
+#include "attacks.h"
 #include "pieceSquareTables.hpp"
 
 void Position::updatePiece(const Square& sq)
@@ -724,10 +725,8 @@ void Position::place(const Square& square, const char piece)
 	const Color pieceColor = colorOf(piece);
 	if (nonPawn(piece))
 		nonPawnMaterial[pieceColor] += pieceValues[PIECES[piece]][MG];
-	pieces[PIECES[piece]] |= SQUAREBB(square.getInd());
 
-	updateOccupiedSquare(square);
-	updatePiece(square);
+	pieces[PIECES[piece]] |= SQUAREBB(square.getInd());
 	color[pieceColor] |= SQUAREBB(square.getInd());
 
 	// hash key updating
@@ -749,10 +748,8 @@ void Position::remove(const Square& square)
 	const Color pieceColor = colorOf(removedPiece);
 	if (nonPawn(removedPiece))
 		nonPawnMaterial[pieceColor] -= pieceValues[PIECES[removedPiece]][MG];
+	
 	pieces[PIECES[removedPiece]] &= ~SQUAREBB(square.getInd());
-
-	updateEmptySquare(square);
-	updatePiece(square);
 	color[pieceColor] &= ~SQUAREBB(square.getInd());
 
 	// hash key updating
@@ -860,7 +857,16 @@ bitboard Position::pawnAttacks(const Color color) const
 const bool Position::underCheck(const Color us) const
 {
 	const Color them = flip(us);
-	return (attackMap[kingPos[us]] & (color[them] ^ pawns(them))).any() || (king(us) & pawnAttacks(them)).any();
+	const square kp = kingPos[us];
+	const bitboard all = color[us] | color[them];
+	if (pawnAttacks(them) & SQUAREBB(kp))
+		return true;
+	for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
+	{
+		if (attack_map(piece, kp, all) & pieces[piece + shift[them]])
+			return true;
+	}
+	return false;
 }
 
 void Position::init(std::string FEN, std::string move)
