@@ -51,6 +51,8 @@ const value Position::evaluate()
 		const bitboard low = (us == COLOR_W ? RANKS[1] | RANKS[2] : RANKS[6] | RANKS[5]);
 		const bitboard blocked = (us == COLOR_W ? all << 8 : all >> 8) & pawns(us);
 		avaliableArea[us] = ~(pawnAttacks(them) | queen(us) | king(us) | (pawns(us) & low) | blocked);
+		mob[us][MG] = 0;
+		mob[us][EG] = 0;
 		for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN })
 		{
 			bitboard units = pieces[piece + shift[us]];
@@ -63,8 +65,8 @@ const value Position::evaluate()
 					            (piece == BISHOP? queen(us) | queen(them): EMPTY_BOARD));
 				bitboard attacks = attack_map(piece, sq, all ^ xray);
 				unsigned mobility = _mm_popcnt_u64(attacks & avaliableArea[us]);
-				mob[us][MG] = mobilityBonus[piece][mobility][MG];
-				mob[us][EG] = mobilityBonus[piece][mobility][EG];
+				mob[us][MG] += mobilityBonus[piece][mobility][MG];
+				mob[us][EG] += mobilityBonus[piece][mobility][EG];
 			}
 		}
 	}
