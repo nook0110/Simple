@@ -31,13 +31,12 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	std::string FEN = "r1bqkbnr/p1pppp1p/3p2p1/1p6/P1PnN3/8/1P1PPPPP/R1BQKBNR w -- 1";
-	//				  "r1bqkb1r/ppp1pppp/2n2n2/3p4/4P3/2N2N2/PPPP1PPP/R1BQKB1R"
+	std::string FEN = "3r4/p4p2/6p1/4b2p/2k3K1/B1P2P2/P1R3PP/8 w -- 1";
+	//				  "rnb1kb1N/p1pqp1pp/1p3n2/8/2B5/2P1P3/PPP2PPP/R1BQK2R b -- 2"
 	std::string MOVE;
 	position.init(FEN, MOVE);
 
 	auto bm = position.findBestMove();
-
 	std::cout << bm.toStr();
 
 	return 0;

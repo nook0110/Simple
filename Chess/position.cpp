@@ -851,7 +851,7 @@ bitboard Position::pawnAttacks(const Color color) const
 	const bitboard nonEdgePawns = pawnsPushed & ~(FILES[0] | FILES[7]);
 	const bitboard leftEdgePawns = pawnsPushed & FILES[0];
 	const bitboard rightEdgePawns = pawnsPushed & FILES[7];
-	return (nonEdgePawns << 1) | (nonEdgePawns >> 1) | (leftEdgePawns >> 1) | (rightEdgePawns << 1);
+	return (nonEdgePawns << 1) | (nonEdgePawns >> 1) | (leftEdgePawns << 1) | (rightEdgePawns >> 1);
 }
 
 const bool Position::underCheck(const Color us) const

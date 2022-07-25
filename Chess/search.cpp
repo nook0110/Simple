@@ -50,7 +50,7 @@ Move Position::findBestMove()
 		std::sort(its[i], its[i + 1]);
 	}
 
-#pragma omp parallel sections num_threads(1)
+#pragma omp parallel sections num_threads(8)
 	{
 #pragma omp section
 		{
@@ -99,9 +99,9 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		return std::nullopt;
 	}
 
-	if (depth > 3)
+	if (depth > 5)
 	{
-		auto eval = quiesce(depth + 1, alpha, beta);
+		auto eval = quiesce(depth, alpha, beta);
 		return eval;
 	}
 
@@ -191,11 +191,8 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 
 std::optional<value> Position::quiesce(int depth, value alpha, value beta)
 {
-	value standingPat = (depth % 2) ? -evaluate() : evaluate();
-	alpha = std::max(alpha, standingPat);
+	value standingPat = (sideToMove == (depth % 2) ? -evaluate() : evaluate());
 
-	if (alpha >= beta)
-		return depth % 2 ? beta : alpha;
 
 	auto us = static_cast<Color>(sideToMove);
 	auto them = flip(us);
@@ -210,6 +207,10 @@ std::optional<value> Position::quiesce(int depth, value alpha, value beta)
 
 	if (depth % 2 == 0)
 	{
+		if (standingPat >= beta)
+			return standingPat;
+		if (alpha < standingPat)
+			alpha = standingPat;
 		std::optional<value> tempAlpha;
 		std::sort(moves.begin(), moves.end());
 
@@ -237,6 +238,10 @@ std::optional<value> Position::quiesce(int depth, value alpha, value beta)
 	}
 	else
 	{
+		if (standingPat <= alpha)
+			return standingPat;
+		if (beta > standingPat)
+			beta = standingPat;
 		std::optional<value> tempBeta;
 		std::sort(moves.begin(), moves.end());
 
