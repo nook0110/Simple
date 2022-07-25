@@ -28,7 +28,6 @@ struct Position {
 
 	inline size_t address() const;
 
-	std::array<std::bitset<64>, 64> attackMap;
 	std::array<bitboard, COLOR_NONE> color;
 	std::array<bitboard, 12> pieces;
 
@@ -50,10 +49,6 @@ struct Position {
 
 	void doMove(const Move& move);
 	void undoMove(const Move& move);
-
-	void updatePiece(const Square& square);
-	void updateEmptySquare(const Square& square);
-	void updateOccupiedSquare(const Square& square);
 
 	const bitboard pawns(const Color color) const;
 	const bitboard queen(const Color color) const;
@@ -80,16 +75,6 @@ struct Position {
 	std::optional<value> findAlphaBeta(int depth, value alpha, value beta, const Move& previous);
 	std::optional<value> quiesce(int depth, value alpha, value beta);
 };
-
-inline square findSquare(const std::bitset<64>& bitset, square pos) // function that finds '1' in bitset
-{
-	for (square i = pos; i < bitset.size(); ++i)
-	{
-		if (bitset.test(i))
-			return i;
-	}
-	return 64;
-}
 
 void findMove(Position& pos, const std::vector<Move>& moves, value& alpha, value& beta, Move& bestMove);
 
