@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	std::string FEN = "r1bqk2r/pppp1pp1/2n2n1p/4p3/1b2N3/2N1P3/PPPP1PPP/R1BQKB1R w -- 1";
+	std::string FEN = "r1bqkbnr/p1pppp1p/3p2p1/1p6/P1PnN3/8/1P1PPPPP/R1BQKBNR w -- 1";
 	//				  "r1bqkb1r/ppp1pppp/2n2n2/3p4/4P3/2N2N2/PPPP1PPP/R1BQKB1R"
 	std::string MOVE;
 	position.init(FEN, MOVE);

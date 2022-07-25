@@ -50,7 +50,7 @@ Move Position::findBestMove()
 		std::sort(its[i], its[i + 1]);
 	}
 
-#pragma omp parallel sections num_threads(8)
+#pragma omp parallel sections num_threads(1)
 	{
 #pragma omp section
 		{
@@ -99,9 +99,10 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		return std::nullopt;
 	}
 
-	if ((depth > 3 && previous.captured != '-') || depth > 7)
+	if (depth > 3)
 	{
-		return (sideToMove == (depth % 2) ? -evaluate() : evaluate());
+		auto eval = quiesce(depth + 1, alpha, beta);
+		return eval;
 	}
 
 	size_t incorrect = 0;
@@ -232,23 +233,6 @@ std::optional<value> Position::quiesce(int depth, value alpha, value beta)
 			}
 		}
 
-		if (moves.size() == 0)
-		{
-			return alpha;
-		}
-
-		if (incorrect == moves.size())
-		{
-			if (underCheck(us))
-			{
-				return -1e9 + (depth << 4);
-			}
-			else
-			{
-				return 0;
-			}
-		}
-
 		return alpha;
 	}
 	else
@@ -273,23 +257,6 @@ std::optional<value> Position::quiesce(int depth, value alpha, value beta)
 			if (beta > tempBeta.value())
 			{
 				beta = tempBeta.value();
-			}
-		}
-
-		if (moves.size() == 0)
-		{
-			return beta;
-		}
-
-		if (incorrect == moves.size())
-		{
-			if (underCheck(us))
-			{
-				return 1e9 - (depth << 4);
-			}
-			else
-			{
-				return 0;
 			}
 		}
 
