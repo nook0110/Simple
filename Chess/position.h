@@ -20,7 +20,7 @@ using key_t = uint_fast64_t;
 
 struct Position {
 
-	std::string board = "----------------------------------------------------------------";
+	std::array<Piece, 64> board;
 	unsigned char sideToMove;
 	square enPassantSquare = -1;
 
@@ -37,14 +37,14 @@ struct Position {
 	std::array<value, PHASE_NONE> pieceValuesSum = { 0, 0 };
 	std::array<value, PHASE_NONE> psqtBonusSum = { 0, 0 };
 
-	char& operator[](const size_t ind) { return board[ind]; }
-	const char& operator[](const size_t ind) const { return board[ind]; }
+	Piece& operator[](const size_t ind) { return board[ind]; }
+	const Piece& operator[](const size_t ind) const { return board[ind]; }
 
 	std::array<square, COLOR_NONE> kingPos;
 
 	// helpers
 
-	void place(const Square& square, const char piece);
+	void place(const Square& square, const Piece piece);
 	void remove(const Square& square);
 
 	void doMove(const Move& move);

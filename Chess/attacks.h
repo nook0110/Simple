@@ -64,7 +64,7 @@ extern bitboard rook_attacks[105000];
 
 void init_sliding_maps();
 
-inline bitboard attack_map(const Piece piece, const square sq, const bitboard occ = EMPTY_BOARD)
+inline bitboard attack_map(const PieceType piece, const square sq, const bitboard occ = EMPTY_BOARD)
 {
     switch (piece)
     {

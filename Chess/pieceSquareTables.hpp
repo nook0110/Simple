@@ -4,7 +4,7 @@
 #include "globals.h"
 
 //
-constexpr signed PSQT[13][8][8][PHASE_NONE] =
+constexpr signed PSQT[PIECE_NONE][8][8][PHASE_NONE] =
 {
     // 'P' white pawn
     {

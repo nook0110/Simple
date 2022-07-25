@@ -10,17 +10,17 @@ std::vector<Move> Position::generateAttacks()
 	moves.reserve(256);
 
 	unsigned long sq;
-	auto pieces = color[sideToMove] & ~pawns(static_cast<Color>(sideToMove));
 	auto _pawns = pawns(static_cast<Color>(sideToMove));
+	auto pieces = color[sideToMove] ^ _pawns;
+
 	while (_BitScanForward64(&sq, pieces))
 	{
-		char piece;
-		piece = board[sq];
+		auto piece = board[sq];
 		pieces &= ~SQUAREBB(sq);
 
 		unsigned long dest;
 
-		auto attacks = attack_map(static_cast<Piece>(PIECES[piece] - shift[sideToMove]), sq, color[sideToMove] | color[!sideToMove]) & color[!sideToMove];
+		auto attacks = attack_map(static_cast<PieceType>(piece - shift[sideToMove]), sq, color[sideToMove] | color[!sideToMove]) & color[!sideToMove];
 
 		while (_BitScanForward64(&dest, attacks))
 		{
@@ -32,7 +32,7 @@ std::vector<Move> Position::generateAttacks()
 	}
 	while (_BitScanForward64(&sq, _pawns))
 	{
-		char pawn = board[sq];
+		auto pawn = board[sq];
 		_pawns &= ~SQUAREBB(sq);
 
 		unsigned long dest;
@@ -46,13 +46,13 @@ std::vector<Move> Position::generateAttacks()
 				if (column > 0)
 				{
 					dest = sq + 7;
-					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
 				}
 				if (column < 7)
 				{
 					dest = sq + 9;
-					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
 				}
 				continue;
@@ -62,18 +62,18 @@ std::vector<Move> Position::generateAttacks()
 			if (column > 0)
 			{
 				dest = sq + 7;
-				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+				if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
 				if (dest == enPassantSquare)
-					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, EMPTY }));
 			}
 			if (column < 7)
 			{
 				dest = sq + 9;
-				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+				if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
 				if (dest == enPassantSquare)
-					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, EMPTY }));
 			}
 			continue;
 		}
@@ -84,13 +84,13 @@ std::vector<Move> Position::generateAttacks()
 				if (column < 7)
 				{
 					dest = sq - 7;
-					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
 				}
 				if (column > 0)
 				{
 					dest = sq - 9;
-					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
 				}
 
@@ -101,18 +101,18 @@ std::vector<Move> Position::generateAttacks()
 			if (column < 7)
 			{
 				dest = sq - 7;
-				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+				if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
 				if (dest == enPassantSquare)
-					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, EMPTY }));
 			}
 			if (column > 0)
 			{
 				dest = sq - 9;
-				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+				if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
 				if (dest == enPassantSquare)
-					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, EMPTY }));
 			}
 
 			continue;
@@ -128,16 +128,17 @@ std::vector<Move> Position::generateMoves()
 	moves.reserve(256);
 
 	unsigned long sq;
-	auto pieces = color[sideToMove] & ~pawns(static_cast<Color>(sideToMove));
 	auto _pawns = pawns(static_cast<Color>(sideToMove));
+	auto pieces = color[sideToMove] ^ _pawns;
+
 	while (_BitScanForward64(&sq, pieces))
 	{
-		char piece = board[sq];
+		auto piece = board[sq];
 		pieces &= ~SQUAREBB(sq);
 
 		unsigned long dest;
 
-		auto attacks = attack_map(static_cast<Piece>(PIECES[piece] - shift[sideToMove]), sq, color[sideToMove] | color[!sideToMove]);
+		auto attacks = attack_map(static_cast<PieceType>(piece - shift[sideToMove]), sq, color[sideToMove] | color[!sideToMove]);
 
 		while (_BitScanForward64(&dest, attacks))
 		{
@@ -150,33 +151,33 @@ std::vector<Move> Position::generateMoves()
 	}
 	while (_BitScanForward64(&sq, _pawns))
 	{
-		char pawn = board[sq];
+		auto pawn = board[sq];
 		_pawns &= ~SQUAREBB(sq);
 
 		unsigned long dest;
 		auto column = sq & 7;
 		auto row = sq >> 3;
 
-		if (pawn == 'p')
+		if (pawn == PAWN_B)
 		{
 			if (row == 6)
 			{
 				if (column > 0)
 				{
 					dest = sq + 7;
-					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
 				}
 				if (column < 7)
 				{
 					dest = sq + 9;
-					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
 				}
 
 				dest = sq + 8;
-				if (board[dest] == '-')
-					moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, '-' }));
+				if (board[dest] == EMPTY)
+					moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, EMPTY }));
 				continue;
 			}
 
@@ -184,31 +185,31 @@ std::vector<Move> Position::generateMoves()
 			if (column > 0)
 			{
 				dest = sq + 7;
-				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+				if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
 				if (dest == enPassantSquare)
-					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, EMPTY }));
 			}
 			if (column < 7)
 			{
 				dest = sq + 9;
-				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+				if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
 				if (dest == enPassantSquare)
-					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, EMPTY }));
 			}
 
 			dest = sq + 8;
-			if (board[dest] != '-')
+			if (board[dest] != EMPTY)
 				continue;
-			moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, '-' }));
+			moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, EMPTY }));
 
 			if (row == 1)
 			{
 				dest = sq + 16;
-				if (board[dest] != '-')
+				if (board[dest] != EMPTY)
 					continue;
-				moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, '-' }));
+				moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, EMPTY }));
 			}
 
 			continue;
@@ -220,19 +221,19 @@ std::vector<Move> Position::generateMoves()
 				if (column < 7)
 				{
 					dest = sq - 7;
-					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
 				}
 				if (column > 0)
 				{
 					dest = sq - 9;
-					if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+					if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 						moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, board[dest] }));
 				}
 
 				dest = sq - 8;
-				if (board[dest] == '-')
-					moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, '-' }));
+				if (board[dest] == EMPTY)
+					moves.push_back(Move({ Square(sq), Square(dest), PROMOTION, EMPTY }));
 				continue;
 			}
 
@@ -240,31 +241,31 @@ std::vector<Move> Position::generateMoves()
 			if (column < 7)
 			{
 				dest = sq - 7;
-				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+				if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
 				if (dest == enPassantSquare)
-					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, EMPTY }));
 			}
 			if (column > 0)
 			{
 				dest = sq - 9;
-				if (board[dest] != '-' && colorOf(board[dest]) != sideToMove)
+				if (board[dest] != EMPTY && colorOf(board[dest]) != sideToMove)
 					moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, board[dest] }));
 				if (dest == enPassantSquare)
-					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, '-' }));
+					moves.push_back(Move({ Square(sq), Square(dest), EN_PASSANT, EMPTY }));
 			}
 
 			dest = sq - 8;
-			if (board[dest] != '-')
+			if (board[dest] != EMPTY)
 				continue;
-			moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, '-' }));
+			moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, EMPTY }));
 
 			if (row == 6)
 			{
 				dest = sq - 16;
-				if (board[dest] != '-')
+				if (board[dest] != EMPTY)
 					continue;
-				moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, '-' }));
+				moves.push_back(Move({ Square(sq), Square(dest), DEFAULT, EMPTY }));
 			}
 			continue;
 		}

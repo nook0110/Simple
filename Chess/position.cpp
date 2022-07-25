@@ -2,66 +2,66 @@
 #include "attacks.h"
 #include "pieceSquareTables.hpp"
 
-void Position::place(const Square& square, const char piece)
+void Position::place(const Square& square, const Piece piece)
 {
-	if (piece == '-')
+	if (piece == EMPTY)
 	{
 		remove(square);
 		return;
 	}
-	if (piece == 'k')
+	if (piece == KING_B)
 	{
 		kingPos[COLOR_B] = square.getInd();
 	}
-	if (piece == 'K')
+	if (piece == KING_W)
 	{
 		kingPos[COLOR_W] = square.getInd();
 	}
 	board[square.getInd()] = piece;
 	for (auto phase : { MG, EG })
 	{
-		pieceValuesSum[phase] += pieceValues[PIECES[piece]][phase];
-		psqtBonusSum[phase] += PSQT[PIECES[piece]][square.rank][square.file][phase];
+		pieceValuesSum[phase] += pieceValues[piece][phase];
+		psqtBonusSum[phase] += PSQT[piece][square.rank][square.file][phase];
 	}
 
 	const Color pieceColor = colorOf(piece);
 	if (nonPawn(piece))
-		nonPawnMaterial[pieceColor] += pieceValues[PIECES[piece]][MG];
+		nonPawnMaterial[pieceColor] += pieceValues[piece][MG];
 
-	pieces[PIECES[piece]] |= SQUAREBB(square.getInd());
+	pieces[piece] |= SQUAREBB(square.getInd());
 	color[pieceColor] |= SQUAREBB(square.getInd());
 
 	// hash key updating
-	//hash ^= psq_keys[PIECES[piece]][square.getInd()];
+	//hash ^= psq_keys[piece][square.getInd()];
 }
 
 void Position::remove(const Square& square)
 {
-	const char removedPiece = board[square.getInd()];
-	if (removedPiece == '-')
+	const auto removedPiece = board[square.getInd()];
+	if (removedPiece == EMPTY)
 		return;
 	for (auto phase : { MG, EG })
 	{
-		pieceValuesSum[phase] -= pieceValues[PIECES[removedPiece]][phase];
-		psqtBonusSum[phase] -= PSQT[PIECES[removedPiece]][square.rank][square.file][phase];
+		pieceValuesSum[phase] -= pieceValues[removedPiece][phase];
+		psqtBonusSum[phase] -= PSQT[removedPiece][square.rank][square.file][phase];
 	}
-	board[square.getInd()] = '-';
+	board[square.getInd()] = EMPTY;
 
 	const Color pieceColor = colorOf(removedPiece);
 	if (nonPawn(removedPiece))
-		nonPawnMaterial[pieceColor] -= pieceValues[PIECES[removedPiece]][MG];
+		nonPawnMaterial[pieceColor] -= pieceValues[removedPiece][MG];
 	
-	pieces[PIECES[removedPiece]] &= ~SQUAREBB(square.getInd());
+	pieces[removedPiece] &= ~SQUAREBB(square.getInd());
 	color[pieceColor] &= ~SQUAREBB(square.getInd());
 
 	// hash key updating
-	//hash ^= psq_keys[PIECES[removedPiece]][square.getInd()];
+	//hash ^= psq_keys[removedPiece][square.getInd()];
 }
 
 void Position::doMove(const Move& move)
 {
-	const char pieceToMove = board[move.from.getInd()];
-	const char capturedPiece = move.captured;
+	const auto pieceToMove = board[move.from.getInd()];
+	const auto capturedPiece = move.captured;
 	Square captureSquare = { move.to.rank, move.to.file };
 	remove(move.from);
 	if (enPassantSquare != -1)
@@ -89,7 +89,7 @@ void Position::doMove(const Move& move)
 	case PROMOTION:
 		if (capturedPiece != '-')
 			remove(captureSquare);
-		place(move.to, sideToMove ? 'Q' : 'q');
+		place(move.to, sideToMove ? QUEEN_W : QUEEN_B);
 		break;
 	}
 	sideToMove = !sideToMove;
@@ -100,7 +100,7 @@ void Position::doMove(const Move& move)
 void Position::undoMove(const Move& move)
 {
 	sideToMove = !sideToMove;
-	const char pieceToMoveBack = board[move.to.getInd()];
+	const auto pieceToMoveBack = board[move.to.getInd()];
 	remove(move.to);
 	switch (move.moveType)
 	{
@@ -111,18 +111,18 @@ void Position::undoMove(const Move& move)
 		place(move.from, pieceToMoveBack);
 		if (sideToMove)
 		{
-			place({ 3, move.to.rank }, 'p');
+			place({ 3, move.to.rank }, PAWN_B);
 		}
 		else
 		{
-			place({ 4, move.to.rank }, 'P');
+			place({ 4, move.to.rank }, PAWN_W);
 		}
 		break;
 	case PROMOTION:
-		place(move.from, sideToMove ? 'P' : 'p');
+		place(move.from, sideToMove ? PAWN_W : PAWN_B);
 		break;
 	}
-	if (move.captured != '-')
+	if (move.captured != EMPTY)
 		place(move.to, move.captured);
 
 	//hash ^= sideToMoveKey;
@@ -184,7 +184,7 @@ void Position::init(std::string FEN, std::string move)
 			}
 			else
 			{
-				board[SQUARE(row, column)] = *current;
+				board[SQUARE(row, column)] = PIECES[*current];
 			}
 			++column;
 		}
@@ -201,13 +201,9 @@ void Position::init(std::string FEN, std::string move)
 	enPassantSquare = SQUARE(8 - (enPassantTargetRow - '0'), enPassantTargetColumn - 'a');
 	for (square ind = 0; ind < 64; ++ind)
 	{
-		if (board[ind] == '-')
+		if (board[ind] == EMPTY)
 			continue;
 		place(Square(ind), board[ind]);
-	}
-	for (auto color : { COLOR_W, COLOR_B })
-	{
-		nonPawnMaterial[color] -= pieceValues[shift[color] + KING][MG];
 	}
 }
 

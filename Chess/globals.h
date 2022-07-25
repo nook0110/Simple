@@ -20,7 +20,7 @@ using square = char;
 
 constexpr bitboard EMPTY_BOARD = 0;
 
-enum Piece
+enum PieceType
 {
 	PAWN = 0,
 	KNIGHT,
@@ -28,6 +28,24 @@ enum Piece
 	ROOK,
 	QUEEN,
 	KING,
+	PT_NONE
+};
+
+enum Piece
+{
+	PAWN_W = 0,
+	KNIGHT_W,
+	BISHOP_W,
+	ROOK_W,
+	QUEEN_W,
+	KING_W,
+	PAWN_B,
+	KNIGHT_B,
+	BISHOP_B,
+	ROOK_B,
+	QUEEN_B,
+	KING_B,
+	EMPTY,
 	PIECE_NONE
 };
 
@@ -56,9 +74,9 @@ inline square& operator++(square& sq) { return sq = (square)((int)sq + 1); }
 inline square operator+=(square& sq, square& oth) { return sq = (square)(sq + (int)oth); }
 */
 
-inline std::unordered_map<char, const int> PIECES = { {'P', 0}, {'N', 1}, {'B', 2}, {'R', 3}, {'Q', 4}, {'K', 5},
-													  {'p', 6}, {'n', 7}, {'b', 8}, {'r', 9}, {'q', 10}, {'k', 11},
-													  {'-', 12} };
+inline std::unordered_map<char, const Piece> PIECES = { {'P', PAWN_W}, {'N', KNIGHT_W}, {'B', BISHOP_W}, {'R', ROOK_W}, {'Q', QUEEN_W}, {'K', KING_W},
+													  {'p', PAWN_B}, {'n', KNIGHT_B}, {'b', BISHOP_B}, {'r', ROOK_B}, {'q', QUEEN_B}, {'k', KING_B},
+													  {'-', EMPTY} };
 
 enum DiscretePhase
 {
@@ -80,16 +98,16 @@ inline Color flip(const Color c)
 	return static_cast<Color>(!c);
 }
 
-inline Color colorOf(const char piece)
+inline Color colorOf(const Piece piece)
 {
-	if (PIECES[piece] == 12)
+	if (piece == EMPTY || piece == PIECE_NONE)
 		return COLOR_NONE;
-	return (piece <= 'Z' ? COLOR_W : COLOR_B);
+	return (piece <= KING_W ? COLOR_W : COLOR_B);
 }
 
-inline const bool nonPawn(const char piece)
+inline const bool nonPawn(const Piece piece)
 {
-    return !(piece == 'P' || piece == 'p');
+    return !(piece == PAWN_W || piece == PAWN_B);
 }
 
 constexpr uint_fast64_t h = 9259542123273814144;

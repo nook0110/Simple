@@ -1,6 +1,6 @@
 #ifndef EVAL_H
 #define EVAL_H
 
-using value = long long;
+using value = int;
 
 #endif // !EVAL_H

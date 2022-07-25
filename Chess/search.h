@@ -21,7 +21,7 @@ struct nodeInfo
 	Move bestMove;
 };
 
-constexpr size_t tableSize = 1ull << 27 - 1ull;
+constexpr size_t tableSize = (1ull << 27) - 1ull;
 
 inline size_t Position::address() const
 {

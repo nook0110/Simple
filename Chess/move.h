@@ -20,7 +20,7 @@ struct Move {
 	Square from;
 	Square to;
 	MoveType moveType;
-	char captured = '-';
+	Piece captured = EMPTY;
 
 	std::string toStr() const noexcept
 	{
@@ -44,12 +44,12 @@ struct Move {
 		if (moveType != other.moveType)
 			return moveType > other.moveType;
 		if (captured != other.captured)
-			if (captured != '-' && other.captured != '-')
+			if (captured != EMPTY && other.captured != EMPTY)
 			{
-				return std::abs(pieceValues[PIECES[captured]][MG]) > std::abs(pieceValues[PIECES[other.captured]][MG]);
+				return std::abs(pieceValues[captured][MG]) > std::abs(pieceValues[other.captured][MG]);
 			}
 			else
-				return PIECES[captured] < PIECES[other.captured];
+				return captured != EMPTY;
 		return abs(7 - 2 * to.file) + abs(7 - 2 * to.rank) < abs(7 - 2 * other.to.file) + abs(7 - 2 * other.to.rank);
 	}
 };

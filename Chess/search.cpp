@@ -99,7 +99,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		return std::nullopt;
 	}
 
-	if (depth > 5)
+	if (depth > 6)
 	{
 		auto eval = quiesce(depth, alpha, beta);
 		return eval;

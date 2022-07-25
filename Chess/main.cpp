@@ -10,6 +10,7 @@
 
 int main(int argc, char** argv)
 {
+	position.board.fill(EMPTY);
 	init_sliding_maps();
 
 	if (argc > 2)
@@ -31,13 +32,18 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	std::string FEN = "3r4/p4p2/6p1/4b2p/2k3K1/B1P2P2/P1R3PP/8 w -- 1";
+	std::string FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w -- 1";
 	//				  "rnb1kb1N/p1pqp1pp/1p3n2/8/2B5/2P1P3/PPP2PPP/R1BQK2R b -- 2"
-	std::string MOVE;
+
+	std::string MOVE = "";
 	position.init(FEN, MOVE);
 
-	auto bm = position.findBestMove();
-	std::cout << bm.toStr();
+	while(true)
+	{
+		auto bm = position.findBestMove();
+		std::cout << bm.toStr() << std::endl;
+		position.doMove(bm);
+	}
 
 	return 0;
 

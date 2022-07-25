@@ -4,7 +4,9 @@
 #include <intrin.h>
 #include <nmmintrin.h>
 
-constexpr value mobilityBonus[5][32][PHASE_NONE] =
+#pragma intrinsic(_BitScanForward)
+
+constexpr value mobilityBonus[KING][32][PHASE_NONE] =
 {
 	{}, // P
 	{
