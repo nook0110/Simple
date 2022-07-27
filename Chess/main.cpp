@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 
 	//while(true)
 	{
-		auto bm = position.findBestMove(7);
+		auto bm = position.findBestMove(10);
 		std::cout << bm.toStr() << "|" << counter << std::endl;
 		position.doMove(bm);
 	}

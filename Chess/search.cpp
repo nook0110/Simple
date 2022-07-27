@@ -111,17 +111,16 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		return eval;
 	}
 
-	auto& pv = PVmoves[hash];
-
-	if (maxDepth <= pv.maxDepth && depth >= pv.depth)
-		return pv.eval;
+	auto pv_iterator = PVmoves.insert({ hash, nodeInfo() }).first;
+	if (maxDepth <= pv_iterator->second.maxDepth && depth >= pv_iterator->second.depth)
+		return  pv_iterator->second.eval;
 
 	size_t incorrect = 0;
 	auto moves = generateMoves();
 
-	if (pv.depth != 255)
+	if (pv_iterator->second.depth != 255)
 	{
-		auto pvInMoves = std::find(moves.begin(), moves.end(), pv.bestMove);
+		auto pvInMoves = std::find(moves.begin(), moves.end(), pv_iterator->second.bestMove);
 		std::iter_swap(moves.begin(), pvInMoves);
 		std::sort(moves.begin() + 1, moves.end());
 	}
@@ -145,9 +144,11 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 			}
 			if (alpha < tempAlpha.value())
 			{
-				pv.bestMove = move;
+				pv_iterator->second.bestMove = move;
+				pv_iterator->second.depth = depth;
+				pv_iterator->second.maxDepth = maxDepth;
 				alpha = tempAlpha.value();
-				pv.eval = alpha;
+				pv_iterator->second.eval = alpha;
 			}
 			if (beta <= tempAlpha.value())
 			{
@@ -185,9 +186,11 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 			}
 			if (beta > tempBeta.value())
 			{
-				pv.bestMove = move;
+				pv_iterator->second.bestMove = move;
+				pv_iterator->second.depth = depth;
+				pv_iterator->second.maxDepth = maxDepth;
 				beta = tempBeta.value();
-				pv.eval = beta;
+				pv_iterator->second.eval = beta;
 			}
 			if (alpha >= tempBeta.value())
 			{
