@@ -4,12 +4,13 @@
 #include "position.h"
 #include "globals.h"
 #include "attacks.h"
-
+#include "search.h"
 
 // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w -- 1
 
 int main(int argc, char** argv)
 {
+	PVmoves.reserve((int)2e7);
 	position.board.fill(EMPTY);
 	init_sliding_maps();
 
@@ -24,7 +25,7 @@ int main(int argc, char** argv)
 		position.init(FEN, MOVE);
 		std::ofstream out(argv[2]);
 
-		auto bm = position.findBestMove();
+		auto bm = position.findBestMove(7);
 		out << bm.toStr();
 		position.doMove(bm);
 		out.close();
@@ -38,10 +39,10 @@ int main(int argc, char** argv)
 	std::string MOVE = "";
 	position.init(FEN, MOVE);
 
-	while(true)
+	//while(true)
 	{
-		auto bm = position.findBestMove();
-		std::cout << bm.toStr() << std::endl;
+		auto bm = position.findBestMove(7);
+		std::cout << bm.toStr() << "|" << counter << std::endl;
 		position.doMove(bm);
 	}
 

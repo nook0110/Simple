@@ -32,7 +32,7 @@ void Position::place(const Square& square, const Piece piece)
 	color[pieceColor] |= SQUAREBB(square.getInd());
 
 	// hash key updating
-	//hash ^= psq_keys[piece][square.getInd()];
+	hash ^= psq_keys[piece][square.getInd()];
 }
 
 void Position::remove(const Square& square)
@@ -55,7 +55,7 @@ void Position::remove(const Square& square)
 	color[pieceColor] &= ~SQUAREBB(square.getInd());
 
 	// hash key updating
-	//hash ^= psq_keys[removedPiece][square.getInd()];
+	hash ^= psq_keys[removedPiece][square.getInd()];
 }
 
 void Position::doMove(const Move& move)
@@ -66,7 +66,7 @@ void Position::doMove(const Move& move)
 	remove(move.from);
 	if (enPassantSquare != -1)
 	{
-		//hash ^= enpass[enPassantSquare & 7];
+		hash ^= enpass[enPassantSquare & 7];
 		enPassantSquare = -1;
 	}
 	switch (move.moveType)
@@ -74,7 +74,7 @@ void Position::doMove(const Move& move)
 	case DOUBLE:
 		place(move.to, pieceToMove);
 		enPassantSquare = (move.to.getInd() + move.from.getInd()) >> 1;
-		//hash ^= enpass[move.from.file];
+		hash ^= enpass[move.from.file];
 		break;
 	case DEFAULT:
 		if (capturedPiece != '-')
@@ -94,7 +94,7 @@ void Position::doMove(const Move& move)
 	}
 	sideToMove = !sideToMove;
 
-	//hash ^= sideToMoveKey;
+	hash ^= sideToMoveKey;
 }
 
 void Position::undoMove(const Move& move)
@@ -125,7 +125,7 @@ void Position::undoMove(const Move& move)
 	if (move.captured != EMPTY)
 		place(move.to, move.captured);
 
-	//hash ^= sideToMoveKey;
+	hash ^= sideToMoveKey;
 }
 
 const bitboard Position::pawns(const Color color) const

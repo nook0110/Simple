@@ -2,11 +2,23 @@
 #include "globals.h"
 
 struct Square {
-	Square() {};
+	Square() : rank(-1), file(-1) {};
 	square rank, file;
 	Square(square rank, square file) :rank(rank), file(file) {}
 	Square(square ind) : rank(ind >> 3), file(ind & 7) {}
 	inline const square getInd() const noexcept { return SQUARE(rank, file); }
+	const bool operator!=(const Square& other) const
+	{
+		if (rank != other.rank)
+			return false;
+		if (file != other.file)
+			return false;	
+		return true;
+	}
+	const bool operator==(const Square& other) const
+	{
+		return !(*this != other);
+	}
 };
 
 enum MoveType {
@@ -51,5 +63,21 @@ struct Move {
 			else
 				return captured != EMPTY;
 		return abs(7 - 2 * to.file) + abs(7 - 2 * to.rank) < abs(7 - 2 * other.to.file) + abs(7 - 2 * other.to.rank);
+	}
+	const bool operator!=(const Move& other) const
+	{
+		if (from != other.from)
+			return false;
+		if (to != other.to)
+			return false;
+		if (moveType != other.moveType)
+			return false;
+		if (captured != other.captured)
+			return false;
+		return true;
+	}
+	const bool operator==(const Move& other) const
+	{
+		return !(*this != other);
 	}
 };

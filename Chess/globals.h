@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <cmath>
 #include <cassert>
+#include <unordered_map>
 
 #ifdef _MSC_VER
 #pragma warning(disable : 26812)
