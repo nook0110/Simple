@@ -66,7 +66,7 @@ void Position::doMove(const Move& move)
 	remove(move.from);
 	if (enPassantSquare != -1)
 	{
-		hash ^= enpass[enPassantSquare & 7];
+		//hash ^= enpass[enPassantSquare & 7];
 		enPassantSquare = -1;
 	}
 	switch (move.moveType)
@@ -74,7 +74,7 @@ void Position::doMove(const Move& move)
 	case DOUBLE:
 		place(move.to, pieceToMove);
 		enPassantSquare = (move.to.getInd() + move.from.getInd()) >> 1;
-		hash ^= enpass[move.from.file];
+		//hash ^= enpass[move.from.file];
 		break;
 	case DEFAULT:
 		if (capturedPiece != '-')

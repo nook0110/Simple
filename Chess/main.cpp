@@ -10,7 +10,7 @@
 
 int main(int argc, char** argv)
 {
-	PVmoves.reserve((int)2e7);
+	PVmoves.reserve((int)5e7);
 	position.board.fill(EMPTY);
 	init_sliding_maps();
 
@@ -39,10 +39,12 @@ int main(int argc, char** argv)
 	std::string MOVE = "";
 	position.init(FEN, MOVE);
 
-	//while(true)
+	while(true)
 	{
-		auto bm = position.findBestMove(10);
-		std::cout << bm.toStr() << "|" << counter << std::endl;
+		counter = 0;
+		qcounter = 0;
+		auto bm = position.findBestMove(8);
+		std::cout << bm.toStr() << " | nodes: " << std::scientific << (double)counter << " q nodes: " << (double)qcounter << std::endl;
 		position.doMove(bm);
 	}
 

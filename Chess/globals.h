@@ -141,5 +141,6 @@ inline constexpr std::array<bitboard, 8> RANKS =
 
 
 extern unsigned long long counter;
+extern unsigned long long qcounter;
 
 #endif // !GLOBALS_H

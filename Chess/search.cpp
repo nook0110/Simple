@@ -1,8 +1,10 @@
 #include "search.h"
+#include <iostream>
 
 extern std::vector<nodeInfo> tp_table(tableSize, nodeInfo());
 extern std::unordered_map<key_t, nodeInfo> PVmoves = std::unordered_map<key_t, nodeInfo>();
 std::mutex updateBM;
+unsigned long long qcounter;
 
 void findMove(Position& pos, const std::vector<Move>& moves, value& alpha, value& beta, Move& bestMove, unsigned char maxDepth)
 {
@@ -50,7 +52,7 @@ Move Position::findBestMove(unsigned char maxDepth)
 		std::sort(its[i], its[i + 1]);
 	}
 
-	for (int depth = 0; depth < maxDepth; ++depth)
+	for (int depth = 2; depth < maxDepth; ++depth)
 	{
 		alpha = INT_MIN;
 		beta = INT_MAX;
@@ -89,6 +91,7 @@ Move Position::findBestMove(unsigned char maxDepth)
 				findMove(c7, std::vector<Move>(its[7], its[8]), alpha, beta, bestMove, depth);
 			}
 		}
+		std::cout << "Depth " << depth << ": " << bestMove.toStr() << std::endl;
 	}
 	return bestMove;
 }
@@ -217,7 +220,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 
 std::optional<value> Position::quiesce(int depth, value alpha, value beta)
 {
-	++counter;
+	++qcounter;
 
 	value standingPat = (sideToMove == (depth % 2) ? -evaluate() : evaluate());
 
