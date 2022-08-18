@@ -13,7 +13,7 @@ enum nodeType
 
 struct nodeInfo
 {
-	nodeInfo() : depth(-1), maxDepth(-1) {}
+	nodeInfo() : depth(255), maxDepth(255) {}
 	nodeInfo(unsigned char depth, value eval, unsigned char maxDepth) : depth(depth), eval(eval), maxDepth(maxDepth) {}
 	//nodeInfo() : type(NODE_TYPE_NONE) {}
 	//key_t key;
