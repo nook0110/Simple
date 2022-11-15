@@ -33,7 +33,54 @@ void findMove(Position& pos, const std::vector<Move>& moves, value& alpha, value
 	}
 }
 
-Move Position::findBestMove(unsigned char maxDepth)
+Move Position::findBestMove(unsigned char maxDepth, std::vector<Move>& moves)
+{
+	++counter;
+
+	auto [pv_iterator, inserted] = PVmoves.insert({ hash, nodeInfo() });
+	if (maxDepth <= pv_iterator->second.maxDepth && 0 >= pv_iterator->second.depth)
+		return  pv_iterator->second.bestMove;
+
+	value alpha = INT_MIN;
+	value beta = INT_MAX;
+
+	if (!inserted)
+	{
+		auto pvInMoves = std::find(moves.begin(), moves.end(), pv_iterator->second.bestMove);
+		std::iter_swap(moves.begin(), pvInMoves);
+		alpha = pv_iterator->second.eval - pieceValues[PAWN_W][EG];
+		beta = pv_iterator->second.eval + pieceValues[PAWN_W][EG];
+	}
+
+	std::optional<value> tempAlpha;
+
+	size_t incorrect = 0;
+	size_t cuts = 0;
+
+	for (const auto& move : moves)
+	{
+		doMove(move);
+		tempAlpha = findAlphaBeta(1, alpha, beta, move, maxDepth);
+		undoMove(move);
+		if (!tempAlpha.has_value())
+		{
+			++cuts;
+			continue;
+		}
+		if (alpha < tempAlpha.value())
+		{
+			pv_iterator->second.bestMove = move;
+			pv_iterator->second.depth = 0;
+			pv_iterator->second.maxDepth = maxDepth;
+			alpha = tempAlpha.value();
+			pv_iterator->second.eval = alpha;
+		}
+	}
+
+	return pv_iterator->second.bestMove;
+}
+
+Move Position::findBestMove(unsigned char minDepth, unsigned char maxDepth)
 {
 	auto moves = generateMoves();
 	Move bestMove = moves[0];
@@ -95,6 +142,7 @@ Move Position::findBestMove(unsigned char maxDepth)
 				findMove(c7, std::vector<Move>(its[7], its[8]), alpha, beta, bestMove, depth);
 			}
 		}
+		std::cout << "Depth " << depth << ": " << bestMove.toStr() << std::endl;
 	}
 	return bestMove;
 }
@@ -103,39 +151,32 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 {
 	++counter;
 
-	auto us = static_cast<Color>(sideToMove);
-	auto them = flip(us);
-
-	if (underCheck(them))
-	{
-		return std::nullopt;
-	}
-
 	if (depth > maxDepth)
 	{
 		auto eval = quiesce(depth, alpha, beta);
 		return eval;
-	}
 	/*
+	auto pv_iterator = PVmoves.insert({ hash, nodeInfo() }).first;
 	if (maxDepth <= pv_iterator->second.maxDepth && depth >= pv_iterator->second.depth)
-		return  pv_iterator->second.eval;
 	*/
+		return  pv_iterator->second.eval;
 
-	size_t incorrect = 0;
 	auto moves = generateMoves();
-
 	/*
+	if (pv_iterator->second.depth != 255)
 	if (pv_iterator->second.depth != 255)
 	{
 		auto pvInMoves = std::find(moves.begin(), moves.end(), pv_iterator->second.bestMove);
 		std::iter_swap(moves.begin(), pvInMoves);
 		std::sort(moves.begin() + 1, moves.end());
+		alpha = pv_iterator->second.eval - pieceValues[PAWN_W][EG];
+		beta = pv_iterator->second.eval + pieceValues[PAWN_W][EG];
 	}
 	else
-	{
 	*/
-		std::sort(moves.begin(), moves.end());
+	{
 	//}
+	}
 	if (depth % 2 == 0)
 	{
 		std::optional<value> tempAlpha;
@@ -151,29 +192,22 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 			cr[COLOR_B] = cr_b;
 			if (!tempAlpha.has_value())
 			{
-				++incorrect;
+				++cuts;
 				continue;
 			}
 			if (alpha < tempAlpha.value())
 			{
 				alpha = tempAlpha.value();
 			}
-			if (beta <= tempAlpha.value())
+			if (beta <= alpha)
 			{
 				return beta;
 			}
 		}
 
-		if (incorrect == moves.size())
+		if (cuts == moves.size())
 		{
-			if (underCheck(us))
-			{
-				return -2e9 + depth;
-			}
-			else
-			{
-				return 0;
-			}
+
 		}
 
 		return alpha;
@@ -193,28 +227,16 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 			cr[COLOR_B] = cr_b;
 			if (!tempBeta.has_value())
 			{
-				++incorrect;
+				++cuts;
 				continue;
 			}
 			if (beta > tempBeta.value())
 			{
 				beta = tempBeta.value();
 			}
-			if (alpha >= tempBeta.value())
+			if (alpha >= beta)
 			{
 				return alpha;
-			}
-		}
-
-		if (incorrect == moves.size())
-		{
-			if (underCheck(us))
-			{
-				return 2e9 - depth;
-			}
-			else
-			{
-				return 0;
 			}
 		}
 

@@ -201,7 +201,9 @@ struct Position {
 	std::vector<Move> generateAttacks();
 	std::vector<Move> generateMoves();
 
-	Move findBestMove(unsigned char maxDepth);
+
+	Move findBestMove(unsigned char maxDepth, std::vector<Move>& moves);
+	Move findBestMove(unsigned char minDepth, unsigned char maxDepth);
 
 	std::optional<value> findAlphaBeta(int depth, value alpha, value beta, const Move& previous, const const unsigned char maxDepth);
 	std::optional<value> quiesce(int depth, value alpha, value beta);
