@@ -86,12 +86,22 @@ enum DiscretePhase
 	PHASE_NONE
 };
 
+enum CastlingRight
+{
+	CR_NONE = 0,
+	CR_OO,
+	CR_OOO,
+	CR_ALL = CR_OO | CR_OOO
+};
+
 inline constexpr signed pieceValues[13][PHASE_NONE] = { {126, 208}, {781, 854}, {825, 915}, {1276, 1380}, {2538, 2682}, {0, 0},
-												        {-126, -208}, {-781, -854}, {-825, -915}, {-1276, -1380}, {-2538, -2682}, {0, 0},
-												        {0, 0} };
+														{-126, -208}, {-781, -854}, {-825, -915}, {-1276, -1380}, {-2538, -2682}, {0, 0},
+														{0, 0} };
 
 inline constexpr std::array<const int, COLOR_NONE> shift = { 6, 0 };
-	
+
+inline constexpr std::array<std::array<square, CR_ALL>, COLOR_NONE> kingDestination = { { {0, 6, 2}, {0, 62 ,58} } };
+
 inline Color flip(const Color c)
 {
 	if (c == COLOR_NONE)
@@ -108,12 +118,12 @@ inline Color colorOf(const Piece piece)
 
 inline const bool nonPawn(const Piece piece)
 {
-    return !(piece == PAWN_W || piece == PAWN_B);
+	return !(piece == PAWN_W || piece == PAWN_B);
 }
 
 constexpr uint_fast64_t h = 9259542123273814144;
 
-inline constexpr std::array<bitboard, 8> FILES = 
+inline constexpr std::array<bitboard, 8> FILES =
 {
 	h >> 7,
 	h >> 6,

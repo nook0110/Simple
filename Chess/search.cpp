@@ -10,9 +10,13 @@ void findMove(Position& pos, const std::vector<Move>& moves, value& alpha, value
 {
 	for (int i = 0; i < moves.size(); ++i)
 	{
+		const CastlingRight cr_w = pos.cr[COLOR_W];
+		const CastlingRight cr_b = pos.cr[COLOR_B];
 		pos.doMove(moves[i]);
 		auto tempAlpha = pos.findAlphaBeta(1, alpha, beta, moves[i], maxDepth);
 		pos.undoMove(moves[i]);
+		pos.cr[COLOR_W] = cr_w;
+		pos.cr[COLOR_B] = cr_b;
 		if (!tempAlpha.has_value())
 		{
 			continue;
@@ -52,11 +56,11 @@ Move Position::findBestMove(unsigned char maxDepth)
 		std::sort(its[i], its[i + 1]);
 	}
 
-	for (int depth = 2; depth < maxDepth; ++depth)
+	for (int depth = 4; depth < maxDepth; ++depth)
 	{
 		alpha = INT_MIN;
 		beta = INT_MAX;
-#pragma omp parallel sections num_threads(8)
+#pragma omp parallel sections num_threads(1)
 		{
 #pragma omp section
 			{
@@ -91,7 +95,6 @@ Move Position::findBestMove(unsigned char maxDepth)
 				findMove(c7, std::vector<Move>(its[7], its[8]), alpha, beta, bestMove, depth);
 			}
 		}
-		std::cout << "Depth " << depth << ": " << bestMove.toStr() << std::endl;
 	}
 	return bestMove;
 }
@@ -113,14 +116,15 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 		auto eval = quiesce(depth, alpha, beta);
 		return eval;
 	}
-
-	auto pv_iterator = PVmoves.insert({ hash, nodeInfo() }).first;
+	/*
 	if (maxDepth <= pv_iterator->second.maxDepth && depth >= pv_iterator->second.depth)
 		return  pv_iterator->second.eval;
+	*/
 
 	size_t incorrect = 0;
 	auto moves = generateMoves();
 
+	/*
 	if (pv_iterator->second.depth != 255)
 	{
 		auto pvInMoves = std::find(moves.begin(), moves.end(), pv_iterator->second.bestMove);
@@ -129,17 +133,22 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 	}
 	else
 	{
+	*/
 		std::sort(moves.begin(), moves.end());
-	}
+	//}
 	if (depth % 2 == 0)
 	{
 		std::optional<value> tempAlpha;
 
 		for (const auto& move : moves)
 		{
+			const CastlingRight cr_w = cr[COLOR_W];
+			const CastlingRight cr_b = cr[COLOR_B];
 			doMove(move);
 			tempAlpha = findAlphaBeta(depth + 1, alpha, beta, move, maxDepth);
 			undoMove(move);
+			cr[COLOR_W] = cr_w;
+			cr[COLOR_B] = cr_b;
 			if (!tempAlpha.has_value())
 			{
 				++incorrect;
@@ -147,11 +156,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 			}
 			if (alpha < tempAlpha.value())
 			{
-				pv_iterator->second.bestMove = move;
-				pv_iterator->second.depth = depth;
-				pv_iterator->second.maxDepth = maxDepth;
 				alpha = tempAlpha.value();
-				pv_iterator->second.eval = alpha;
 			}
 			if (beta <= tempAlpha.value())
 			{
@@ -179,9 +184,13 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 
 		for (const auto& move : moves)
 		{
+			const CastlingRight cr_w = cr[COLOR_W];
+			const CastlingRight cr_b = cr[COLOR_B];
 			doMove(move);
 			tempBeta = findAlphaBeta(depth + 1, alpha, beta, move, maxDepth);
 			undoMove(move);
+			cr[COLOR_W] = cr_w;
+			cr[COLOR_B] = cr_b;
 			if (!tempBeta.has_value())
 			{
 				++incorrect;
@@ -189,11 +198,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 			}
 			if (beta > tempBeta.value())
 			{
-				pv_iterator->second.bestMove = move;
-				pv_iterator->second.depth = depth;
-				pv_iterator->second.maxDepth = maxDepth;
 				beta = tempBeta.value();
-				pv_iterator->second.eval = beta;
 			}
 			if (alpha >= tempBeta.value())
 			{
@@ -246,9 +251,13 @@ std::optional<value> Position::quiesce(int depth, value alpha, value beta)
 
 		for (const auto& move : moves)
 		{
+			const CastlingRight cr_w = cr[COLOR_W];
+			const CastlingRight cr_b = cr[COLOR_B];
 			doMove(move);
 			tempAlpha = quiesce(depth + 1, alpha, beta);
 			undoMove(move);
+			cr[COLOR_W] = cr_w;
+			cr[COLOR_B] = cr_b;
 			if (!tempAlpha.has_value())
 			{
 				++incorrect;
@@ -277,9 +286,13 @@ std::optional<value> Position::quiesce(int depth, value alpha, value beta)
 
 		for (const auto& move : moves)
 		{
+			const CastlingRight cr_w = cr[COLOR_W];
+			const CastlingRight cr_b = cr[COLOR_B];
 			doMove(move);
 			tempBeta = quiesce(depth + 1, alpha, beta);
 			undoMove(move);
+			cr[COLOR_W] = cr_w;
+			cr[COLOR_B] = cr_b;
 			if (!tempBeta.has_value())
 			{
 				++incorrect;

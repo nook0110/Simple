@@ -69,6 +69,39 @@ void Position::doMove(const Move& move)
 		//hash ^= enpass[enPassantSquare & 7];
 		enPassantSquare = -1;
 	}
+	if (sideToMove == COLOR_W)
+	{
+		if (pieceToMove == KING_W)
+			cr[COLOR_W] = CR_NONE;
+		else if (pieceToMove == ROOK_W && move.from.rank == 7 && move.from.file == 0)
+			cr[COLOR_W] = static_cast<CastlingRight>(cr[COLOR_W] & ~CR_OOO);
+		else if (pieceToMove == ROOK_W && move.from.rank == 7 && move.from.file == 7)
+			cr[COLOR_W] = static_cast<CastlingRight>(cr[COLOR_W] & ~CR_OO);
+		if (capturedPiece == ROOK_B)
+		{
+			if (move.to.rank == 0 && move.to.file == 0)
+				cr[COLOR_B] = static_cast<CastlingRight>(cr[COLOR_B] & ~CR_OOO);
+			if (move.to.rank == 0 && move.to.file == 7)
+				cr[COLOR_B] = static_cast<CastlingRight>(cr[COLOR_B] & ~CR_OO);
+		}
+
+	}
+	else
+	{
+		if (pieceToMove == KING_B)
+			cr[COLOR_B] = CR_NONE;
+		else if (pieceToMove == ROOK_B && move.from.rank == 0 && move.from.file == 0)
+			cr[COLOR_B] = static_cast<CastlingRight>(cr[COLOR_B] & ~CR_OOO);
+		else if (pieceToMove == ROOK_B && move.from.rank == 0 && move.from.file == 7)
+			cr[COLOR_B] = static_cast<CastlingRight>(cr[COLOR_B] & ~CR_OO);
+		if (capturedPiece == ROOK_W)
+		{
+			if (move.to.rank == 7 && move.to.file == 0)
+				cr[COLOR_W] = static_cast<CastlingRight>(cr[COLOR_W] & ~CR_OOO);
+			if (move.to.rank == 7 && move.to.file == 7)
+				cr[COLOR_W] = static_cast<CastlingRight>(cr[COLOR_W] & ~CR_OO);
+		}
+	}
 	switch (move.moveType)
 	{
 	case DOUBLE:
@@ -90,6 +123,20 @@ void Position::doMove(const Move& move)
 		if (capturedPiece != '-')
 			remove(captureSquare);
 		place(move.to, sideToMove ? QUEEN_W : QUEEN_B);
+		break;
+	case CASTLING_OO:
+		// king moves
+		place(move.to, pieceToMove);
+		// rook moves
+		remove(SQUARE(sideToMove ? 7 : 0, 7));
+		place(SQUARE(sideToMove ? 7 : 0, 5), sideToMove ? ROOK_W : ROOK_B);
+		break;
+	case CASTLING_OOO:
+		// king moves
+		place(move.to, pieceToMove);
+		// rook moves
+		remove(SQUARE(sideToMove ? 7 : 0, 0));
+		place(SQUARE(sideToMove ? 7 : 0, 3), sideToMove ? ROOK_W : ROOK_B);
 		break;
 	}
 	sideToMove = !sideToMove;
@@ -120,6 +167,20 @@ void Position::undoMove(const Move& move)
 		break;
 	case PROMOTION:
 		place(move.from, sideToMove ? PAWN_W : PAWN_B);
+		break;
+	case CASTLING_OO:
+		// king moves back
+		place(move.from, pieceToMoveBack);
+		// rook moves back
+		remove(SQUARE(sideToMove ? 7 : 0, 5));
+		place(SQUARE(sideToMove ? 7 : 0, 7), sideToMove ? ROOK_W : ROOK_B);
+		break;
+	case CASTLING_OOO:
+		// king moves back
+		place(move.from, pieceToMoveBack);
+		// rook moves back
+		remove(SQUARE(sideToMove ? 7 : 0, 3));
+		place(SQUARE(sideToMove ? 7 : 0, 0), sideToMove ? ROOK_W : ROOK_B);
 		break;
 	}
 	if (move.captured != EMPTY)
@@ -156,19 +217,50 @@ bitboard Position::pawnAttacks(const Color color) const
 	return (nonEdgePawns << 1) | (nonEdgePawns >> 1) | (leftEdgePawns << 1) | (rightEdgePawns >> 1);
 }
 
-const bool Position::underCheck(const Color us) const
+const bool Position::underAttack(const square sq, const Color us) const
 {
 	const Color them = flip(us);
-	const square kp = kingPos[us];
 	const bitboard all = color[us] | color[them];
-	if (pawnAttacks(them) & SQUAREBB(kp))
+	if (pawnAttacks(them) & SQUAREBB(sq))
 		return true;
 	for (auto piece : { KNIGHT, BISHOP, ROOK, QUEEN, KING })
 	{
-		if (attack_map(piece, kp, all) & pieces[piece + shift[them]])
+		if (attack_map(piece, sq, all) & pieces[piece + shift[them]])
 			return true;
 	}
 	return false;
+}
+
+const bool Position::underCheck(const Color us) const
+{
+	return underAttack(kingPos[us], us);
+}
+
+const bool Position::canCastle(const Color us, const CastlingRight cr) const
+{
+	if (!(this->cr[us] & cr))
+		return false;
+	if (castlingPath[us][cr] & (color[us] | color[flip(us)]))
+		return false;
+	if (underCheck(us))
+		return false;
+	if (cr & CR_OO)
+	{
+		for (auto sq = kingPos[us] + 1; sq <= kingDestination[us][CR_OO]; ++sq)
+		{
+			if (underAttack(sq, us))
+				return false;
+		}
+	}
+	if (cr & CR_OOO)
+	{
+		for (auto sq = kingPos[us] - 1; sq >= kingDestination[us][CR_OOO]; --sq)
+		{
+			if (underAttack(sq, us))
+				return false;
+		}
+	}
+	return true;
 }
 
 void Position::init(std::string FEN, std::string move)
@@ -204,6 +296,20 @@ void Position::init(std::string FEN, std::string move)
 		if (board[ind] == EMPTY)
 			continue;
 		place(Square(ind), board[ind]);
+	}
+	initCastlingPath();
+}
+
+void Position::initCastlingPath()
+{
+	castlingPath[COLOR_W].fill(0);
+	castlingPath[COLOR_B].fill(0);
+	for (auto us : { COLOR_W, COLOR_B })
+	{
+		for (auto sq = kingPos[us] + 1; (sq & 7) < 7; ++sq)
+			castlingPath[us][CR_OO]  |= SQUAREBB(sq);
+		for (auto sq = kingPos[us] - 1; (sq & 7) > 0; --sq)
+			castlingPath[us][CR_OOO] |= SQUAREBB(sq);
 	}
 }
 

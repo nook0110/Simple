@@ -270,5 +270,10 @@ std::vector<Move> Position::generateMoves()
 			continue;
 		}
 	}
+	for (auto _cr : { CR_OO, CR_OOO })
+	{
+		if (canCastle(static_cast<Color>(sideToMove), _cr))
+			moves.push_back(Move({ Square(kingPos[sideToMove]), kingDestination[sideToMove][_cr], (_cr == CR_OO ? CASTLING_OO : CASTLING_OOO), EMPTY }));
+	}
 	return moves;
 }

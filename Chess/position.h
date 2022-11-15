@@ -149,6 +149,8 @@ struct Position {
 	std::array<Piece, 64> board;
 	unsigned char sideToMove;
 	square enPassantSquare = -1;
+	std::array<CastlingRight, COLOR_NONE> cr = {CR_ALL, CR_ALL};
+	std::array<std::array<bitboard, CR_ALL>, COLOR_NONE> castlingPath;
 
 	key_t hash = 0;
 
@@ -181,7 +183,9 @@ struct Position {
 	const bitboard king(const Color color) const;
 	bitboard pawnAttacks(const Color color) const;
 
+	const bool underAttack(const square sq, const Color us) const;
 	const bool underCheck(const Color us) const;
+	const bool canCastle(const Color us, const CastlingRight cr) const;
 
 	// evaluation
 
@@ -191,6 +195,7 @@ struct Position {
 	const value evaluate();
 
 	void init(std::string FEN, std::string move);
+	void initCastlingPath();
 
 
 	std::vector<Move> generateAttacks();
