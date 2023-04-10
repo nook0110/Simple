@@ -142,25 +142,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="attacks.cpp" />
-    <ClCompile Include="eval.cpp" />
-    <ClCompile Include="globals.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="position.cpp" />
-    <ClCompile Include="positionGenerator.cpp" />
-    <ClCompile Include="search.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="attacks.h" />
-    <ClInclude Include="eval.h" />
-    <ClInclude Include="globals.h" />
-    <ClInclude Include="move.h" />
-    <ClInclude Include="pieceSquareTables.hpp" />
-    <ClInclude Include="position.h" />
-    <ClInclude Include="positionGenerator.h" />
-    <ClInclude Include="search.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
