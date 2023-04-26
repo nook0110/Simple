@@ -18,6 +18,22 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="MoveGenerator.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AlphaBeta.h" />
+    <ClInclude Include="BitBoard.h" />
+    <ClInclude Include="BitScan.h" />
+    <ClInclude Include="SimpleChessEngine.h" />
+    <ClInclude Include="Evaluator.h" />
+    <ClInclude Include="Hasher.h" />
+    <ClInclude Include="HashTable.h" />
+    <ClInclude Include="Move.h" />
+    <ClInclude Include="MoveGenerator.h" />
+    <ClInclude Include="Position.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
