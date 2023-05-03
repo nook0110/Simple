@@ -9,5 +9,5 @@
 
 namespace SimpleChessEngine
 {
-using ChessEngine = AlphaBetaSearcher;
+using ChessEngine = Searcher;
 }  // namespace SimpleChessEngine
