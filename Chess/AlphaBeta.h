@@ -1,25 +1,30 @@
 #pragma once
-#include <array>
-#include <iostream>
+#include <algorithm>
+#include <optional>
 #include <type_traits>
 
+#include "Evaluator.h"
+#include "MoveGenerator.h"
+#include "TranspositionTable.h"
+
+namespace SimpleChessEngine
+{
 /**
- * \brief A simple implementation of the alpha-beta search algorithm with
- * transposition tables and iterative deepening.
+ * \brief A simple implementation of the alpha-beta search algorithm.
  *
- * \tparam Position The type of the position.
- * \tparam MoveGenerator The type of the move generator.
- * \tparam Evaluator The type of the evaluator.
- * \tparam HashTable The type of the hash table.
+ * \details
+ * A list of features:
+ *  - PVS
+ *  - ZWS
+ *  - Fail-soft
+ *  - Aspirational windows
+ *  - Transposition table
+ *  - Iterative deepening
+ *  - Quiescence search
  */
-template <class Position, class MoveGenerator, class Evaluator, class HashTable>
-class AlphaBetaSearcher
+class Searcher
 {
  public:
-  using Moves = std::invoke_result_t<MoveGenerator, const Position&>;
-  using Move = typename Moves::value_type;
-  using Eval = std::invoke_result_t<Evaluator, const Position&>;
-
   /**
    * \brief Constructor.
    *
@@ -27,9 +32,9 @@ class AlphaBetaSearcher
    * \param evaluator The evaluator.
    * \param position The initial position.
    */
-  explicit AlphaBetaSearcher(Position position = Position(),
-                             MoveGenerator move_generator = MoveGenerator(),
-                             Evaluator evaluator = Evaluator())
+  explicit Searcher(Position position = Position(),
+                    MoveGenerator move_generator = MoveGenerator(),
+                    Evaluator evaluator = Evaluator())
       : current_position_(std::move(position)),
         move_generator_(std::move(move_generator)),
         evaluator_(std::move(evaluator))
@@ -65,115 +70,105 @@ class AlphaBetaSearcher
    *
    * \return The best move.
    */
-  Move ComputeBestMove(size_t depth);
+  Move ComputeBestMove(const size_t depth);
 
  private:
   /**
-   * \brief Starts the alpha-beta search algorithm.
-   *
-   * \param depth The max depth.
-   */
-  void FindBestMove(size_t depth);
-
-  /**
    * \brief Performs the alpha-beta search algorithm.
    *
-   * \param depth The current depth.
+   * \param remaining_depth The remaining depth.
    * \param alpha The current alpha value.
    * \param beta The current beta value.
    *
    * \return Evaluation of subtree.
    */
-  [[nodiscard]] Eval AlphaBeta(size_t depth, Eval alpha, Eval beta);
+  [[nodiscard]] Eval AlphaBeta(const size_t remaining_depth, Eval alpha,
+                               const Eval beta);
 
   Position current_position_;  //!< Current position.
 
   MoveGenerator move_generator_;  //!< Move generator.
   Evaluator evaluator_;           //!< Evaluator.
 
-  HashTable best_moves_;  //!< Hash table to store the best moves.
+  TranspositionTable
+      best_moves_;  //!< Transposition-table to store the best moves.
 };
+}  // namespace SimpleChessEngine
 
-template <class Position, class MoveGenerator, class Evaluator, class HashTable>
-void AlphaBetaSearcher<Position, MoveGenerator, Evaluator,
-                       HashTable>::SetPosition(Position position)
+namespace SimpleChessEngine
+{
+inline void Searcher::SetPosition(Position position)
 {
   current_position_ = std::move(position);
 }
 
-template <class Position, class MoveGenerator, class Evaluator, class HashTable>
-const Position& AlphaBetaSearcher<Position, MoveGenerator, Evaluator,
-                                  HashTable>::GetPosition() const
+inline const Position& Searcher::GetPosition() const
 {
   return current_position_;
 }
 
-template <class Position, class MoveGenerator, class Evaluator, class HashTable>
-void AlphaBetaSearcher<Position, MoveGenerator, Evaluator,
-                       HashTable>::FindBestMove(const size_t depth)
-{
-  // current best evaluation
-  Eval best_eval = std::numeric_limits<Eval>::min();
-
-  for (auto moves = move_generator_(current_position_);
-       const auto& move : moves)
-  {
-    // make the move and search the tree
-    current_position_.DoMove(move);
-    auto temp_eval = -AlphaBeta(depth - 1, std::numeric_limits<Eval>::min(),
-                                std::numeric_limits<Eval>::max());
-
-    // undo the move
-    current_position_.UndoMove(move);
-
-    // check if we have found a better move
-    if (temp_eval > best_eval)
-    {
-      best_eval = temp_eval;
-      best_moves_[current_position_] = move;
-    }
-  }
-}
-
-template <class Position, class MoveGenerator, class Evaluator, class HashTable>
-typename AlphaBetaSearcher<Position, MoveGenerator, Evaluator, HashTable>::Move
-AlphaBetaSearcher<Position, MoveGenerator, Evaluator,
-                  HashTable>::GetCurrentBestMove() const
+inline Move Searcher::GetCurrentBestMove() const
 {
   return best_moves_[current_position_];
 }
 
-template <class Position, class MoveGenerator, class Evaluator, class HashTable>
-typename AlphaBetaSearcher<Position, MoveGenerator, Evaluator, HashTable>::Move
-AlphaBetaSearcher<Position, MoveGenerator, Evaluator,
-                  HashTable>::ComputeBestMove(size_t depth)
+inline Move Searcher::ComputeBestMove(const size_t depth)
 {
-  for (size_t current_depth = 0; current_depth < depth; ++current_depth)
+  auto alpha = std::numeric_limits<Eval>::min();
+  auto beta = std::numeric_limits<Eval>::max();
+
+  for (size_t current_depth = 0; current_depth < depth;)
   {
-    FindBestMove(current_depth);
+    constexpr auto window_size = 10;
+    const auto eval = AlphaBeta(current_depth, alpha, beta);
+
+    // check if true eval is out of window
+    if (eval <= alpha)
+    {
+      // search again with a wider window
+      alpha -= window_size;
+
+      continue;
+    }
+
+    // check if true eval is out of window
+    if (eval >= beta)
+    {
+      // search again with a wider window
+      beta += window_size;
+      continue;
+    }
+
+    // set the window
+    alpha = eval - window_size;
+    beta = eval + window_size;
+
+    // increase the depth
+    current_depth++;
   }
 
   return GetCurrentBestMove();
 }
 
-template <class Position, class MoveGenerator, class Evaluator, class HashTable>
-typename AlphaBetaSearcher<Position, MoveGenerator, Evaluator, HashTable>::Eval
-AlphaBetaSearcher<Position, MoveGenerator, Evaluator, HashTable>::AlphaBeta(
-    const size_t depth, Eval alpha, Eval beta)
+inline Eval Searcher::AlphaBeta(const size_t remaining_depth, Eval alpha,
+                                const Eval beta)
 {
   // return the evaluation of the current position if we have reached the end of
   // the search tree
-  if (depth == 0)
+  if (remaining_depth <= 0)
   {
-    return evaluator_(current_position_);
+    return evaluator_(current_position_, alpha, beta);
   }
 
   // lambda function to analyze a move
-  auto analyze_move = [this, alpha, beta, depth](const auto& move)
+  auto analyze_move = [this, remaining_depth](const auto& move,
+                                              const auto analyzed_alpha,
+                                              const auto analyzed_beta)
   {
     // make the move and search the tree
     current_position_.DoMove(move);
-    auto temp_eval = -AlphaBeta(depth - 1, -beta, -alpha);
+    auto temp_eval =
+        -AlphaBeta(remaining_depth - 1, -analyzed_beta, -analyzed_alpha);
 
     // undo the move
     current_position_.UndoMove(move);
@@ -181,26 +176,6 @@ AlphaBetaSearcher<Position, MoveGenerator, Evaluator, HashTable>::AlphaBeta(
     // return the evaluation
     return temp_eval;
   };
-
-  // check if we have already searched this position
-  if (best_moves_.Contains(current_position_))
-  {
-    auto pv_move = best_moves_[current_position_];
-
-    auto temp_eval = analyze_move(pv_move);
-
-    // check if we have found a better move
-    if (temp_eval >= beta)
-    {
-      return beta;
-    }
-
-    // update the best move
-    if (temp_eval > alpha)
-    {
-      alpha = temp_eval;
-    }
-  }
 
   // get all the possible moves
   auto moves = move_generator_(current_position_);
@@ -211,28 +186,83 @@ AlphaBetaSearcher<Position, MoveGenerator, Evaluator, HashTable>::AlphaBeta(
     return evaluator_.GetGameResult(current_position_);
   }
 
+  // check if we have already searched this position
+  if (best_moves_.Contains(current_position_))
+  {
+    const auto& best_move = best_moves_[current_position_];
+
+    // find the best move in moves
+    std::iter_swap(std::find(moves.begin(), moves.end(), best_move),
+                   moves.begin());
+
+    // sort all moves except first (PV-move)
+    // std::stable_sort(std::next(moves.begin()), moves.end());
+  }
+  else
+  {
+    // std::stable_sort(moves.begin(), moves.end());
+  }
+
+  const auto& first_move = *moves.begin();
+
+  auto best_eval = analyze_move(first_move, -beta, -alpha);
+
+  if (best_eval > alpha)
+  {
+    if (best_eval >= beta)
+    {
+      return best_eval;
+    }
+
+    alpha = best_eval;
+  }
+
+  // set best move
+  best_moves_[current_position_] = std::move(moves.front());
+
+  // delete first move
+  std::iter_swap(moves.begin(), std::prev(moves.end()));
+  moves.pop_back();
+
   // search the tree
   for (auto& move : moves)
   {
-    auto temp_eval = analyze_move(move);
+    // make the move and search the tree
+    current_position_.DoMove(move);
 
-    // check if we have found a better move
-    if (temp_eval >= beta)
-    {
-      best_moves_[current_position_] = std::move(move);
-
-      return beta;
-    }
+    auto temp_eval = -AlphaBeta(remaining_depth - 1, -alpha - 1, -alpha);
 
     // update the best move
-    if (temp_eval > alpha)
+    if (temp_eval > alpha && temp_eval < beta)
     {
+      temp_eval = -AlphaBeta(remaining_depth - 1, -alpha, -beta);
+
+      if (temp_eval > alpha)
+      {
+        alpha = temp_eval;
+      }
+    }
+
+    // undo the move
+    current_position_.UndoMove(move);
+
+    if (temp_eval > best_eval)
+    {
+      // check if we have found a better move
+      if (temp_eval >= beta)
+      {
+        best_moves_[current_position_] = std::move(move);
+
+        return beta;
+      }
+
       best_moves_[current_position_] = std::move(move);
 
-      alpha = temp_eval;
+      best_eval = temp_eval;
     }
   }
 
   // return the best evaluation
-  return alpha;
+  return best_eval;
 }
+}  // namespace SimpleChessEngine

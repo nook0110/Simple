@@ -29,7 +29,7 @@
     <ClInclude Include="SimpleChessEngine.h" />
     <ClInclude Include="Evaluator.h" />
     <ClInclude Include="Hasher.h" />
-    <ClInclude Include="HashTable.h" />
+    <ClInclude Include="TranspositionTable.h" />
     <ClInclude Include="Move.h" />
     <ClInclude Include="MoveGenerator.h" />
     <ClInclude Include="Position.h" />

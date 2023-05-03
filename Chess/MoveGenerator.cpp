@@ -79,6 +79,51 @@ MoveGenerator::Moves MoveGenerator::GeneratePawnMoves(const Position& position,
   moves.reserve(kMaxPawnMovesAmount);
 
   // TODO: generate pawn moves
+  assert((false));
 
   return moves;
+}
+
+MoveGenerator::Moves MoveGenerator::GenerateKnightMoves(
+    const Position& position, BitIndex from) const
+{
+  Moves moves;
+  constexpr size_t kMaxKnightMoves = 8;
+  moves.reserve(kMaxKnightMoves);
+
+  // TODO: generate knight moves
+  assert((false));
+
+  return moves;
+}
+
+MoveGenerator::Moves MoveGenerator::GenerateBishopMoves(
+    const Position& position, BitIndex from) const
+{
+  Moves moves;
+  constexpr size_t kMaxBishopMoves = 13;
+  moves.reserve(kMaxBishopMoves);
+
+  // TODO: generate bishop moves
+  assert((false));
+
+  return moves;
+}
+
+MoveGenerator::Moves MoveGenerator::GenerateRookMoves(const Position& position,
+                                                      BitIndex from) const
+{
+  return Moves{};
+}
+
+MoveGenerator::Moves MoveGenerator::GenerateQueenMoves(const Position& position,
+                                                       BitIndex from) const
+{
+  return Moves{};
+}
+
+MoveGenerator::Moves MoveGenerator::GenerateKingMoves(const Position& position,
+                                                      BitIndex from) const
+{
+  return Moves{};
 }
