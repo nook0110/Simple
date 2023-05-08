@@ -31,7 +31,4 @@ inline size_t Position::address() const
 	return hash & tableSize;
 }
 
-//extern nodeInfo* TTable = new nodeInfo[tableSize];
-extern std::unordered_map<key_t, nodeInfo> PVmoves;
-
 #endif // !SEARCH_H

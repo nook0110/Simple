@@ -155,11 +155,12 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 	{
 		auto eval = quiesce(depth, alpha, beta);
 		return eval;
+	}
 	/*
 	auto pv_iterator = PVmoves.insert({ hash, nodeInfo() }).first;
 	if (maxDepth <= pv_iterator->second.maxDepth && depth >= pv_iterator->second.depth)
 	*/
-		return  pv_iterator->second.eval;
+	//return  pv_iterator->second.eval;
 
 	auto moves = generateMoves();
 	/*
@@ -175,7 +176,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 	else
 	*/
 	{
-	//}
+		//}
 	}
 	if (depth % 2 == 0)
 	{
@@ -192,7 +193,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 			cr[COLOR_B] = cr_b;
 			if (!tempAlpha.has_value())
 			{
-				++cuts;
+				//++cuts;
 				continue;
 			}
 			if (alpha < tempAlpha.value())
@@ -205,7 +206,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 			}
 		}
 
-		if (cuts == moves.size())
+		//if (cuts == moves.size())
 		{
 
 		}
@@ -227,7 +228,7 @@ std::optional<value> Position::findAlphaBeta(int depth, value alpha, value beta,
 			cr[COLOR_B] = cr_b;
 			if (!tempBeta.has_value())
 			{
-				++cuts;
+				//++cuts;
 				continue;
 			}
 			if (beta > tempBeta.value())

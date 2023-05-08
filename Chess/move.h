@@ -38,7 +38,7 @@ struct Move {
 
 	std::string toStr() const noexcept
 	{
-		std::string str = (char)(from.file + 'a') + std::to_string(8 - from.rank) + (char)(to.file + 'a') + std::to_string(8 - to.rank);
+		std::string str = char((from.file + 'a')) + std::to_string(8 - from.rank) + (char)(to.file + 'a') + std::to_string(8 - to.rank);
 		if (moveType == PROMOTION)
 		{
 			if (to.rank == 0)
