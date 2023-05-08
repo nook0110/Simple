@@ -6,13 +6,13 @@
 namespace SimpleChessEngine
 {
 template <Piece piece>
-size_t GetAttackTableAddress(const int square, const BitBoard<64>& occuppied = kEmptyBoard)
+size_t GetAttackTableAddress(const int square, const BitBoard<64>& occupied = kEmptyBoard)
 {
     static_assert(piece == Piece::kBishop || piece == Piece::kRook);
 }
 
 template <Piece piece>
-BitBoard<64> GetAttackMap(const int square, const BitBoard<64>& occuppied = kEmptyBoard)
+BitBoard<64> GetAttackMap(const int square, const BitBoard<64>& occupied = kEmptyBoard)
 {
     static constexpr std::array<BitBoard<64>, 64> king_attacks = {
         770ull, 1797ull, 3594ull, 7188ull, 14376ull, 28752ull, 57504ull, 49216ull,
@@ -32,18 +32,18 @@ BitBoard<64> GetAttackMap(const int square, const BitBoard<64>& occuppied = kEmp
         145241105196122112ull, 362539804446949376ull, 725361088165576704ull, 1450722176331153408ull, 2901444352662306816ull, 5802888705324613632ull, 11533718717099671552ull, 4620693356194824192ull,
         288234782788157440ull, 576469569871282176ull, 1224997833292120064ull, 2449995666584240128ull, 4899991333168480256ull, 9799982666336960512ull, 1152939783987658752ull, 2305878468463689728ull,
         1128098930098176ull, 2257297371824128ull, 4796069720358912ull, 9592139440717824ull, 19184278881435648ull, 38368557762871296ull, 4679521487814656ull, 9077567998918656ull};
-    constexpr if (piece == Piece::kKnight)
+    if (piece == Piece::kKnight)
     {
         return knight_attacks[static_cast<size_t>(square)];
     }
-    constexpr if (piece == Piece::kKing)
+    if (piece == Piece::kKing)
     {
         return king_attacks[static_cast<size_t>(square)];
     }
-    constexpr if (piece == Piece::kQueen)
+    if (piece == Piece::kQueen)
     {
-        return GetAttackMap<Piece::kBishop>(square, occuppied) | 
-               GetAttackMap<Piece::kRook>(square, occuppied);
+        return GetAttackMap<Piece::kBishop>(square, occupied) | 
+               GetAttackMap<Piece::kRook>(square, occupied);
     }
 }
 }
