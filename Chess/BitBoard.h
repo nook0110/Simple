@@ -16,3 +16,5 @@ BitIndex BitBoard<Size>::GetFirstBit() const
 {
   return BitScan(this->to_ullong());
 }
+
+constexpr BitBoard<64> kEmptyBoard = 0;
