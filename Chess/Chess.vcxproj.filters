@@ -15,51 +15,45 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MoveGenerator.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
     <ClCompile Include="main.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
-    <ClCompile Include="eval.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
-    <ClCompile Include="positionGenerator.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
-    <ClCompile Include="globals.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
-    <ClCompile Include="position.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
-    <ClCompile Include="search.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
-    <ClCompile Include="attacks.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="eval.h">
+    <ClInclude Include="AlphaBeta.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="positionGenerator.h">
+    <ClInclude Include="MoveGenerator.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="globals.h">
+    <ClInclude Include="Move.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="move.h">
+    <ClInclude Include="Position.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="position.h">
+    <ClInclude Include="Evaluator.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="pieceSquareTables.hpp">
+    <ClInclude Include="SimpleChessEngine.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="search.h">
+    <ClInclude Include="TranspositionTable.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="attacks.h">
+    <ClInclude Include="Hasher.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="BitScan.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="BitBoard.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="UciCommunicator.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
