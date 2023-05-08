@@ -1,6 +1,7 @@
 #include "SimpleChessEngine.h"
+#include "UciCommunicator.h"
 int main()
 {
-  SimpleChessEngine::ChessEngine x;
-  x.ComputeBestMove(1);
+  SimpleChessEngine::UciCommunicator uci;
+  // uci.Start();
 }
