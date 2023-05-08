@@ -203,7 +203,7 @@ inline Eval Searcher::AlphaBeta(const size_t remaining_depth, Eval alpha,
     // std::stable_sort(moves.begin(), moves.end());
   }
 
-  const auto& first_move = *moves.begin();
+  const auto& first_move = moves.front();
 
   auto best_eval = analyze_move(first_move, -beta, -alpha);
 
@@ -236,7 +236,7 @@ inline Eval Searcher::AlphaBeta(const size_t remaining_depth, Eval alpha,
     if (temp_eval > alpha && temp_eval < beta)
     {
       temp_eval = -AlphaBeta(remaining_depth - 1, -alpha, -beta);
-
+      
       if (temp_eval > alpha)
       {
         alpha = temp_eval;
