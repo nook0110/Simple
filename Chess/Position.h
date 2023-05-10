@@ -1,7 +1,7 @@
 #pragma once
 #include <array>
 
-#include "BitBoard.h"
+#include "Bitboard.h"
 #include "Hasher.h"
 #include "Move.h"
 
@@ -34,14 +34,23 @@ class Position
 
   [[nodiscard]] Hash GetHash() const { return Hash{}; };
 
-  [[nodiscard]] const Bitboard<kBoardSize>& GetPieces() const
+  [[nodiscard]] const Bitboard<kBoardSize>& GetAllPieces() const
   {
-    return pieces_[static_cast<size_t>(sideToMove_)];
+    return Bitboard<>{pieces_[static_cast<size_t>(Player::kWhite)] |
+                      pieces_[static_cast<size_t>(Player::kBlack)]};
+  }
+
+  [[nodiscard]] const Bitboard<kBoardSize>& GetPieces(Player player) const
+  {
+    return pieces_[static_cast<size_t>(player)];
   }
 
   [[nodiscard]] Piece GetPiece(BitIndex index) const { return Piece{}; }
 
   [[nodiscard]] Player GetSideToMove() const { return sideToMove_; }
+
+  [[nodiscard]] bool IsUnderCheck() const { return IsUnderCheck(sideToMove_); }
+  [[nodiscard]] bool IsUnderCheck(Player player) const { return false; }
 
  private:
   Player sideToMove_;

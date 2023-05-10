@@ -1,15 +1,47 @@
 #pragma once
 
-#include "Bitboard.h"
+#include "BitBoard.h"
 #include "Position.h"
 
 namespace SimpleChessEngine
 {
+struct Magic
+{
+  Bitboard<64> mask;
+  uint_fast64_t magic;
+  unsigned shift;
+};
+
+struct
+{
+  static constexpr size_t kRook_table_size = 0x19000;
+  static constexpr size_t kBishop_table_size = 0x1480;
+  std::array<Bitboard<64>, kRook_table_size> rook_table_ = {};
+  std::array<Bitboard<64>, kBishop_table_size> bishop_table_ = {};
+  std::array<size_t, 64> rook_base_ = {};
+  std::array<size_t, 64> bishop_base_ = {};
+  std::array<Magic, 64> rook_magic_ = {};
+  std::array<Magic, 64> bishop_magic_ = {};
+  void Init() {}
+} attack_table;
+
 template <Piece piece>
 size_t GetAttackTableAddress(const int square,
                              const Bitboard<64>& occupied = kEmptyBoard)
 {
   static_assert(piece == Piece::kBishop || piece == Piece::kRook);
+  if (piece == Piece::kRook)
+  {
+    auto& mg = attack_table.rook_magic_[square];
+    size_t key = (occupied & mg.mask).to_ullong() * mg.magic >> mg.shift;
+    return rook_base_[square] + key;
+  }
+  if (piece == Piece::kBishop)
+  {
+    auto& mg = attack_table.bishop_magic_[square];
+    size_t key = (occupied & mg.mask).to_ullong() * mg.magic >> mg.shift;
+    return bishop_base_[square] + key;
+  }
 }
 
 template <Piece piece>
@@ -158,6 +190,16 @@ Bitboard<64> GetAttackMap(const int square,
   {
     return GetAttackMap<Piece::kBishop>(square, occupied) |
            GetAttackMap<Piece::kRook>(square, occupied);
+  }
+  if (piece == Piece::kBishop)
+  {
+    return attack_table
+        .bishop_table_[GetAttackTableAddress<Piece::kBishop>(square, occupied)];
+  }
+  if (piece == Piece::kRook)
+  {
+    return attack_table
+        .rook_table_[GetAttackTableAddress<Piece::kRook>(square, occupied)];
   }
 }
 }  // namespace SimpleChessEngine
