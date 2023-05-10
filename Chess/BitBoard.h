@@ -2,7 +2,7 @@
 #include "BitScan.h"
 
 template <size_t Size = 64>
-class BitBoard : public std::bitset<Size>
+class Bitboard : public std::bitset<Size>
 {
  public:
   using std::bitset<Size>::bitset;
@@ -12,9 +12,9 @@ class BitBoard : public std::bitset<Size>
 };
 
 template <size_t Size>
-BitIndex BitBoard<Size>::GetFirstBit() const
+BitIndex Bitboard<Size>::GetFirstBit() const
 {
   return BitScan(this->to_ullong());
 }
 
-constexpr BitBoard<64> kEmptyBoard = 0;
+constexpr Bitboard<64> kEmptyBoard = 0;

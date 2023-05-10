@@ -34,7 +34,7 @@ class Position
 
   [[nodiscard]] Hash GetHash() const { return Hash{}; };
 
-  [[nodiscard]] const BitBoard<kBoardSize>& GetPieces() const
+  [[nodiscard]] const Bitboard<kBoardSize>& GetPieces() const
   {
     return pieces_[static_cast<size_t>(sideToMove_)];
   }
@@ -46,7 +46,7 @@ class Position
  private:
   Player sideToMove_;
 
-  std::array<BitBoard<kBoardSize>, kAmountOfPlayers> pieces_;
+  std::array<Bitboard<kBoardSize>, kAmountOfPlayers> pieces_;
 
   std::array<Piece, kBoardSize> board_;
 };

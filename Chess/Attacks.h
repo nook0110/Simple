@@ -5,16 +5,49 @@
 
 namespace SimpleChessEngine
 {
+struct Magic
+{
+    Bitboard<64> mask;
+    uint_fast64_t magic;
+    unsigned shift;
+};
+
+struct
+{
+    static constexpr size_t kRook_table_size = 0x19000;
+    static constexpr size_t kBishop_table_size = 0x1480;
+    std::array<Bitboard<64>, kRook_table_size> rook_table_ = {};
+    std::array<Bitboard<64>, kBishop_table_size> bishop_table_ = {};
+    std::array<size_t, 64> rook_base_ = {};
+    std::array<size_t, 64> bishop_base_ = {};
+    std::array<Magic, 64> rook_magic_ = {};
+    std::array<Magic, 64> bishop_magic_ = {};
+    void Init()
+    {}
+} attack_table;
+
 template <Piece piece>
-size_t GetAttackTableAddress(const int square, const BitBoard<64>& occupied = kEmptyBoard)
+size_t GetAttackTableAddress(const int square, const Bitboard<64>& occupied = kEmptyBoard)
 {
     static_assert(piece == Piece::kBishop || piece == Piece::kRook);
+    if (piece == Piece::kRook)
+    {
+        auto& mg = attack_table.rook_magic_[square];
+        size_t key = (occupied & mg.mask).to_ullong() * mg.magic >> mg.shift;
+        return rook_base_[square] + key;
+    }
+    if (piece == Piece::kBishop)
+    {
+        auto& mg = attack_table.bishop_magic_[square];
+        size_t key = (occupied & mg.mask).to_ullong() * mg.magic >> mg.shift;
+        return bishop_base_[square] + key;
+    }
 }
 
 template <Piece piece>
-BitBoard<64> GetAttackMap(const int square, const BitBoard<64>& occupied = kEmptyBoard)
+Bitboard<64> GetAttackMap(const int square, const Bitboard<64>& occupied = kEmptyBoard)
 {
-    static constexpr std::array<BitBoard<64>, 64> king_attacks = {
+    static constexpr std::array<Bitboard<64>, 64> king_attacks = {
         770ull, 1797ull, 3594ull, 7188ull, 14376ull, 28752ull, 57504ull, 49216ull,
         197123ull, 460039ull, 920078ull, 1840156ull, 3680312ull, 7360624ull, 14721248ull, 12599488ull,
         50463488ull, 117769984ull, 235539968ull, 471079936ull, 942159872ull, 1884319744ull, 3768639488ull, 3225468928ull,
@@ -23,7 +56,7 @@ BitBoard<64> GetAttackMap(const int square, const BitBoard<64>& occupied = kEmpt
         846636838289408ull, 1975852459884544ull, 3951704919769088ull, 7903409839538176ull, 15806819679076352ull, 31613639358152704ull, 63227278716305408ull, 54114388906344448ull,
         216739030602088448ull, 505818229730443264ull, 1011636459460886528ull, 2023272918921773056ull, 4046545837843546112ull, 8093091675687092224ull, 16186183351374184448ull, 13853283560024178688ull,
         144959613005987840ull, 362258295026614272ull, 724516590053228544ull, 1449033180106457088ull, 2898066360212914176ull, 5796132720425828352ull, 11592265440851656704ull, 4665729213955833856ull};
-    static constexpr std::array<BitBoard<64>, 64> knight_attacks = {
+    static constexpr std::array<Bitboard<64>, 64> knight_attacks = {
         132096ull, 329728ull, 659712ull, 1319424ull, 2638848ull, 5277696ull, 10489856ull, 4202496ull,
         33816580ull, 84410376ull, 168886289ull, 337772578ull, 675545156ull, 1351090312ull, 2685403152ull, 1075839008ull,
         8657044482ull, 21609056261ull, 43234889994ull, 86469779988ull, 172939559976ull, 345879119952ull, 687463207072ull, 275414786112ull,
@@ -44,6 +77,14 @@ BitBoard<64> GetAttackMap(const int square, const BitBoard<64>& occupied = kEmpt
     {
         return GetAttackMap<Piece::kBishop>(square, occupied) | 
                GetAttackMap<Piece::kRook>(square, occupied);
+    }
+    if (piece == Piece::kBishop)
+    {
+        return attack_table.bishop_table_[GetAttackTableAddress<Piece::kBishop>(square, occupied)];
+    }
+    if (piece == Piece::kRook)
+    {
+        return attack_table.rook_table_[GetAttackTableAddress<Piece::kRook>(square, occupied)];
     }
 }
 }
