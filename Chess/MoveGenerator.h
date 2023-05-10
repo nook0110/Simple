@@ -11,22 +11,12 @@ class MoveGenerator
  public:
   using Moves = std::vector<Move>;
 
-  Moves operator()(const Position& position) const;
+  Moves operator()(Position& position);
 
  private:
-  [[nodiscard]] Moves GenerateMovesForPiece(const Position& position,
-                                            BitIndex from) const;
-  [[nodiscard]] Moves GeneratePawnMoves(const Position& position,
-                                        BitIndex from) const;
-  [[nodiscard]] Moves GenerateKnightMoves(const Position& position,
-                                          BitIndex from) const;
-  [[nodiscard]] Moves GenerateBishopMoves(const Position& position,
-                                          BitIndex from) const;
-  [[nodiscard]] Moves GenerateRookMoves(const Position& position,
-                                        BitIndex from) const;
-  [[nodiscard]] Moves GenerateQueenMoves(const Position& position,
-                                         BitIndex from) const;
-  [[nodiscard]] Moves GenerateKingMoves(const Position& position,
-                                        BitIndex from) const;
+  [[nodiscard]] Moves GenerateMovesForPiece(Position& position, BitIndex from);
+
+  template <Piece piece>
+  [[nodiscard]] Moves GenerateMoves(Position& position, BitIndex from);
 };
 }  // namespace SimpleChessEngine

@@ -4,7 +4,7 @@
 
 using namespace SimpleChessEngine;
 
-MoveGenerator::Moves MoveGenerator::operator()(const Position& position) const
+MoveGenerator::Moves MoveGenerator::operator()(Position& position)
 {
   // create moves, max amount moves 218
   Moves moves;
@@ -12,7 +12,7 @@ MoveGenerator::Moves MoveGenerator::operator()(const Position& position) const
   moves.reserve(kMaxMovesAmount);
 
   // get all pieces
-  auto pieces = position.GetPieces();
+  auto pieces = position.GetAllPieces();
 
   // generate moves for each piece
   while (pieces.any())
@@ -28,8 +28,8 @@ MoveGenerator::Moves MoveGenerator::operator()(const Position& position) const
   return moves;
 }
 
-MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
-    const Position& position, BitIndex from) const
+MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(Position& position,
+                                                          BitIndex from)
 {
   // create moves, max amount moves 218
   Moves moves;
@@ -41,28 +41,33 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
   const auto side_to_move = position.GetSideToMove();
 
   // check if piece exists
-  assert((position.GetPieces()[from]));
+  assert((position.GetAllPieces()[from]));
 
   switch (piece)
   {
     case Piece::kPawn:
       // generate pawn moves
-      moves = GeneratePawnMoves(position, from);
+      moves = GenerateMoves<Piece::kPawn>(position, from);
       break;
     case Piece::kKnight:
-      moves = GenerateKnightMoves(position, from);
+      // generate knight moves
+      moves = GenerateMoves<Piece::kKnight>(position, from);
       break;
     case Piece::kBishop:
-      moves = GenerateBishopMoves(position, from);
+      // generate bishop moves
+      moves = GenerateMoves<Piece::kBishop>(position, from);
       break;
     case Piece::kRook:
-      moves = GenerateRookMoves(position, from);
+      // generate rook moves
+      moves = GenerateMoves<Piece::kRook>(position, from);
       break;
     case Piece::kQueen:
-      moves = GenerateQueenMoves(position, from);
+      // generate queen moves
+      moves = GenerateMoves<Piece::kQueen>(position, from);
       break;
     case Piece::kKing:
-      moves = GenerateKingMoves(position, from);
+      // generate king moves
+      moves = GenerateMoves<Piece::kKing>(position, from);
       break;
     default:
       break;
@@ -71,59 +76,58 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
   return moves;
 }
 
-MoveGenerator::Moves MoveGenerator::GeneratePawnMoves(const Position& position,
-                                                      BitIndex from) const
+template <Piece piece>
+Bitboard<> GetAttackMap(BitIndex, Bitboard<> side_to_move)
+{
+  return Bitboard<>{};
+}
+
+template <Piece piece>
+MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
+                                                  BitIndex from)
 {
   Moves moves;
-  constexpr size_t kMaxPawnMovesAmount = 4;
-  moves.reserve(kMaxPawnMovesAmount);
+  constexpr size_t kMaxMoves = 64;
+  moves.reserve(kMaxMoves);
 
-  // TODO: generate pawn moves
-  assert((false));
+  const auto attacks = GetAttackMap<piece>(from, position.GetAllPieces());
 
+  const auto side_to_move = position.GetSideToMove();
+
+  const auto& our_pieces = position.GetPieces(side_to_move);
+
+  const auto valid_moves = Bitboard{attacks & ~our_pieces};
+
+  while (const auto to = valid_moves.GetFirstBit())
+  {
+    Move move{from, to};
+
+    position.DoMove(move);
+
+    if (!position.IsUnderCheck(side_to_move))
+    {
+      moves.push_back(move);
+    }
+
+    position.UndoMove(move);
+  }
   return moves;
 }
 
-MoveGenerator::Moves MoveGenerator::GenerateKnightMoves(
-    const Position& position, BitIndex from) const
-{
-  Moves moves;
-  constexpr size_t kMaxKnightMoves = 8;
-  moves.reserve(kMaxKnightMoves);
-
-  // TODO: generate knight moves
-  assert((false));
-
-  return moves;
-}
-
-MoveGenerator::Moves MoveGenerator::GenerateBishopMoves(
-    const Position& position, BitIndex from) const
-{
-  Moves moves;
-  constexpr size_t kMaxBishopMoves = 13;
-  moves.reserve(kMaxBishopMoves);
-
-  // TODO: generate bishop moves
-  assert((false));
-
-  return moves;
-}
-
-MoveGenerator::Moves MoveGenerator::GenerateRookMoves(const Position& position,
-                                                      BitIndex from) const
+template <>
+MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kPawn>(
+    Position& position, BitIndex from)
 {
   return Moves{};
 }
 
-MoveGenerator::Moves MoveGenerator::GenerateQueenMoves(const Position& position,
-                                                       BitIndex from) const
-{
-  return Moves{};
-}
-
-MoveGenerator::Moves MoveGenerator::GenerateKingMoves(const Position& position,
-                                                      BitIndex from) const
-{
-  return Moves{};
-}
+template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kKnight>(
+    Position& position, BitIndex from);
+template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kBishop>(
+    Position& position, BitIndex from);
+template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kRook>(
+    Position& position, BitIndex from);
+template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kQueen>(
+    Position& position, BitIndex from);
+template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kKing>(
+    Position& position, BitIndex from);

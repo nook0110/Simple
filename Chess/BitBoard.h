@@ -8,6 +8,10 @@ class Bitboard : public std::bitset<Size>
   using std::bitset<Size>::bitset;
   static_assert(Size <= 64);
 
+  explicit Bitboard(std::bitset<Size> bitset)
+      : std::bitset<Size>(std::move(bitset))
+  {}
+
   [[nodiscard]] BitIndex GetFirstBit() const;
 };
 

@@ -25,7 +25,7 @@
   <ItemGroup>
     <ClInclude Include="AlphaBeta.h" />
     <ClInclude Include="Attacks.h" />
-    <ClInclude Include="BitBoard.h" />
+    <ClInclude Include="Bitboard.h" />
     <ClInclude Include="BitScan.h" />
     <ClInclude Include="SimpleChessEngine.h" />
     <ClInclude Include="Evaluator.h" />

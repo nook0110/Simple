@@ -50,7 +50,7 @@
     <ClInclude Include="BitScan.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="BitBoard.h">
+    <ClInclude Include="Bitboard.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="UciCommunicator.h">
