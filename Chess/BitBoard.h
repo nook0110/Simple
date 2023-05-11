@@ -27,8 +27,8 @@ class Bitboard : public std::bitset<size>
   [[nodiscard]] BitIndex GetFirstBit() const;
 };
 
-template <size_t Size>
-BitIndex Bitboard<Size>::GetFirstBit() const
+template <size_t size>
+BitIndex Bitboard<size>::GetFirstBit() const
 {
   return BitScan(this->to_ullong());
 }
