@@ -23,7 +23,7 @@
     <ClCompile Include="MoveGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AlphaBeta.h" />
+    <ClInclude Include="Searcher.h" />
     <ClInclude Include="Attacks.h" />
     <ClInclude Include="Bitboard.h" />
     <ClInclude Include="BitScan.h" />

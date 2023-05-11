@@ -72,7 +72,6 @@ class Searcher
    */
   Move ComputeBestMove(const size_t depth);
 
- private:
   /**
    * \brief Performs the alpha-beta search algorithm.
    *
@@ -82,9 +81,10 @@ class Searcher
    *
    * \return Evaluation of subtree.
    */
-  [[nodiscard]] Eval AlphaBeta(const size_t remaining_depth, Eval alpha,
-                               const Eval beta);
+  [[nodiscard]] Eval Search(const size_t remaining_depth, Eval alpha,
+                            const Eval beta);
 
+ private:
   Position current_position_;  //!< Current position.
 
   MoveGenerator move_generator_;  //!< Move generator.
@@ -112,46 +112,8 @@ inline Move Searcher::GetCurrentBestMove() const
   return best_moves_[current_position_];
 }
 
-inline Move Searcher::ComputeBestMove(const size_t depth)
-{
-  auto alpha = std::numeric_limits<Eval>::min();
-  auto beta = std::numeric_limits<Eval>::max();
-
-  for (size_t current_depth = 0; current_depth < depth;)
-  {
-    constexpr auto window_size = 10;
-    const auto eval = AlphaBeta(current_depth, alpha, beta);
-
-    // check if true eval is out of window
-    if (eval <= alpha)
-    {
-      // search again with a wider window
-      alpha -= window_size;
-
-      continue;
-    }
-
-    // check if true eval is out of window
-    if (eval >= beta)
-    {
-      // search again with a wider window
-      beta += window_size;
-      continue;
-    }
-
-    // set the window
-    alpha = eval - window_size;
-    beta = eval + window_size;
-
-    // increase the depth
-    current_depth++;
-  }
-
-  return GetCurrentBestMove();
-}
-
-inline Eval Searcher::AlphaBeta(const size_t remaining_depth, Eval alpha,
-                                const Eval beta)
+inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
+                             const Eval beta)
 {
   // return the evaluation of the current position if we have reached the end of
   // the search tree
@@ -168,7 +130,7 @@ inline Eval Searcher::AlphaBeta(const size_t remaining_depth, Eval alpha,
     // make the move and search the tree
     current_position_.DoMove(move);
     auto temp_eval =
-        -AlphaBeta(remaining_depth - 1, -analyzed_beta, -analyzed_alpha);
+        -Search(remaining_depth - 1, -analyzed_beta, -analyzed_alpha);
 
     // undo the move
     current_position_.UndoMove(move);
@@ -230,13 +192,13 @@ inline Eval Searcher::AlphaBeta(const size_t remaining_depth, Eval alpha,
     // make the move and search the tree
     current_position_.DoMove(move);
 
-    auto temp_eval = -AlphaBeta(remaining_depth - 1, -alpha - 1, -alpha);
+    auto temp_eval = -Search(remaining_depth - 1, -alpha - 1, -alpha);
 
     // update the best move
     if (temp_eval > alpha && temp_eval < beta)
     {
-      temp_eval = -AlphaBeta(remaining_depth - 1, -alpha, -beta);
-      
+      temp_eval = -Search(remaining_depth - 1, -alpha, -beta);
+
       if (temp_eval > alpha)
       {
         alpha = temp_eval;

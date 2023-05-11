@@ -18,9 +18,9 @@ class UciCommunicator
       : i_stream_(i_stream), o_stream_(o_stream)
   {}
 
-  void Start() { io_thread_.detach(); }
-
  private:
+  void StartSearch() { io_thread_.detach(); }
+
   void InputOutputStream();
 
   void ParseCommand(std::stringstream command);
@@ -44,6 +44,8 @@ class UciCommunicator
 
   std::istream& i_stream_;
   std::ostream& o_stream_;
+
+  ChessEngine engine_;
 
   std::thread io_thread_{[this] {}};
 };

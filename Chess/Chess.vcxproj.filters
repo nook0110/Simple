@@ -23,7 +23,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AlphaBeta.h">
+    <ClInclude Include="Searcher.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="MoveGenerator.h">

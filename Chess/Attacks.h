@@ -188,8 +188,8 @@ Bitboard<64> GetAttackMap(const int square,
   }
   if (piece == Piece::kQueen)
   {
-    return GetAttackMap<Piece::kBishop>(square, occupied) |
-           GetAttackMap<Piece::kRook>(square, occupied);
+    return Bitboard{GetAttackMap<Piece::kBishop>(square, occupied) |
+                    GetAttackMap<Piece::kRook>(square, occupied)};
   }
   if (piece == Piece::kBishop)
   {

@@ -5,6 +5,10 @@ class Move
 {
  public:
   using Index = size_t;
-  Move(Index from, Index to);
+  Move() = default;
+  Move(Index from, Index to){};
+
+  bool operator==(const Move& other) const { return false; }
+  bool operator<(const Move&) const { return false; }
 };
 }  // namespace SimpleChessEngine

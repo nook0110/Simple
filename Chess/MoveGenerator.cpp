@@ -29,7 +29,7 @@ MoveGenerator::Moves MoveGenerator::operator()(Position& position)
 }
 
 MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(Position& position,
-                                                          BitIndex from)
+                                                          const BitIndex from)
 {
   // create moves, max amount moves 218
   Moves moves;
@@ -90,35 +90,35 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
   constexpr size_t kMaxMoves = 64;
   moves.reserve(kMaxMoves);
 
+  // get all squares that piece attacks
   const auto attacks = GetAttackMap<piece>(from, position.GetAllPieces());
 
+  // get whose move is now
   const auto side_to_move = position.GetSideToMove();
 
+  // get our pieces
   const auto& our_pieces = position.GetPieces(side_to_move);
 
+  // remove moves into our pieces
   const auto valid_moves = Bitboard{attacks & ~our_pieces};
 
   while (const auto to = valid_moves.GetFirstBit())
   {
+    // create move
     Move move{from, to};
 
     position.DoMove(move);
 
-    if (!position.IsUnderCheck(side_to_move))
-    {
-      moves.push_back(move);
-    }
+    const bool validity = !position.IsUnderCheck(side_to_move);
 
     position.UndoMove(move);
+
+    if (validity)
+    {
+      moves.emplace_back(std::move(move));
+    }
   }
   return moves;
-}
-
-template <>
-MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kPawn>(
-    Position& position, BitIndex from)
-{
-  return Moves{};
 }
 
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kKnight>(

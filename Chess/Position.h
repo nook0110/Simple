@@ -47,13 +47,16 @@ class Position
 
   [[nodiscard]] Piece GetPiece(BitIndex index) const { return Piece{}; }
 
-  [[nodiscard]] Player GetSideToMove() const { return sideToMove_; }
+  [[nodiscard]] Player GetSideToMove() const { return side_to_move_; }
 
-  [[nodiscard]] bool IsUnderCheck() const { return IsUnderCheck(sideToMove_); }
+  [[nodiscard]] bool IsUnderCheck() const
+  {
+    return IsUnderCheck(side_to_move_);
+  }
   [[nodiscard]] bool IsUnderCheck(Player player) const { return false; }
 
  private:
-  Player sideToMove_;
+  Player side_to_move_{};
 
   std::array<Bitboard<kBoardSize>, kAmountOfPlayers> pieces_;
 

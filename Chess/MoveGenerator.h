@@ -14,9 +14,10 @@ class MoveGenerator
   Moves operator()(Position& position);
 
  private:
-  [[nodiscard]] Moves GenerateMovesForPiece(Position& position, BitIndex from);
+  [[nodiscard]] Moves GenerateMovesForPiece(Position& position,
+                                            const BitIndex from);
 
   template <Piece piece>
-  [[nodiscard]] Moves GenerateMoves(Position& position, BitIndex from);
+  [[nodiscard]] Moves GenerateMoves(Position& position, const BitIndex from);
 };
 }  // namespace SimpleChessEngine
