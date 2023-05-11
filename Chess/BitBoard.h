@@ -1,15 +1,27 @@
 #pragma once
 #include "BitScan.h"
 
-template <size_t Size = 64>
-class Bitboard : public std::bitset<Size>
+/**
+ * \brief Class that represents a bitboard.
+ *
+ * \details A simple wrapper of std::bitset<size>.
+ *
+ * \tparam size The size of the bitboard.
+ *
+ * \author nook0110
+ */
+template <size_t size = 64>
+class Bitboard : public std::bitset<size>
 {
  public:
-  using std::bitset<Size>::bitset;
-  static_assert(Size <= 64);
+  using std::bitset<size>::bitset;
+  static_assert(size <= 64);
 
-  explicit Bitboard(std::bitset<Size> bitset)
-      : std::bitset<Size>(std::move(bitset))
+  /**
+   * \brief Constructs a bitboard from a bitset.
+   */
+  explicit Bitboard(std::bitset<size> bitset)
+      : std::bitset<size>(std::move(bitset))
   {}
 
   [[nodiscard]] BitIndex GetFirstBit() const;

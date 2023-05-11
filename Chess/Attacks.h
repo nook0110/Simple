@@ -3,6 +3,10 @@
 #include "BitBoard.h"
 #include "Position.h"
 
+/*
+ * TODO: Rewrite code.
+ */
+
 namespace SimpleChessEngine
 {
 struct Magic

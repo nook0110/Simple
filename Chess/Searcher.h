@@ -21,6 +21,8 @@ namespace SimpleChessEngine
  *  - Transposition table
  *  - Iterative deepening
  *  - Quiescence search
+ *
+ *  \author nook0110
  */
 class Searcher
 {

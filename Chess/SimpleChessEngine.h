@@ -7,6 +7,11 @@
 
 namespace SimpleChessEngine
 {
+/**
+ * \brief Class that represents a chess engine.
+ *
+ * \author nook0110
+ */
 class ChessEngine
 {
  public:
@@ -17,7 +22,10 @@ class ChessEngine
  private:
   Searcher searcher_;
 };
+}  // namespace SimpleChessEngine
 
+namespace SimpleChessEngine
+{
 inline Move ChessEngine::ComputeBestMove(const size_t depth)
 {
   auto alpha = std::numeric_limits<Eval>::min();
@@ -69,9 +77,12 @@ inline Move ChessEngine::ComputeBestMove(
   Move previous_best_move{};
   size_t last_best_move_change{};
   for (size_t current_depth = 0;
-       (std::chrono::high_resolution_clock::now() - start_time) <
-           time_for_move &&
-       last_best_move_change < max_last_best_move_change;)
+       std::chrono::high_resolution_clock::now() - start_time <
+           time_for_move  // check if we have time for another iteration
+       &&
+       last_best_move_change < max_last_best_move_change  // check if best move
+                                                          // changed recently
+       ;)
   {
     constexpr auto window_size = 10;
     const auto eval = searcher_.Search(current_depth, alpha, beta);

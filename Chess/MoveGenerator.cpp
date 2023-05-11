@@ -17,10 +17,14 @@ MoveGenerator::Moves MoveGenerator::operator()(Position& position)
   // generate moves for each piece
   while (pieces.any())
   {
+    // get first piece
     const auto from = pieces.GetFirstBit();
     pieces.reset(from);
 
+    // generate moves for piece
     auto moves_for_piece = GenerateMovesForPiece(position, from);
+
+    // add moves
     moves.insert(moves.end(), moves_for_piece.begin(), moves_for_piece.end());
   }
 
@@ -73,6 +77,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(Position& position,
       break;
   }
 
+  // return moves
   return moves;
 }
 
@@ -107,17 +112,21 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
     // create move
     Move move{from, to};
 
+    // do move
     position.DoMove(move);
 
-    const bool validity = !position.IsUnderCheck(side_to_move);
-
-    position.UndoMove(move);
-
-    if (validity)
+    // check if move is valid
+    if (!position.IsUnderCheck(side_to_move))
     {
-      moves.emplace_back(std::move(move));
+      static_assert(std::is_trivially_copyable_v<decltype(move)>);
+      moves.push_back(move);
     }
+
+    // undo move
+    position.UndoMove(move);
   }
+
+  // return moves
   return moves;
 }
 
