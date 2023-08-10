@@ -73,6 +73,9 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(Position& position,
       // generate king moves
       moves = GenerateMoves<Piece::kKing>(position, from);
       break;
+    case Piece::kNone:
+      assert(false);
+      break;
     default:
       break;
   }

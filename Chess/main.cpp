@@ -1,7 +1,9 @@
+#include "Attacks.h"
 #include "SimpleChessEngine.h"
 #include "UciCommunicator.h"
+
 int main()
 {
-  SimpleChessEngine::UciCommunicator uci;
-  // uci.Start();
+  SimpleChessEngine::UciChessEngine uci;
+  uci.Start();
 }

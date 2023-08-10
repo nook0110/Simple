@@ -61,7 +61,7 @@ class Searcher
    *
    * \return The current best move.
    */
-  [[nodiscard]] Move GetCurrentBestMove() const;
+  [[nodiscard]] std::optional<Move> GetCurrentBestMove() const;
 
   /**
    * \brief Calculates the best move for the current position.
@@ -72,7 +72,7 @@ class Searcher
    *
    * \return The best move.
    */
-  Move ComputeBestMove(const size_t depth);
+  Move ComputeBestMove(size_t depth);
 
   /**
    * \brief Performs the alpha-beta search algorithm.
@@ -109,7 +109,7 @@ inline const Position& Searcher::GetPosition() const
   return current_position_;
 }
 
-inline Move Searcher::GetCurrentBestMove() const
+inline std::optional<Move> Searcher::GetCurrentBestMove() const
 {
   return best_moves_[current_position_];
 }
@@ -156,11 +156,10 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
     const auto& best_move = best_moves_[current_position_];
 
     // find the best move in moves
-    // std::iter_swap(std::find(moves.begin(), moves.end(), best_move),
-    //               moves.begin());
+    std::iter_swap(std::ranges::find(moves, best_move), moves.begin());
 
     // sort all moves except first (PV-move)
-    // std::stable_sort(std::next(moves.begin()), moves.end());
+    std::stable_sort(std::next(moves.begin()), moves.end());
   }
   else
   {

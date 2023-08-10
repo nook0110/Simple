@@ -24,13 +24,13 @@ enum class Player
  */
 enum class Piece
 {
-  kNothing,  //!< No piece.
-  kPawn,     //!< Pawn.
-  kKnight,   //!< Knight.
-  kBishop,   //!< Bishop.
-  kRook,     //!< Rook.
-  kQueen,    //!< Queen.
-  kKing      //!< King.
+  kNone,    //!< No piece.
+  kPawn,    //!< Pawn.
+  kKnight,  //!< Knight.
+  kBishop,  //!< Bishop.
+  kRook,    //!< Rook.
+  kQueen,   //!< Queen.
+  kKing     //!< King.
 };
 
 /**

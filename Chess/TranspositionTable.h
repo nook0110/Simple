@@ -19,16 +19,14 @@ class TranspositionTable
 
   [[nodiscard]] bool Contains(const Position& position) const { return false; }
 
-  Move& operator[](const Position& position)
+  std::optional<Move>& operator[](const Position& position)
   {
-    assert(table_[hasher_(position)].has_value());
-    return table_[hasher_(position)].value();
+    return table_[hasher_(position)];
   }
 
-  const Move& operator[](const Position& position) const
+  const std::optional<Move>& operator[](const Position& position) const
   {
-    assert(table_[hasher_(position)].has_value());
-    return table_[hasher_(position)].value();
+    return table_[hasher_(position)];
   }
 
  private:

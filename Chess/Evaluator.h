@@ -1,4 +1,7 @@
 #pragma once
+#include <cassert>
+
+#include "MoveGenerator.h"
 #include "Position.h"
 
 namespace SimpleChessEngine
@@ -15,6 +18,7 @@ class Evaluator
 
   [[nodiscard]] Eval GetGameResult(const Position& position) const
   {
+    assert(MoveGenerator{}(const_cast<Position&>(position)).empty());
     return Eval{};
   };
 };

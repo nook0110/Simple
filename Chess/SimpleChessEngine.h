@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <variant>
 
 #include "Evaluator.h"
 #include "Move.h"
@@ -7,6 +8,30 @@
 
 namespace SimpleChessEngine
 {
+struct DepthInfo
+{
+  size_t current_depth = 0;
+};
+
+struct ScoreInfo
+{
+  Eval current_eval = Eval{};
+};
+
+struct NodePerSecondInfo
+{
+  size_t nodes_per_second = 0;
+};
+
+class InfoPrinter
+{
+ public:
+  virtual ~InfoPrinter() = default;
+  virtual void operator()(const DepthInfo& depth_info) const {}
+  virtual void operator()(const ScoreInfo& score_info) const {}
+  virtual void operator()(const NodePerSecondInfo& nps_info) const {}
+};
+
 /**
  * \brief Class that represents a chess engine.
  *
@@ -15,18 +40,35 @@ namespace SimpleChessEngine
 class ChessEngine
 {
  public:
-  Move ComputeBestMove(const size_t depth);
+  explicit ChessEngine(
+      std::unique_ptr<InfoPrinter> printer = std::make_unique<InfoPrinter>())
+      : printer_(std::move(printer))
+  {}
 
-  Move ComputeBestMove(const std::chrono::milliseconds left_time);
+  void SetInfoPrinter(std::unique_ptr<InfoPrinter> printer)
+  {
+    printer_ = std::move(printer);
+  }
+
+  void ComputeBestMove(const size_t depth);
+
+  void ComputeBestMove(const std::chrono::milliseconds left_time);
+
+  [[nodiscard]] Move GetCurrentBestMove() const;
 
  private:
+  template <class Info>
+  void PrintInfo(const Info& info);
+
+  std::unique_ptr<InfoPrinter> printer_;
+
   Searcher searcher_;
 };
 }  // namespace SimpleChessEngine
 
 namespace SimpleChessEngine
 {
-inline Move ChessEngine::ComputeBestMove(const size_t depth)
+inline void ChessEngine::ComputeBestMove(const size_t depth)
 {
   auto alpha = std::numeric_limits<Eval>::min();
   auto beta = std::numeric_limits<Eval>::max();
@@ -60,23 +102,22 @@ inline Move ChessEngine::ComputeBestMove(const size_t depth)
     // increase the depth
     current_depth++;
   }
-
-  return searcher_.GetCurrentBestMove();
 }
 
-inline Move ChessEngine::ComputeBestMove(
+inline void ChessEngine::ComputeBestMove(
     const std::chrono::milliseconds left_time)
 {
   const auto start_time = std::chrono::high_resolution_clock::now();
   const auto time_for_move = left_time / 2;
-  constexpr size_t max_last_best_move_change = 5;
+  constexpr size_t max_last_best_move_change =
+      std::numeric_limits<size_t>::max();
 
   auto alpha = std::numeric_limits<Eval>::min();
   auto beta = std::numeric_limits<Eval>::max();
 
-  Move previous_best_move{};
+  std::optional<Move> previous_best_move{};
   size_t last_best_move_change{};
-  for (size_t current_depth = 0;
+  for (size_t current_depth = 1;
        std::chrono::high_resolution_clock::now() - start_time <
            time_for_move  // check if we have time for another iteration
        &&
@@ -84,6 +125,8 @@ inline Move ChessEngine::ComputeBestMove(
                                                           // changed recently
        ;)
   {
+    PrintInfo(DepthInfo{current_depth});
+
     constexpr auto window_size = 10;
     const auto eval = searcher_.Search(current_depth, alpha, beta);
 
@@ -125,7 +168,11 @@ inline Move ChessEngine::ComputeBestMove(
 
     previous_best_move = searcher_.GetCurrentBestMove();
   }
+}
 
-  return searcher_.GetCurrentBestMove();
+template <class Info>
+void ChessEngine::PrintInfo(const Info& info)
+{
+  (*printer_)(info);
 }
 }  // namespace SimpleChessEngine
