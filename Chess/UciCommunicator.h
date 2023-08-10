@@ -205,14 +205,14 @@ inline void UciChessEngine::ParseGo(std::stringstream command)
       assert(false);
     }
   }
+}
+inline void UciChessEngine::ParseStop(std::stringstream command) {}
 
-  inline void UciChessEngine::ParseStop(std::stringstream command) {}
+inline void UciChessEngine::ParseQuit(std::stringstream command)
+{
+  quit_ = true;
+  StopSearch();
+}
 
-  inline void UciChessEngine::ParseQuit(std::stringstream command)
-  {
-    quit_ = true;
-    StopSearch();
-  }
-
-  inline void UciChessEngine::SendOptions() {}
+inline void UciChessEngine::SendOptions() {}
 }  // namespace SimpleChessEngine
