@@ -2,6 +2,8 @@
 
 #include <cassert>
 
+#include "Attacks.h"
+
 using namespace SimpleChessEngine;
 
 MoveGenerator::Moves MoveGenerator::operator()(Position& position)
@@ -85,12 +87,6 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(Position& position,
 }
 
 template <Piece piece>
-Bitboard<> GetAttackMap(BitIndex, Bitboard<> side_to_move)
-{
-  return Bitboard<>{};
-}
-
-template <Piece piece>
 MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
                                                   BitIndex from)
 {
@@ -99,7 +95,8 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
   moves.reserve(kMaxMoves);
 
   // get all squares that piece attacks
-  const auto attacks = GetAttackMap<piece>(from, position.GetAllPieces());
+  const auto attacks =
+      AttackTable::GetAttackMap<piece>(from, position.GetAllPieces());
 
   // get whose move is now
   const auto side_to_move = position.GetSideToMove();

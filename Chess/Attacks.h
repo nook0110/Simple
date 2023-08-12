@@ -11,6 +11,10 @@
 
 namespace SimpleChessEngine
 {
+/**
+ * \brief
+ *
+ */
 struct Magic
 {
   Bitboard<64> mask;
@@ -22,19 +26,19 @@ struct AttackTable
 {
   static constexpr size_t kRookTableSize = 0x19000;
   static constexpr size_t kBishopTableSize = 0x1480;
-  std::array<Bitboard<64>, kRookTableSize> rook_table = {};
-  std::array<Bitboard<64>, kBishopTableSize> bishop_table = {};
-  std::array<size_t, 64> rook_base = {};
-  std::array<size_t, 64> bishop_base = {};
-  std::array<Magic, 64> rook_magic = {};
-  std::array<Magic, 64> bishop_magic = {};
+  const std::array<Bitboard<64>, kRookTableSize> rook_table = {};
+  const std::array<Bitboard<64>, kBishopTableSize> bishop_table = {};
+  const std::array<size_t, 64> rook_base = {};
+  const std::array<size_t, 64> bishop_base = {};
+  const std::array<Magic, 64> rook_magic = {};
+  const std::array<Magic, 64> bishop_magic = {};
 
   template <Piece piece>
   static size_t GetAttackTableAddress(
-      int square, const Bitboard<64>& occupied = kEmptyBoard);
+      BitIndex square, const Bitboard<64>& occupied = kEmptyBoard);
 
   template <Piece piece>
-  static Bitboard<> GetAttackMap(const int square, const Bitboard<>& occupied);
+  static Bitboard<> GetAttackMap(BitIndex square, const Bitboard<>& occupied);
 
  private:
   void Init() {}
@@ -44,7 +48,7 @@ struct AttackTable
 };
 
 template <Piece piece>
-size_t AttackTable::GetAttackTableAddress(const int square,
+size_t AttackTable::GetAttackTableAddress(const BitIndex square,
                                           const Bitboard<64>& occupied)
 {
   static_assert(piece == Piece::kBishop || piece == Piece::kRook);
@@ -63,7 +67,7 @@ size_t AttackTable::GetAttackTableAddress(const int square,
 }
 
 template <Piece piece>
-Bitboard<> AttackTable::GetAttackMap(const int square,
+Bitboard<> AttackTable::GetAttackMap(const BitIndex square,
                                      const Bitboard<64>& occupied)
 {
   static constexpr std::array<Bitboard<64>, 64> king_attacks = {

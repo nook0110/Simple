@@ -1,6 +1,5 @@
 #pragma once
 #include <array>
-#include <cassert>
 #include <optional>
 
 #include "Hasher.h"
@@ -30,9 +29,8 @@ class TranspositionTable
   }
 
  private:
-  constexpr static size_t kSize = 10;
-
-  std::array<std::optional<Move>, kSize> table_;
-  Hasher hasher_;
+  constexpr static size_t kSize = 10;             //!< Size of the table.
+  std::array<std::optional<Move>, kSize> table_;  //!< The table.
+  Hasher hasher_;                                 //!< The hasher.
 };
 }  // namespace SimpleChessEngine
