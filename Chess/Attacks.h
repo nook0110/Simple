@@ -5,10 +5,6 @@
 #include "BitBoard.h"
 #include "Position.h"
 
-/*
- * TODO: Rewrite code.
- */
-
 namespace SimpleChessEngine
 {
 /**
@@ -200,25 +196,25 @@ Bitboard<> AttackTable::GetAttackMap(const BitIndex square,
       38368557762871296ull,
       4679521487814656ull,
       9077567998918656ull};
-  if (piece == Piece::kKnight)
+  if constexpr (piece == Piece::kKnight)
   {
     return knight_attacks[static_cast<size_t>(square)];
   }
-  if (piece == Piece::kKing)
+  if constexpr (piece == Piece::kKing)
   {
     return king_attacks[static_cast<size_t>(square)];
   }
-  if (piece == Piece::kQueen)
+  if constexpr (piece == Piece::kQueen)
   {
     return Bitboard{GetAttackMap<Piece::kBishop>(square, occupied) |
                     GetAttackMap<Piece::kRook>(square, occupied)};
   }
-  if (piece == Piece::kBishop)
+  if constexpr (piece == Piece::kBishop)
   {
     return kAttackTable
         ->bishop_table[GetAttackTableAddress<Piece::kBishop>(square, occupied)];
   }
-  if (piece == Piece::kRook)
+  if constexpr (piece == Piece::kRook)
   {
     return kAttackTable
         ->rook_table[GetAttackTableAddress<Piece::kRook>(square, occupied)];

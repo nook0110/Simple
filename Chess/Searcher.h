@@ -17,7 +17,7 @@ namespace SimpleChessEngine
  *  - PVS
  *  - ZWS
  *  - Fail-soft
- *  - Aspirational windows
+ *  - Aspiration windows
  *  - Transposition table
  *  - Iterative deepening
  *  - Quiescence search

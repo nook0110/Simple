@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cassert>
 
 #include "Bitboard.h"
 #include "Hasher.h"
@@ -7,6 +8,7 @@
 
 constexpr size_t kBoardSize = 64;
 constexpr size_t kAmountOfPlayers = 2;
+constexpr size_t kPieceTypes = 7;
 
 namespace SimpleChessEngine
 {
@@ -18,6 +20,11 @@ enum class Player
   kWhite,  //!< White player.
   kBlack   //!< Black player.
 };
+
+Player Flip(const Player player)
+{
+    return player == Player::kWhite ? Player::kBlack : Player::kWhite;
+}
 
 /**
  * \brief Enum class that represents a piece.
@@ -42,19 +49,36 @@ enum class Piece
 class Position
 {
  public:
+     void PlacePiece(const BitIndex square, const Piece piece, const Player color)
+     {
+         assert(board_[square] == Piece::kNone);
+         board_[square] = piece;
+         pieces_by_color_[static_cast<size_t>(color)].set(square);
+         pieces_by_type_[static_cast<size_t>(piece)].set(square);
+         // TODO: hash update
+     }
+
+     void RemovePiece(const BitIndex square, const Player color)
+     {
+         auto piece = board_[square];
+         pieces_by_type_[static_cast<size_t>(piece)].reset(square);
+         pieces_by_color_[static_cast<size_t>(color)].reset(square);
+         board_[square] = Piece::kNone;
+         // TODO: hash update
+     }
   /**
    * \brief Does given move.
    *
    * \param move Move to do.
    */
-  void DoMove(const Move& move){};
+     void DoMove(const Move& move);
 
   /**
    * \brief Undoes given move.
    *
    * \param move Move to undo.
    */
-  void UndoMove(const Move& move){};
+     void UndoMove(const Move& move);
 
   /**
    * \brief Gets hash of the position.
@@ -70,8 +94,8 @@ class Position
    */
   [[nodiscard]] Bitboard<kBoardSize> GetAllPieces() const
   {
-    return Bitboard{pieces_[static_cast<size_t>(Player::kWhite)] |
-                    pieces_[static_cast<size_t>(Player::kBlack)]};
+    return Bitboard{pieces_by_color_[static_cast<size_t>(Player::kWhite)] |
+                    pieces_by_color_[static_cast<size_t>(Player::kBlack)]};
   }
 
   /**
@@ -83,7 +107,7 @@ class Position
    */
   [[nodiscard]] const Bitboard<kBoardSize>& GetPieces(Player player) const
   {
-    return pieces_[static_cast<size_t>(player)];
+    return pieces_by_color_[static_cast<size_t>(player)];
   }
 
   /**
@@ -122,8 +146,10 @@ class Position
  private:
   Player side_to_move_{};  //!< Whose side to move.
 
+  std::array<Bitboard<kBoardSize>, kPieceTypes>
+      pieces_by_type_; //!< Bitboard of pieces of certain type
   std::array<Bitboard<kBoardSize>, kAmountOfPlayers>
-      pieces_;  //!< Bitboard of pieces for each player
+      pieces_by_color_;  //!< Bitboard of pieces for each player
 
   std::array<Piece, kBoardSize> board_{};  //!< Current position of pieces
 };
