@@ -2,31 +2,14 @@
 #include <array>
 #include <cassert>
 
+#include "Utility.h"
 #include "Bitboard.h"
 #include "Hasher.h"
 #include "Move.h"
 #include "Piece.h"
 
-constexpr size_t kBoardSize = 64;
-constexpr size_t kAmountOfPlayers = 2;
-constexpr size_t kPieceTypes = 7;
-
 namespace SimpleChessEngine
 {
-/**
- * \brief Enum class that represents a player.
- */
-enum class Player
-{
-  kWhite,  //!< White player.
-  kBlack   //!< Black player.
-};
-
-[[nodiscard]] inline Player Flip(const Player player)
-{
-  return player == Player::kWhite ? Player::kBlack : Player::kWhite;
-}
-
 /**
  * \brief Class that represents a chess position.
  *
@@ -79,7 +62,7 @@ class Position
    *
    * \return Bitboard with all pieces on the board.
    */
-  [[nodiscard]] Bitboard<kBoardSize> GetAllPieces() const
+  [[nodiscard]] Bitboard<kBoardArea> GetAllPieces() const
   {
     return Bitboard{pieces_by_color_[static_cast<size_t>(Player::kWhite)] |
                     pieces_by_color_[static_cast<size_t>(Player::kBlack)]};
@@ -92,7 +75,7 @@ class Position
    *
    * \return Bitboard with all pieces of given player.
    */
-  [[nodiscard]] const Bitboard<kBoardSize>& GetPieces(Player player) const
+  [[nodiscard]] const Bitboard<kBoardArea>& GetPieces(Player player) const
   {
     return pieces_by_color_[static_cast<size_t>(player)];
   }
@@ -133,11 +116,11 @@ class Position
  private:
   Player side_to_move_{};  //!< Whose side to move.
 
-  std::array<Bitboard<kBoardSize>, kPieceTypes>
+  std::array<Bitboard<kBoardArea>, kPieceTypes>
       pieces_by_type_;  //!< Bitboard of pieces of certain type
-  std::array<Bitboard<kBoardSize>, kAmountOfPlayers>
+  std::array<Bitboard<kBoardArea>, kColors>
       pieces_by_color_;  //!< Bitboard of pieces for each player
 
-  std::array<Piece, kBoardSize> board_{};  //!< Current position of pieces
+  std::array<Piece, kBoardArea> board_{};  //!< Current position of pieces
 };
 }  // namespace SimpleChessEngine

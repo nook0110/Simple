@@ -22,7 +22,7 @@ void Position::UndoMove(const Move& move)
   const auto from = move.from;
   const auto to = move.to;
   const auto piece_to_move = board_[to];
-  auto captured_piece = move.captured_piece;
+  const auto captured_piece = move.captured_piece;
   const Player us = side_to_move_;
   const Player them = Flip(us);
   RemovePiece(to, us);

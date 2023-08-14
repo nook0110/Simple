@@ -13,7 +13,7 @@ namespace SimpleChessEngine
  */
 struct Magic
 {
-  Bitboard<64> mask;
+  Bitboard<> mask;
   uint_fast64_t magic;
   unsigned shift;
 };
@@ -22,21 +22,23 @@ struct AttackTable
 {
   static constexpr size_t kRookTableSize = 0x19000;
   static constexpr size_t kBishopTableSize = 0x1480;
-  const std::array<Bitboard<64>, kRookTableSize> rook_table = {};
-  const std::array<Bitboard<64>, kBishopTableSize> bishop_table = {};
-  const std::array<size_t, 64> rook_base = {};
-  const std::array<size_t, 64> bishop_base = {};
-  const std::array<Magic, 64> rook_magic = {};
-  const std::array<Magic, 64> bishop_magic = {};
+  const std::array<Bitboard<>, kRookTableSize> rook_table = {};
+  const std::array<Bitboard<>, kBishopTableSize> bishop_table = {};
+  const std::array<size_t, kBoardArea> rook_base = {};
+  const std::array<size_t, kBoardArea> bishop_base = {};
+  const std::array<Magic, kBoardArea> rook_magic = {};
+  const std::array<Magic, kBoardArea> bishop_magic = {};
 
   template <Piece piece>
   static size_t GetAttackTableAddress(
-      BitIndex square, const Bitboard<64>& occupied = kEmptyBoard);
+      BitIndex square, const Bitboard<>& occupied = kEmptyBoard);
 
   template <Piece piece>
   static Bitboard<> GetAttackMap(BitIndex square, const Bitboard<>& occupied);
 
  private:
+     void InitBishopMagics();
+     void InitRookMagics();
      void Init();
 
   static inline const std::unique_ptr<AttackTable> kAttackTable =
@@ -45,7 +47,7 @@ struct AttackTable
 
 template <Piece piece>
 size_t AttackTable::GetAttackTableAddress(const BitIndex square,
-                                          const Bitboard<64>& occupied)
+                                          const Bitboard<>& occupied)
 {
   static_assert(piece == Piece::kBishop || piece == Piece::kRook);
   if constexpr (piece == Piece::kRook)
@@ -64,9 +66,9 @@ size_t AttackTable::GetAttackTableAddress(const BitIndex square,
 
 template <Piece piece>
 Bitboard<> AttackTable::GetAttackMap(const BitIndex square,
-                                     const Bitboard<64>& occupied)
+                                     const Bitboard<>& occupied)
 {
-  static constexpr std::array<Bitboard<64>, 64> king_attacks = {
+  static constexpr std::array<Bitboard<>, kBoardArea> king_attacks = {
       770ull,
       1797ull,
       3594ull,
@@ -131,7 +133,7 @@ Bitboard<> AttackTable::GetAttackMap(const BitIndex square,
       5796132720425828352ull,
       11592265440851656704ull,
       4665729213955833856ull};
-  static constexpr std::array<Bitboard<64>, 64> knight_attacks = {
+  static constexpr std::array<Bitboard<>, kBoardArea> knight_attacks = {
       132096ull,
       329728ull,
       659712ull,

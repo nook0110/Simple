@@ -39,6 +39,7 @@
     <ClInclude Include="MoveGenerator.h" />
     <ClInclude Include="Position.h" />
     <ClInclude Include="UciCommunicator.h" />
+    <ClInclude Include="Utility.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
