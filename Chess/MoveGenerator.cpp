@@ -110,7 +110,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
   while (const auto to = valid_moves.GetFirstBit())
   {
     // create move
-    Move move{from, to};
+    Move move{};
 
     // do move
     position.DoMove(move);

@@ -25,6 +25,7 @@
     <ClCompile Include="Position.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Piece.h" />
     <ClInclude Include="PositionFactory.h" />
     <ClInclude Include="Searcher.h" />
     <ClInclude Include="Attacks.h" />
