@@ -105,7 +105,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
   const auto& our_pieces = position.GetPieces(side_to_move);
 
   // remove moves into our pieces
-  const auto valid_moves = Bitboard{attacks & ~our_pieces};
+  const auto valid_moves = attacks & (~our_pieces);
 
   while (const auto to = valid_moves.GetFirstBit())
   {
