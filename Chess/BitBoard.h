@@ -26,6 +26,8 @@ class Bitboard : public std::bitset<size>
 
   [[nodiscard]] BitIndex GetFirstBit() const;
 
+  bool operator==(const Bitboard&) const;
+
   Bitboard operator&(const Bitboard& other) const;
   Bitboard& operator&=(const Bitboard& other);
 

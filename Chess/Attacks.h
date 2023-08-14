@@ -30,16 +30,16 @@ struct AttackTable
   const std::array<Magic, kBoardArea> bishop_magic = {};
 
   template <Piece piece>
-  static size_t GetAttackTableAddress(
-      BitIndex square, const Bitboard<>& occupied = kEmptyBoard);
+  static size_t GetAttackTableAddress(BitIndex square,
+                                      const Bitboard<>& occupied = kEmptyBoard);
 
   template <Piece piece>
   static Bitboard<> GetAttackMap(BitIndex square, const Bitboard<>& occupied);
 
  private:
-     void InitBishopMagics();
-     void InitRookMagics();
-     void Init();
+  void InitBishopMagics();
+  void InitRookMagics();
+  void Init();
 
   static inline const std::unique_ptr<AttackTable> kAttackTable =
       std::make_unique<AttackTable>();
@@ -208,8 +208,8 @@ Bitboard<> AttackTable::GetAttackMap(const BitIndex square,
   }
   if constexpr (piece == Piece::kQueen)
   {
-    return Bitboard{GetAttackMap<Piece::kBishop>(square, occupied) |
-                    GetAttackMap<Piece::kRook>(square, occupied)};
+    return GetAttackMap<Piece::kBishop>(square, occupied) |
+           GetAttackMap<Piece::kRook>(square, occupied);
   }
   if constexpr (piece == Piece::kBishop)
   {

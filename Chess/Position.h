@@ -2,11 +2,11 @@
 #include <array>
 #include <cassert>
 
-#include "Utility.h"
 #include "Bitboard.h"
 #include "Hasher.h"
 #include "Move.h"
 #include "Piece.h"
+#include "Utility.h"
 
 namespace SimpleChessEngine
 {
@@ -64,8 +64,8 @@ class Position
    */
   [[nodiscard]] Bitboard<kBoardArea> GetAllPieces() const
   {
-    return Bitboard{pieces_by_color_[static_cast<size_t>(Player::kWhite)] |
-                    pieces_by_color_[static_cast<size_t>(Player::kBlack)]};
+    return pieces_by_color_[static_cast<size_t>(Player::kWhite)] |
+           pieces_by_color_[static_cast<size_t>(Player::kBlack)];
   }
 
   /**
