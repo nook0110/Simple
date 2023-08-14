@@ -37,7 +37,7 @@ struct AttackTable
   static Bitboard<> GetAttackMap(BitIndex square, const Bitboard<>& occupied);
 
  private:
-  void Init() {}
+     void Init();
 
   static inline const std::unique_ptr<AttackTable> kAttackTable =
       std::make_unique<AttackTable>();

@@ -7,7 +7,6 @@ void Position::DoMove(const Move& move)
     auto from = move.from_;
     auto to = move.to_;
     auto piece_to_move = board_[from];
-    auto captured_piece = board_[to];
     Player us = side_to_move_;
     Player them = Flip(us);
     RemovePiece(from, us);
