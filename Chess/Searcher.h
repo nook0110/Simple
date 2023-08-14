@@ -181,7 +181,7 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
   }
 
   // set best move
-  best_moves_[current_position_] = std::move(moves.front());
+  best_moves_[current_position_] = moves.front();
 
   // delete first move
   std::iter_swap(moves.begin(), std::prev(moves.end()));
@@ -214,12 +214,12 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
       // check if we have found a better move
       if (temp_eval >= beta)
       {
-        best_moves_[current_position_] = std::move(move);
+        best_moves_[current_position_] = move;
 
         return beta;
       }
 
-      best_moves_[current_position_] = std::move(move);
+      best_moves_[current_position_] = move;
 
       best_eval = temp_eval;
     }

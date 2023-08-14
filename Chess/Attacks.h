@@ -219,5 +219,7 @@ Bitboard<> AttackTable::GetAttackMap(const BitIndex square,
     return kAttackTable
         ->rook_table[GetAttackTableAddress<Piece::kRook>(square, occupied)];
   }
+  assert(false);
+  return {};
 }
 }  // namespace SimpleChessEngine
