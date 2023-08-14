@@ -3,7 +3,7 @@
 using namespace SimpleChessEngine;
 
 template <Piece SlidingPiece>
-constexpr std::array<Compass, 4> GetDelta()
+constexpr std::array<Compass, 4> GetStepDelta()
 {
   if constexpr (SlidingPiece == Piece::kBishop)
   {
@@ -21,25 +21,23 @@ constexpr std::array<Compass, 4> GetDelta()
 
 template <Piece SlidingPiece>
 [[nodiscard]] Bitboard<> GenerateAttackMask(
-    const BitIndex square, const Bitboard<> occupancy = kBorderBB)
+    const BitIndex square, const Bitboard<> occupancy = kEmptyBoard)
 {
   static_assert(SlidingPiece == Piece::kBishop || SlidingPiece == Piece::kRook);
   assert(IsOk(square));
 
-  static constexpr auto delta = GetDelta<SlidingPiece>();
+  static constexpr auto delta = GetStepDelta<SlidingPiece>();
 
   Bitboard<> result = kEmptyBoard;
 
-  for (size_t i = 0; i < kMoveDirection; ++i)
+  for (size_t i = 0; i < delta.size(); ++i)
   {
-    for (BitIndex temp = square; true; temp += delta[i])
-    {
-      auto square_bb = GetBitboardOfSquare(temp);
-      result |= square_bb;
-      if ((square_bb & occupancy) != kEmptyBoard) break;
-    }
+    const auto step = static_cast<int>(delta[i]);
+    for (BitIndex temp = square; 
+         IsValidShift(temp, delta[i]) && (occupancy & GetBitboardOfSquare(temp)).none();
+         result |= GetBitboardOfSquare(temp += step))
+        ;
   }
-  result ^= GetBitboardOfSquare(square);
   return result;
 }
 

@@ -8,6 +8,25 @@ namespace SimpleChessEngine
     constexpr size_t kPieceTypes = 7; // For Pawn, Knight, Bishop, Rook, Queen, King and Empty Square
     constexpr Bitboard<> kBorderBB = 0xff818181818181ff;
 
+    [[nodiscard]] inline constexpr std::pair<int, int> GetCoordinates(const BitIndex square)
+    {
+        return std::make_pair(square % kLineSize, square / kLineSize);
+    }
+
+    [[nodiscard]] inline int ManhattanDistance(const BitIndex first, const BitIndex second)
+    {
+        const auto [xfirst, yfirst] = GetCoordinates(first);
+        const auto [xsecond, ysecond] = GetCoordinates(second);
+        return std::abs(xfirst - xsecond) + std::abs(yfirst - ysecond);
+    }
+
+    [[nodiscard]] inline int KingDistance(const BitIndex first, const BitIndex second)
+    {
+        const auto [xfirst, yfirst] = GetCoordinates(first);
+        const auto [xsecond, ysecond] = GetCoordinates(second);
+        return std::max(std::abs(xfirst - xsecond), std::abs(yfirst - ysecond));
+    }
+
     /**
  * \brief Enum class that represents a player color.
  */
@@ -42,5 +61,11 @@ namespace SimpleChessEngine
     [[nodiscard]] inline Bitboard<> GetBitboardOfSquare(const BitIndex square)
     {
         return Bitboard<>(1ull << square);
+    }
+
+    [[nodiscard]] inline bool IsValidShift(const BitIndex square, const Compass shift)
+    {
+        BitIndex new_square = square + static_cast<int>(shift);
+        return IsOk(new_square) && KingDistance(square, new_square) == 1;
     }
 };
