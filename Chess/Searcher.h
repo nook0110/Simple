@@ -5,6 +5,7 @@
 
 #include "Evaluator.h"
 #include "MoveGenerator.h"
+#include "PositionFactory.h"
 #include "TranspositionTable.h"
 
 namespace SimpleChessEngine
@@ -34,7 +35,7 @@ class Searcher
    * \param evaluator The evaluator.
    * \param position The initial position.
    */
-  explicit Searcher(Position position = Position(),
+  explicit Searcher(Position position = PositionFactory{}(),
                     MoveGenerator move_generator = MoveGenerator(),
                     Evaluator evaluator = Evaluator())
       : current_position_(std::move(position)),

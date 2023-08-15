@@ -1,8 +1,14 @@
 #include "pch.h"
 
 #define SplitPCH
+#include "../Chess/Attacks.cpp"
 #include "../Chess/BitBoard.h"
+#include "../Chess/MoveFactory.h"
+#include "../Chess/MoveGenerator.cpp"
 #include "../Chess/MoveGenerator.h"
+#include "../Chess/Position.cpp"
+#include "../Chess/PositionFactory.h"
+#include "../Chess/SimpleChessEngine.h"
 
 using namespace SimpleChessEngine;
 
@@ -47,5 +53,43 @@ TEST(GetFirstBit, EachBit)
 }
 }  // namespace BitBoardTests
 
-namespace my_namespace
-{}
+namespace MoveGeneratorTests
+{
+TEST(GenerateMoves, StartPosition)
+{
+  auto start_position = PositionFactory{}();
+
+  constexpr MoveGenerator generator{};
+
+  const auto moves = generator(start_position);
+
+  // ASSERT_EQ(start_position, PositionFactory{}());
+
+  ASSERT_EQ(moves.size(), static_cast<size_t>(20));
+}
+}  // namespace MoveGeneratorTests
+
+namespace BestMoveTests
+{
+Move ComputeBestMoveByTime(
+    Position position,
+    const std::chrono::milliseconds left_time = std::chrono::seconds(5))
+{
+  ChessEngine engine;
+  engine.SetPosition(std::move(position));
+
+  engine.ComputeBestMove(left_time);
+
+  return engine.GetCurrentBestMove();
+}
+
+Move ComputeBestMoveByDepth(Position position, const size_t depth = 20)
+{
+  ChessEngine engine;
+  engine.SetPosition(std::move(position));
+
+  engine.ComputeBestMove(depth);
+
+  return engine.GetCurrentBestMove();
+}
+}  // namespace BestMoveTests

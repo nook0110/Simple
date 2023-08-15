@@ -40,9 +40,23 @@ class UciDebugPrinter final : public InfoPrinter
 class SearchThread
 {
  public:
-  explicit SearchThread(std::ostream& o_stream)
-      : engine_(std::make_unique<UciDebugPrinter>(o_stream))
+  explicit SearchThread(Position position, std::ostream& o_stream)
+      : engine_(std::move(position),
+                std::make_unique<UciDebugPrinter>(o_stream))
   {}
+
+  explicit SearchThread(std::ostream& o_stream)
+      : engine_(std::move(PositionFactory{}()),
+                std::make_unique<UciDebugPrinter>(o_stream))
+  {}
+
+  void Start(Position position)
+  {
+    engine_.SetPosition(std::move(position));
+    Stop();
+    thread_ = std::thread(
+        [this] { engine_.ComputeBestMove(std::chrono::seconds(1)); });
+  }
 
   void Start()
   {

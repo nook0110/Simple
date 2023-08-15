@@ -6,7 +6,7 @@
 
 using namespace SimpleChessEngine;
 
-MoveGenerator::Moves MoveGenerator::operator()(Position& position)
+MoveGenerator::Moves MoveGenerator::operator()(Position& position) const
 {
   // create moves, max amount moves 218
   Moves moves;
@@ -33,8 +33,8 @@ MoveGenerator::Moves MoveGenerator::operator()(Position& position)
   return moves;
 }
 
-MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(Position& position,
-                                                          const BitIndex from)
+MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
+    Position& position, const BitIndex from) const
 {
   // create moves, max amount moves 218
   Moves moves;
@@ -87,7 +87,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(Position& position,
 
 template <Piece piece>
 MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
-                                                  BitIndex from)
+                                                  const BitIndex from) const
 {
   Moves moves;
   constexpr size_t kMaxMoves = 64;
@@ -130,12 +130,12 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
 }
 
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kKnight>(
-    Position& position, BitIndex from);
+    Position& position, BitIndex from) const;
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kBishop>(
-    Position& position, BitIndex from);
+    Position& position, BitIndex from) const;
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kRook>(
-    Position& position, BitIndex from);
+    Position& position, BitIndex from) const;
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kQueen>(
-    Position& position, BitIndex from);
+    Position& position, BitIndex from) const;
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kKing>(
-    Position& position, BitIndex from);
+    Position& position, BitIndex from) const;

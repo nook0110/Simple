@@ -13,6 +13,27 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Файлы заголовков\Move">
+      <UniqueIdentifier>{ec2261cf-3577-4725-9864-b842886967c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Position">
+      <UniqueIdentifier>{9f05e608-f7a0-4fac-b79a-af0af7242ed1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Uci">
+      <UniqueIdentifier>{32b5e50b-949a-471a-9adb-7426b83e1b03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\BitBoard">
+      <UniqueIdentifier>{65142925-dfe0-4a48-9f75-e2822e8daafa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Move\Generator">
+      <UniqueIdentifier>{711b8ec7-9ed2-496b-91f8-e1839cffdee0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Engine">
+      <UniqueIdentifier>{6553a254-b862-4a70-8253-2af47f76d480}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Engine\Searcher">
+      <UniqueIdentifier>{1b9b3d7d-260c-4575-8994-e365e0c080a1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MoveGenerator.cpp">
@@ -29,50 +50,53 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Searcher.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="MoveGenerator.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
     <ClInclude Include="Move.h">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Move</Filter>
     </ClInclude>
     <ClInclude Include="Position.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="Evaluator.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleChessEngine.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="TranspositionTable.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="Hasher.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="BitScan.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="Bitboard.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="UciCommunicator.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="Attacks.h">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Position</Filter>
     </ClInclude>
     <ClInclude Include="PositionFactory.h">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Position</Filter>
+    </ClInclude>
+    <ClInclude Include="Searcher.h">
+      <Filter>Файлы заголовков\Engine\Searcher</Filter>
+    </ClInclude>
+    <ClInclude Include="TranspositionTable.h">
+      <Filter>Файлы заголовков\Engine\Searcher</Filter>
+    </ClInclude>
+    <ClInclude Include="Hasher.h">
+      <Filter>Файлы заголовков\Engine\Searcher</Filter>
+    </ClInclude>
+    <ClInclude Include="Evaluator.h">
+      <Filter>Файлы заголовков\Engine\Searcher</Filter>
     </ClInclude>
     <ClInclude Include="Piece.h">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Position</Filter>
+    </ClInclude>
+    <ClInclude Include="UciCommunicator.h">
+      <Filter>Файлы заголовков\Uci</Filter>
+    </ClInclude>
+    <ClInclude Include="Bitboard.h">
+      <Filter>Файлы заголовков\BitBoard</Filter>
+    </ClInclude>
+    <ClInclude Include="BitScan.h">
+      <Filter>Файлы заголовков\BitBoard</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleChessEngine.h">
+      <Filter>Файлы заголовков\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="MoveGenerator.h">
+      <Filter>Файлы заголовков\Move\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="MoveFactory.h">
+      <Filter>Файлы заголовков\Move</Filter>
+    </ClInclude>
+    <ClInclude Include="Attacks.h">
+      <Filter>Файлы заголовков\Move\Generator</Filter>
     </ClInclude>
     <ClInclude Include="Utility.h">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Position</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
