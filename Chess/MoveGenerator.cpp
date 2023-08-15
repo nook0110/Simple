@@ -17,14 +17,13 @@ MoveGenerator::Moves MoveGenerator::operator()(Position& position)
   auto pieces = position.GetAllPieces();
 
   // generate moves for each piece
-  while (pieces.any())
+  while (const auto from = pieces.GetFirstBit())
   {
     // get first piece
-    const auto from = pieces.GetFirstBit();
-    pieces.reset(from);
+    pieces.reset(*from);
 
     // generate moves for piece
-    auto moves_for_piece = GenerateMovesForPiece(position, from);
+    auto moves_for_piece = GenerateMovesForPiece(position, *from);
 
     // add moves
     moves.insert(moves.end(), moves_for_piece.begin(), moves_for_piece.end());

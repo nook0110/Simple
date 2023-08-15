@@ -1,4 +1,6 @@
 #pragma once
+#include <optional>
+
 #include "BitScan.h"
 
 /**
@@ -24,7 +26,7 @@ class Bitboard : public std::bitset<size>
       : std::bitset<size>(std::move(bitset))
   {}
 
-  [[nodiscard]] BitIndex GetFirstBit() const;
+  [[nodiscard]] std::optional<BitIndex> GetFirstBit() const;
 
   Bitboard operator&(const Bitboard& other) const;
   Bitboard& operator&=(const Bitboard& other);
@@ -45,7 +47,7 @@ class Bitboard : public std::bitset<size>
 };
 
 template <size_t size>
-BitIndex Bitboard<size>::GetFirstBit() const
+std::optional<BitIndex> Bitboard<size>::GetFirstBit() const
 {
   return BitScan(this->to_ullong());
 }

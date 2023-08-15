@@ -5,9 +5,9 @@
 
 #pragma intrinsic(_BitScanForward)
 
-using BitIndex = int;
+using BitIndex = size_t;
 
-inline BitIndex BitScan(const size_t mask)
+inline std::optional<BitIndex> BitScan(const size_t mask)
 {
   unsigned long index;
   if (_BitScanForward64(&index, mask))
@@ -15,10 +15,10 @@ inline BitIndex BitScan(const size_t mask)
     return index;
   }
 
-  return -1;
+  return std::nullopt;
 }
 
-inline BitIndex BitScan(const std::bitset<64>& mask)
+inline std::optional<BitIndex> BitScan(const std::bitset<64>& mask)
 {
   unsigned long index;
   if (_BitScanForward64(&index, mask.to_ullong()))
@@ -26,5 +26,5 @@ inline BitIndex BitScan(const std::bitset<64>& mask)
     return index;
   }
 
-  return -1;
+  return std::nullopt;
 }
