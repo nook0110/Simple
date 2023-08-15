@@ -26,15 +26,13 @@ template <Piece SlidingPiece>
   static_assert(SlidingPiece == Piece::kBishop || SlidingPiece == Piece::kRook);
   assert(IsOk(square));
 
-  static constexpr auto delta = GetStepDelta<SlidingPiece>();
-
   Bitboard<> result = kEmptyBoard;
 
-  for (size_t i = 0; i < delta.size(); ++i)
+  for (auto direction : GetStepDelta<SlidingPiece>())
   {
-    const auto step = static_cast<int>(delta[i]);
+    const auto step = static_cast<int>(direction);
     for (BitIndex temp = square; 
-         IsValidShift(temp, delta[i]) && (occupancy & GetBitboardOfSquare(temp)).none();
+         IsValidShift(temp, direction) && (occupancy & GetBitboardOfSquare(temp)).none();
          result |= GetBitboardOfSquare(temp += step))
         ;
   }
