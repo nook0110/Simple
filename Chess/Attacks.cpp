@@ -38,3 +38,9 @@ template <Piece SlidingPiece>
   }
   return result;
 }
+
+template <Piece SlidingPiece, size_t table_size>
+AttackTable<SlidingPiece, table_size>::AttackTable()
+{
+    if constexpr (SlidingPiece != Piece::kBishop && SlidingPiece != Piece::kRook) return;
+}

@@ -29,16 +29,16 @@ constexpr size_t GetTableSize(const Piece sliding_piece)
 template <Piece SlidingPiece, size_t table_size = GetTableSize(SlidingPiece)>
 struct AttackTable
 {
-  std::array<Bitboard<>, table_size> table;
-  std::array<size_t, kBoardArea> base;
-  std::array<Magic, kBoardArea> magic;
+  std::array<Bitboard<>, table_size> table = {};
+  std::array<size_t, kBoardArea> base = {};
+  std::array<Magic, kBoardArea> magic = {};
 
   static size_t GetAttackTableAddress(BitIndex square,
                                       const Bitboard<>& occupied = kEmptyBoard);
 
   static Bitboard<> GetAttackMap(BitIndex square, const Bitboard<>& occupied);
 
-  AttackTable(){};
+  AttackTable();
 
  private:
   static inline const std::unique_ptr<AttackTable<Piece::kBishop>>
