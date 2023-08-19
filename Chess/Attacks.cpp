@@ -38,13 +38,3 @@ template <Piece SlidingPiece>
   }
   return result;
 }
-
-void AttackTable::InitBishopMagics() {}
-
-void AttackTable::InitRookMagics() {}
-
-void AttackTable::Init()
-{
-  InitBishopMagics();
-  InitRookMagics();
-}

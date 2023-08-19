@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <map>
 
 #include "BitBoard.h"
 #include "Position.h"
@@ -18,54 +19,59 @@ struct Magic
   unsigned shift;
 };
 
+constexpr size_t GetTableSize(const Piece sliding_piece)
+{
+    if (sliding_piece == Piece::kBishop)
+        return 0x1480;
+    if (sliding_piece == Piece::kRook)
+        return 0x19000;
+    return 0;
+}
+
+template <Piece SlidingPiece, size_t table_size = GetTableSize(SlidingPiece)>
 struct AttackTable
 {
-  static constexpr size_t kRookTableSize = 0x19000;
-  static constexpr size_t kBishopTableSize = 0x1480;
-  const std::array<Bitboard<>, kRookTableSize> rook_table = {};
-  const std::array<Bitboard<>, kBishopTableSize> bishop_table = {};
-  const std::array<size_t, kBoardArea> rook_base = {};
-  const std::array<size_t, kBoardArea> bishop_base = {};
-  const std::array<Magic, kBoardArea> rook_magic = {};
-  const std::array<Magic, kBoardArea> bishop_magic = {};
+  std::array<Bitboard<>, table_size> table;
+  std::array<size_t, kBoardArea> base;
+  std::array<Magic, kBoardArea> magic;
 
-  template <Piece piece>
   static size_t GetAttackTableAddress(BitIndex square,
                                       const Bitboard<>& occupied = kEmptyBoard);
 
-  template <Piece piece>
   static Bitboard<> GetAttackMap(BitIndex square, const Bitboard<>& occupied);
 
  private:
-  void InitBishopMagics();
-  void InitRookMagics();
-  void Init();
+  
+  AttackTable();
 
-  static inline const std::unique_ptr<AttackTable> kAttackTable =
-      std::make_unique<AttackTable>();
+  static inline const std::unique_ptr<AttackTable> kBishopTable =
+      std::make_unique<AttackTable<Piece::kBishop>>();
+
+  static inline const std::unique_ptr<AttackTable> kRookTable =
+      std::make_unique<AttackTable<Piece::kRook>>();
 };
 
-template <Piece piece>
-size_t AttackTable::GetAttackTableAddress(const BitIndex square,
+template <Piece piece, size_t table_size>
+size_t AttackTable<piece, table_size>::GetAttackTableAddress(const BitIndex square,
                                           const Bitboard<>& occupied)
 {
   static_assert(piece == Piece::kBishop || piece == Piece::kRook);
   if constexpr (piece == Piece::kRook)
   {
-    const auto& [mask, magic, shift] = kAttackTable->rook_magic[square];
+    const auto& [mask, magic, shift] = kRookTable->magic[square];
     const size_t key = (occupied & mask).to_ullong() * magic >> shift;
-    return kAttackTable->rook_base[square] + key;
+    return kRookTable->base[square] + key;
   }
   if constexpr (piece == Piece::kBishop)
   {
-    const auto& [mask, magic, shift] = kAttackTable->bishop_magic[square];
+    const auto& [mask, magic, shift] = kBishopTable->magic[square];
     const size_t key = (occupied & mask).to_ullong() * magic >> shift;
-    return kAttackTable->bishop_base[square] + key;
+    return kBishopTable->base[square] + key;
   }
 }
 
-template <Piece piece>
-Bitboard<> AttackTable::GetAttackMap(const BitIndex square,
+template <Piece piece, size_t table_size>
+Bitboard<> AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
                                      const Bitboard<>& occupied)
 {
   static constexpr std::array<Bitboard<>, kBoardArea> king_attacks = {
@@ -213,13 +219,13 @@ Bitboard<> AttackTable::GetAttackMap(const BitIndex square,
   }
   if constexpr (piece == Piece::kBishop)
   {
-    return kAttackTable
-        ->bishop_table[GetAttackTableAddress<Piece::kBishop>(square, occupied)];
+      return kBishopTable
+          ->table[GetAttackTableAddress<Piece::kBishop>(square, occupied)];
   }
   if constexpr (piece == Piece::kRook)
   {
-    return kAttackTable
-        ->rook_table[GetAttackTableAddress<Piece::kRook>(square, occupied)];
+    return kRookTable
+        ->table[GetAttackTableAddress<Piece::kRook>(square, occupied)];
   }
   assert(false);
   return {};
