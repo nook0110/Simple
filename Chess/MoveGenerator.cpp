@@ -95,7 +95,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
 
   // get all squares that piece attacks
   const auto attacks =
-      AttackTable::GetAttackMap<piece>(from, position.GetAllPieces());
+      AttackTable<piece>::GetAttackMap(from, position.GetAllPieces());
 
   // get whose move is now
   const auto side_to_move = position.GetSideToMove();
