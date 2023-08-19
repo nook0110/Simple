@@ -6,8 +6,6 @@
 #include <string>
 #include <thread>
 
-#include "Evaluator.h"
-#include "Move.h"
 #include "Position.h"
 #include "SimpleChessEngine.h"
 
@@ -40,19 +38,18 @@ class UciDebugPrinter final : public InfoPrinter
 class SearchThread
 {
  public:
-  explicit SearchThread(Position position, std::ostream& o_stream)
-      : engine_(std::move(position),
-                std::make_unique<UciDebugPrinter>(o_stream))
+  explicit SearchThread(const Position position, std::ostream& o_stream)
+      : engine_(position, std::make_unique<UciDebugPrinter>(o_stream))
   {}
 
   explicit SearchThread(std::ostream& o_stream)
-      : engine_(std::move(PositionFactory{}()),
+      : engine_(PositionFactory{}(),
                 std::make_unique<UciDebugPrinter>(o_stream))
   {}
 
-  void Start(Position position)
+  void Start(const Position position)
   {
-    engine_.SetPosition(std::move(position));
+    engine_.SetPosition(position);
     Stop();
     thread_ = std::thread(
         [this] { engine_.ComputeBestMove(std::chrono::seconds(1)); });
@@ -105,8 +102,6 @@ class UciChessEngine
   void ParseGo(std::stringstream command);
   void ParseStop(std::stringstream command);
   void ParseQuit(std::stringstream command);
-
-  void SendOptions();
 
   void Send(const std::string& message) const
   {
@@ -181,8 +176,6 @@ inline void UciChessEngine::ParseUci(std::stringstream command)
   Send("id name " + name);
   Send("id author " + author);
 
-  SendOptions();
-
   // ReSharper disable once StringLiteralTypo
   Send("uciok");
 }
@@ -227,6 +220,4 @@ inline void UciChessEngine::ParseQuit(std::stringstream command)
   quit_ = true;
   StopSearch();
 }
-
-inline void UciChessEngine::SendOptions() {}
 }  // namespace SimpleChessEngine

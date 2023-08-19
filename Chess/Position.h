@@ -6,6 +6,7 @@
 #include "Hasher.h"
 #include "Move.h"
 #include "Piece.h"
+#include "Player.h"
 #include "Utility.h"
 
 namespace SimpleChessEngine
@@ -19,6 +20,14 @@ namespace SimpleChessEngine
 class Position
 {
  public:
+  /**
+   * \brief Places a piece with a color on a chosen square.
+   *
+   * \param square Square to place piece.
+   * \param piece Piece to place.
+   * \param color Color of the piece.
+   *
+   */
   void PlacePiece(const BitIndex square, const Piece piece, const Player color)
   {
     assert(board_[square] == Piece::kNone);
@@ -28,6 +37,13 @@ class Position
     // TODO: hash update
   }
 
+  /**
+   * \brief Removes a piece from a chosen square.
+   *
+   * \param square Square to remove piece from.
+   * \param color Color of the piece.
+   *
+   */
   void RemovePiece(const BitIndex square, const Player color)
   {
     auto piece = board_[square];
@@ -36,6 +52,7 @@ class Position
     board_[square] = Piece::kNone;
     // TODO: hash update
   }
+
   /**
    * \brief Does given move.
    *
@@ -55,7 +72,7 @@ class Position
    *
    * \return Hash of the position.
    */
-  [[nodiscard]] Hash GetHash() const { return Hash{}; };
+  [[nodiscard]] Hash GetHash() const { return Hash{}; }
 
   /**
    * \brief Gets all pieces on the board.
@@ -97,6 +114,13 @@ class Position
   [[nodiscard]] Player GetSideToMove() const { return side_to_move_; }
 
   /**
+   * \brief Sets side to move.
+   *
+   * \param player Player whose's side to move.
+   */
+  void SetSideToMove(const Player player) { side_to_move_ = player; }
+
+  /**
    * \brief Checks if current player is under check.
    *
    * \return True if current player is under check, false otherwise.
@@ -112,6 +136,15 @@ class Position
    * \return True if given player is under check, false otherwise.
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const { return false; }
+
+  /**
+   * \brief Default operator==()
+   *
+   * \param other Other position to compare with.
+   *
+   * \return True if positions are the same, false otherwise.
+   */
+  bool operator==(const Position& other) const = default;
 
  private:
   Player side_to_move_{};  //!< Whose side to move.

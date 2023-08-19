@@ -4,6 +4,8 @@
 
 int main()
 {
+  auto pos = SimpleChessEngine::PositionFactory{}();
+
   SimpleChessEngine::UciChessEngine uci;
   uci.Start();
 }

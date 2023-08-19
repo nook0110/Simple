@@ -22,9 +22,6 @@
     <Filter Include="Файлы заголовков\Uci">
       <UniqueIdentifier>{32b5e50b-949a-471a-9adb-7426b83e1b03}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Файлы заголовков\BitBoard">
-      <UniqueIdentifier>{65142925-dfe0-4a48-9f75-e2822e8daafa}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Файлы заголовков\Move\Generator">
       <UniqueIdentifier>{711b8ec7-9ed2-496b-91f8-e1839cffdee0}</UniqueIdentifier>
     </Filter>
@@ -33,6 +30,9 @@
     </Filter>
     <Filter Include="Файлы заголовков\Engine\Searcher">
       <UniqueIdentifier>{1b9b3d7d-260c-4575-8994-e365e0c080a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Bitboard">
+      <UniqueIdentifier>{65142925-dfe0-4a48-9f75-e2822e8daafa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -78,10 +78,10 @@
       <Filter>Файлы заголовков\Uci</Filter>
     </ClInclude>
     <ClInclude Include="Bitboard.h">
-      <Filter>Файлы заголовков\BitBoard</Filter>
+      <Filter>Файлы заголовков\Bitboard</Filter>
     </ClInclude>
     <ClInclude Include="BitScan.h">
-      <Filter>Файлы заголовков\BitBoard</Filter>
+      <Filter>Файлы заголовков\Bitboard</Filter>
     </ClInclude>
     <ClInclude Include="SimpleChessEngine.h">
       <Filter>Файлы заголовков\Engine</Filter>
@@ -96,6 +96,9 @@
       <Filter>Файлы заголовков\Move\Generator</Filter>
     </ClInclude>
     <ClInclude Include="Utility.h">
+      <Filter>Файлы заголовков\Position</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
       <Filter>Файлы заголовков\Position</Filter>
     </ClInclude>
   </ItemGroup>

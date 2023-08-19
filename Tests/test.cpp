@@ -55,17 +55,46 @@ TEST(GetFirstBit, EachBit)
 
 namespace MoveGeneratorTests
 {
-TEST(GenerateMoves, StartPosition)
+[[nodiscard]] size_t CountPossibleGames(Position& position, const size_t depth)
 {
-  auto start_position = PositionFactory{}();
+  if (depth == 0) return 1;
 
   constexpr MoveGenerator generator{};
 
-  const auto moves = generator(start_position);
+  size_t answer{};
 
-  // ASSERT_EQ(start_position, PositionFactory{}());
+  const auto moves = generator(position);
 
-  ASSERT_EQ(moves.size(), static_cast<size_t>(20));
+  if (moves.empty()) return 1;
+
+  if (depth == 1) return moves.size();
+
+  for (const auto& move : moves)
+  {
+    position.DoMove(move);
+    answer += CountPossibleGames(position, depth - 1);
+    position.UndoMove(move);
+  }
+
+  return answer;
+}
+
+TEST(GenerateMoves, ShannonNumberCheck)
+{
+  auto start_position = PositionFactory{}();
+
+  constexpr size_t max_plies = 6;
+
+  constexpr std::array<size_t, max_plies + 1> shannon_number = {
+      1, 20, 400, 8902, 197281, 4865609, 119060324};
+
+  for (size_t depth = 0; depth <= max_plies; ++depth)
+  {
+    auto possible_games = CountPossibleGames(start_position, depth);
+
+    ASSERT_EQ(start_position, PositionFactory{}());
+    ASSERT_EQ(possible_games, shannon_number[depth]);
+  }
 }
 }  // namespace MoveGeneratorTests
 
