@@ -1,9 +1,9 @@
 #pragma once
 
+#include <chrono>
 #include <map>
 #include <memory>
 #include <random>
-#include <chrono>
 
 #include "BitBoard.h"
 #include "Position.h"
