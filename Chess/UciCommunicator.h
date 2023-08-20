@@ -212,6 +212,7 @@ inline void UciChessEngine::ParseGo(std::stringstream command)
       assert(false);
     }
   }
+  search_thread_.Start();
 }
 inline void UciChessEngine::ParseStop(std::stringstream command) {}
 

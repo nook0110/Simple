@@ -104,12 +104,14 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
   const auto& our_pieces = position.GetPieces(side_to_move);
 
   // remove moves into our pieces
-  const auto valid_moves = attacks & (~our_pieces);
+  auto valid_moves = attacks & (~our_pieces);
 
   while (const auto to = valid_moves.GetFirstBit())
   {
+    valid_moves.reset(to.value());
+
     // create move
-    Move move{};
+    Move move{from, to.value(), position.GetPiece(to.value())};
 
     // do move
     position.DoMove(move);
