@@ -23,8 +23,7 @@ template <Piece sliding_piece>
 [[nodiscard]] Bitboard<> GenerateAttackMask(
     const BitIndex square, const Bitboard<> occupancy = kEmptyBoard)
 {
-  static_assert(sliding_piece == Piece::kBishop ||
-                sliding_piece == Piece::kRook);
+  static_assert(IsWeakSlidingPiece(sliding_piece));
   assert(IsOk(square));
 
   Bitboard<> result = kEmptyBoard;
@@ -43,8 +42,7 @@ template <Piece sliding_piece>
 template <Piece sliding_piece, size_t table_size>
 AttackTable<sliding_piece, table_size>::AttackTable()
 {
-  if constexpr (sliding_piece != Piece::kBishop &&
-                sliding_piece != Piece::kRook)
+  if constexpr (!IsWeakSlidingPiece(sliding_piece))
     return;
 
   std::vector<Bitboard<>> occupancy(1 << 16), reference(1 << 16);
@@ -61,9 +59,9 @@ AttackTable<sliding_piece, table_size>::AttackTable()
     auto [file, rank] = GetCoordinates(sq);
     Bitboard<> edges =
         rank_edges & ~kRankBitboard[rank] | file_edges & ~kFileBitboard[file];
-    magic[sq].mask = GenerateAttackMask<sliding_piece>(sq) & ~edges;
-    magic[sq].shift = 64 - magic[sq].mask.count();
-    base[sq] = (sq ? base[sq - 1] + offset : 0);
+    magic_[sq].mask = GenerateAttackMask<sliding_piece>(sq) & ~edges;
+    magic_[sq].shift = 64 - magic_[sq].mask.count();
+    base_[sq] = (sq ? base_[sq - 1] + offset : 0);
     offset = 0;
     Bitboard b(kEmptyBoard);
     do
@@ -71,29 +69,29 @@ AttackTable<sliding_piece, table_size>::AttackTable()
       occupancy[offset] = b;
       reference[offset] = GenerateAttackMask<sliding_piece>(sq, b);
       ++offset;
-      b = Bitboard<>{b.to_ullong() - magic[sq].mask.to_ullong()} &
-          magic[sq].mask;
+      b = Bitboard<>{b.to_ullong() - magic_[sq].mask.to_ullong()} &
+          magic_[sq].mask;
     }
     while (b.any());
     std::mt19937_64 gen(
         std::chrono::steady_clock::now().time_since_epoch().count());
     for (size_t i = 0; i < offset;)
     {
-      for (magic[sq].magic = 0;
-           (Bitboard<>(magic[sq].magic * magic[sq].mask.to_ullong()) >> 56)
+      for (magic_[sq].magic = 0;
+           (Bitboard<>(magic_[sq].magic * magic_[sq].mask.to_ullong()) >> 56)
                .count() < 6;)
-        magic[sq].magic = gen() & gen() & gen();
+        magic_[sq].magic = gen() & gen() & gen();
       ++attempt_count;
       for (i = 0; i < offset; ++i)
       {
-        const auto idx = magic[sq].GetIndex(occupancy[i]);
+        const auto idx = magic_[sq].GetIndex(occupancy[i]);
 
         if (epoch[idx] < attempt_count)
         {
           epoch[idx] = attempt_count;
-          table[base[sq] + idx] = reference[i];
+          table_[base_[sq] + idx] = reference[i];
         }
-        else if (table[base[sq] + idx] != reference[i])
+        else if (table_[base_[sq] + idx] != reference[i])
           break;
       }
     }

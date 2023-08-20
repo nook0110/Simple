@@ -83,6 +83,16 @@ enum class Compass
   return IsOk(new_square) && KingDistance(square, new_square) == 1;
 }
 
+[[nodiscard]] inline constexpr bool IsSlidingPiece(const Piece piece)
+{
+    return piece == Piece::kBishop || piece == Piece::kRook || piece == Piece::kQueen;
+}
+
+[[nodiscard]] inline constexpr bool IsWeakSlidingPiece(const Piece piece)
+{
+    return IsSlidingPiece(piece) && piece != Piece::kQueen;
+}
+
 [[nodiscard]] inline std::string DrawBitboard(const Bitboard<> b) {
 
     std::string s = "+---+---+---+---+---+---+---+---+\n";

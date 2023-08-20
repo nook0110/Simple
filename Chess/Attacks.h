@@ -21,7 +21,7 @@ struct Magic
   unsigned shift;
   [[nodiscard]] size_t GetIndex(const Bitboard<> occupancy) const
   {
-      return (occupancy & mask).to_ullong() * magic >> shift;
+      return (mask & occupancy).to_ullong() * magic >> shift;
   }
 };
 
@@ -33,12 +33,10 @@ constexpr size_t GetTableSize(const Piece sliding_piece)
 }
 
 template <Piece SlidingPiece, size_t table_size = GetTableSize(SlidingPiece)>
-struct AttackTable
+class AttackTable
 {
-  std::array<Bitboard<>, table_size> table = {};
-  std::array<size_t, kBoardArea> base = {};
-  std::array<Magic, kBoardArea> magic = {};
-
+public:
+  
   static size_t GetAttackTableAddress(BitIndex square,
                                       const Bitboard<>& occupied = kEmptyBoard);
 
@@ -47,11 +45,10 @@ struct AttackTable
   AttackTable();
 
  private:
-  static inline const std::unique_ptr<AttackTable<Piece::kBishop>>
-      kBishopTable = std::make_unique<AttackTable<Piece::kBishop>>();
-
-  static inline const std::unique_ptr<AttackTable<Piece::kRook>> kRookTable =
-      std::make_unique<AttackTable<Piece::kRook>>();
+     std::array<Bitboard<>, table_size> table_ = {};
+     std::array<size_t, kBoardArea> base_ = {};
+     std::array<Magic, kBoardArea> magic_ = {};
+     static inline const auto self_ = std::make_unique<AttackTable>();
 };
 
 template <Piece piece, size_t table_size>
@@ -59,10 +56,7 @@ size_t AttackTable<piece, table_size>::GetAttackTableAddress(
     const BitIndex square, const Bitboard<>& occupied)
 {
   static_assert(piece == Piece::kBishop || piece == Piece::kRook);
-  if constexpr (piece == Piece::kRook)
-    return kRookTable->base[square] + kRookTable->magic[square].GetIndex(occupied);
-  if constexpr (piece == Piece::kBishop)
-    return kBishopTable->base[square] + kBishopTable->magic[square].GetIndex(occupied);
+  return self_->base_[square] + self_->magic_[square].GetIndex(occupied);
 }
 
 template <Piece piece, size_t table_size>
@@ -212,16 +206,9 @@ Bitboard<> AttackTable<piece, table_size>::GetAttackMap(
     return AttackTable<Piece::kBishop>::GetAttackMap(square, occupied) |
            AttackTable<Piece::kRook>::GetAttackMap(square, occupied);
   }
-  if constexpr (piece == Piece::kBishop)
+  if constexpr (IsWeakSlidingPiece(piece))
   {
-    return kBishopTable
-        ->table[AttackTable<Piece::kBishop>::GetAttackTableAddress(square,
-                                                                   occupied)];
-  }
-  if constexpr (piece == Piece::kRook)
-  {
-    return kRookTable->table[AttackTable<Piece::kRook>::GetAttackTableAddress(
-        square, occupied)];
+      return self_->table_[GetAttackTableAddress(square, occupied)];
   }
   assert(false);
   return {};
