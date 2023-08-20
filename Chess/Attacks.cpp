@@ -86,9 +86,7 @@ AttackTable<sliding_piece, table_size>::AttackTable()
       ++attempt_count;
       for (i = 0; i < offset; ++i)
       {
-        const auto idx =
-            (occupancy[i] & magic[sq].mask).to_ullong() * magic[sq].magic >>
-            magic[sq].shift;
+        const auto idx = magic[sq].GetIndex(occupancy[i]);
 
         if (epoch[idx] < attempt_count)
         {

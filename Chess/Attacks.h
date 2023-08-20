@@ -19,6 +19,10 @@ struct Magic
   Bitboard<> mask;
   uint_fast64_t magic;
   unsigned shift;
+  [[nodiscard]] size_t GetIndex(const Bitboard<> occupancy) const
+  {
+      return (occupancy & mask).to_ullong() * magic >> shift;
+  }
 };
 
 constexpr size_t GetTableSize(const Piece sliding_piece)
@@ -56,17 +60,9 @@ size_t AttackTable<piece, table_size>::GetAttackTableAddress(
 {
   static_assert(piece == Piece::kBishop || piece == Piece::kRook);
   if constexpr (piece == Piece::kRook)
-  {
-    const auto& [mask, magic, shift] = kRookTable->magic[square];
-    const size_t key = (occupied & mask).to_ullong() * magic >> shift;
-    return kRookTable->base[square] + key;
-  }
+    return kRookTable->base[square] + kRookTable->magic[square].GetIndex(occupied);
   if constexpr (piece == Piece::kBishop)
-  {
-    const auto& [mask, magic, shift] = kBishopTable->magic[square];
-    const size_t key = (occupied & mask).to_ullong() * magic >> shift;
-    return kBishopTable->base[square] + key;
-  }
+    return kBishopTable->base[square] + kBishopTable->magic[square].GetIndex(occupied);
 }
 
 template <Piece piece, size_t table_size>
