@@ -23,7 +23,7 @@ template <Piece sliding_piece>
 [[nodiscard]] Bitboard<> GenerateAttackMask(
     const BitIndex square, const Bitboard<> occupancy = kEmptyBoard)
 {
-  static_assert(IsWeakSlidingPiece(sliding_piece));
+  assert(IsWeakSlidingPiece(sliding_piece));
   assert(IsOk(square));
 
   Bitboard<> result = kEmptyBoard;
@@ -42,8 +42,7 @@ template <Piece sliding_piece>
 template <Piece sliding_piece, size_t table_size>
 AttackTable<sliding_piece, table_size>::AttackTable()
 {
-  if constexpr (!IsWeakSlidingPiece(sliding_piece))
-    return;
+  if constexpr (!IsWeakSlidingPiece(sliding_piece)) return;
 
   std::vector<Bitboard<>> occupancy(1 << 16), reference(1 << 16);
   std::vector<int> epoch(1 << 16);

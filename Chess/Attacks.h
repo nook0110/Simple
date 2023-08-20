@@ -21,7 +21,7 @@ struct Magic
   unsigned shift;
   [[nodiscard]] size_t GetIndex(const Bitboard<> occupancy) const
   {
-      return (mask & occupancy).to_ullong() * magic >> shift;
+    return (mask & occupancy).to_ullong() * magic >> shift;
   }
 };
 
@@ -32,30 +32,29 @@ constexpr size_t GetTableSize(const Piece sliding_piece)
   return 0;
 }
 
-template <Piece SlidingPiece, size_t table_size = GetTableSize(SlidingPiece)>
+template <Piece sliding_piece, size_t table_size = GetTableSize(sliding_piece)>
 class AttackTable
 {
-public:
-  
-  static size_t GetAttackTableAddress(BitIndex square,
-                                      const Bitboard<>& occupied = kEmptyBoard);
-
+ public:
   static Bitboard<> GetAttackMap(BitIndex square, const Bitboard<>& occupied);
 
   AttackTable();
 
  private:
-     std::array<Bitboard<>, table_size> table_ = {};
-     std::array<size_t, kBoardArea> base_ = {};
-     std::array<Magic, kBoardArea> magic_ = {};
-     static inline const auto self_ = std::make_unique<AttackTable>();
+  static size_t GetAttackTableAddress(BitIndex square,
+                                      const Bitboard<>& occupied = kEmptyBoard);
+
+  std::array<Bitboard<>, table_size> table_ = {};
+  std::array<size_t, kBoardArea> base_ = {};
+  std::array<Magic, kBoardArea> magic_ = {};
+  static inline const auto self_ = std::make_unique<AttackTable>();
 };
 
 template <Piece piece, size_t table_size>
 size_t AttackTable<piece, table_size>::GetAttackTableAddress(
     const BitIndex square, const Bitboard<>& occupied)
 {
-  static_assert(piece == Piece::kBishop || piece == Piece::kRook);
+  assert(IsWeakSlidingPiece(piece));
   return self_->base_[square] + self_->magic_[square].GetIndex(occupied);
 }
 
@@ -208,9 +207,16 @@ Bitboard<> AttackTable<piece, table_size>::GetAttackMap(
   }
   if constexpr (IsWeakSlidingPiece(piece))
   {
-      return self_->table_[GetAttackTableAddress(square, occupied)];
+    return self_->table_[GetAttackTableAddress(square, occupied)];
   }
   assert(false);
   return {};
 }
+
+template class AttackTable<Piece::kPawn>;
+template class AttackTable<Piece::kKnight>;
+template class AttackTable<Piece::kBishop>;
+template class AttackTable<Piece::kRook>;
+template class AttackTable<Piece::kQueen>;
+template class AttackTable<Piece::kKing>;
 }  // namespace SimpleChessEngine

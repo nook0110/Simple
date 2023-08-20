@@ -130,14 +130,3 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
   // return moves
   return moves;
 }
-
-template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kKnight>(
-    Position& position, BitIndex from) const;
-template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kBishop>(
-    Position& position, BitIndex from) const;
-template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kRook>(
-    Position& position, BitIndex from) const;
-template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kQueen>(
-    Position& position, BitIndex from) const;
-template MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kKing>(
-    Position& position, BitIndex from) const;
