@@ -43,8 +43,8 @@ template <Piece SlidingPiece, size_t table_size>
 AttackTable<SlidingPiece, table_size>::AttackTable()
 {
     if constexpr (SlidingPiece != Piece::kBishop && SlidingPiece != Piece::kRook) return;
-    std::vector<Bitboard<>> occupancy(4096), reference(4096);
-    std::vector<int> epoch(4096);
+    std::vector<Bitboard<>> occupancy(1 << 16), reference(1 << 16);
+    std::vector<int> epoch(1 << 16);
     unsigned attempt_count = 0;
     size_t offset = 0;
     Bitboard<> rank_edges = kRankBitboard.front() | kRankBitboard.back();
@@ -66,7 +66,7 @@ AttackTable<SlidingPiece, table_size>::AttackTable()
             b = (b - magic[sq].mask) & magic[sq].mask;
         } while (b.any());
         std::mt19937_64 gen(std::chrono::steady_clock::now().time_since_epoch().count());
-        for (int i = 0; i < offset; )
+        for (size_t i = 0; i < offset; )
         {
             for (magic[sq].magic = 0; (Bitboard<>(magic[sq].magic * magic[sq].mask.to_ullong()) >> 56).count() < 6; )
                 magic[sq].magic = gen();

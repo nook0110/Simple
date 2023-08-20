@@ -104,7 +104,10 @@ class Position
    *
    * \return Piece on given square.
    */
-  [[nodiscard]] Piece GetPiece(BitIndex index) const { return Piece{}; }
+  [[nodiscard]] Piece GetPiece(const BitIndex index) const
+  {
+    return board_[index];
+  }
 
   /**
    * \brief Gets side to move.

@@ -7,8 +7,6 @@ struct Move
 {
   using Index = BitIndex;
 
-  Move() = default;
-
   bool operator==(const Move& other) const { return false; }
   bool operator<(const Move&) const { return false; }
 
