@@ -16,10 +16,10 @@ namespace SimpleChessEngine
  */
 struct Magic
 {
-  Bitboard<> mask;
+  Bitboard mask;
   uint_fast64_t magic;
   unsigned shift;
-  [[nodiscard]] size_t GetIndex(const Bitboard<> occupancy) const
+  [[nodiscard]] size_t GetIndex(const Bitboard occupancy) const
   {
     return (mask & occupancy).to_ullong() * magic >> shift;
   }
@@ -36,15 +36,15 @@ template <Piece sliding_piece, size_t table_size = GetTableSize(sliding_piece)>
 class AttackTable
 {
  public:
-  static Bitboard<> GetAttackMap(BitIndex square, const Bitboard<>& occupied);
+  static Bitboard GetAttackMap(BitIndex square, const Bitboard& occupied);
 
   AttackTable();
 
  private:
   static size_t GetAttackTableAddress(BitIndex square,
-                                      const Bitboard<>& occupied = kEmptyBoard);
+                                      const Bitboard& occupied = kEmptyBoard);
 
-  std::array<Bitboard<>, table_size> table_ = {};
+  std::array<Bitboard, table_size> table_ = {};
   std::array<size_t, kBoardArea> base_ = {};
   std::array<Magic, kBoardArea> magic_ = {};
   static inline const auto self_ = std::make_unique<AttackTable>();
@@ -52,17 +52,17 @@ class AttackTable
 
 template <Piece piece, size_t table_size>
 size_t AttackTable<piece, table_size>::GetAttackTableAddress(
-    const BitIndex square, const Bitboard<>& occupied)
+    const BitIndex square, const Bitboard& occupied)
 {
   assert(IsWeakSlidingPiece(piece));
   return self_->base_[square] + self_->magic_[square].GetIndex(occupied);
 }
 
 template <Piece piece, size_t table_size>
-Bitboard<> AttackTable<piece, table_size>::GetAttackMap(
-    const BitIndex square, const Bitboard<>& occupied)
+Bitboard AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
+                                                      const Bitboard& occupied)
 {
-  static constexpr std::array<Bitboard<>, kBoardArea> king_attacks = {
+  static constexpr std::array<Bitboard, kBoardArea> king_attacks = {
       770ull,
       1797ull,
       3594ull,
@@ -127,7 +127,7 @@ Bitboard<> AttackTable<piece, table_size>::GetAttackMap(
       5796132720425828352ull,
       11592265440851656704ull,
       4665729213955833856ull};
-  static constexpr std::array<Bitboard<>, kBoardArea> knight_attacks = {
+  static constexpr std::array<Bitboard, kBoardArea> knight_attacks = {
       132096ull,
       329728ull,
       659712ull,

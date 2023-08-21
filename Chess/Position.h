@@ -27,7 +27,7 @@ class Position
    * \param piece Piece to place.
    * \param color Color of the piece.
    *
-   */   
+   */
   void PlacePiece(const BitIndex square, const Piece piece, const Player color)
   {
     assert(!board_[square]);
@@ -80,7 +80,7 @@ class Position
    *
    * \return Bitboard with all pieces on the board.
    */
-  [[nodiscard]] Bitboard<kBoardArea> GetAllPieces() const
+  [[nodiscard]] Bitboard GetAllPieces() const
   {
     return pieces_by_color_[static_cast<size_t>(Player::kWhite)] |
            pieces_by_color_[static_cast<size_t>(Player::kBlack)];
@@ -93,7 +93,7 @@ class Position
    *
    * \return Bitboard with all pieces of given player.
    */
-  [[nodiscard]] const Bitboard<kBoardArea>& GetPieces(Player player) const
+  [[nodiscard]] const Bitboard& GetPieces(Player player) const
   {
     return pieces_by_color_[static_cast<size_t>(player)];
   }
@@ -153,9 +153,9 @@ class Position
  private:
   Player side_to_move_{};  //!< Whose side to move.
 
-  std::array<Bitboard<kBoardArea>, kPieceTypes>
+  std::array<Bitboard, kPieceTypes>
       pieces_by_type_;  //!< Bitboard of pieces of certain type
-  std::array<Bitboard<kBoardArea>, kColors>
+  std::array<Bitboard, kColors>
       pieces_by_color_;  //!< Bitboard of pieces for each player
 
   std::array<Piece, kBoardArea> board_{};  //!< Current position of pieces

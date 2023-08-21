@@ -3,127 +3,118 @@
 
 #include "BitScan.h"
 
+constexpr size_t kBitboardSize = 64;
+
 /**
  * \brief Class that represents a bitboard.
  *
- * \details A simple wrapper of std::bitset<size>.
+ * \details A simple wrapper of std::bitset.
  *
  * \tparam size The size of the bitboard.
  *
  * \author nook0110
  */
-template <size_t size = 64>
-class Bitboard : public std::bitset<size>
+class Bitboard : public std::bitset<kBitboardSize>
 {
+  // TODO: Add constexpr to all methods
+
  public:
-  using std::bitset<size>::bitset;
-  static_assert(size <= 64);
+  using std::bitset<kBitboardSize>::bitset;
 
   /**
    * \brief Constructs a bitboard from a bitset.
    */
-  explicit constexpr Bitboard(const std::bitset<size> bitset)
-      : std::bitset<size>(std::move(bitset))
+
+  explicit Bitboard(std::bitset<kBitboardSize> bitset)
+      : std::bitset<kBitboardSize>(std::move(bitset))
   {}
 
   [[nodiscard]] std::optional<BitIndex> GetFirstBit() const;
 
-  constexpr Bitboard operator&(const Bitboard& other) const;
-  constexpr Bitboard& operator&=(const Bitboard& other);
+  Bitboard operator&(const Bitboard& other) const;
+  Bitboard& operator&=(const Bitboard& other);
 
-  constexpr Bitboard operator|(const Bitboard& other) const;
-  constexpr Bitboard& operator|=(const Bitboard& other);
+  Bitboard operator|(const Bitboard& other) const;
+  Bitboard& operator|=(const Bitboard& other);
 
-  constexpr Bitboard operator^(const Bitboard& other) const;
-  constexpr Bitboard& operator^=(const Bitboard& other);
+  Bitboard operator^(const Bitboard& other) const;
+  Bitboard& operator^=(const Bitboard& other);
 
-  constexpr Bitboard operator~() const;
+  Bitboard operator~() const;
 
-  constexpr Bitboard operator<<(size_t pos) const;
-  constexpr Bitboard& operator<<=(size_t pos);
+  Bitboard operator<<(size_t pos) const;
+  Bitboard& operator<<=(size_t pos);
 
-  constexpr Bitboard operator>>(size_t pos) const;
-  constexpr Bitboard& operator>>=(size_t pos);
+  Bitboard operator>>(size_t pos) const;
+  Bitboard& operator>>=(size_t pos);
+
+ private:
 };
 
-template <size_t size>
-std::optional<BitIndex> Bitboard<size>::GetFirstBit() const
+inline std::optional<BitIndex> Bitboard::GetFirstBit() const
 {
   return BitScan(this->to_ullong());
 }
 
-template <size_t size>
-constexpr Bitboard<size> Bitboard<size>::operator&(const Bitboard& other) const
+inline Bitboard Bitboard::operator&(const Bitboard& other) const
 {
   auto copy = *this;
   return copy &= other;
 }
 
-template <size_t size>
-constexpr Bitboard<size>& Bitboard<size>::operator&=(const Bitboard& other)
+inline Bitboard& Bitboard::operator&=(const Bitboard& other)
 {
-  std::bitset<size>::operator&=(other);
+  std::bitset<kBitboardSize>::operator&=(other);
   return *this;
 }
 
-template <size_t size>
-constexpr Bitboard<size> Bitboard<size>::operator|(const Bitboard& other) const
+inline Bitboard Bitboard::operator|(const Bitboard& other) const
 {
   auto copy = *this;
   return copy |= other;
 }
 
-template <size_t size>
-constexpr Bitboard<size>& Bitboard<size>::operator|=(const Bitboard& other)
+inline Bitboard& Bitboard::operator|=(const Bitboard& other)
 {
-  std::bitset<size>::operator|=(other);
+  std::bitset<kBitboardSize>::operator|=(other);
   return *this;
 }
 
-template <size_t size>
-constexpr Bitboard<size> Bitboard<size>::operator^(const Bitboard& other) const
+inline Bitboard Bitboard::operator^(const Bitboard& other) const
 {
   auto copy = *this;
   return copy ^= other;
 }
 
-template <size_t size>
-constexpr Bitboard<size>& Bitboard<size>::operator^=(const Bitboard& other)
+inline Bitboard& Bitboard::operator^=(const Bitboard& other)
 {
-  Bitboard{std::bitset<size>::operator^=(other)};
+  Bitboard{std::bitset<kBitboardSize>::operator^=(other)};
   return *this;
 }
 
-template <size_t size>
-constexpr Bitboard<size> Bitboard<size>::operator~() const
+inline Bitboard Bitboard::operator~() const
 {
-  return Bitboard{std::bitset<size>::operator~()};
+  return Bitboard{std::bitset<kBitboardSize>::operator~()};
 }
 
-template <size_t size>
-constexpr Bitboard<size> Bitboard<size>::operator<<(size_t pos) const
+inline Bitboard Bitboard::operator<<(const size_t pos) const
 {
-  return Bitboard{std::bitset<size>::operator<<(pos)};
+  return Bitboard{std::bitset<kBitboardSize>::operator<<(pos)};
 }
 
-template <size_t size>
-constexpr Bitboard<size>& Bitboard<size>::operator<<=(size_t pos)
+inline Bitboard& Bitboard::operator<<=(const size_t pos)
 {
-  Bitboard{std::bitset<size>::operator<<=(pos)};
+  Bitboard{std::bitset<kBitboardSize>::operator<<=(pos)};
   return *this;
 }
 
-template <size_t size>
-constexpr Bitboard<size> Bitboard<size>::operator>>(size_t pos) const
+inline Bitboard Bitboard::operator>>(const size_t pos) const
 {
-  return Bitboard{std::bitset<size>::operator>>(pos)};
+  return Bitboard{std::bitset<kBitboardSize>::operator>>(pos)};
 }
 
-template <size_t size>
-constexpr Bitboard<size>& Bitboard<size>::operator>>=(size_t pos)
+inline Bitboard& Bitboard::operator>>=(const size_t pos)
 {
-  Bitboard{std::bitset<size>::operator>>=(pos)};
+  Bitboard{std::bitset<kBitboardSize>::operator>>=(pos)};
   return *this;
 }
-
-inline const Bitboard<64> kEmptyBoard = Bitboard<64>{};

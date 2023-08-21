@@ -8,7 +8,8 @@
 
 namespace SimpleChessEngine
 {
-constexpr size_t kBoardArea = 64;
+inline constexpr size_t kBoardArea = 64;
+const Bitboard kEmptyBoard = Bitboard{};
 constexpr int kLineSize = 8;
 constexpr size_t kColors = 2;
 constexpr size_t kPieceTypes =
@@ -18,7 +19,7 @@ namespace
 constexpr unsigned long long kFileA = 0x0101010101010101ULL;
 constexpr unsigned long long kRank1 = 0xFF;
 }  // namespace
-constexpr std::array<Bitboard<>, kLineSize> kRankBitboard = {
+constexpr std::array<Bitboard, kLineSize> kRankBitboard = {
     kRank1,
     kRank1 << (kLineSize * 1),
     kRank1 << (kLineSize * 2),
@@ -27,7 +28,7 @@ constexpr std::array<Bitboard<>, kLineSize> kRankBitboard = {
     kRank1 << (kLineSize * 5),
     kRank1 << (kLineSize * 6),
     kRank1 << (kLineSize * 7)};
-constexpr std::array<Bitboard<>, kLineSize> kFileBitboard = {
+constexpr std::array<Bitboard, kLineSize> kFileBitboard = {
     kFileA,      kFileA << 1, kFileA << 2, kFileA << 3,
     kFileA << 4, kFileA << 5, kFileA << 6, kFileA << 7};
 
@@ -81,7 +82,7 @@ enum class Compass
   return square >= 0 && square < kBoardArea;
 }
 
-[[nodiscard]] inline Bitboard<> GetBitboardOfSquare(const BitIndex square)
+[[nodiscard]] inline Bitboard GetBitboardOfSquare(const BitIndex square)
 {
   return {1ull << square};
 }
@@ -104,7 +105,7 @@ enum class Compass
   return IsSlidingPiece(piece) && piece != Piece::kQueen;
 }
 
-[[nodiscard]] inline std::string DrawBitboard(const Bitboard<> b)
+[[nodiscard]] inline std::string DrawBitboard(const Bitboard b)
 {
   std::string s = "+---+---+---+---+---+---+---+---+\n";
 
