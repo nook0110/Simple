@@ -30,11 +30,13 @@ template <Piece sliding_piece>
 
   for (auto direction : GetStepDelta<sliding_piece>())
   {
-    Bitboard destination{};
-    for (BitIndex temp = square; (destination = DoShiftIfValid(temp, direction)).any() &&
-                                 (occupancy & GetBitboardOfSquare(temp)).none();
-         result |= destination)
-      ;
+      Bitboard step;
+      for (BitIndex temp = square; (occupancy & GetBitboardOfSquare(temp)).none(); )
+      {
+          step = DoShiftIfValid(temp, direction);
+          result |= step;
+          if (step.none()) break;
+      }
   }
   return result;
 }

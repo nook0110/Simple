@@ -90,6 +90,8 @@ enum class Compass
   kNorthEast = kNorth + kEast
 };
 
+constexpr std::array<Compass, kColors> kPawnMoveDirection = { Compass::kNorth, Compass::kSouth };
+
 [[nodiscard]] inline bool IsOk(const BitIndex square)
 {
   return square >= 0 && square < kBoardArea;
@@ -100,11 +102,16 @@ enum class Compass
   return Bitboard{1ull << square};
 }
 
+[[nodiscard]] inline bool IsAdjacent(const BitIndex sq_first, const BitIndex sq_second)
+{
+    return KingDistance(sq_first, sq_second) == 1;
+}
+
 [[nodiscard]] inline Bitboard GetShiftIfValid(const BitIndex square,
                                        const Compass shift)
 {
   const BitIndex new_square = square + static_cast<int>(shift);
-  return (IsOk(new_square) && KingDistance(square, new_square) == 1? Bitboard{new_square} : Bitboard{});
+  return IsOk(new_square) && IsAdjacent(square, new_square)? GetBitboardOfSquare(new_square) : Bitboard{};
 }
 
 [[nodiscard]] inline Bitboard DoShiftIfValid(BitIndex& square,
@@ -112,14 +119,15 @@ enum class Compass
 {
     BitIndex copy = square;
     square += static_cast<int>(shift);
-    return (IsOk(square) && KingDistance(copy, square) == 1 ? Bitboard{ square } : Bitboard{});
+    return IsOk(square) && IsAdjacent(copy, square)? GetBitboardOfSquare(square) : Bitboard{};
 }
 
 [[nodiscard]] inline Bitboard GetPawnAttacks(const BitIndex square, const Player side)
 {
     Bitboard res{};
-    for (auto step : (side == Player::kWhite ? std::initializer_list<Compass>{ Compass::kNorthWest, Compass::kNorthEast } :
-                                               std::initializer_list<Compass>{Compass::kSouthWest, Compass::kSouthEast}))
+    static constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = 
+    { {{Compass::kNorthWest, Compass::kNorthEast}, {Compass::kSouthWest, Compass::kSouthEast}} };
+    for (auto step : kPawnAttackDirections[static_cast<size_t>(side)])
     {
         res |= GetShiftIfValid(square, step);
     }
