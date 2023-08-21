@@ -35,11 +35,15 @@ constexpr std::array<Bitboard, kLineSize> kFileBB = {
 constexpr std::array<Bitboard, kColors> kCloseRanks = { kRankBB[2] | kRankBB[3], 
                                                         kRankBB[5] | kRankBB[4] };
 
-/*
 constexpr std::array<std::array<Bitboard, kLineSize>, kColors> kDoubleMoveSpan =
 {
+    {
+    {kCloseRanks[0] & kFileBB[0], kCloseRanks[0] & kFileBB[1], kCloseRanks[0] & kFileBB[2], kCloseRanks[0] & kFileBB[3],
+     kCloseRanks[0] & kFileBB[4], kCloseRanks[0] & kFileBB[5], kCloseRanks[0] & kFileBB[6], kCloseRanks[0] & kFileBB[7]},
+    {kCloseRanks[1] & kFileBB[0], kCloseRanks[1] & kFileBB[1], kCloseRanks[1] & kFileBB[2], kCloseRanks[1] & kFileBB[3],
+     kCloseRanks[1] & kFileBB[4], kCloseRanks[1] & kFileBB[5], kCloseRanks[1] & kFileBB[6], kCloseRanks[1] & kFileBB[7]}
+    }
 };
-*/
 
 using Rank = int;
 using File = int;
@@ -96,11 +100,30 @@ enum class Compass
   return Bitboard{1ull << square};
 }
 
-[[nodiscard]] inline bool IsValidShift(const BitIndex square,
+[[nodiscard]] inline Bitboard GetShiftIfValid(const BitIndex square,
                                        const Compass shift)
 {
   const BitIndex new_square = square + static_cast<int>(shift);
-  return IsOk(new_square) && KingDistance(square, new_square) == 1;
+  return (IsOk(new_square) && KingDistance(square, new_square) == 1? Bitboard{new_square} : Bitboard{});
+}
+
+[[nodiscard]] inline Bitboard DoShiftIfValid(BitIndex& square,
+    const Compass shift)
+{
+    BitIndex copy = square;
+    square += static_cast<int>(shift);
+    return (IsOk(square) && KingDistance(copy, square) == 1 ? Bitboard{ square } : Bitboard{});
+}
+
+[[nodiscard]] inline Bitboard GetPawnAttacks(const BitIndex square, const Player side)
+{
+    Bitboard res{};
+    for (auto step : (side == Player::kWhite ? std::initializer_list<Compass>{ Compass::kNorthWest, Compass::kNorthEast } :
+                                               std::initializer_list<Compass>{Compass::kSouthWest, Compass::kSouthEast}))
+    {
+        res |= GetShiftIfValid(square, step);
+    }
+    return res;
 }
 
 [[nodiscard]] inline constexpr bool IsSlidingPiece(const Piece piece)
