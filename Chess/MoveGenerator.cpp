@@ -51,8 +51,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
   switch (piece)
   {
     case Piece::kPawn:
-      // generate pawn moves
-      moves = GenerateMoves<Piece::kPawn>(position, from);
+      // TODO: generate pawn moves
       break;
     case Piece::kKnight:
       // generate knight moves

@@ -213,7 +213,6 @@ Bitboard<> AttackTable<piece, table_size>::GetAttackMap(
   return {};
 }
 
-template class AttackTable<Piece::kPawn>;
 template class AttackTable<Piece::kKnight>;
 template class AttackTable<Piece::kBishop>;
 template class AttackTable<Piece::kRook>;

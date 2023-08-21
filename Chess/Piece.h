@@ -15,4 +15,6 @@ enum class Piece
   kQueen,   //!< Queen.
   kKing     //!< King.
 };
+
+inline bool operator!(const Piece piece) { return piece == Piece::kNone; }
 }  // namespace SimpleChessEngine
