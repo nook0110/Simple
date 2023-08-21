@@ -47,9 +47,21 @@ class Bitboard
       return *this;
   }
 
+  Bitboard& set()
+  {
+      value_ = ~0ull;
+      return *this;
+  }
+
   Bitboard& reset(const size_t pos)
   {
       value_ &= ~(1ull << pos);
+      return *this;
+  }
+
+  Bitboard& reset()
+  {
+      value_ = 0ull;
       return *this;
   }
 

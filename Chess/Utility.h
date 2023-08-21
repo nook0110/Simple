@@ -32,14 +32,13 @@ constexpr std::array<Bitboard, kLineSize> kFileBB = {
     kFileA,      kFileA << 1, kFileA << 2, kFileA << 3,
     kFileA << 4, kFileA << 5, kFileA << 6, kFileA << 7};
 
-/*
-constexpr std::array<Bitboard, kColors> kCloseRanks = { kRankBB[2].to_ullong() | kRankBB[3].to_ullong(), 
-                                                        kRankBB[5].to_ullong() | kRankBB[4].to_ullong() };
-                                                        */
+constexpr std::array<Bitboard, kColors> kCloseRanks = { kRankBB[2] | kRankBB[3], 
+                                                        kRankBB[5] | kRankBB[4] };
 
 /*
 constexpr std::array<std::array<Bitboard, kLineSize>, kColors> kDoubleMoveSpan =
-{};
+{
+};
 */
 
 using Rank = int;
