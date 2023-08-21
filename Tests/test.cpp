@@ -14,41 +14,40 @@ using namespace SimpleChessEngine;
 
 namespace BitBoardTests
 {
-constexpr auto kDefaultBitboardSize = 64;
 TEST(GetFirstBit, NoBits)
 {
   // all bits are 0
-  Bitboard<kDefaultBitboardSize> x;
+  const Bitboard bitboard;
 
   // should be nullopt
-  ASSERT_FALSE(x.GetFirstBit());
+  ASSERT_FALSE(bitboard.GetFirstBit());
 }
 
 TEST(GetFirstBit, AllBits)
 {
-  Bitboard<kDefaultBitboardSize> x;
+  Bitboard bitboard;
   // all bits are 1
-  x.set();
+  bitboard.set();
 
   // should not be nullopt
-  ASSERT_TRUE(x.GetFirstBit());
+  ASSERT_TRUE(bitboard.GetFirstBit());
 
   // should be first (0-index) bit
-  ASSERT_EQ(x.GetFirstBit().value(), 0);
+  ASSERT_EQ(bitboard.GetFirstBit().value(), 0);
 }
 
 TEST(GetFirstBit, EachBit)
 {
-  for (int i = 0; i < kDefaultBitboardSize; ++i)
+  for (int i = 0; i < kBitboardSize; ++i)
   {
-    Bitboard<64> x;
+    Bitboard bitboard;
     // all bits are 0, except i
-    x.set(i);
+    bitboard.set(i);
 
     // should not be nullopt
-    ASSERT_TRUE(x.GetFirstBit());
+    ASSERT_TRUE(bitboard.GetFirstBit());
     // should be i
-    ASSERT_EQ(x.GetFirstBit().value(), i);
+    ASSERT_EQ(bitboard.GetFirstBit().value(), i);
   }
 }
 }  // namespace BitBoardTests
