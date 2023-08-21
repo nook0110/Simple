@@ -79,7 +79,7 @@ AttackTable<sliding_piece, table_size>::AttackTable()
       for (magic_[sq].magic = 0;
            (Bitboard<>(magic_[sq].magic * magic_[sq].mask.to_ullong()) >> 56)
                .count() < 6;)
-        magic_[sq].magic = gen() & gen() & gen();
+        magic_[sq].magic = gen() & gen() & gen(); // sparse random
       ++attempt_count;
       for (i = 0; i < offset; ++i)
       {

@@ -24,18 +24,21 @@ constexpr std::array<Bitboard<>, kLineSize> kRankBitboard
 constexpr std::array<Bitboard<>, kLineSize> kFileBitboard
 = { kFileA, kFileA << 1, kFileA << 2, kFileA << 3, kFileA << 4, kFileA << 5, kFileA << 6, kFileA << 7 };
 
-[[nodiscard]] constexpr std::pair<int, int> GetCoordinates(
+using Rank = int;
+using File = int;
+
+[[nodiscard]] constexpr std::pair<File, Rank> GetCoordinates(
     const BitIndex square)
 {
   return std::make_pair(static_cast<int>(square % kLineSize),
                         static_cast<int>(square / kLineSize));
 }
 
-[[nodiscard]] constexpr inline BitIndex GetSquare(int file, int rank)
+[[nodiscard]] constexpr inline BitIndex GetSquare(File file, Rank rank)
 {
     assert(file >= 0 && file < kLineSize);
     assert(rank >= 0 && rank < kLineSize);
-    return (rank << 3) | file;
+    return rank << 3 | file;
 }
 
 [[nodiscard]] inline int ManhattanDistance(const BitIndex first,
@@ -97,10 +100,12 @@ enum class Compass
 
     std::string s = "+---+---+---+---+---+---+---+---+\n";
 
-    for (int r = 7; r >= 0; --r)
+    for (Rank r = 7; r >= 0; --r)
     {
-        for (int f = 0; f <= 7; ++f)
+        for (File f = 0; f <= 7; ++f)
+        {
             s += (b & GetBitboardOfSquare(GetSquare(f, r))).any() ? "| X " : "|   ";
+        }
 
         s += "| " + std::to_string(1 + r) + "\n+---+---+---+---+---+---+---+---+\n";
     }
