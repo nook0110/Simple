@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#define SplitPCH
+#define SPLIT_PCH
 #include "../Chess/Attacks.cpp"
 #include "../Chess/BitBoard.h"
 #include "../Chess/MoveFactory.h"
@@ -118,24 +118,82 @@ TEST(GenerateMoves, ShannonNumberCheck)
 namespace BestMoveTests
 {
 Move ComputeBestMoveByTime(
-    Position position,
+    const Position& position,
     const std::chrono::milliseconds left_time = std::chrono::seconds(5))
 {
   ChessEngine engine;
-  engine.SetPosition(std::move(position));
+  engine.SetPosition(position);
 
   engine.ComputeBestMove(left_time);
 
   return engine.GetCurrentBestMove();
 }
 
-Move ComputeBestMoveByDepth(Position position, const size_t depth = 20)
+Move ComputeBestMoveByDepth(const Position& position, const size_t depth = 20)
 {
   ChessEngine engine;
-  engine.SetPosition(std::move(position));
+  engine.SetPosition(position);
 
   engine.ComputeBestMove(depth);
 
   return engine.GetCurrentBestMove();
 }
+
+class BestMoveTest : public testing::TestWithParam<std::string>
+{
+ protected:
+  [[nodiscard]] Position GeneratePosition() const
+  {
+    const auto fen = GetFen();
+    return PositionFactory{}(fen);
+  }
+
+  [[nodiscard]] Move GetAnswer() const
+  {
+    const auto move = GetMove();
+    return MoveFactory{}(move);
+  }
+
+ private:
+  [[nodiscard]] std::string GetFen() const
+  {
+    const auto& epd = GetParam();
+    static const std::string best_move_word = "bm";
+
+    const auto end_of_fen = epd.find(best_move_word);
+
+    return epd.substr(0, end_of_fen);
+  }
+
+  [[nodiscard]] std::string GetMove() const
+  {
+    const auto& epd = GetParam();
+    static const std::string best_move_word = "bm";
+
+    const auto end_of_fen = epd.find(best_move_word);
+
+    static const std::string best_move_end = ";";
+    const auto end_of_move = epd.find(best_move_end);
+
+    const auto move_start = end_of_fen + best_move_word.size();
+
+    return epd.substr(move_start + 1, end_of_move - move_start);
+  }
+};
+
+TEST_P(BestMoveTest, FindBestMove)
+{
+  const auto position = GeneratePosition();
+
+  const auto first_answer = ComputeBestMoveByTime(position);
+  const auto second_answer = ComputeBestMoveByDepth(position);
+
+  ASSERT_EQ(first_answer, GetAnswer());
+  ASSERT_EQ(second_answer, GetAnswer());
+}
+
+INSTANTIATE_TEST_CASE_P(
+    Name, BestMoveTest,
+    testing::Values(
+        R"(1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - bm Qd1+; id "BK.01")"));
 }  // namespace BestMoveTests

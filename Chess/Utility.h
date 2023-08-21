@@ -1,10 +1,10 @@
 #pragma once
 
-#include <vector>
-#include <tuple>
 #include <cmath>
-#include <string>
 #include <iostream>
+#include <string>
+#include <tuple>
+#include <vector>
 
 namespace SimpleChessEngine
 {
@@ -15,14 +15,21 @@ constexpr size_t kPieceTypes =
     7;  // For Pawn, Knight, Bishop, Rook, Queen, King and Empty Square
 namespace
 {
-    constexpr unsigned long long kFileA = 0x0101010101010101ULL;
-    constexpr unsigned long long kRank1 = 0xFF;
-}
-constexpr std::array<Bitboard<>, kLineSize> kRankBitboard
-= { kRank1, kRank1 << (kLineSize * 1), kRank1 << (kLineSize * 2), kRank1 << (kLineSize * 3),
-    kRank1 << (kLineSize * 4), kRank1 << (kLineSize * 5), kRank1 << (kLineSize * 6), kRank1 << (kLineSize * 7) };
-constexpr std::array<Bitboard<>, kLineSize> kFileBitboard
-= { kFileA, kFileA << 1, kFileA << 2, kFileA << 3, kFileA << 4, kFileA << 5, kFileA << 6, kFileA << 7 };
+constexpr unsigned long long kFileA = 0x0101010101010101ULL;
+constexpr unsigned long long kRank1 = 0xFF;
+}  // namespace
+constexpr std::array<Bitboard<>, kLineSize> kRankBitboard = {
+    kRank1,
+    kRank1 << (kLineSize * 1),
+    kRank1 << (kLineSize * 2),
+    kRank1 << (kLineSize * 3),
+    kRank1 << (kLineSize * 4),
+    kRank1 << (kLineSize * 5),
+    kRank1 << (kLineSize * 6),
+    kRank1 << (kLineSize * 7)};
+constexpr std::array<Bitboard<>, kLineSize> kFileBitboard = {
+    kFileA,      kFileA << 1, kFileA << 2, kFileA << 3,
+    kFileA << 4, kFileA << 5, kFileA << 6, kFileA << 7};
 
 using Rank = int;
 using File = int;
@@ -36,9 +43,9 @@ using File = int;
 
 [[nodiscard]] constexpr inline BitIndex GetSquare(File file, Rank rank)
 {
-    assert(file >= 0 && file < kLineSize);
-    assert(rank >= 0 && rank < kLineSize);
-    return rank << 3 | file;
+  assert(file >= 0 && file < kLineSize);
+  assert(rank >= 0 && rank < kLineSize);
+  return rank << 3 | file;
 }
 
 [[nodiscard]] inline int ManhattanDistance(const BitIndex first,
@@ -88,30 +95,30 @@ enum class Compass
 
 [[nodiscard]] inline constexpr bool IsSlidingPiece(const Piece piece)
 {
-    return piece == Piece::kBishop || piece == Piece::kRook || piece == Piece::kQueen;
+  return piece == Piece::kBishop || piece == Piece::kRook ||
+         piece == Piece::kQueen;
 }
 
 [[nodiscard]] inline constexpr bool IsWeakSlidingPiece(const Piece piece)
 {
-    return IsSlidingPiece(piece) && piece != Piece::kQueen;
+  return IsSlidingPiece(piece) && piece != Piece::kQueen;
 }
 
-[[nodiscard]] inline std::string DrawBitboard(const Bitboard<> b) {
+[[nodiscard]] inline std::string DrawBitboard(const Bitboard<> b)
+{
+  std::string s = "+---+---+---+---+---+---+---+---+\n";
 
-    std::string s = "+---+---+---+---+---+---+---+---+\n";
-
-    for (Rank r = 7; r >= 0; --r)
+  for (Rank r = 7; r >= 0; --r)
+  {
+    for (File f = 0; f <= 7; ++f)
     {
-        for (File f = 0; f <= 7; ++f)
-        {
-            s += (b & GetBitboardOfSquare(GetSquare(f, r))).any() ? "| X " : "|   ";
-        }
-
-        s += "| " + std::to_string(1 + r) + "\n+---+---+---+---+---+---+---+---+\n";
+      s += (b & GetBitboardOfSquare(GetSquare(f, r))).any() ? "| X " : "|   ";
     }
-    s += "  a   b   c   d   e   f   g   h\n";
 
-    return s;
+    s += "| " + std::to_string(1 + r) + "\n+---+---+---+---+---+---+---+---+\n";
+  }
+  s += "  a   b   c   d   e   f   g   h\n";
+
+  return s;
 }
-
 };  // namespace SimpleChessEngine

@@ -7,8 +7,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Chess", "Chess\Chess.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tests", "Tests\Tests.vcxproj", "{3AD66ACA-1E19-496B-865C-0F6ACE2F0820}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestGeneratorFromEPD", "TestGeneratorFromEPD\TestGeneratorFromEPD.vcxproj", "{40DB9EBA-AE6B-406F-BD1F-B315DF08457B}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -33,14 +31,6 @@ Global
 		{3AD66ACA-1E19-496B-865C-0F6ACE2F0820}.Release|x64.Build.0 = Release|x64
 		{3AD66ACA-1E19-496B-865C-0F6ACE2F0820}.Release|x86.ActiveCfg = Release|Win32
 		{3AD66ACA-1E19-496B-865C-0F6ACE2F0820}.Release|x86.Build.0 = Release|Win32
-		{40DB9EBA-AE6B-406F-BD1F-B315DF08457B}.Debug|x64.ActiveCfg = Debug|x64
-		{40DB9EBA-AE6B-406F-BD1F-B315DF08457B}.Debug|x64.Build.0 = Debug|x64
-		{40DB9EBA-AE6B-406F-BD1F-B315DF08457B}.Debug|x86.ActiveCfg = Debug|Win32
-		{40DB9EBA-AE6B-406F-BD1F-B315DF08457B}.Debug|x86.Build.0 = Debug|Win32
-		{40DB9EBA-AE6B-406F-BD1F-B315DF08457B}.Release|x64.ActiveCfg = Release|x64
-		{40DB9EBA-AE6B-406F-BD1F-B315DF08457B}.Release|x64.Build.0 = Release|x64
-		{40DB9EBA-AE6B-406F-BD1F-B315DF08457B}.Release|x86.ActiveCfg = Release|Win32
-		{40DB9EBA-AE6B-406F-BD1F-B315DF08457B}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
