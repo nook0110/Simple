@@ -5,8 +5,9 @@
 #pragma GCC target("avx2,bmi,bmi2,popcnt,lzcnt")
 #elif defined(_MSC_VER)
 #define USE_MSVC_INTRINSICS
-#include "nmmintrin.h"
 #include <intrin.h>
+
+#include "nmmintrin.h"
 #pragma intrinsic(_BitScanForward)
 #endif
 
@@ -23,7 +24,7 @@ inline std::optional<BitIndex> BitScan(const size_t mask)
 #elif defined(USE_MSVC_INTRINSICS)
   if (_BitScanForward64(&index, mask))
   {
-      return index;
+    return index;
   }
   return std::nullopt;
 #endif
@@ -43,4 +44,3 @@ inline std::optional<BitIndex> BitScan(const std::bitset<64>& mask)
 
 #undef USE_GCC_BUILTINS
 #undef USE_MSVC_INTRINSICS
-

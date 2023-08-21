@@ -16,5 +16,8 @@ enum class Piece
   kKing     //!< King.
 };
 
-[[nodiscard]] constexpr bool operator!(const Piece piece) { return piece == Piece::kNone; }
+[[nodiscard]] constexpr bool operator!(const Piece piece)
+{
+  return piece == Piece::kNone;
+}
 }  // namespace SimpleChessEngine

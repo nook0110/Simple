@@ -30,13 +30,14 @@ template <Piece sliding_piece>
 
   for (auto direction : GetStepDelta<sliding_piece>())
   {
-      Bitboard step;
-      for (BitIndex temp = square; (occupancy & GetBitboardOfSquare(temp)).none(); )
-      {
-          step = DoShiftIfValid(temp, direction);
-          result |= step;
-          if (step.none()) break;
-      }
+    Bitboard step;
+    for (BitIndex temp = square;
+         (occupancy & GetBitboardOfSquare(temp)).none();)
+    {
+      step = DoShiftIfValid(temp, direction);
+      result |= step;
+      if (step.none()) break;
+    }
   }
   return result;
 }
@@ -58,8 +59,7 @@ AttackTable<sliding_piece, table_size>::AttackTable()
   for (BitIndex sq = 0; sq < kBoardArea; ++sq)
   {
     auto [file, rank] = GetCoordinates(sq);
-    Bitboard edges =
-        rank_edges & ~kRankBB[rank] | file_edges & ~kFileBB[file];
+    Bitboard edges = rank_edges & ~kRankBB[rank] | file_edges & ~kFileBB[file];
     magic_[sq].mask = GenerateAttackMask<sliding_piece>(sq) & ~edges;
     magic_[sq].shift = 64 - magic_[sq].mask.count();
     base_[sq] = (sq ? base_[sq - 1] + offset : 0);
@@ -79,9 +79,8 @@ AttackTable<sliding_piece, table_size>::AttackTable()
     for (size_t i = 0; i < offset;)
     {
       for (magic_[sq].magic = kEmptyBoard;
-           ((magic_[sq].magic * magic_[sq].mask) >> 56)
-               .count() < 6;)
-          magic_[sq].magic = Bitboard{ gen() & gen() & gen() };  // sparse random
+           ((magic_[sq].magic * magic_[sq].mask) >> 56).count() < 6;)
+        magic_[sq].magic = Bitboard{gen() & gen() & gen()};  // sparse random
       ++attempt_count;
       for (i = 0; i < offset; ++i)
       {

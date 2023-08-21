@@ -16,34 +16,33 @@ constexpr size_t kPieceTypes =
     7;  // For Pawn, Knight, Bishop, Rook, Queen, King and Empty Square
 namespace
 {
-    constexpr Bitboard kFileA{ 0x0101010101010101ULL };
-    constexpr Bitboard kRank1{ 0xFF };
+constexpr Bitboard kFileA{0x0101010101010101ULL};
+constexpr Bitboard kRank1{0xFF};
 }  // namespace
-constexpr std::array<Bitboard, kLineSize> kRankBB = {
-    kRank1,
-    kRank1 << (kLineSize * 1),
-    kRank1 << (kLineSize * 2),
-    kRank1 << (kLineSize * 3),
-    kRank1 << (kLineSize * 4),
-    kRank1 << (kLineSize * 5),
-    kRank1 << (kLineSize * 6),
-    kRank1 << (kLineSize * 7)};
+constexpr std::array<Bitboard, kLineSize> kRankBB = {kRank1,
+                                                     kRank1 << (kLineSize * 1),
+                                                     kRank1 << (kLineSize * 2),
+                                                     kRank1 << (kLineSize * 3),
+                                                     kRank1 << (kLineSize * 4),
+                                                     kRank1 << (kLineSize * 5),
+                                                     kRank1 << (kLineSize * 6),
+                                                     kRank1 << (kLineSize * 7)};
 constexpr std::array<Bitboard, kLineSize> kFileBB = {
     kFileA,      kFileA << 1, kFileA << 2, kFileA << 3,
     kFileA << 4, kFileA << 5, kFileA << 6, kFileA << 7};
 
-constexpr std::array<Bitboard, kColors> kCloseRanks = { kRankBB[2] | kRankBB[3], 
-                                                        kRankBB[5] | kRankBB[4] };
+constexpr std::array<Bitboard, kColors> kCloseRanks = {kRankBB[2] | kRankBB[3],
+                                                       kRankBB[5] | kRankBB[4]};
 
 constexpr std::array<std::array<Bitboard, kLineSize>, kColors> kDoubleMoveSpan =
-{
-    {
-    {kCloseRanks[0] & kFileBB[0], kCloseRanks[0] & kFileBB[1], kCloseRanks[0] & kFileBB[2], kCloseRanks[0] & kFileBB[3],
-     kCloseRanks[0] & kFileBB[4], kCloseRanks[0] & kFileBB[5], kCloseRanks[0] & kFileBB[6], kCloseRanks[0] & kFileBB[7]},
-    {kCloseRanks[1] & kFileBB[0], kCloseRanks[1] & kFileBB[1], kCloseRanks[1] & kFileBB[2], kCloseRanks[1] & kFileBB[3],
-     kCloseRanks[1] & kFileBB[4], kCloseRanks[1] & kFileBB[5], kCloseRanks[1] & kFileBB[6], kCloseRanks[1] & kFileBB[7]}
-    }
-};
+    {{{kCloseRanks[0] & kFileBB[0], kCloseRanks[0] & kFileBB[1],
+       kCloseRanks[0] & kFileBB[2], kCloseRanks[0] & kFileBB[3],
+       kCloseRanks[0] & kFileBB[4], kCloseRanks[0] & kFileBB[5],
+       kCloseRanks[0] & kFileBB[6], kCloseRanks[0] & kFileBB[7]},
+      {kCloseRanks[1] & kFileBB[0], kCloseRanks[1] & kFileBB[1],
+       kCloseRanks[1] & kFileBB[2], kCloseRanks[1] & kFileBB[3],
+       kCloseRanks[1] & kFileBB[4], kCloseRanks[1] & kFileBB[5],
+       kCloseRanks[1] & kFileBB[6], kCloseRanks[1] & kFileBB[7]}}};
 
 using Rank = int;
 using File = int;
@@ -90,7 +89,8 @@ enum class Compass
   kNorthEast = kNorth + kEast
 };
 
-constexpr std::array<Compass, kColors> kPawnMoveDirection = { Compass::kNorth, Compass::kSouth };
+constexpr std::array<Compass, kColors> kPawnMoveDirection = {Compass::kNorth,
+                                                             Compass::kSouth};
 
 [[nodiscard]] inline bool IsOk(const BitIndex square)
 {
@@ -102,36 +102,42 @@ constexpr std::array<Compass, kColors> kPawnMoveDirection = { Compass::kNorth, C
   return Bitboard{1ull << square};
 }
 
-[[nodiscard]] inline bool IsAdjacent(const BitIndex sq_first, const BitIndex sq_second)
+[[nodiscard]] inline bool IsAdjacent(const BitIndex sq_first,
+                                     const BitIndex sq_second)
 {
-    return KingDistance(sq_first, sq_second) == 1;
+  return KingDistance(sq_first, sq_second) == 1;
 }
 
 [[nodiscard]] inline Bitboard GetShiftIfValid(const BitIndex square,
-                                       const Compass shift)
+                                              const Compass shift)
 {
   const BitIndex new_square = square + static_cast<int>(shift);
-  return IsOk(new_square) && IsAdjacent(square, new_square)? GetBitboardOfSquare(new_square) : Bitboard{};
+  return IsOk(new_square) && IsAdjacent(square, new_square)
+             ? GetBitboardOfSquare(new_square)
+             : Bitboard{};
 }
 
 [[nodiscard]] inline Bitboard DoShiftIfValid(BitIndex& square,
-    const Compass shift)
+                                             const Compass shift)
 {
-    BitIndex copy = square;
-    square += static_cast<int>(shift);
-    return IsOk(square) && IsAdjacent(copy, square)? GetBitboardOfSquare(square) : Bitboard{};
+  BitIndex copy = square;
+  square += static_cast<int>(shift);
+  return IsOk(square) && IsAdjacent(copy, square) ? GetBitboardOfSquare(square)
+                                                  : Bitboard{};
 }
 
-[[nodiscard]] inline Bitboard GetPawnAttacks(const BitIndex square, const Player side)
+[[nodiscard]] inline Bitboard GetPawnAttacks(const BitIndex square,
+                                             const Player side)
 {
-    Bitboard res{};
-    static constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = 
-    { {{Compass::kNorthWest, Compass::kNorthEast}, {Compass::kSouthWest, Compass::kSouthEast}} };
-    for (auto step : kPawnAttackDirections[static_cast<size_t>(side)])
-    {
-        res |= GetShiftIfValid(square, step);
-    }
-    return res;
+  Bitboard res{};
+  static constexpr std::array<std::array<Compass, 2>, kColors>
+      kPawnAttackDirections = {{{Compass::kNorthWest, Compass::kNorthEast},
+                                {Compass::kSouthWest, Compass::kSouthEast}}};
+  for (auto step : kPawnAttackDirections[static_cast<size_t>(side)])
+  {
+    res |= GetShiftIfValid(square, step);
+  }
+  return res;
 }
 
 [[nodiscard]] inline constexpr bool IsSlidingPiece(const Piece piece)

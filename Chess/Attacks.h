@@ -194,11 +194,11 @@ Bitboard AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
       9077567998918656ull};
   if constexpr (piece == Piece::kKnight)
   {
-      return Bitboard{ knight_attacks[static_cast<size_t>(square)] };
+    return Bitboard{knight_attacks[static_cast<size_t>(square)]};
   }
   if constexpr (piece == Piece::kKing)
   {
-      return Bitboard{ king_attacks[static_cast<size_t>(square)] };
+    return Bitboard{king_attacks[static_cast<size_t>(square)]};
   }
   if constexpr (piece == Piece::kQueen)
   {
