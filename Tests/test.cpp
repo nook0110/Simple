@@ -1,6 +1,9 @@
 #include "pch.h"
 
 #define SPLIT_PCH
+
+#include <tuple>
+
 #include "../Chess/Attacks.cpp"
 #include "../Chess/BitBoard.h"
 #include "../Chess/MoveFactory.h"
@@ -9,6 +12,8 @@
 #include "../Chess/Position.cpp"
 #include "../Chess/PositionFactory.h"
 #include "../Chess/SimpleChessEngine.h"
+#include "../Chess/Attacks.h"
+#include "../Chess/Attacks.cpp"
 
 using namespace SimpleChessEngine;
 
@@ -51,6 +56,33 @@ TEST(GetFirstBit, EachBit)
   }
 }
 }  // namespace BitBoardTests
+
+namespace AttackMapTests
+{
+    struct TestCase
+    {
+        Bitboard occupancy;
+        BitIndex square;
+        Bitboard answer;
+    };
+
+    template <Piece sliding_piece>
+    class TestAttackMaskGeneration : testing::TestWithParam<TestCase>
+    {
+    protected:
+        [[nodiscard]] Bitboard GetMask() const
+        {
+            auto [occupancy, square, std::ignore] = GetParam();
+            Bitboard mask = GenerateAttackMask<sliding_piece>(square, occupancy);
+            return mask;
+        }
+        [[nodiscard]] Bitboard GetAnswer() const
+        {
+            auto [std::ignore, std::ignore, answer] = GetParam();
+            return answer;
+        }
+    };
+}  // namespace AttackMapTests
 
 namespace PositionTest
 {
