@@ -1,6 +1,7 @@
 #pragma once
 #include <chrono>
 #include <variant>
+#include <vector>
 
 #include "Evaluator.h"
 #include "Move.h"
@@ -23,6 +24,11 @@ struct NodePerSecondInfo
   size_t nodes_per_second = 0;
 };
 
+struct PrincipalVariation
+{
+  std::vector<Move> moves;
+};
+
 class InfoPrinter
 {
  public:
@@ -30,6 +36,8 @@ class InfoPrinter
   virtual void operator()(const DepthInfo& depth_info) const {}
   virtual void operator()(const ScoreInfo& score_info) const {}
   virtual void operator()(const NodePerSecondInfo& nps_info) const {}
+  virtual void operator()(const PrincipalVariation& principal_variation) const
+  {}
 };
 
 /**
@@ -173,6 +181,10 @@ inline void ChessEngine::ComputeBestMove(
     }
 
     previous_best_move = searcher_.GetCurrentBestMove();
+    if (searcher_.GetCurrentBestMove().has_value())
+    {
+      PrintInfo(PrincipalVariation({searcher_.GetCurrentBestMove().value()}));
+    }
   }
 }
 

@@ -31,6 +31,16 @@ class UciDebugPrinter final : public InfoPrinter
     o_stream_ << "info nps " << nps_info.nodes_per_second << std::endl;
   }
 
+  void operator()(const PrincipalVariation& principal_variation) const override
+  {
+    o_stream_ << "info pv ";
+    for (const auto& [from, to, captured_piece] : principal_variation.moves)
+    {
+      o_stream_ << from << "|" << to << " ";
+    }
+    o_stream_ << std::endl;
+  }
+
  private:
   std::ostream& o_stream_;
 };
@@ -59,7 +69,7 @@ class SearchThread
   {
     Stop();
     thread_ = std::thread(
-        [this] { engine_.ComputeBestMove(std::chrono::seconds(1)); });
+        [this] { engine_.ComputeBestMove(std::chrono::seconds(1000)); });
   }
 
   void Stop()

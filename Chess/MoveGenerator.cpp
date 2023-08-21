@@ -14,7 +14,7 @@ MoveGenerator::Moves MoveGenerator::operator()(Position& position) const
   moves.reserve(kMaxMovesAmount);
 
   // get all pieces
-  auto pieces = position.GetAllPieces();
+  auto pieces = position.GetPieces(position.GetSideToMove());
 
   // generate moves for each piece
   while (const auto from = pieces.GetFirstBit())
@@ -104,7 +104,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
   const auto& our_pieces = position.GetPieces(side_to_move);
 
   // remove moves into our pieces
-  auto valid_moves = attacks & (~our_pieces);
+  auto valid_moves = attacks & ~our_pieces;
 
   while (const auto to = valid_moves.GetFirstBit())
   {

@@ -53,6 +53,23 @@ TEST(GetFirstBit, EachBit)
 }
 }  // namespace BitBoardTests
 
+namespace PositionTest
+{
+TEST(DoMove, DoAndUndoEqualZero)
+{
+  const auto start_pos = PositionFactory{}();
+  Position pos = start_pos;
+
+  for (const auto moves = MoveGenerator{}(pos); const auto& move : moves)
+  {
+    pos.DoMove(move);
+    pos.UndoMove(move);
+
+    ASSERT_EQ(pos, start_pos);
+  }
+}
+}  // namespace PositionTest
+
 namespace MoveGeneratorTests
 {
 [[nodiscard]] size_t CountPossibleGames(Position& position, const size_t depth)
