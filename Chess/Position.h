@@ -27,10 +27,11 @@ class Position
    * \param piece Piece to place.
    * \param color Color of the piece.
    *
-   */
+   */   
   void PlacePiece(const BitIndex square, const Piece piece, const Player color)
   {
-    assert(board_[square] == Piece::kNone);
+    assert(!board_[square]);
+    assert(piece);
     board_[square] = piece;
     pieces_by_color_[static_cast<size_t>(color)].set(square);
     pieces_by_type_[static_cast<size_t>(piece)].set(square);

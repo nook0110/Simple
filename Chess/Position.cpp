@@ -29,6 +29,6 @@ void Position::UndoMove(const Move& move)
   const Player them = Flip(us);
 
   RemovePiece(to, us);
-  PlacePiece(to, captured_piece, them);
+  if (!!captured_piece) PlacePiece(to, captured_piece, them);
   PlacePiece(from, piece_to_move, us);
 }
