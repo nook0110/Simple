@@ -22,7 +22,7 @@ namespace BitBoardTests
 TEST(GetFirstBit, NoBits)
 {
   // all bits are 0
-  const Bitboard bitboard;
+  constexpr Bitboard bitboard;
 
   // should be nullopt
   ASSERT_FALSE(bitboard.GetFirstBit());
