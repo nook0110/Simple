@@ -17,11 +17,11 @@ namespace SimpleChessEngine
 struct Magic
 {
   Bitboard mask;
-  uint_fast64_t magic;
+  Bitboard magic;
   unsigned shift;
   [[nodiscard]] size_t GetIndex(const Bitboard occupancy) const
   {
-    return (mask & occupancy).to_ullong() * magic >> shift;
+    return static_cast<size_t>((mask & occupancy) * magic >> shift);
   }
 };
 
@@ -62,7 +62,7 @@ template <Piece piece, size_t table_size>
 Bitboard AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
                                                       const Bitboard& occupied)
 {
-  static constexpr std::array<Bitboard, kBoardArea> king_attacks = {
+  static constexpr std::array<unsigned long long, kBoardArea> king_attacks = {
       770ull,
       1797ull,
       3594ull,
@@ -127,7 +127,7 @@ Bitboard AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
       5796132720425828352ull,
       11592265440851656704ull,
       4665729213955833856ull};
-  static constexpr std::array<Bitboard, kBoardArea> knight_attacks = {
+  static constexpr std::array<unsigned long long, kBoardArea> knight_attacks = {
       132096ull,
       329728ull,
       659712ull,
@@ -194,11 +194,11 @@ Bitboard AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
       9077567998918656ull};
   if constexpr (piece == Piece::kKnight)
   {
-    return knight_attacks[static_cast<size_t>(square)];
+      return Bitboard{ knight_attacks[static_cast<size_t>(square)] };
   }
   if constexpr (piece == Piece::kKing)
   {
-    return king_attacks[static_cast<size_t>(square)];
+      return Bitboard{ king_attacks[static_cast<size_t>(square)] };
   }
   if constexpr (piece == Piece::kQueen)
   {

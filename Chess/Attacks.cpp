@@ -50,14 +50,14 @@ AttackTable<sliding_piece, table_size>::AttackTable()
   unsigned attempt_count = 0;
   size_t offset = 0;
 
-  const Bitboard rank_edges = kRankBitboard.front() | kRankBitboard.back();
-  const Bitboard file_edges = kFileBitboard.front() | kFileBitboard.back();
+  const Bitboard rank_edges = kRankBB.front() | kRankBB.back();
+  const Bitboard file_edges = kFileBB.front() | kFileBB.back();
 
   for (BitIndex sq = 0; sq < kBoardArea; ++sq)
   {
     auto [file, rank] = GetCoordinates(sq);
     Bitboard edges =
-        rank_edges & ~kRankBitboard[rank] | file_edges & ~kFileBitboard[file];
+        rank_edges & ~kRankBB[rank] | file_edges & ~kFileBB[file];
     magic_[sq].mask = GenerateAttackMask<sliding_piece>(sq) & ~edges;
     magic_[sq].shift = 64 - magic_[sq].mask.count();
     base_[sq] = (sq ? base_[sq - 1] + offset : 0);
@@ -68,18 +68,18 @@ AttackTable<sliding_piece, table_size>::AttackTable()
       occupancy[offset] = b;
       reference[offset] = GenerateAttackMask<sliding_piece>(sq, b);
       ++offset;
-      b = Bitboard{b.to_ullong() - magic_[sq].mask.to_ullong()} &
-          magic_[sq].mask;
+      b -= magic_[sq].mask;
+      b &= magic_[sq].mask;
     }
     while (b.any());
     std::mt19937_64 gen(
         std::chrono::steady_clock::now().time_since_epoch().count());
     for (size_t i = 0; i < offset;)
     {
-      for (magic_[sq].magic = 0;
-           (Bitboard(magic_[sq].magic * magic_[sq].mask.to_ullong()) >> 56)
+      for (magic_[sq].magic = kEmptyBoard;
+           ((magic_[sq].magic * magic_[sq].mask) >> 56)
                .count() < 6;)
-        magic_[sq].magic = gen() & gen() & gen();  // sparse random
+          magic_[sq].magic = Bitboard{ gen() & gen() & gen() };  // sparse random
       ++attempt_count;
       for (i = 0; i < offset; ++i)
       {

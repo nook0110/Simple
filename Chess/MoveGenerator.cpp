@@ -46,7 +46,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
   const auto side_to_move = position.GetSideToMove();
 
   // check if piece exists
-  assert((position.GetAllPieces()[from]));
+  assert((position.GetAllPieces().test(from)));
 
   switch (piece)
   {

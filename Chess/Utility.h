@@ -16,10 +16,10 @@ constexpr size_t kPieceTypes =
     7;  // For Pawn, Knight, Bishop, Rook, Queen, King and Empty Square
 namespace
 {
-constexpr unsigned long long kFileA = 0x0101010101010101ULL;
-constexpr unsigned long long kRank1 = 0xFF;
+    constexpr Bitboard kFileA{ 0x0101010101010101ULL };
+    constexpr Bitboard kRank1{ 0xFF };
 }  // namespace
-constexpr std::array<Bitboard, kLineSize> kRankBitboard = {
+constexpr std::array<Bitboard, kLineSize> kRankBB = {
     kRank1,
     kRank1 << (kLineSize * 1),
     kRank1 << (kLineSize * 2),
@@ -28,9 +28,19 @@ constexpr std::array<Bitboard, kLineSize> kRankBitboard = {
     kRank1 << (kLineSize * 5),
     kRank1 << (kLineSize * 6),
     kRank1 << (kLineSize * 7)};
-constexpr std::array<Bitboard, kLineSize> kFileBitboard = {
+constexpr std::array<Bitboard, kLineSize> kFileBB = {
     kFileA,      kFileA << 1, kFileA << 2, kFileA << 3,
     kFileA << 4, kFileA << 5, kFileA << 6, kFileA << 7};
+
+/*
+constexpr std::array<Bitboard, kColors> kCloseRanks = { kRankBB[2].to_ullong() | kRankBB[3].to_ullong(), 
+                                                        kRankBB[5].to_ullong() | kRankBB[4].to_ullong() };
+                                                        */
+
+/*
+constexpr std::array<std::array<Bitboard, kLineSize>, kColors> kDoubleMoveSpan =
+{};
+*/
 
 using Rank = int;
 using File = int;
@@ -42,7 +52,7 @@ using File = int;
                         static_cast<int>(square / kLineSize));
 }
 
-[[nodiscard]] constexpr inline BitIndex GetSquare(File file, Rank rank)
+[[nodiscard]] constexpr BitIndex GetSquare(File file, Rank rank)
 {
   assert(file >= 0 && file < kLineSize);
   assert(rank >= 0 && rank < kLineSize);
@@ -84,7 +94,7 @@ enum class Compass
 
 [[nodiscard]] inline Bitboard GetBitboardOfSquare(const BitIndex square)
 {
-  return {1ull << square};
+  return Bitboard{1ull << square};
 }
 
 [[nodiscard]] inline bool IsValidShift(const BitIndex square,
