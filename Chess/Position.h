@@ -141,6 +141,11 @@ class Position
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const { return false; }
 
+  std::optional<BitIndex> GetEnPassantSquare() const
+  {
+    return en_passant_square_;
+  }
+
   /**
    * \brief Default operator==()
    *
@@ -152,6 +157,8 @@ class Position
 
  private:
   Player side_to_move_{};  //!< Whose side to move.
+
+  std::optional<BitIndex> en_passant_square_{};
 
   std::array<Bitboard, kPieceTypes>
       pieces_by_type_;  //!< Bitboard of pieces of certain type

@@ -150,9 +150,18 @@ inline MoveGenerator::Moves
 MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, true>(
     Position& position, const BitIndex from) const
 {
-  Moves moves{};
+  auto side_to_move = position.GetSideToMove();
 
-  return ApplyPromotions(std::move(moves), position, from);
+  if (static constexpr std::array kIsPromoting = {6, 1};
+      GetCoordinates(from).second ==
+      kIsPromoting[static_cast<size_t>(side_to_move)])
+  {
+    auto moves = GenerateMovesFromSquare<Piece::kPawn, false>(position, from);
+
+    return ApplyPromotions(std::move(moves), position, from);
+  }
+
+  return GenerateAttacksForPawn(position, from);
 }
 
 template <>
@@ -160,15 +169,17 @@ inline MoveGenerator::Moves
 MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
     Position& position, const BitIndex from) const
 {
-  Moves moves{};
+  Moves moves = GenerateAttacksForPawn(position, from);
 
-  auto attacks = GenerateMovesFromSquare<Piece::kPawn, true>(position, from);
+  auto ordinary_moves = GenerateMovesForPawn(position, from);
+
+  moves.insert(moves.end(), ordinary_moves.begin(), ordinary_moves.end());
 
   return ApplyPromotions(std::move(moves), position, from);
 }
 
 MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
-                                                           BitIndex from)
+                                                           const BitIndex from)
 {
   Moves moves;
   static constexpr size_t kMaxMoves = 2;
@@ -180,17 +191,16 @@ MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
            kPawnAttackDirections = {{{Compass::kNorthWest, Compass::kNorthEast},
                                      {Compass::kSouthWest,
                                       Compass::kSouthEast}}};
-       auto move : kPawnAttackDirections[static_cast<size_t>(side_to_move)])
+       auto shift : kPawnAttackDirections[static_cast<size_t>(side_to_move)])
   {
-    if (const BitIndex to = from + static_cast<int>(move);
+    if (const BitIndex to = from + static_cast<int>(shift);
         IsShiftValid(to, from))
     {
-      Move move{from, to, position.GetPiece(to)};
-
-      if (position.GetPieces(Flip(side_to_move)).Test(to))
-        moves.emplace_back(from, to, position.GetPiece(to));
-
-      // TODO: Check for en croissant
+      if (Move move{from, to, position.GetPiece(to)};
+          (position.GetPieces(Flip(side_to_move)).Test(to) ||
+           position.GetEnPassantSquare() == to) &&
+          IsMoveValid(position, move))
+        moves.emplace_back(move);
     }
   }
 
@@ -198,19 +208,20 @@ MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
 }
 
 MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
-                                                         BitIndex from) const
+                                                         const BitIndex from)
 {
   Moves moves;
   static constexpr size_t kMaxMoves = 2;
-  static constexpr std::array<Rank, 2> kPawnDoublePushRank = { 1, 6 };
+  static constexpr std::array kPawnDoublePushRank = {1, 6};
   moves.reserve(kMaxMoves);
 
   auto [file, rank] = GetCoordinates(from);
   auto side_to_move = position.GetSideToMove();
 
   if (const auto to =
-          from + static_cast<int>(kPawnMoveDirection[static_cast<size_t>(side_to_move)]);
-      !position.GetPiece(from))
+          from + static_cast<int>(
+                     kPawnMoveDirection[static_cast<size_t>(side_to_move)]);
+      !position.GetPiece(to))
   {
     if (auto move = Move{from, to}; IsMoveValid(position, move))
     {
@@ -219,13 +230,17 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
   }
 
   if (rank == kPawnDoublePushRank[static_cast<size_t>(side_to_move)] &&
-      (position.GetAllPieces() & kDoubleMoveSpan[static_cast<size_t>(side_to_move)][file]).None())
+      (position.GetAllPieces() &
+       kDoubleMoveSpan[static_cast<size_t>(side_to_move)][file])
+          .None())
   {
-      auto to = from + 2 * static_cast<int>(kPawnMoveDirection[static_cast<size_t>(side_to_move)]);
-      if (auto move = Move{ from, to }; IsMoveValid(position, move))
-      {
-          moves.emplace_back(move);
-      }
+    const auto to =
+        from + 2 * static_cast<int>(
+                       kPawnMoveDirection[static_cast<size_t>(side_to_move)]);
+    if (auto move = Move{from, to}; IsMoveValid(position, move))
+    {
+      moves.emplace_back(move);
+    }
   }
 
   return moves;
@@ -233,7 +248,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
 
 MoveGenerator::Moves MoveGenerator::ApplyPromotions(Moves moves,
                                                     const Position& position,
-                                                    const BitIndex from) const
+                                                    const BitIndex from)
 {
   auto side_to_move = position.GetSideToMove();
 

@@ -33,9 +33,9 @@ class UciDebugPrinter final : public InfoPrinter
   void operator()(const PrincipalVariation& principal_variation) const override
   {
     o_stream_ << "info pv ";
-    for (const auto& [from, to, captured_piece] : principal_variation.moves)
+    for (const auto& move : principal_variation.moves)
     {
-      o_stream_ << from << "|" << to << " ";
+      o_stream_ << move.from << "|" << move.to << " ";
     }
     o_stream_ << std::endl;
   }
