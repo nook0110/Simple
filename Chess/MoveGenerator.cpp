@@ -196,11 +196,17 @@ MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
     if (const BitIndex to = from + static_cast<int>(shift);
         IsShiftValid(to, from))
     {
-      if (Move move{from, to, position.GetPiece(to)};
-          (position.GetPieces(Flip(side_to_move)).Test(to) ||
-           position.GetEnPassantSquare() == to) &&
-          IsMoveValid(position, move))
-        moves.emplace_back(move);
+      Move move{from, to, position.GetPiece(to)};
+
+      if (position.GetPieces(Flip(side_to_move)).Test(to))
+      {
+        if (IsMoveValid(position, move)) moves.emplace_back(move);
+      }
+      else if (position.GetEnPassantSquare() == to)
+      {
+        move.captured_piece = Piece::kPawn;
+        if (IsMoveValid(position, move)) moves.emplace_back(move);
+      }
     }
   }
 

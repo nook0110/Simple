@@ -287,6 +287,11 @@ namespace MoveGeneratorTests
     position.UndoMove(move);
   }
 
+  if (answer > 100000)
+  {
+    std::cout << answer << " ";
+  }
+
   return answer;
 }
 
