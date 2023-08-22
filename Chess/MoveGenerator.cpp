@@ -192,15 +192,15 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
 {
   Moves moves;
   static constexpr size_t kMaxMoves = 2;
+  static constexpr std::array<Rank, 2> kPawnDoublePushRank = { 1, 6 };
   moves.reserve(kMaxMoves);
 
+  auto [file, rank] = GetCoordinates(from);
   auto side_to_move = position.GetSideToMove();
 
-  static constexpr std::array kPawnMove = {Compass::kNorth, Compass::kSouth};
-
   if (const auto to =
-          from + static_cast<int>(kPawnMove[static_cast<size_t>(side_to_move)]);
-      position.GetAllPieces().Test(to))
+          from + static_cast<int>(kPawnMoveDirection[static_cast<size_t>(side_to_move)]);
+      !position.GetPiece(from))
   {
     if (auto move = Move{from, to}; IsMoveValid(position, move))
     {
@@ -208,7 +208,15 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
     }
   }
 
-  // TODO: Double move
+  if (rank == kPawnDoublePushRank[static_cast<size_t>(side_to_move)] &&
+      (position.GetAllPieces() & kDoubleMoveSpan[static_cast<size_t>(side_to_move)][file]).None())
+  {
+      auto to = from + 2 * static_cast<int>(kPawnMoveDirection[static_cast<size_t>(side_to_move)]);
+      if (auto move = Move{ from, to }; IsMoveValid(position, move))
+      {
+          moves.emplace_back(move);
+      }
+  }
 
   return moves;
 }
