@@ -8,8 +8,6 @@
 
 #include "BitScan.h"
 
-constexpr size_t kBitboardSize = 64;
-
 /**
  * \brief Class that represents a bitboard.
  *

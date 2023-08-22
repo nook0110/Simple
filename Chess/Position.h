@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <array>
 #include <cassert>
 
@@ -93,9 +94,14 @@ class Position
    *
    * \return Bitboard with all pieces of given player.
    */
-  [[nodiscard]] const Bitboard& GetPieces(Player player) const
+  [[nodiscard]] inline const Bitboard& GetPieces(const Player player) const
   {
     return pieces_by_color_[static_cast<size_t>(player)];
+  }
+
+  [[nodiscard]] inline Bitboard GetPiecesByType(const Player player, const Piece piece) const
+  {
+      return pieces_by_color_[static_cast<size_t>(player)] & pieces_by_type_[static_cast<size_t>(piece)];
   }
 
   /**
@@ -124,6 +130,19 @@ class Position
    */
   void SetSideToMove(const Player player) { side_to_move_ = player; }
 
+  [[nodiscard]] Bitboard GetPawnAttacks(const Player player) const
+  {
+      const auto us = static_cast<size_t>(player);
+      const auto pawns = GetPiecesByType(player, Piece::kPawn);
+      return Shift(pawns, kPawnAttackDirections[us][0]) | Shift(pawns, kPawnAttackDirections[us][1]);
+  }
+
+  [[nodiscard]] inline BitIndex GetKingSquare(const Player player) const
+  {
+      return (pieces_by_type_[static_cast<size_t>(Piece::kKing)] & 
+              pieces_by_color_[static_cast<size_t>(player)]).GetFirstBit().value();
+  }
+
   /**
    * \brief Checks if current player is under check.
    *
@@ -139,7 +158,18 @@ class Position
    *
    * \return True if given player is under check, false otherwise.
    */
-  [[nodiscard]] bool IsUnderCheck(Player player) const { return false; }
+  [[nodiscard]] bool IsUnderCheck(const Player player) const
+  {
+      const auto them = Flip(player);
+      const auto king_square = GetKingSquare(player);
+      if (std::any_of(kCheckers.begin(), kCheckers.end(), [](const auto&& piece)
+          {
+              return (AttackTable<piece>::GetAttackMap(king_square, piece) & GetPiecesByType(them, piece)).any();
+          }))
+        return true;
+      if (GetPawnAttacks(them).Test(king_square)) return true;
+      return false;
+  }
 
   /**
    * \brief Default operator==()
@@ -149,6 +179,10 @@ class Position
    * \return True if positions are the same, false otherwise.
    */
   bool operator==(const Position& other) const = default;
+
+  struct EvaluationData
+  {
+  };
 
  private:
   Player side_to_move_{};  //!< Whose side to move.
