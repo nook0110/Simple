@@ -38,9 +38,9 @@ class Searcher
   explicit Searcher(Position position = PositionFactory{}(),
                     MoveGenerator move_generator = MoveGenerator(),
                     Evaluator evaluator = Evaluator())
-      : current_position_(std::move(position)),
-        move_generator_(std::move(move_generator)),
-        evaluator_(std::move(evaluator))
+      : current_position_(position),
+        move_generator_(move_generator),
+        evaluator_(evaluator)
   {}
 
   /**
@@ -63,17 +63,6 @@ class Searcher
    * \return The current best move.
    */
   [[nodiscard]] std::optional<Move> GetCurrentBestMove() const;
-
-  /**
-   * \brief Calculates the best move for the current position.
-   *
-   * \details This function uses iterative deepening to find the best move.
-   *
-   * \param depth The maximum depth to search.
-   *
-   * \return The best move.
-   */
-  Move ComputeBestMove(size_t depth);
 
   /**
    * \brief Performs the alpha-beta search algorithm.
@@ -102,7 +91,7 @@ namespace SimpleChessEngine
 {
 inline void Searcher::SetPosition(Position position)
 {
-  current_position_ = std::move(position);
+  current_position_ = position;
 }
 
 inline const Position& Searcher::GetPosition() const
