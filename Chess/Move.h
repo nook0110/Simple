@@ -13,5 +13,7 @@ struct Move
   Index from{};
   Index to{};
   Piece captured_piece{};
+
+  Piece promoted_to{};
 };
 }  // namespace SimpleChessEngine

@@ -86,7 +86,7 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
 
   for (size_t current_depth = 0; current_depth < depth;)
   {
-    constexpr auto window_size = 10;
+    static constexpr auto window_size = 10;
     const auto eval = searcher_.Search(current_depth, alpha, beta);
 
     // check if true eval is out of window
@@ -120,7 +120,7 @@ inline void ChessEngine::ComputeBestMove(
 {
   const auto start_time = std::chrono::high_resolution_clock::now();
   const auto time_for_move = left_time / 2;
-  constexpr size_t max_last_best_move_change =
+  static constexpr size_t max_last_best_move_change =
       std::numeric_limits<size_t>::max();
 
   auto alpha = std::numeric_limits<Eval>::min();
@@ -138,7 +138,7 @@ inline void ChessEngine::ComputeBestMove(
   {
     PrintInfo(DepthInfo{current_depth});
 
-    constexpr auto window_size = 10;
+    static constexpr auto window_size = 10;
     const auto eval = searcher_.Search(current_depth, alpha, beta);
 
     // check if true eval is out of window

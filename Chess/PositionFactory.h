@@ -16,7 +16,7 @@ inline Position PositionFactory::operator()(const std::string& fen)
 {
   Position position;
 
-  constexpr size_t board_size = 8;
+  static constexpr size_t kBoardSize = 8;
 
   std::unordered_map<char, std::pair<Piece, Player>> pieces = {
       {'p', {Piece::kPawn, Player::kBlack}},
@@ -34,10 +34,10 @@ inline Position PositionFactory::operator()(const std::string& fen)
 
   auto current = fen.begin();
 
-  for (int row = board_size - 1; row >= 0; --row)
+  for (int row = kBoardSize - 1; row >= 0; --row)
   {
     size_t column = 0;
-    while (column < board_size)
+    while (column < kBoardSize)
     {
       if (std::isdigit(*current))
       {
@@ -49,7 +49,7 @@ inline Position PositionFactory::operator()(const std::string& fen)
       }
 
       const auto& [piece, color] = pieces[*current];
-      position.PlacePiece(row * board_size + column, piece, color);
+      position.PlacePiece(row * kBoardSize + column, piece, color);
 
       assert(piece != Piece::kNone);
 

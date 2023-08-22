@@ -29,7 +29,7 @@ class TranspositionTable
   }
 
  private:
-  constexpr static size_t kSize = 10;             //!< Size of the table.
+  static constexpr size_t kSize = 10;             //!< Size of the table.
   std::array<std::optional<Move>, kSize> table_;  //!< The table.
   Hasher hasher_;                                 //!< The hasher.
 };

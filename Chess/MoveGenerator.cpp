@@ -6,11 +6,12 @@
 
 using namespace SimpleChessEngine;
 
-MoveGenerator::Moves MoveGenerator::operator()(Position& position) const
+template <bool only_attacks>
+MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const
 {
   // create moves, max amount moves 218
   Moves moves;
-  constexpr size_t kMaxMovesAmount = 218;
+  static constexpr size_t kMaxMovesAmount = 218;
   moves.reserve(kMaxMovesAmount);
 
   // get all pieces
@@ -33,12 +34,28 @@ MoveGenerator::Moves MoveGenerator::operator()(Position& position) const
   return moves;
 }
 
+template MoveGenerator::Moves MoveGenerator::GenerateMoves<true>(
+    Position& position) const;
+
+template MoveGenerator::Moves MoveGenerator::GenerateMoves<false>(
+    Position& position) const;
+
+template <>
+MoveGenerator::Moves
+MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
+    Position& position, BitIndex from) const;
+
+template <>
+MoveGenerator::Moves MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, true>(
+    Position& position, BitIndex from) const;
+
+template <bool only_attacks>
 MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
     Position& position, const BitIndex from) const
 {
   // create moves, max amount moves 218
   Moves moves;
-  constexpr size_t kMaxMovesAmount = 218;
+  static constexpr size_t kMaxMovesAmount = 218;
   moves.reserve(kMaxMovesAmount);
 
   // get piece and side to move
@@ -50,27 +67,27 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
   switch (piece)
   {
     case Piece::kPawn:
-      moves = GenerateMoves<Piece::kPawn>(position, from);
+      moves = GenerateMovesFromSquare<Piece::kPawn>(position, from);
       break;
     case Piece::kKnight:
       // generate knight moves
-      moves = GenerateMoves<Piece::kKnight>(position, from);
+      moves = GenerateMovesFromSquare<Piece::kKnight>(position, from);
       break;
     case Piece::kBishop:
       // generate bishop moves
-      moves = GenerateMoves<Piece::kBishop>(position, from);
+      moves = GenerateMovesFromSquare<Piece::kBishop>(position, from);
       break;
     case Piece::kRook:
       // generate rook moves
-      moves = GenerateMoves<Piece::kRook>(position, from);
+      moves = GenerateMovesFromSquare<Piece::kRook>(position, from);
       break;
     case Piece::kQueen:
       // generate queen moves
-      moves = GenerateMoves<Piece::kQueen>(position, from);
+      moves = GenerateMovesFromSquare<Piece::kQueen>(position, from);
       break;
     case Piece::kKing:
       // generate king moves
-      moves = GenerateMoves<Piece::kKing>(position, from);
+      moves = GenerateMovesFromSquare<Piece::kKing>(position, from);
       break;
     case Piece::kNone:
       assert(false);
@@ -83,12 +100,14 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
   return moves;
 }
 
-template <Piece piece>
-MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
-                                                  const BitIndex from) const
+template <Piece piece, bool only_attacks>
+MoveGenerator::Moves MoveGenerator::GenerateMovesFromSquare(
+    Position& position, const BitIndex from) const
 {
+  assert(position.GetPiece(from) == piece);
+
   Moves moves;
-  constexpr size_t kMaxMoves = 64;
+  static constexpr size_t kMaxMoves = 27;
   moves.reserve(kMaxMoves);
 
   // get all squares that piece attacks
@@ -104,25 +123,22 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
   // remove moves into our pieces
   auto valid_moves = attacks & ~our_pieces;
 
+  if constexpr (only_attacks)
+  {
+    const auto& enemy_piece = position.GetPieces(Flip(side_to_move));
+
+    valid_moves &= enemy_piece;
+  }
+
   while (const auto to = valid_moves.GetFirstBit())
   {
     valid_moves.Reset(to.value());
 
-    // create move
-    Move move{from, to.value(), position.GetPiece(to.value())};
-
-    // do move
-    position.DoMove(move);
-
-    // check if move is valid
-    if (!position.IsUnderCheck(side_to_move))
+    if (auto move = Move{from, to.value(), position.GetPiece(to.value())};
+        IsMoveValid(position, move))
     {
-      static_assert(std::is_trivially_copyable_v<decltype(move)>);
-      moves.push_back(move);
+      moves.emplace_back(move);
     }
-
-    // undo move
-    position.UndoMove(move);
   }
 
   // return moves
@@ -130,8 +146,76 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
 }
 
 template <>
-inline MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kPawn>(
+inline MoveGenerator::Moves
+MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, true>(
     Position& position, const BitIndex from) const
+{}
+
+template <>
+inline MoveGenerator::Moves
+MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
+    Position& position, const BitIndex from) const
+{}
+
+MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
+                                                           BitIndex from)
 {
-  return Moves{};
+  Moves moves;
+  static constexpr size_t kMaxMoves = 2;
+  moves.reserve(kMaxMoves);
+
+  auto side_to_move = position.GetSideToMove();
+
+  for (static constexpr std::array<std::array<Compass, 2>, kColors>
+           kPawnAttackDirections = {{{Compass::kNorthWest, Compass::kNorthEast},
+                                     {Compass::kSouthWest,
+                                      Compass::kSouthEast}}};
+       auto move : kPawnAttackDirections[static_cast<size_t>(side_to_move)])
+  {
+    if (const BitIndex to = from + static_cast<int>(move);
+        IsShiftValid(to, from))
+    {
+      Move move{from, to, position.GetPiece(to)};
+
+      if (position.GetPieces(Flip(side_to_move)).Test(to))
+        moves.emplace_back(from, to, position.GetPiece(to));
+
+      // TODO: Check for en croissant
+    }
+  }
+
+  return moves;
+}
+
+MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
+                                                         BitIndex from) const
+{
+  Moves moves;
+  static constexpr size_t kMaxMoves = 2;
+  moves.reserve(kMaxMoves);
+
+  auto side_to_move = position.GetSideToMove();
+
+  static constexpr std::array kPawnMove = {Compass::kNorth, Compass::kSouth};
+
+  if (const auto to =
+          from + static_cast<int>(kPawnMove[static_cast<size_t>(side_to_move)]);
+      position.GetAllPieces().Test(to))
+  {
+    if (auto move = Move{from, to}; IsMoveValid(position, move))
+    {
+      moves.emplace_back(move);
+    }
+  }
+
+  // TODO: Double move
+
+  return moves;
+}
+
+MoveGenerator::Moves MoveGenerator::AddPromotions(Moves moves,
+                                                  Position& position,
+                                                  BitIndex from) const
+{
+  static constexpr std::array kIsPromoting = {7, 1};
 }

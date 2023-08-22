@@ -255,7 +255,8 @@ TEST(DoMove, DoAndUndoEqualZero)
   const auto start_pos = PositionFactory{}();
   Position pos = start_pos;
 
-  for (const auto moves = MoveGenerator{}(pos); const auto& move : moves)
+  for (const auto moves = MoveGenerator{}.GenerateMoves(pos);
+       const auto& move : moves)
   {
     pos.DoMove(move);
     pos.UndoMove(move);
@@ -271,11 +272,9 @@ namespace MoveGeneratorTests
 {
   if (depth == 0) return 1;
 
-  constexpr MoveGenerator generator{};
-
   size_t answer{};
 
-  const auto moves = generator(position);
+  const auto moves = MoveGenerator{}.GenerateMoves(position);
 
   if (moves.empty()) return 1;
 

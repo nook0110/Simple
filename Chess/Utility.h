@@ -5,7 +5,7 @@
 
 namespace SimpleChessEngine
 {
-inline constexpr size_t kBoardArea = 64;
+constexpr size_t kBoardArea = 64;
 constexpr Bitboard kEmptyBoard = Bitboard{};
 constexpr int kLineSize = 8;
 constexpr size_t kColors = 2;
@@ -105,22 +105,28 @@ constexpr std::array kPawnMoveDirection = {Compass::kNorth, Compass::kSouth};
   return KingDistance(sq_first, sq_second) == 1;
 }
 
-[[nodiscard]] inline Bitboard GetShiftIfValid(const BitIndex square,
-                                              const Compass shift)
+[[nodiscard]] inline bool IsShiftValid(const BitIndex shifted_square,
+                                       const BitIndex square)
 {
-  const BitIndex new_square = square + static_cast<int>(shift);
-  return IsOk(new_square) && IsAdjacent(square, new_square)
-             ? GetBitboardOfSquare(new_square)
-             : Bitboard{};
+  return IsOk(shifted_square) && IsAdjacent(square, shifted_square);
 }
 
-[[nodiscard]] inline Bitboard DoShiftIfValid(BitIndex& square,
-                                             const Compass shift)
+[[nodiscard]] inline std::optional<Bitboard> GetShiftIfValid(
+    const BitIndex square, const Compass shift)
+{
+  const BitIndex new_square = square + static_cast<int>(shift);
+  return IsShiftValid(new_square, square)
+             ? std::optional{GetBitboardOfSquare(new_square)}
+             : std::nullopt;
+}
+
+[[nodiscard]] inline std::optional<Bitboard> DoShiftIfValid(BitIndex& square,
+                                                            const Compass shift)
 {
   const BitIndex copy = square;
   square += static_cast<int>(shift);
-  return IsOk(square) && IsAdjacent(copy, square) ? GetBitboardOfSquare(square)
-                                                  : Bitboard{};
+  return IsShiftValid(square, copy) ? std::optional{GetBitboardOfSquare(square)}
+                                    : std::nullopt;
 }
 
 [[nodiscard]] inline Bitboard GetPawnAttacks(const BitIndex square,
@@ -132,7 +138,7 @@ constexpr std::array kPawnMoveDirection = {Compass::kNorth, Compass::kSouth};
                                 {Compass::kSouthWest, Compass::kSouthEast}}};
   for (const auto step : kPawnAttackDirections[static_cast<size_t>(side)])
   {
-    res |= GetShiftIfValid(square, step);
+    res |= GetShiftIfValid(square, step).value_or(Bitboard{});
   }
   return res;
 }

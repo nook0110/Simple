@@ -36,7 +36,7 @@ template <Piece sliding_piece>
     for (BitIndex temp = square;
          (occupancy & GetBitboardOfSquare(temp)).None();)
     {
-      step = DoShiftIfValid(temp, direction);
+      step = DoShiftIfValid(temp, direction).value_or(Bitboard{});
       result |= step;
       if (step.None()) break;
     }
