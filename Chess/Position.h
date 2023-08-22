@@ -100,8 +100,8 @@ class Position
     return pieces_by_color_[static_cast<size_t>(player)];
   }
 
-  [[nodiscard]] inline Bitboard GetPiecesByType(const Player player,
-                                                const Piece piece) const
+  template <Piece piece>
+  [[nodiscard]] inline Bitboard GetPiecesByType(const Player player) const
   {
     return pieces_by_color_[static_cast<size_t>(player)] &
            pieces_by_type_[static_cast<size_t>(piece)];
@@ -136,7 +136,7 @@ class Position
   [[nodiscard]] Bitboard GetPawnAttacks(const Player player) const
   {
     const auto us = static_cast<size_t>(player);
-    const auto pawns = GetPiecesByType(player, Piece::kPawn);
+    const auto pawns = GetPiecesByType<Piece::kPawn>(player);
     return Shift(pawns, kPawnAttackDirections[us][0]) |
            Shift(pawns, kPawnAttackDirections[us][1]);
   }
@@ -147,6 +147,14 @@ class Position
             pieces_by_color_[static_cast<size_t>(player)])
         .GetFirstBit()
         .value();
+  }
+
+  template <Piece piece>
+  [[nodiscard]] bool AttackedByPiece(const Player player, const BitIndex square) const
+  {
+      if constexpr (piece == Piece::kPawn)
+          return GetPawnAttacks(Flip(player)).Test(square);
+      return AttackTable<piece>::GetAttackMap(square, GetAllPieces()) & GetPiecesByType<piece>(Flip(player));
   }
 
   /**
@@ -166,18 +174,13 @@ class Position
    */
   [[nodiscard]] bool IsUnderCheck(const Player player) const
   {
-    const auto them = Flip(player);
     const auto king_square = GetKingSquare(player);
-    if (std::any_of(kCheckers.begin(), kCheckers.end(),
-                    [this, them](auto piece)
-                    {
-                      return (AttackTable<piece>::GetAttackMap(king_square,
-                                                               piece) &
-                              GetPiecesByType(them, piece))
-                          .any();
-                    }))
-      return true;
-    if (GetPawnAttacks(them).Test(king_square)) return true;
+      if (AttackedByPiece<Piece::kPawn>(player, king_square) ||
+          AttackedByPiece<Piece::kKnight>(player, king_square) ||
+          AttackedByPiece<Piece::kBishop>(player, king_square) ||
+          AttackedByPiece<Piece::kRook>(player, king_square) ||
+          AttackedByPiece<Piece::kQueen>(player, king_square))
+          return true;
     return false;
   }
 

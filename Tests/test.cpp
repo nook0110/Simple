@@ -41,7 +41,7 @@ TEST(GetFirstBit, AllBits)
 
 TEST(GetFirstBit, EachBit)
 {
-  for (size_t i = 0; i < kBitboardSize; ++i)
+  for (size_t i = 0; i < kBoardArea; ++i)
   {
     Bitboard bitboard;
     // all bits are 0, except i
