@@ -66,7 +66,7 @@ class MoveGenerator
 
   [[nodiscard]] Moves GenerateMovesForPawn(Position& position,
                                            BitIndex from) const;
-  [[nodiscard]] Moves AddPromotions(Moves moves, Position& position,
-                                    BitIndex from) const;
+  [[nodiscard]] Moves ApplyPromotions(Moves moves, const Position& position,
+                                      BitIndex from) const;
 };
 }  // namespace SimpleChessEngine

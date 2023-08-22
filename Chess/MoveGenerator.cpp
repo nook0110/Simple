@@ -149,13 +149,23 @@ template <>
 inline MoveGenerator::Moves
 MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, true>(
     Position& position, const BitIndex from) const
-{}
+{
+  Moves moves{};
+
+  return ApplyPromotions(std::move(moves), position, from);
+}
 
 template <>
 inline MoveGenerator::Moves
 MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
     Position& position, const BitIndex from) const
-{}
+{
+  Moves moves{};
+
+  auto attacks = GenerateMovesFromSquare<Piece::kPawn, true>(position, from);
+
+  return ApplyPromotions(std::move(moves), position, from);
+}
 
 MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
                                                            BitIndex from)
@@ -221,9 +231,34 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
   return moves;
 }
 
-MoveGenerator::Moves MoveGenerator::AddPromotions(Moves moves,
-                                                  Position& position,
-                                                  BitIndex from) const
+MoveGenerator::Moves MoveGenerator::ApplyPromotions(Moves moves,
+                                                    const Position& position,
+                                                    const BitIndex from) const
 {
-  static constexpr std::array kIsPromoting = {7, 1};
+  auto side_to_move = position.GetSideToMove();
+
+  if (static constexpr std::array kIsPromoting = {6, 1};
+      GetCoordinates(from).second ==
+      kIsPromoting[static_cast<size_t>(side_to_move)])
+  {
+    static constexpr std::array kPiecesToPromoteTo = {
+        Piece::kKnight, Piece::kBishop, Piece::kRook, Piece::kQueen};
+
+    moves.reserve(moves.size() * kPiecesToPromoteTo.size());
+
+    const auto end = moves.end();
+
+    for (auto it = moves.begin(); it != end; ++it)
+    {
+      (*it).promoted_to = kPiecesToPromoteTo.front();
+
+      for (size_t piece = 1; piece < kPiecesToPromoteTo.size(); piece++)
+      {
+        moves.emplace_back(*it);
+        moves.back().promoted_to = kPiecesToPromoteTo[piece];
+      }
+    }
+  }
+
+  return moves;
 }
