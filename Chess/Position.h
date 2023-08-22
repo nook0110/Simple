@@ -3,6 +3,7 @@
 #include <array>
 #include <cassert>
 
+#include "Attacks.h"
 #include "Bitboard.h"
 #include "Hasher.h"
 #include "Move.h"
@@ -99,9 +100,11 @@ class Position
     return pieces_by_color_[static_cast<size_t>(player)];
   }
 
-  [[nodiscard]] inline Bitboard GetPiecesByType(const Player player, const Piece piece) const
+  [[nodiscard]] inline Bitboard GetPiecesByType(const Player player,
+                                                const Piece piece) const
   {
-      return pieces_by_color_[static_cast<size_t>(player)] & pieces_by_type_[static_cast<size_t>(piece)];
+    return pieces_by_color_[static_cast<size_t>(player)] &
+           pieces_by_type_[static_cast<size_t>(piece)];
   }
 
   /**
@@ -132,15 +135,18 @@ class Position
 
   [[nodiscard]] Bitboard GetPawnAttacks(const Player player) const
   {
-      const auto us = static_cast<size_t>(player);
-      const auto pawns = GetPiecesByType(player, Piece::kPawn);
-      return Shift(pawns, kPawnAttackDirections[us][0]) | Shift(pawns, kPawnAttackDirections[us][1]);
+    const auto us = static_cast<size_t>(player);
+    const auto pawns = GetPiecesByType(player, Piece::kPawn);
+    return Shift(pawns, kPawnAttackDirections[us][0]) |
+           Shift(pawns, kPawnAttackDirections[us][1]);
   }
 
   [[nodiscard]] inline BitIndex GetKingSquare(const Player player) const
   {
-      return (pieces_by_type_[static_cast<size_t>(Piece::kKing)] & 
-              pieces_by_color_[static_cast<size_t>(player)]).GetFirstBit().value();
+    return (pieces_by_type_[static_cast<size_t>(Piece::kKing)] &
+            pieces_by_color_[static_cast<size_t>(player)])
+        .GetFirstBit()
+        .value();
   }
 
   /**
@@ -160,15 +166,19 @@ class Position
    */
   [[nodiscard]] bool IsUnderCheck(const Player player) const
   {
-      const auto them = Flip(player);
-      const auto king_square = GetKingSquare(player);
-      if (std::any_of(kCheckers.begin(), kCheckers.end(), [](const auto&& piece)
-          {
-              return (AttackTable<piece>::GetAttackMap(king_square, piece) & GetPiecesByType(them, piece)).any();
-          }))
-        return true;
-      if (GetPawnAttacks(them).Test(king_square)) return true;
-      return false;
+    const auto them = Flip(player);
+    const auto king_square = GetKingSquare(player);
+    if (std::any_of(kCheckers.begin(), kCheckers.end(),
+                    [this, them](auto piece)
+                    {
+                      return (AttackTable<piece>::GetAttackMap(king_square,
+                                                               piece) &
+                              GetPiecesByType(them, piece))
+                          .any();
+                    }))
+      return true;
+    if (GetPawnAttacks(them).Test(king_square)) return true;
+    return false;
   }
 
   std::optional<BitIndex> GetEnPassantSquare() const
@@ -186,8 +196,7 @@ class Position
   bool operator==(const Position& other) const = default;
 
   struct EvaluationData
-  {
-  };
+  {};
 
  private:
   Player side_to_move_{};  //!< Whose side to move.

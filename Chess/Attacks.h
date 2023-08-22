@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "BitBoard.h"
-#include "Position.h"
+#include "Utility.h"
 
 namespace SimpleChessEngine
 {

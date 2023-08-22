@@ -1,7 +1,12 @@
 #pragma once
 
+#include <array>
+#include <cassert>
 #include <cmath>
 #include <string>
+
+#include "Piece.h"
+#include "Player.h"
 
 namespace SimpleChessEngine
 {
@@ -89,33 +94,33 @@ enum class Compass
 
 [[nodiscard]] inline Bitboard Shift(const Bitboard bb, const Compass direction)
 {
-    switch (direction)
-    {
+  switch (direction)
+  {
     case Compass::kNorth:
-        return bb << kLineSize;
+      return bb << kLineSize;
     case Compass::kSouth:
-        return bb >> kLineSize;
+      return bb >> kLineSize;
     case Compass::kEast:
-        return (bb & ~kFileBB.back())  << 1;
+      return (bb & ~kFileBB.back()) << 1;
     case Compass::kWest:
-        return (bb & ~kFileBB.front()) >> 1;
+      return (bb & ~kFileBB.front()) >> 1;
     case Compass::kNorthEast:
-        return Shift(Shift(bb, Compass::kNorth), Compass::kEast);
+      return Shift(Shift(bb, Compass::kNorth), Compass::kEast);
     case Compass::kNorthWest:
-        return Shift(Shift(bb, Compass::kNorth), Compass::kWest);
+      return Shift(Shift(bb, Compass::kNorth), Compass::kWest);
     case Compass::kSouthEast:
-        return Shift(Shift(bb, Compass::kSouth), Compass::kEast);
+      return Shift(Shift(bb, Compass::kSouth), Compass::kEast);
     case Compass::kSouthWest:
-        return Shift(Shift(bb, Compass::kSouth), Compass::kWest);
+      return Shift(Shift(bb, Compass::kSouth), Compass::kWest);
     default:
-        return Bitboard{};
-    }
+      return Bitboard{};
+  }
 }
 
 constexpr std::array kPawnMoveDirection = {Compass::kNorth, Compass::kSouth};
-constexpr std::array<std::array<Compass, 2>, kColors>
-kPawnAttackDirections = { {{Compass::kNorthWest, Compass::kNorthEast},
-                          {Compass::kSouthWest, Compass::kSouthEast}} };
+constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
+    {{Compass::kNorthWest, Compass::kNorthEast},
+     {Compass::kSouthWest, Compass::kSouthEast}}};
 
 [[nodiscard]] inline bool IsOk(const BitIndex square)
 {
@@ -179,7 +184,8 @@ kPawnAttackDirections = { {{Compass::kNorthWest, Compass::kNorthEast},
   return IsSlidingPiece(piece) && piece != Piece::kQueen;
 }
 
-constexpr std::array<Piece, 4> kCheckers = { Piece::kKnight, Piece::kBishop, Piece::kRook, Piece::kQueen };
+constexpr std::array<Piece, 4> kCheckers = {Piece::kKnight, Piece::kBishop,
+                                            Piece::kRook, Piece::kQueen};
 
 [[nodiscard]] inline std::string DrawBitboard(const Bitboard b)
 {
