@@ -117,7 +117,7 @@ constexpr std::array kPawnMoveDirection = {Compass::kNorth, Compass::kSouth};
 [[nodiscard]] inline Bitboard DoShiftIfValid(BitIndex& square,
                                              const Compass shift)
 {
-  BitIndex copy = square;
+  const BitIndex copy = square;
   square += static_cast<int>(shift);
   return IsOk(square) && IsAdjacent(copy, square) ? GetBitboardOfSquare(square)
                                                   : Bitboard{};
@@ -130,7 +130,7 @@ constexpr std::array kPawnMoveDirection = {Compass::kNorth, Compass::kSouth};
   static constexpr std::array<std::array<Compass, 2>, kColors>
       kPawnAttackDirections = {{{Compass::kNorthWest, Compass::kNorthEast},
                                 {Compass::kSouthWest, Compass::kSouthEast}}};
-  for (auto step : kPawnAttackDirections[static_cast<size_t>(side)])
+  for (const auto step : kPawnAttackDirections[static_cast<size_t>(side)])
   {
     res |= GetShiftIfValid(square, step);
   }

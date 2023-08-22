@@ -70,9 +70,8 @@ class TestAttackMaskGeneration : public testing::TestWithParam<TestCase>
  protected:
   [[nodiscard]] Bitboard GetMask() const
   {
-    auto test_case = GetParam();
-    return GenerateAttackMask<sliding_piece>(test_case.square,
-                                             test_case.occupancy);
+    const auto [occupancy, square, answer] = GetParam();
+    return GenerateAttackMask<sliding_piece>(square, occupancy);
   }
   [[nodiscard]] Bitboard GetAnswer() const { return GetParam().answer; }
 };
@@ -179,7 +178,7 @@ class TestAttackMapTable : public testing::TestWithParam<TestCaseWithoutAnswer>
   }
   [[nodiscard]] Bitboard GetAnswer() const
   {
-    auto test_case = GetParam();
+    const auto test_case = GetParam();
     return GenerateAttackMask<sliding_piece>(test_case.square,
                                              test_case.occupancy);
   }
