@@ -64,9 +64,10 @@ class MoveGenerator
   [[nodiscard]] static Moves GenerateAttacksForPawn(Position& position,
                                                     BitIndex from);
 
-  [[nodiscard]] Moves GenerateMovesForPawn(Position& position,
-                                           BitIndex from) const;
-  [[nodiscard]] Moves AddPromotions(Moves moves, Position& position,
-                                    BitIndex from) const;
+  [[nodiscard]] static Moves GenerateMovesForPawn(Position& position,
+                                                  BitIndex from);
+  [[nodiscard]] static Moves ApplyPromotions(Moves moves,
+                                             const Position& position,
+                                             BitIndex from);
 };
 }  // namespace SimpleChessEngine
