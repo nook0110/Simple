@@ -154,7 +154,8 @@ class Position
   {
       if constexpr (piece == Piece::kPawn)
           return GetPawnAttacks(Flip(player)).Test(square);
-      return AttackTable<piece>::GetAttackMap(square, GetAllPieces()) & GetPiecesByType<piece>(Flip(player));
+      else
+          return (AttackTable<piece>::GetAttackMap(square, GetAllPieces()) & GetPiecesByType<piece>(Flip(player))).Any();
   }
 
   /**
