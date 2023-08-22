@@ -30,7 +30,7 @@ class MoveGenerator
   [[nodiscard]] static bool IsMoveValid(Position& position, const Move& move)
   {
     position.DoMove(move);
-    const auto valid = !position.IsUnderCheck(position.GetSideToMove());
+    const auto valid = !position.IsUnderCheck(Flip(position.GetSideToMove()));
     position.UndoMove(move);
 
     return valid;
