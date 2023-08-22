@@ -33,8 +33,8 @@ class Position
     assert(!board_[square]);
     assert(piece);
     board_[square] = piece;
-    pieces_by_color_[static_cast<size_t>(color)].set(square);
-    pieces_by_type_[static_cast<size_t>(piece)].set(square);
+    pieces_by_color_[static_cast<size_t>(color)].Set(square);
+    pieces_by_type_[static_cast<size_t>(piece)].Set(square);
     // TODO: hash update
   }
 
@@ -48,8 +48,8 @@ class Position
   void RemovePiece(const BitIndex square, const Player color)
   {
     auto piece = board_[square];
-    pieces_by_type_[static_cast<size_t>(piece)].reset(square);
-    pieces_by_color_[static_cast<size_t>(color)].reset(square);
+    pieces_by_type_[static_cast<size_t>(piece)].Reset(square);
+    pieces_by_color_[static_cast<size_t>(color)].Reset(square);
     board_[square] = Piece::kNone;
     // TODO: hash update
   }

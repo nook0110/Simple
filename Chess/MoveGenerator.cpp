@@ -20,7 +20,7 @@ MoveGenerator::Moves MoveGenerator::operator()(Position& position) const
   while (const auto from = pieces.GetFirstBit())
   {
     // get first piece
-    pieces.reset(*from);
+    pieces.Reset(*from);
 
     // generate moves for piece
     auto moves_for_piece = GenerateMovesForPiece(position, *from);
@@ -43,7 +43,6 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
 
   // get piece and side to move
   const auto piece = position.GetPiece(from);
-  const auto side_to_move = position.GetSideToMove();
 
   // check if piece exists
   assert(position.GetAllPieces().test(from));
@@ -51,7 +50,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
   switch (piece)
   {
     case Piece::kPawn:
-      // TODO: generate pawn moves
+      moves = GenerateMoves<Piece::kPawn>(position, from);
       break;
     case Piece::kKnight:
       // generate knight moves
@@ -107,7 +106,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
 
   while (const auto to = valid_moves.GetFirstBit())
   {
-    valid_moves.reset(to.value());
+    valid_moves.Reset(to.value());
 
     // create move
     Move move{from, to.value(), position.GetPiece(to.value())};
@@ -128,4 +127,11 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position,
 
   // return moves
   return moves;
+}
+
+template <>
+inline MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kPawn>(
+    Position& position, const BitIndex from) const
+{
+  return Moves{};
 }

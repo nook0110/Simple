@@ -1,7 +1,6 @@
 #pragma once
 #include <algorithm>
 #include <optional>
-#include <type_traits>
 
 #include "Evaluator.h"
 #include "MoveGenerator.h"
@@ -35,9 +34,9 @@ class Searcher
    * \param evaluator The evaluator.
    * \param position The initial position.
    */
-  explicit Searcher(Position position = PositionFactory{}(),
-                    MoveGenerator move_generator = MoveGenerator(),
-                    Evaluator evaluator = Evaluator())
+  explicit Searcher(const Position position = PositionFactory{}(),
+                    const MoveGenerator move_generator = MoveGenerator(),
+                    const Evaluator evaluator = Evaluator())
       : current_position_(position),
         move_generator_(move_generator),
         evaluator_(evaluator)
@@ -73,8 +72,7 @@ class Searcher
    *
    * \return Evaluation of subtree.
    */
-  [[nodiscard]] Eval Search(const size_t remaining_depth, Eval alpha,
-                            const Eval beta);
+  [[nodiscard]] Eval Search(size_t remaining_depth, Eval alpha, Eval beta);
 
  private:
   Position current_position_;  //!< Current position.
@@ -89,7 +87,7 @@ class Searcher
 
 namespace SimpleChessEngine
 {
-inline void Searcher::SetPosition(Position position)
+inline void Searcher::SetPosition(const Position position)
 {
   current_position_ = position;
 }

@@ -1,38 +1,36 @@
 #pragma once
 
 #include <cmath>
-#include <iostream>
 #include <string>
-#include <tuple>
-#include <vector>
 
 namespace SimpleChessEngine
 {
 inline constexpr size_t kBoardArea = 64;
-const Bitboard kEmptyBoard = Bitboard{};
+constexpr Bitboard kEmptyBoard = Bitboard{};
 constexpr int kLineSize = 8;
 constexpr size_t kColors = 2;
 constexpr size_t kPieceTypes =
     7;  // For Pawn, Knight, Bishop, Rook, Queen, King and Empty Square
-namespace
+
+namespace  // TODO: Name namespace
 {
 constexpr Bitboard kFileA{0x0101010101010101ULL};
 constexpr Bitboard kRank1{0xFF};
 }  // namespace
-constexpr std::array<Bitboard, kLineSize> kRankBB = {kRank1,
-                                                     kRank1 << (kLineSize * 1),
-                                                     kRank1 << (kLineSize * 2),
-                                                     kRank1 << (kLineSize * 3),
-                                                     kRank1 << (kLineSize * 4),
-                                                     kRank1 << (kLineSize * 5),
-                                                     kRank1 << (kLineSize * 6),
-                                                     kRank1 << (kLineSize * 7)};
-constexpr std::array<Bitboard, kLineSize> kFileBB = {
-    kFileA,      kFileA << 1, kFileA << 2, kFileA << 3,
-    kFileA << 4, kFileA << 5, kFileA << 6, kFileA << 7};
 
-constexpr std::array<Bitboard, kColors> kCloseRanks = {kRankBB[2] | kRankBB[3],
-                                                       kRankBB[5] | kRankBB[4]};
+constexpr std::array kRankBB = {kRank1,
+                                kRank1 << static_cast<size_t>(kLineSize) * 1,
+                                kRank1 << static_cast<size_t>(kLineSize) * 2,
+                                kRank1 << static_cast<size_t>(kLineSize) * 3,
+                                kRank1 << static_cast<size_t>(kLineSize) * 4,
+                                kRank1 << static_cast<size_t>(kLineSize) * 5,
+                                kRank1 << static_cast<size_t>(kLineSize) * 6,
+                                kRank1 << static_cast<size_t>(kLineSize) * 7};
+constexpr std::array kFileBB = {kFileA,      kFileA << 1, kFileA << 2,
+                                kFileA << 3, kFileA << 4, kFileA << 5,
+                                kFileA << 6, kFileA << 7};
+constexpr std::array kCloseRanks = {kRankBB[2] | kRankBB[3],
+                                    kRankBB[5] | kRankBB[4]};
 
 constexpr std::array<std::array<Bitboard, kLineSize>, kColors> kDoubleMoveSpan =
     {{{kCloseRanks[0] & kFileBB[0], kCloseRanks[0] & kFileBB[1],
@@ -54,7 +52,7 @@ using File = int;
                         static_cast<int>(square / kLineSize));
 }
 
-[[nodiscard]] constexpr BitIndex GetSquare(File file, Rank rank)
+[[nodiscard]] constexpr BitIndex GetSquare(const File file, const Rank rank)
 {
   assert(file >= 0 && file < kLineSize);
   assert(rank >= 0 && rank < kLineSize);
@@ -89,12 +87,11 @@ enum class Compass
   kNorthEast = kNorth + kEast
 };
 
-constexpr std::array<Compass, kColors> kPawnMoveDirection = {Compass::kNorth,
-                                                             Compass::kSouth};
+constexpr std::array kPawnMoveDirection = {Compass::kNorth, Compass::kSouth};
 
 [[nodiscard]] inline bool IsOk(const BitIndex square)
 {
-  return square >= 0 && square < kBoardArea;
+  return square < kBoardArea;
 }
 
 [[nodiscard]] inline Bitboard GetBitboardOfSquare(const BitIndex square)
@@ -140,13 +137,13 @@ constexpr std::array<Compass, kColors> kPawnMoveDirection = {Compass::kNorth,
   return res;
 }
 
-[[nodiscard]] inline constexpr bool IsSlidingPiece(const Piece piece)
+[[nodiscard]] constexpr bool IsSlidingPiece(const Piece piece)
 {
   return piece == Piece::kBishop || piece == Piece::kRook ||
          piece == Piece::kQueen;
 }
 
-[[nodiscard]] inline constexpr bool IsWeakSlidingPiece(const Piece piece)
+[[nodiscard]] constexpr bool IsWeakSlidingPiece(const Piece piece)
 {
   return IsSlidingPiece(piece) && piece != Piece::kQueen;
 }
@@ -159,7 +156,7 @@ constexpr std::array<Compass, kColors> kPawnMoveDirection = {Compass::kNorth,
   {
     for (File f = 0; f <= 7; ++f)
     {
-      s += (b & GetBitboardOfSquare(GetSquare(f, r))).any() ? "| X " : "|   ";
+      s += (b & GetBitboardOfSquare(GetSquare(f, r))).Any() ? "| X " : "|   ";
     }
 
     s += "| " + std::to_string(1 + r) + "\n+---+---+---+---+---+---+---+---+\n";

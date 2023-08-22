@@ -1,12 +1,8 @@
 #pragma once
 
-#ifdef __GNUC__
-#define USE_GCC_BUILTINS
-#pragma GCC target("avx2,bmi,bmi2,popcnt,lzcnt")
-#elif defined(_MSC_VER)
 #define USE_MSVC_INTRINSICS
-#include "nmmintrin.h"
-#endif
+
+#include <intrin.h>
 
 #include <optional>
 
@@ -35,50 +31,50 @@ class Bitboard
 
   constexpr Bitboard() {}
 
-  [[nodiscard]] constexpr bool any() const { return static_cast<bool>(value_); }
-  [[nodiscard]] constexpr bool none() const
+  [[nodiscard]] constexpr bool Any() const { return static_cast<bool>(value_); }
+  [[nodiscard]] constexpr bool None() const
   {
     return !static_cast<bool>(value_);
   }
 
-  Bitboard& set(const size_t pos)
+  Bitboard& Set(const size_t pos)
   {
     value_ |= 1ull << pos;
     return *this;
   }
 
-  Bitboard& set()
+  Bitboard& Set()
   {
     value_ = ~0ull;
     return *this;
   }
 
-  Bitboard& reset(const size_t pos)
+  Bitboard& Reset(const size_t pos)
   {
     value_ &= ~(1ull << pos);
     return *this;
   }
 
-  Bitboard& reset()
+  Bitboard& Reset()
   {
     value_ = 0ull;
     return *this;
   }
 
-  Bitboard& flip(const size_t pos)
+  Bitboard& Flip(const size_t pos)
   {
     value_ ^= 1ull << pos;
     return *this;
   }
 
-  constexpr bool test(const size_t pos) const
+  constexpr bool Test(const size_t pos) const
   {
-    return static_cast<bool>(value_ & (1ull << pos));
+    return static_cast<bool>(value_ & 1ull << pos);
   }
 
   constexpr bool operator==(const Bitboard& other) const = default;
 
-  size_t count() const;
+  size_t Count() const;
 
   [[nodiscard]] std::optional<BitIndex> GetFirstBit() const;
 
@@ -114,15 +110,7 @@ class Bitboard
   uint64_t value_{};
 };
 
-inline size_t Bitboard::count() const
-{
-#ifdef USE_GCC_BUILTINS
-  return __builtin_popcountll(value_);
-#elif defined(USE_MSVC_INTRINSICS)
-  return _mm_popcnt_u64(value_);
-#endif
-  return std::bitset<64>(value_).count();
-}
+inline size_t Bitboard::Count() const { return _mm_popcnt_u64(value_); }
 
 inline std::optional<BitIndex> Bitboard::GetFirstBit() const
 {

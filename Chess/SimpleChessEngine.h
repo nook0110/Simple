@@ -49,7 +49,7 @@ class ChessEngine
 {
  public:
   explicit ChessEngine(
-      Position position = PositionFactory{}(),
+      const Position position = PositionFactory{}(),
       std::unique_ptr<InfoPrinter> printer = std::make_unique<InfoPrinter>())
       : printer_(std::move(printer)), searcher_(position)
   {}
@@ -59,11 +59,11 @@ class ChessEngine
     printer_ = std::move(printer);
   }
 
-  void SetPosition(Position position) { searcher_.SetPosition(position); }
+  void SetPosition(const Position position) { searcher_.SetPosition(position); }
 
-  void ComputeBestMove(const size_t depth);
+  void ComputeBestMove(size_t depth);
 
-  void ComputeBestMove(const std::chrono::milliseconds left_time);
+  void ComputeBestMove(std::chrono::milliseconds left_time);
 
   [[nodiscard]] Move GetCurrentBestMove() const;
 

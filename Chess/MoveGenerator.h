@@ -35,7 +35,7 @@ class MoveGenerator
    * \return All possible moves for the given square.
    */
   [[nodiscard]] Moves GenerateMovesForPiece(Position& position,
-                                            const BitIndex from) const;
+                                            BitIndex from) const;
 
   /**
    * \brief Generates all possible moves for a given square with given piece.
@@ -47,7 +47,10 @@ class MoveGenerator
    * \return All possible moves for the given square and piece.
    */
   template <Piece piece>
-  [[nodiscard]] Moves GenerateMoves(Position& position,
-                                    const BitIndex from) const;
+  [[nodiscard]] Moves GenerateMoves(Position& position, BitIndex from) const;
 };
+
+template <>
+MoveGenerator::Moves MoveGenerator::GenerateMoves<Piece::kPawn>(
+    Position& position, BitIndex from) const;
 }  // namespace SimpleChessEngine

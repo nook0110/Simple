@@ -1,8 +1,7 @@
+// ReSharper disable CppClangTidyBugproneSuspiciousInclude
 #include "pch.h"
 
-#define SPLIT_PCH
-
-#include <tuple>
+// WARNING! pch.h must be first header!
 
 #include "../Chess/Attacks.cpp"
 #include "../Chess/Attacks.h"
@@ -31,7 +30,7 @@ TEST(GetFirstBit, AllBits)
 {
   Bitboard bitboard;
   // all bits are 1
-  bitboard.set();
+  bitboard.Set();
 
   // should not be nullopt
   ASSERT_TRUE(bitboard.GetFirstBit());
@@ -42,11 +41,11 @@ TEST(GetFirstBit, AllBits)
 
 TEST(GetFirstBit, EachBit)
 {
-  for (int i = 0; i < kBitboardSize; ++i)
+  for (size_t i = 0; i < kBitboardSize; ++i)
   {
     Bitboard bitboard;
     // all bits are 0, except i
-    bitboard.set(i);
+    bitboard.Set(i);
 
     // should not be nullopt
     ASSERT_TRUE(bitboard.GetFirstBit());

@@ -1,7 +1,6 @@
 #pragma once
 #include <cassert>
 
-#include "MoveGenerator.h"
 #include "Position.h"
 
 namespace SimpleChessEngine
@@ -16,13 +15,13 @@ class Evaluator
   [[nodiscard]] Eval GetGameResult(const Position& position) const
   {
     assert(MoveGenerator{}(const_cast<Position&>(position)).empty());
-    return Eval{rand()};
+    return Eval{};
   }
 };
 
 inline Eval Evaluator::operator()(const Position& position, Eval alpha,
                                   Eval beta) const
 {
-  return Eval{rand()};
+  return Eval{};
 }
 }  // namespace SimpleChessEngine
