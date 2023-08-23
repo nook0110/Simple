@@ -244,9 +244,9 @@ class Position
     return false;
   }
 
-  std::optional<BitIndex> GetEnPassantSquare() const
+  [[nodiscard]] std::optional<BitIndex> GetEnCroissantSquare() const
   {
-    return en_passant_square_;
+    return en_croissant_square_;
   }
 
   /**
@@ -264,7 +264,7 @@ class Position
  private:
   Player side_to_move_{};  //!< Whose side to move.
 
-  std::optional<BitIndex> en_passant_square_{};
+  std::optional<BitIndex> en_croissant_square_{};
 
   std::array<Bitboard, kPieceTypes>
       pieces_by_type_;  //!< Bitboard of pieces of certain type

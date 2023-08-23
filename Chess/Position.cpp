@@ -1,5 +1,7 @@
 #include "Position.h"
 
+#include <variant>
+
 using namespace SimpleChessEngine;
 
 void Position::DoMove(const Move& move)

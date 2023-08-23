@@ -134,7 +134,8 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesFromSquare(
   {
     valid_moves.Reset(to.value());
 
-    if (auto move = Move{from, to.value(), position.GetPiece(to.value())};
+    if (auto move =
+            DefaultMove{from, to.value(), position.GetPiece(to.value())};
         IsMoveValid(position, move))
     {
       moves.emplace_back(move);
@@ -196,16 +197,16 @@ MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
     if (const BitIndex to = from + static_cast<int>(shift);
         IsShiftValid(to, from))
     {
-      Move move{from, to, position.GetPiece(to)};
+      DefaultMove move{from, to, position.GetPiece(to)};
 
       if (position.GetPieces(Flip(side_to_move)).Test(to))
       {
         if (IsMoveValid(position, move)) moves.emplace_back(move);
       }
-      else if (position.GetEnPassantSquare() == to)
+      else if (position.GetEnCroissantSquare() == to)
       {
-        move.captured_piece = Piece::kPawn;
-        if (IsMoveValid(position, move)) moves.emplace_back(move);
+        if (IsMoveValid(position, move))
+          moves.emplace_back(EnCroissant{from, to});
       }
     }
   }
@@ -229,7 +230,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
                      kPawnMoveDirection[static_cast<size_t>(side_to_move)]);
       !position.GetPiece(to))
   {
-    if (auto move = Move{from, to}; IsMoveValid(position, move))
+    if (auto move = DefaultMove{from, to}; IsMoveValid(position, move))
     {
       moves.emplace_back(move);
     }
@@ -243,7 +244,9 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
     const auto to =
         from + 2 * static_cast<int>(
                        kPawnMoveDirection[static_cast<size_t>(side_to_move)]);
-    if (auto move = Move{from, to}; IsMoveValid(position, move))
+
+    // TODO: to double move
+    if (auto move = DefaultMove{from, to}; IsMoveValid(position, move))
     {
       moves.emplace_back(move);
     }
@@ -265,18 +268,19 @@ MoveGenerator::Moves MoveGenerator::ApplyPromotions(Moves moves,
     static constexpr std::array kPiecesToPromoteTo = {
         Piece::kKnight, Piece::kBishop, Piece::kRook, Piece::kQueen};
 
-    moves.reserve(moves.size() * kPiecesToPromoteTo.size());
-
     const auto end = moves.end();
 
     for (auto it = moves.begin(); it != end; ++it)
     {
-      (*it).promoted_to = kPiecesToPromoteTo.front();
+      auto promotion = static_cast<Promotion>(std::get<DefaultMove>(*it));
+      promotion.promoted_to = kPiecesToPromoteTo.front();
+
+      *it = promotion;
 
       for (size_t piece = 1; piece < kPiecesToPromoteTo.size(); piece++)
       {
-        moves.emplace_back(*it);
-        moves.back().promoted_to = kPiecesToPromoteTo[piece];
+        promotion.promoted_to = kPiecesToPromoteTo[piece];
+        moves.emplace_back(promotion);
       }
     }
   }
