@@ -147,7 +147,9 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
     std::iter_swap(std::ranges::find(moves, best_move), moves.begin());
 
     // sort all moves except first (PV-move)
-    std::stable_sort(std::next(moves.begin()), moves.end());
+    std::stable_sort(std::next(moves.begin()), moves.end(),
+                     [](const Move& first, const Move& second)
+                     { return false; });
   }
   else
   {

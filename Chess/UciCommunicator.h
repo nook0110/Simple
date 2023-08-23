@@ -34,9 +34,7 @@ class UciDebugPrinter final : public InfoPrinter
   {
     o_stream_ << "info pv ";
     for (const auto& move : principal_variation.moves)
-    {
-      o_stream_ << move.from << "|" << move.to << " ";
-    }
+    {}
     o_stream_ << std::endl;
   }
 

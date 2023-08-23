@@ -7,7 +7,7 @@ using namespace SimpleChessEngine;
 
 void Position::DoMove(const Move& move)
 {
-  en_passant_square_.reset();
+  en_croissant_square_.reset();
   std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
              move);
   side_to_move_ = Flip(side_to_move_);
@@ -37,7 +37,7 @@ void Position::DoMove(const DoublePush& move)
   const auto direction = kPawnMoveDirection[static_cast<size_t>(us)];
   const auto to = Shift(Shift(from, direction), direction);
 
-  en_passant_square_ = std::midpoint(from, to);
+  en_croissant_square_ = std::midpoint(from, to);
 
   RemovePiece(from, us);
   PlacePiece(to, Piece::kPawn, us);
