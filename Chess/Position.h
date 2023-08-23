@@ -70,6 +70,8 @@ class Position
    */
   void DoMove(const DefaultMove& move);
 
+  void DoMove(const DoublePush& move);
+
   /**
    * \brief Does given move.
    *
@@ -104,6 +106,8 @@ class Position
    * \param move Move to do.
    */
   void UndoMove(const DefaultMove& move);
+
+  void UndoMove(const DoublePush& move);
 
   /**
    * \brief Does given move.
@@ -243,7 +247,6 @@ class Position
       return true;
     return false;
   }
-
   std::optional<BitIndex> GetEnPassantSquare() const
   {
     return en_passant_square_;

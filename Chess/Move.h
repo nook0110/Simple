@@ -12,6 +12,11 @@ struct DefaultMove
   Piece captured_piece{};
 };
 
+struct DoublePush
+{
+  BitIndex from{};
+};
+
 struct EnCroissant
 {
   BitIndex from{};
@@ -26,5 +31,5 @@ struct Promotion : DefaultMove
 struct Castling
 {};
 
-using Move = std::variant<DefaultMove, EnCroissant, Promotion, Castling>;
+using Move = std::variant<DefaultMove, DoublePush, EnCroissant, Promotion, Castling>;
 }  // namespace SimpleChessEngine

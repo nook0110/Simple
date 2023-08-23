@@ -117,6 +117,11 @@ enum class Compass
   }
 }
 
+[[nodiscard]] constexpr BitIndex Shift(const BitIndex square, const Compass direction)
+{
+  return square + static_cast<int>(direction);
+}
+
 constexpr std::array kPawnMoveDirection = {Compass::kNorth, Compass::kSouth};
 constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
     {{Compass::kNorthWest, Compass::kNorthEast},
@@ -147,7 +152,7 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
 [[nodiscard]] inline std::optional<Bitboard> GetShiftIfValid(
     const BitIndex square, const Compass shift)
 {
-  const BitIndex new_square = square + static_cast<int>(shift);
+  const BitIndex new_square = Shift(square, shift);
   return IsShiftValid(new_square, square)
              ? std::optional{GetBitboardOfSquare(new_square)}
              : std::nullopt;

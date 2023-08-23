@@ -7,6 +7,29 @@ namespace SimpleChessEngine
 {
 using Eval = int;
 
+enum class GamePhase
+{
+  kMG,
+  kEG
+};
+
+constexpr size_t kGamePhases = 2;
+
+using PhaseValue = int;
+
+constexpr std::array<PhaseValue, kGamePhases> kPhaseValueLimits = {};
+
+struct TaperedEval
+{
+  std::array<Eval, kGamePhases> eval;
+  [[nodiscard]] Eval operator()(PhaseValue pv) const
+  {
+    if (pv < kPhaseValueLimits[0]) pv = kPhaseValueLimits[0];
+    if (pv > kPhaseValueLimits[1]) pv = kPhaseValueLimits[1];
+    return eval[0] * (kPhaseValueLimits[1] - pv) + eval[1] * (pv - kPhaseValueLimits[0]);
+  }
+};
+
 class Evaluator
 {
  public:
