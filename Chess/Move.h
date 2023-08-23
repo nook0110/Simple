@@ -1,19 +1,30 @@
 #pragma once
+#include <variant>
+
 #include "BitBoard.h"
 #include "Piece.h"
 namespace SimpleChessEngine
 {
-struct Move
+struct DefaultMove
 {
-  using Index = BitIndex;
-
-  bool operator==(const Move& other) const { return false; }
-  bool operator<(const Move&) const { return false; }
-
-  Index from{};
-  Index to{};
+  BitIndex from{};
+  BitIndex to{};
   Piece captured_piece{};
+};
 
+struct EnCroissant
+{
+  BitIndex from{};
+  BitIndex to{};
+};
+
+struct Promotion : DefaultMove
+{
   Piece promoted_to{};
 };
+
+struct Castling
+{};
+
+using Move = std::variant<DefaultMove, EnCroissant, Promotion, Castling>;
 }  // namespace SimpleChessEngine

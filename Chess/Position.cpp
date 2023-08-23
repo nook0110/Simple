@@ -4,31 +4,28 @@ using namespace SimpleChessEngine;
 
 void Position::DoMove(const Move& move)
 {
-  const auto from = move.from;
-  const auto to = move.to;
-  const auto piece_to_move = board_[from];
-  const Player us = side_to_move_;
-  const Player them = Flip(us);
-
-  RemovePiece(from, us);
-  RemovePiece(to, them);
-  PlacePiece(to, piece_to_move, us);
-
-  side_to_move_ = Flip(side_to_move_);
+  std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
+             move);
 }
+
+void Position::DoMove(const DefaultMove& move) {}
+
+void Position::DoMove(const EnCroissant& move) {}
+
+void Position::DoMove(const Promotion& move) {}
+
+void Position::DoMove(const Castling& move) {}
 
 void Position::UndoMove(const Move& move)
 {
-  side_to_move_ = Flip(side_to_move_);
-
-  const auto from = move.from;
-  const auto to = move.to;
-  const auto piece_to_move = board_[to];
-  const auto captured_piece = move.captured_piece;
-  const Player us = side_to_move_;
-  const Player them = Flip(us);
-
-  RemovePiece(to, us);
-  if (!!captured_piece) PlacePiece(to, captured_piece, them);
-  PlacePiece(from, piece_to_move, us);
+  std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
+             move);
 }
+
+void Position::UndoMove(const DefaultMove& move) {}
+
+void Position::UndoMove(const EnCroissant& move) {}
+
+void Position::UndoMove(const Promotion& move) {}
+
+void Position::UndoMove(const Castling& move) {}

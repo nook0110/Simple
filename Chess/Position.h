@@ -64,11 +64,67 @@ class Position
   void DoMove(const Move& move);
 
   /**
+   * \brief Does given move.
+   *
+   * \param move Move to do.
+   */
+  void DoMove(const DefaultMove& move);
+
+  /**
+   * \brief Does given move.
+   *
+   * \param move Move to do.
+   */
+  void DoMove(const EnCroissant& move);
+
+  /**
+   * \brief Does given move.
+   *
+   * \param move Move to do.
+   */
+  void DoMove(const Promotion& move);
+
+  /**
+   * \brief Does given move.
+   *
+   * \param move Move to do.
+   */
+  void DoMove(const Castling& move);
+
+  /**
    * \brief Undoes given move.
    *
    * \param move Move to undo.
    */
   void UndoMove(const Move& move);
+
+  /**
+   * \brief Does given move.
+   *
+   * \param move Move to do.
+   */
+  void UndoMove(const DefaultMove& move);
+
+  /**
+   * \brief Does given move.
+   *
+   * \param move Move to do.
+   */
+  void UndoMove(const EnCroissant& move);
+
+  /**
+   * \brief Does given move.
+   *
+   * \param move Move to do.
+   */
+  void UndoMove(const Promotion& move);
+
+  /**
+   * \brief Does given move.
+   *
+   * \param move Move to do.
+   */
+  void UndoMove(const Castling& move);
 
   /**
    * \brief Gets hash of the position.
@@ -95,13 +151,13 @@ class Position
    *
    * \return Bitboard with all pieces of given player.
    */
-  [[nodiscard]] inline const Bitboard& GetPieces(const Player player) const
+  [[nodiscard]] const Bitboard& GetPieces(const Player player) const
   {
     return pieces_by_color_[static_cast<size_t>(player)];
   }
 
   template <Piece piece>
-  [[nodiscard]] inline Bitboard GetPiecesByType(const Player player) const
+  [[nodiscard]] Bitboard GetPiecesByType(const Player player) const
   {
     return pieces_by_color_[static_cast<size_t>(player)] &
            pieces_by_type_[static_cast<size_t>(piece)];
@@ -141,7 +197,7 @@ class Position
            Shift(pawns, kPawnAttackDirections[us][1]);
   }
 
-  [[nodiscard]] inline BitIndex GetKingSquare(const Player player) const
+  [[nodiscard]] BitIndex GetKingSquare(const Player player) const
   {
     return (pieces_by_type_[static_cast<size_t>(Piece::kKing)] &
             pieces_by_color_[static_cast<size_t>(player)])
@@ -150,12 +206,15 @@ class Position
   }
 
   template <Piece piece>
-  [[nodiscard]] bool AttackedByPiece(const Player player, const BitIndex square) const
+  [[nodiscard]] bool AttackedByPiece(const Player player,
+                                     const BitIndex square) const
   {
-      if constexpr (piece == Piece::kPawn)
-          return GetPawnAttacks(Flip(player)).Test(square);
-      else
-          return (AttackTable<piece>::GetAttackMap(square, GetAllPieces()) & GetPiecesByType<piece>(Flip(player))).Any();
+    if constexpr (piece == Piece::kPawn)
+      return GetPawnAttacks(Flip(player)).Test(square);
+    else
+      return (AttackTable<piece>::GetAttackMap(square, GetAllPieces()) &
+              GetPiecesByType<piece>(Flip(player)))
+          .Any();
   }
 
   /**
@@ -176,12 +235,12 @@ class Position
   [[nodiscard]] bool IsUnderCheck(const Player player) const
   {
     const auto king_square = GetKingSquare(player);
-      if (AttackedByPiece<Piece::kPawn>(player, king_square) ||
-          AttackedByPiece<Piece::kKnight>(player, king_square) ||
-          AttackedByPiece<Piece::kBishop>(player, king_square) ||
-          AttackedByPiece<Piece::kRook>(player, king_square) ||
-          AttackedByPiece<Piece::kQueen>(player, king_square))
-          return true;
+    if (AttackedByPiece<Piece::kPawn>(player, king_square) ||
+        AttackedByPiece<Piece::kKnight>(player, king_square) ||
+        AttackedByPiece<Piece::kBishop>(player, king_square) ||
+        AttackedByPiece<Piece::kRook>(player, king_square) ||
+        AttackedByPiece<Piece::kQueen>(player, king_square))
+      return true;
     return false;
   }
 
