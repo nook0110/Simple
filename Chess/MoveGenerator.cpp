@@ -222,12 +222,11 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
   static constexpr std::array kPawnDoublePushRank = {1, 6};
   moves.reserve(kMaxMoves);
 
-  auto [file, rank] = GetCoordinates(from);
-  auto side_to_move = position.GetSideToMove();
+  const auto [file, rank] = GetCoordinates(from);
+  const auto side_to_move = position.GetSideToMove();
+  const auto push_direction = kPawnMoveDirection[static_cast<size_t>(side_to_move)];
 
-  if (const auto to =
-          from + static_cast<int>(
-                     kPawnMoveDirection[static_cast<size_t>(side_to_move)]);
+  if (const auto to = Shift(from, push_direction);
       !position.GetPiece(to))
   {
     if (auto move = DefaultMove{from, to}; IsMoveValid(position, move))
@@ -241,12 +240,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
        kDoubleMoveSpan[static_cast<size_t>(side_to_move)][file])
           .None())
   {
-    const auto to =
-        from + 2 * static_cast<int>(
-                       kPawnMoveDirection[static_cast<size_t>(side_to_move)]);
-
-    // TODO: to double move
-    if (auto move = DefaultMove{from, to}; IsMoveValid(position, move))
+    if (auto move = DoublePush{from}; IsMoveValid(position, move))
     {
       moves.emplace_back(move);
     }
