@@ -209,16 +209,21 @@ class Position
         .value();
   }
 
-  template <Piece piece>
-  [[nodiscard]] bool AttackedByPiece(const Player player,
-                                     const BitIndex square) const
+  [[nodiscard]] Bitboard Attackers(const BitIndex square) const
   {
-    if constexpr (piece == Piece::kPawn)
-      return GetPawnAttacks(Flip(player)).Test(square);
-    else
-      return (AttackTable<piece>::GetAttackMap(square, GetAllPieces()) &
-              GetPiecesByType<piece>(Flip(player)))
-          .Any();
+    return 
+      ::GetPawnAttacks(square, Player::kWhite) & GetPiecesByType<Piece::kPawn>(Player::kBlack) |
+      ::GetPawnAttacks(square, Player::kBlack) & GetPiecesByType<Piece::kPawn>(Player::kWhite) |
+      AttackTable<Piece::kKnight>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kKnight)] |
+      AttackTable<Piece::kBishop>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kBishop)] |
+      AttackTable<Piece::kRook>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kRook)] |
+      AttackTable<Piece::kQueen>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kQueen)] |
+      AttackTable<Piece::kKing>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kKing)];
+  }
+
+  [[nodiscard]] bool IsUnderAttack(const BitIndex square, const Player us) const
+  {
+    return (Attackers(square) & pieces_by_color_[static_cast<size_t>(Flip(us))]).Any();
   }
 
   /**
@@ -238,14 +243,7 @@ class Position
    */
   [[nodiscard]] bool IsUnderCheck(const Player player) const
   {
-    const auto king_square = GetKingSquare(player);
-    if (AttackedByPiece<Piece::kPawn>(player, king_square) ||
-        AttackedByPiece<Piece::kKnight>(player, king_square) ||
-        AttackedByPiece<Piece::kBishop>(player, king_square) ||
-        AttackedByPiece<Piece::kRook>(player, king_square) ||
-        AttackedByPiece<Piece::kQueen>(player, king_square))
-      return true;
-    return false;
+    return IsUnderAttack(GetKingSquare(player), player);
   }
 
   [[nodiscard]] std::optional<BitIndex> GetEnCroissantSquare() const

@@ -39,6 +39,17 @@ struct Promotion : DefaultMove
 
 struct Castling
 {
+  enum class CastlingSide
+  {
+    kOO,
+    kOOO
+  };
+
+  CastlingSide side;
+
+  BitIndex king_from{};
+  BitIndex rook_from{};
+
   bool operator==(const Castling&) const = default;
 };
 
