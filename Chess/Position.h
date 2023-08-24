@@ -23,6 +23,17 @@ namespace SimpleChessEngine
 class Position
 {
  public:
+  struct EvaluationData
+  {};
+
+  enum class CastlingRight
+  {
+    kNone,
+    k00 = 1,
+    k000 = 2,
+    kAll = k00 | k000
+  };
+
   /**
    * \brief Places a piece with a color on a chosen square.
    *
@@ -204,27 +215,31 @@ class Position
 
   [[nodiscard]] BitIndex GetKingSquare(const Player player) const
   {
-    return (pieces_by_type_[static_cast<size_t>(Piece::kKing)] &
-            pieces_by_color_[static_cast<size_t>(player)])
-        .GetFirstBit()
-        .value();
+    return king_positions_[static_cast<size_t>(player)];
   }
 
   [[nodiscard]] Bitboard Attackers(const BitIndex square) const
   {
-    return
-      GetPawnAttacks(square, Player::kWhite) & GetPiecesByType<Piece::kPawn>(Player::kBlack) |
-      GetPawnAttacks(square, Player::kBlack) & GetPiecesByType<Piece::kPawn>(Player::kWhite) |
-      AttackTable<Piece::kKnight>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kKnight)] |
-      AttackTable<Piece::kBishop>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kBishop)] |
-      AttackTable<Piece::kRook>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kRook)] |
-      AttackTable<Piece::kQueen>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kQueen)] |
-      AttackTable<Piece::kKing>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kKing)];
+    return GetPawnAttacks(square, Player::kWhite) &
+               GetPiecesByType<Piece::kPawn>(Player::kBlack) |
+           GetPawnAttacks(square, Player::kBlack) &
+               GetPiecesByType<Piece::kPawn>(Player::kWhite) |
+           AttackTable<Piece::kKnight>::GetAttackMap(square, GetAllPieces()) &
+               pieces_by_type_[static_cast<size_t>(Piece::kKnight)] |
+           AttackTable<Piece::kBishop>::GetAttackMap(square, GetAllPieces()) &
+               pieces_by_type_[static_cast<size_t>(Piece::kBishop)] |
+           AttackTable<Piece::kRook>::GetAttackMap(square, GetAllPieces()) &
+               pieces_by_type_[static_cast<size_t>(Piece::kRook)] |
+           AttackTable<Piece::kQueen>::GetAttackMap(square, GetAllPieces()) &
+               pieces_by_type_[static_cast<size_t>(Piece::kQueen)] |
+           AttackTable<Piece::kKing>::GetAttackMap(square, GetAllPieces()) &
+               pieces_by_type_[static_cast<size_t>(Piece::kKing)];
   }
 
   [[nodiscard]] bool IsUnderAttack(const BitIndex square, const Player us) const
   {
-    return (Attackers(square) & pieces_by_color_[static_cast<size_t>(Flip(us))]).Any();
+    return (Attackers(square) & pieces_by_color_[static_cast<size_t>(Flip(us))])
+        .Any();
   }
 
   /**
@@ -252,6 +267,30 @@ class Position
     return en_croissant_square_;
   }
 
+  [[nodiscard]] const std::array<std::bitset<2>, kColors>& GetCastlingRights()
+      const
+  {
+    return castling_rights_;
+  }
+
+  template <Piece piece>
+  [[nodiscard]] Bitboard GetCastlingSquares(Castling::CastlingSide side) const
+  {
+    static_assert(piece == Piece::kRook || piece == Piece::kKing);
+    if constexpr (piece == Piece::kKing)
+    {
+      return castling_squares_for_king_[static_cast<size_t>(side_to_move_)]
+                                       [static_cast<size_t>(side)];
+    }
+    if constexpr (piece == Piece::kRook)
+    {
+      return castling_squares_for_rook_[static_cast<size_t>(side_to_move_)]
+                                       [static_cast<size_t>(side)];
+    }
+    assert(false);
+    return {};
+  }
+
   /**
    * \brief Default operator==()
    *
@@ -261,29 +300,23 @@ class Position
    */
   bool operator==(const Position& other) const = default;
 
-  struct EvaluationData
-  {};
-
-  enum class CR
-  {
-    kNone,
-    k00 = 1,
-    k000 = 2,
-    kAll = k00 | k000
-  };
-
  private:
   Player side_to_move_{};  //!< Whose side to move.
 
   std::optional<BitIndex> en_croissant_square_{};
 
   std::array<Bitboard, kPieceTypes>
-      pieces_by_type_;  //!< Bitboard of pieces of certain type
+      pieces_by_type_{};  //!< Bitboard of pieces of certain type
   std::array<Bitboard, kColors>
-      pieces_by_color_;  //!< Bitboard of pieces for each player
+      pieces_by_color_{};  //!< Bitboard of pieces for each player
 
   std::array<Piece, kBoardArea> board_{};  //!< Current position of pieces
 
-  std::array<std::bitset<2>, kColors> castling_rights{ {static_cast<size_t>(CR::kAll), static_cast<size_t>(CR::kAll)} };
+  std::array<std::bitset<2>, kColors> castling_rights_{};
+
+  std::array<BitIndex, kColors> king_positions_{};
+
+  std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_king_{};
+  std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
 };
 }  // namespace SimpleChessEngine

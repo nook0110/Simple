@@ -47,11 +47,10 @@ constexpr std::array<std::array<Bitboard, kLineSize>, kColors> kDoubleMoveSpan =
        kCloseRanks[1] & kFileBB[4], kCloseRanks[1] & kFileBB[5],
        kCloseRanks[1] & kFileBB[6], kCloseRanks[1] & kFileBB[7]}}};
 
-constexpr std::array<std::array<BitIndex, 2>, kColors> kKingCastlingDestination =
-{ {{6, 2}, {62, 58}} };
-constexpr std::array<std::array<BitIndex, 2>, kColors> kRookCastlingDestination =
-{ {{5, 3}, {61, 59}} };
-
+constexpr std::array<std::array<BitIndex, 2>, kColors>
+    kKingCastlingDestination = {{{6, 2}, {62, 58}}};
+constexpr std::array<std::array<BitIndex, 2>, kColors>
+    kRookCastlingDestination = {{{5, 3}, {61, 59}}};
 
 using Rank = int;
 using File = int;
@@ -59,15 +58,14 @@ using File = int;
 [[nodiscard]] constexpr std::pair<File, Rank> GetCoordinates(
     const BitIndex square)
 {
-  return std::make_pair(static_cast<int>(square % kLineSize),
-                        static_cast<int>(square / kLineSize));
+  return std::make_pair(square % kLineSize, square / kLineSize);
 }
 
 [[nodiscard]] constexpr BitIndex GetSquare(const File file, const Rank rank)
 {
   assert(file >= 0 && file < kLineSize);
   assert(rank >= 0 && rank < kLineSize);
-  return rank << 3 | file;
+  return static_cast<BitIndex>(rank << 3 | file);
 }
 
 [[nodiscard]] inline int ManhattanDistance(const BitIndex first,
@@ -123,9 +121,10 @@ enum class Compass
   }
 }
 
-[[nodiscard]] constexpr BitIndex Shift(const BitIndex square, const Compass direction)
+[[nodiscard]] constexpr BitIndex Shift(const BitIndex square,
+                                       const Compass direction)
 {
-  return square + static_cast<int>(direction);
+  return square + static_cast<BitIndex>(direction);
 }
 
 constexpr std::array kPawnMoveDirection = {Compass::kNorth, Compass::kSouth};
@@ -195,8 +194,8 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
   return IsSlidingPiece(piece) && piece != Piece::kQueen;
 }
 
-constexpr std::array<Piece, 4> kCheckers = {Piece::kKnight, Piece::kBishop,
-                                            Piece::kRook, Piece::kQueen};
+constexpr std::array kCheckers = {Piece::kKnight, Piece::kBishop, Piece::kRook,
+                                  Piece::kQueen};
 
 [[nodiscard]] inline std::string DrawBitboard(const Bitboard b)
 {

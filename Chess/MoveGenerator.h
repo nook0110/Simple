@@ -1,5 +1,5 @@
 #pragma once
-#include <vector>
+#include <list>
 
 #include "Move.h"
 #include "Position.h"
@@ -14,7 +14,7 @@ namespace SimpleChessEngine
 class MoveGenerator
 {
  public:
-  using Moves = std::vector<Move>;
+  using Moves = std::list<Move>;
 
   /**
    * \brief Generates all possible moves for a given position.
@@ -61,7 +61,7 @@ class MoveGenerator
   [[nodiscard]] Moves GenerateMovesFromSquare(Position& position,
                                               BitIndex from) const;
 
-  [[nodiscard]] Moves GenerateCastling(Position& position) const;
+  [[nodiscard]] Moves GenerateCastling(const Position& position) const;
 
   [[nodiscard]] static Moves GenerateAttacksForPawn(Position& position,
                                                     BitIndex from);

@@ -11,8 +11,6 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const
 {
   // create moves, max amount moves 218
   Moves moves;
-  static constexpr size_t kMaxMovesAmount = 218;
-  moves.reserve(kMaxMovesAmount);
 
   // get all pieces
   auto pieces = position.GetPieces(position.GetSideToMove());
@@ -27,7 +25,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const
     auto moves_for_piece = GenerateMovesForPiece(position, *from);
 
     // add moves
-    moves.insert(moves.end(), moves_for_piece.begin(), moves_for_piece.end());
+    moves.splice(moves.end(), moves_for_piece);
   }
 
   // return moves
@@ -55,8 +53,6 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
 {
   // create moves, max amount moves 218
   Moves moves;
-  static constexpr size_t kMaxMovesAmount = 218;
-  moves.reserve(kMaxMovesAmount);
 
   // get piece and side to move
   const auto piece = position.GetPiece(from);
@@ -107,8 +103,6 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesFromSquare(
   assert(position.GetPiece(from) == piece);
 
   Moves moves;
-  static constexpr size_t kMaxMoves = 27;
-  moves.reserve(kMaxMoves);
 
   // get all squares that piece attacks
   const auto attacks =
@@ -140,6 +134,12 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesFromSquare(
     {
       moves.emplace_back(move);
     }
+  }
+
+  if constexpr (piece == Piece::kKing)
+  {
+    auto castling = GenerateCastling(position);
+    moves.splice(moves.end(), castling);
   }
 
   // return moves
@@ -174,20 +174,83 @@ MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
 
   auto ordinary_moves = GenerateMovesForPawn(position, from);
 
-  moves.insert(moves.end(), ordinary_moves.begin(), ordinary_moves.end());
+  moves.splice(moves.end(), ordinary_moves);
 
   return ApplyPromotions(std::move(moves), position, from);
 }
 
-MoveGenerator::Moves MoveGenerator::GenerateCastling(Position& position) const
-{}
+MoveGenerator::Moves MoveGenerator::GenerateCastling(
+    const Position& position) const
+{
+  if (position.IsUnderCheck())
+  {
+    return {};
+  }
+
+  Moves moves;
+
+  const auto& castling_rights = position.GetCastlingRights();
+
+  const auto side_to_move = position.GetSideToMove();
+
+  const auto king_square = position.GetKingSquare(side_to_move);
+
+  static constexpr std::array kCastlingSides = {Castling::CastlingSide::k00,
+                                                Castling::CastlingSide::k000};
+  for (auto castling_side : kCastlingSides)
+    if (castling_rights[static_cast<size_t>(side_to_move)]
+                       [static_cast<size_t>(castling_side)])
+    {
+      if (const auto all_pieces = position.GetAllPieces();
+          (position.GetCastlingSquares<Piece::kKing>(castling_side) &
+               all_pieces |
+           position.GetCastlingSquares<Piece::kRook>(castling_side) &
+               all_pieces)
+              .Any())
+      {
+        continue;
+      }
+
+      const auto to =
+          kKingCastlingDestination[static_cast<size_t>(side_to_move)]
+                                  [static_cast<size_t>(castling_side)];
+      Compass direction{};
+
+      if (to - king_square > 0)
+      {
+        direction = Compass::kEast;
+      }
+      if (to - king_square < 0)
+      {
+        direction = Compass::kWest;
+      }
+
+      auto square_to_check = king_square;
+
+      bool is_any_square_under_attack{};
+
+      while (square_to_check != to)
+      {
+        square_to_check = Shift(square_to_check, direction);
+        if (position.IsUnderAttack(square_to_check, side_to_move))
+        {
+          is_any_square_under_attack = true;
+          break;
+        }
+      }
+
+      if (is_any_square_under_attack) continue;
+
+      moves.emplace_back(Castling{castling_side, king_square, to});
+    }
+
+  return moves;
+}
 
 MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
                                                            const BitIndex from)
 {
   Moves moves;
-  static constexpr size_t kMaxMoves = 2;
-  moves.reserve(kMaxMoves);
 
   auto side_to_move = position.GetSideToMove();
 
@@ -197,7 +260,7 @@ MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
                                       Compass::kSouthEast}}};
        auto shift : kPawnAttackDirections[static_cast<size_t>(side_to_move)])
   {
-    if (const BitIndex to = from + static_cast<int>(shift);
+    if (const BitIndex to = from + static_cast<BitIndex>(shift);
         IsShiftValid(to, from))
     {
       DefaultMove move{from, to, position.GetPiece(to)};
@@ -221,16 +284,14 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
                                                          const BitIndex from)
 {
   Moves moves;
-  static constexpr size_t kMaxMoves = 2;
   static constexpr std::array kPawnDoublePushRank = {1, 6};
-  moves.reserve(kMaxMoves);
 
   const auto [file, rank] = GetCoordinates(from);
   const auto side_to_move = position.GetSideToMove();
-  const auto push_direction = kPawnMoveDirection[static_cast<size_t>(side_to_move)];
+  const auto push_direction =
+      kPawnMoveDirection[static_cast<size_t>(side_to_move)];
 
-  if (const auto to = Shift(from, push_direction);
-      !position.GetPiece(to))
+  if (const auto to = Shift(from, push_direction); !position.GetPiece(to))
   {
     if (auto move = DefaultMove{from, to}; IsMoveValid(position, move))
     {
