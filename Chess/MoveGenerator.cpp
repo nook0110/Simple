@@ -179,6 +179,9 @@ MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
   return ApplyPromotions(std::move(moves), position, from);
 }
 
+MoveGenerator::Moves MoveGenerator::GenerateCastling(Position& position) const
+{}
+
 MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
                                                            const BitIndex from)
 {
