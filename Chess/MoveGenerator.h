@@ -61,6 +61,8 @@ class MoveGenerator
   [[nodiscard]] Moves GenerateMovesFromSquare(Position& position,
                                               BitIndex from) const;
 
+  [[nodiscard]] Moves GenerateCastling(Position& position) const;
+
   [[nodiscard]] static Moves GenerateAttacksForPawn(Position& position,
                                                     BitIndex from);
 
