@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <cassert>
 
 #include "Attacks.h"
@@ -263,6 +264,14 @@ class Position
   struct EvaluationData
   {};
 
+  enum class CR
+  {
+    kNone,
+    k00 = 1,
+    k000 = 2,
+    kAll = k00 | k000
+  };
+
  private:
   Player side_to_move_{};  //!< Whose side to move.
 
@@ -274,5 +283,7 @@ class Position
       pieces_by_color_;  //!< Bitboard of pieces for each player
 
   std::array<Piece, kBoardArea> board_{};  //!< Current position of pieces
+
+  std::array<std::bitset<2>, kColors> castling_rights{ {static_cast<size_t>(CR::kAll), static_cast<size_t>(CR::kAll)} };
 };
 }  // namespace SimpleChessEngine

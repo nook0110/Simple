@@ -47,6 +47,12 @@ constexpr std::array<std::array<Bitboard, kLineSize>, kColors> kDoubleMoveSpan =
        kCloseRanks[1] & kFileBB[4], kCloseRanks[1] & kFileBB[5],
        kCloseRanks[1] & kFileBB[6], kCloseRanks[1] & kFileBB[7]}}};
 
+constexpr std::array<std::array<BitIndex, 2>, kColors> kKingCastlingDestination =
+{ {{6, 2}, {62, 58}} };
+constexpr std::array<std::array<BitIndex, 2>, kColors> kRookCastlingDestination =
+{ {{5, 3}, {61, 59}} };
+
+
 using Rank = int;
 using File = int;
 

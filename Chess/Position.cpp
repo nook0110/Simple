@@ -71,7 +71,19 @@ void Position::DoMove(const Promotion& move)
 }
 
 void Position::DoMove(const Castling& move) 
-{}
+{
+  const auto [side, king_from, rook_from] = move;
+
+  const auto us = side_to_move_;
+
+  const auto color_idx = static_cast<size_t>(us);
+  const auto side_idx = static_cast<size_t>(side);
+
+  RemovePiece(king_from, us);
+  RemovePiece(rook_from, us);
+  PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us);
+  PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us);
+}
 
 void Position::UndoMove(const Move& move)
 {
@@ -134,4 +146,17 @@ void Position::UndoMove(const Promotion& move)
   PlacePiece(from, Piece::kPawn, us);
 }
 
-void Position::UndoMove(const Castling& move) {}
+void Position::UndoMove(const Castling& move)
+{
+  const auto [side, king_from, rook_from] = move;
+
+  const auto us = side_to_move_;
+
+  const auto color_idx = static_cast<size_t>(us);
+  const auto side_idx = static_cast<size_t>(side);
+  
+  PlacePiece(king_from, Piece::kKing, us);
+  PlacePiece(rook_from, Piece::kRook, us);
+  RemovePiece(kKingCastlingDestination[color_idx][side_idx], us);
+  RemovePiece(kRookCastlingDestination[color_idx][side_idx], us);
+}

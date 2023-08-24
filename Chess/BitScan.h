@@ -4,7 +4,7 @@
 
 #pragma intrinsic(_BitScanForward)
 
-using BitIndex = size_t;
+using BitIndex = unsigned char;
 
 inline std::optional<BitIndex> BitScan(const size_t mask)
 {

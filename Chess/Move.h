@@ -43,8 +43,8 @@ struct Castling
 {
   enum class CastlingSide
   {
-    kOO,
-    kOOO
+    k00,
+    k000
   };
 
   CastlingSide side;
