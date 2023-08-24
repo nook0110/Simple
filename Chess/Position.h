@@ -193,7 +193,7 @@ class Position
    */
   void SetSideToMove(const Player player) { side_to_move_ = player; }
 
-  [[nodiscard]] Bitboard GetPawnAttacks(const Player player) const
+  [[nodiscard]] Bitboard GetAllPawnAttacks(const Player player) const
   {
     const auto us = static_cast<size_t>(player);
     const auto pawns = GetPiecesByType<Piece::kPawn>(player);
@@ -211,9 +211,9 @@ class Position
 
   [[nodiscard]] Bitboard Attackers(const BitIndex square) const
   {
-    return 
-      ::GetPawnAttacks(square, Player::kWhite) & GetPiecesByType<Piece::kPawn>(Player::kBlack) |
-      ::GetPawnAttacks(square, Player::kBlack) & GetPiecesByType<Piece::kPawn>(Player::kWhite) |
+    return
+      GetPawnAttacks(square, Player::kWhite) & GetPiecesByType<Piece::kPawn>(Player::kBlack) |
+      GetPawnAttacks(square, Player::kBlack) & GetPiecesByType<Piece::kPawn>(Player::kWhite) |
       AttackTable<Piece::kKnight>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kKnight)] |
       AttackTable<Piece::kBishop>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kBishop)] |
       AttackTable<Piece::kRook>::GetAttackMap(square, GetAllPieces()) & pieces_by_type_[static_cast<size_t>(Piece::kRook)] |

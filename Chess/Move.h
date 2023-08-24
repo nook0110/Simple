@@ -17,6 +17,8 @@ struct DefaultMove
 struct DoublePush
 {
   BitIndex from{};
+
+  bool operator==(const DoublePush&) const = default;
 };
 
 struct EnCroissant
