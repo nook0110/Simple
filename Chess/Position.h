@@ -26,6 +26,13 @@ class Position
   struct EvaluationData
   {};
 
+  struct IrreversibleData
+  {
+    std::optional<BitIndex> en_croissant_square{};
+
+    std::array<std::bitset<2>, kColors> castling_rights{};
+  };
+
   enum class CastlingRight
   {
     kNone,
@@ -110,7 +117,7 @@ class Position
    *
    * \param move Move to undo.
    */
-  void UndoMove(const Move& move);
+  void UndoMove(const Move& move, const IrreversibleData data);
 
   /**
    * \brief Does given move.
@@ -154,11 +161,7 @@ class Position
    *
    * \return Bitboard with all pieces on the board.
    */
-  [[nodiscard]] Bitboard GetAllPieces() const
-  {
-    return pieces_by_color_[static_cast<size_t>(Player::kWhite)] |
-           pieces_by_color_[static_cast<size_t>(Player::kBlack)];
-  }
+  [[nodiscard]] Bitboard GetAllPieces() const;
 
   /**
    * \brief Gets all pieces of given player.
@@ -167,17 +170,10 @@ class Position
    *
    * \return Bitboard with all pieces of given player.
    */
-  [[nodiscard]] const Bitboard& GetPieces(const Player player) const
-  {
-    return pieces_by_color_[static_cast<size_t>(player)];
-  }
+  [[nodiscard]] const Bitboard& GetPieces(Player player) const;
 
   template <Piece piece>
-  [[nodiscard]] Bitboard GetPiecesByType(const Player player) const
-  {
-    return pieces_by_color_[static_cast<size_t>(player)] &
-           pieces_by_type_[static_cast<size_t>(piece)];
-  }
+  [[nodiscard]] Bitboard GetPiecesByType(Player player) const;
 
   /**
    * \brief Gets piece on given square.
@@ -186,10 +182,7 @@ class Position
    *
    * \return Piece on given square.
    */
-  [[nodiscard]] Piece GetPiece(const BitIndex index) const
-  {
-    return board_[index];
-  }
+  [[nodiscard]] Piece GetPiece(BitIndex index) const;
 
   /**
    * \brief Gets side to move.
@@ -205,92 +198,37 @@ class Position
    */
   void SetSideToMove(const Player player) { side_to_move_ = player; }
 
-  [[nodiscard]] Bitboard GetAllPawnAttacks(const Player player) const
-  {
-    const auto us = static_cast<size_t>(player);
-    const auto pawns = GetPiecesByType<Piece::kPawn>(player);
-    return Shift(pawns, kPawnAttackDirections[us][0]) |
-           Shift(pawns, kPawnAttackDirections[us][1]);
-  }
+  [[nodiscard]] Bitboard GetAllPawnAttacks(Player player) const;
 
-  [[nodiscard]] BitIndex GetKingSquare(const Player player) const
-  {
-    return king_positions_[static_cast<size_t>(player)];
-  }
+  [[nodiscard]] BitIndex GetKingSquare(Player player) const;
 
-  [[nodiscard]] Bitboard Attackers(const BitIndex square) const
-  {
-    return GetPawnAttacks(square, Player::kWhite) &
-               GetPiecesByType<Piece::kPawn>(Player::kBlack) |
-           GetPawnAttacks(square, Player::kBlack) &
-               GetPiecesByType<Piece::kPawn>(Player::kWhite) |
-           AttackTable<Piece::kKnight>::GetAttackMap(square, GetAllPieces()) &
-               pieces_by_type_[static_cast<size_t>(Piece::kKnight)] |
-           AttackTable<Piece::kBishop>::GetAttackMap(square, GetAllPieces()) &
-               pieces_by_type_[static_cast<size_t>(Piece::kBishop)] |
-           AttackTable<Piece::kRook>::GetAttackMap(square, GetAllPieces()) &
-               pieces_by_type_[static_cast<size_t>(Piece::kRook)] |
-           AttackTable<Piece::kQueen>::GetAttackMap(square, GetAllPieces()) &
-               pieces_by_type_[static_cast<size_t>(Piece::kQueen)] |
-           AttackTable<Piece::kKing>::GetAttackMap(square, GetAllPieces()) &
-               pieces_by_type_[static_cast<size_t>(Piece::kKing)];
-  }
+  [[nodiscard]] Bitboard Attackers(BitIndex square) const;
 
-  [[nodiscard]] bool IsUnderAttack(const BitIndex square, const Player us) const
-  {
-    return (Attackers(square) & pieces_by_color_[static_cast<size_t>(Flip(us))])
-        .Any();
-  }
+  [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us) const;
 
   /**
    * \brief Checks if current player is under check.
    *
    * \return True if current player is under check, false otherwise.
    */
-  [[nodiscard]] bool IsUnderCheck() const
-  {
-    return IsUnderCheck(side_to_move_);
-  }
+  [[nodiscard]] bool IsUnderCheck() const;
 
   /**
    * \brief Checks if given player is under check.
    *
    * \return True if given player is under check, false otherwise.
    */
-  [[nodiscard]] bool IsUnderCheck(const Player player) const
-  {
-    return IsUnderAttack(GetKingSquare(player), player);
-  }
+  [[nodiscard]] bool IsUnderCheck(Player player) const;
 
-  [[nodiscard]] std::optional<BitIndex> GetEnCroissantSquare() const
-  {
-    return en_croissant_square_;
-  }
+  [[nodiscard]] const std::optional<BitIndex>& GetEnCroissantSquare() const;
 
   [[nodiscard]] const std::array<std::bitset<2>, kColors>& GetCastlingRights()
-      const
-  {
-    return castling_rights_;
-  }
+      const;
 
   template <Piece piece>
-  [[nodiscard]] Bitboard GetCastlingSquares(Castling::CastlingSide side) const
-  {
-    static_assert(piece == Piece::kRook || piece == Piece::kKing);
-    if constexpr (piece == Piece::kKing)
-    {
-      return castling_squares_for_king_[static_cast<size_t>(side_to_move_)]
-                                       [static_cast<size_t>(side)];
-    }
-    if constexpr (piece == Piece::kRook)
-    {
-      return castling_squares_for_rook_[static_cast<size_t>(side_to_move_)]
-                                       [static_cast<size_t>(side)];
-    }
-    assert(false);
-    return {};
-  }
+  [[nodiscard]] Bitboard GetCastlingSquares(Castling::CastlingSide side) const;
 
+  [[nodiscard]] IrreversibleData GetIrreversibleData() const;
   /**
    * \brief Default operator==()
    *
@@ -301,9 +239,9 @@ class Position
   bool operator==(const Position& other) const = default;
 
  private:
-  Player side_to_move_{};  //!< Whose side to move.
+  IrreversibleData irreversible_data_;
 
-  std::optional<BitIndex> en_croissant_square_{};
+  Player side_to_move_{};  //!< Whose side to move.
 
   std::array<Bitboard, kPieceTypes>
       pieces_by_type_{};  //!< Bitboard of pieces of certain type
@@ -312,11 +250,114 @@ class Position
 
   std::array<Piece, kBoardArea> board_{};  //!< Current position of pieces
 
-  std::array<std::bitset<2>, kColors> castling_rights_{};
-
   std::array<BitIndex, kColors> king_positions_{};
 
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_king_{};
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
 };
+
+inline Bitboard Position::GetAllPieces() const
+{
+  return pieces_by_color_[static_cast<size_t>(Player::kWhite)] |
+         pieces_by_color_[static_cast<size_t>(Player::kBlack)];
+}
+
+inline const Bitboard& Position::GetPieces(const Player player) const
+{
+  return pieces_by_color_[static_cast<size_t>(player)];
+}
+
+template <Piece piece>
+Bitboard Position::GetPiecesByType(const Player player) const
+{
+  return pieces_by_color_[static_cast<size_t>(player)] &
+         pieces_by_type_[static_cast<size_t>(piece)];
+}
+
+template <Piece piece>
+Bitboard Position::GetCastlingSquares(Castling::CastlingSide side) const
+{
+  static_assert(piece == Piece::kRook || piece == Piece::kKing);
+  if constexpr (piece == Piece::kKing)
+  {
+    return castling_squares_for_king_[static_cast<size_t>(side_to_move_)]
+                                     [static_cast<size_t>(side)];
+  }
+  if constexpr (piece == Piece::kRook)
+  {
+    return castling_squares_for_rook_[static_cast<size_t>(side_to_move_)]
+                                     [static_cast<size_t>(side)];
+  }
+  assert(false);
+  return {};
+}
+
+inline Bitboard Position::GetAllPawnAttacks(const Player player) const
+{
+  const auto us = static_cast<size_t>(player);
+  const auto pawns = GetPiecesByType<Piece::kPawn>(player);
+  return Shift(pawns, kPawnAttackDirections[us][0]) |
+         Shift(pawns, kPawnAttackDirections[us][1]);
+}
+
+inline Piece Position::GetPiece(const BitIndex index) const
+{
+  return board_[index];
+}
+
+inline BitIndex Position::GetKingSquare(const Player player) const
+{
+  return king_positions_[static_cast<size_t>(player)];
+}
+
+inline bool Position::IsUnderAttack(const BitIndex square,
+                                    const Player us) const
+{
+  return (Attackers(square) & pieces_by_color_[static_cast<size_t>(Flip(us))])
+      .Any();
+}
+
+inline bool Position::IsUnderCheck() const
+{
+  return IsUnderCheck(side_to_move_);
+}
+
+inline bool Position::IsUnderCheck(const Player player) const
+{
+  return IsUnderAttack(GetKingSquare(player), player);
+}
+
+inline const std::optional<BitIndex>& Position::GetEnCroissantSquare() const
+{
+  return irreversible_data_.en_croissant_square;
+}
+
+inline const std::array<std::bitset<2>, kColors>& Position::GetCastlingRights()
+    const
+{
+  return irreversible_data_.castling_rights;
+}
+
+inline Bitboard Position::Attackers(const BitIndex square) const
+{
+  return GetPawnAttacks(square, Player::kWhite) &
+             GetPiecesByType<Piece::kPawn>(Player::kBlack) |
+         GetPawnAttacks(square, Player::kBlack) &
+             GetPiecesByType<Piece::kPawn>(Player::kWhite) |
+         AttackTable<Piece::kKnight>::GetAttackMap(square, GetAllPieces()) &
+             pieces_by_type_[static_cast<size_t>(Piece::kKnight)] |
+         AttackTable<Piece::kBishop>::GetAttackMap(square, GetAllPieces()) &
+             pieces_by_type_[static_cast<size_t>(Piece::kBishop)] |
+         AttackTable<Piece::kRook>::GetAttackMap(square, GetAllPieces()) &
+             pieces_by_type_[static_cast<size_t>(Piece::kRook)] |
+         AttackTable<Piece::kQueen>::GetAttackMap(square, GetAllPieces()) &
+             pieces_by_type_[static_cast<size_t>(Piece::kQueen)] |
+         AttackTable<Piece::kKing>::GetAttackMap(square, GetAllPieces()) &
+             pieces_by_type_[static_cast<size_t>(Piece::kKing)];
+}
+
+inline Position::IrreversibleData Position::GetIrreversibleData() const
+{
+  return irreversible_data_;
+}
 }  // namespace SimpleChessEngine

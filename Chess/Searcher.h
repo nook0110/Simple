@@ -117,13 +117,15 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
                                               const auto analyzed_alpha,
                                               const auto analyzed_beta)
   {
+    const auto irreversible_data = current_position_.GetIrreversibleData();
+
     // make the move and search the tree
     current_position_.DoMove(move);
     auto temp_eval =
         -Search(remaining_depth - 1, -analyzed_beta, -analyzed_alpha);
 
     // undo the move
-    current_position_.UndoMove(move);
+    current_position_.UndoMove(move, irreversible_data);
 
     // return the evaluation
     return temp_eval;
@@ -180,6 +182,8 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
   // search the tree
   for (auto& move : moves)
   {
+    const auto irreversible_data = current_position_.GetIrreversibleData();
+
     // make the move and search the tree
     current_position_.DoMove(move);
 
@@ -197,7 +201,7 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
     }
 
     // undo the move
-    current_position_.UndoMove(move);
+    current_position_.UndoMove(move, irreversible_data);
 
     if (temp_eval > best_eval)
     {

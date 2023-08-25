@@ -29,9 +29,11 @@ class MoveGenerator
  private:
   [[nodiscard]] static bool IsMoveValid(Position& position, const Move& move)
   {
+    const auto irreversible_data = position.GetIrreversibleData();
+
     position.DoMove(move);
     const auto valid = !position.IsUnderCheck(Flip(position.GetSideToMove()));
-    position.UndoMove(move);
+    position.UndoMove(move, irreversible_data);
 
     return valid;
   }

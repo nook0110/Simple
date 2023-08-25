@@ -259,7 +259,7 @@ TEST(DoMove, DoAndUndoEqualZero)
        const auto& move : moves)
   {
     pos.DoMove(move);
-    pos.UndoMove(move);
+    pos.UndoMove(move, );
 
     ASSERT_EQ(pos, start_pos);
   }
@@ -284,7 +284,7 @@ namespace MoveGeneratorTests
   {
     position.DoMove(move);
     answer += CountPossibleGames(position, depth - 1);
-    position.UndoMove(move);
+    position.UndoMove(move, );
   }
 
   if (answer > 100000)

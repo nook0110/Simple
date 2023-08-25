@@ -7,7 +7,7 @@ using namespace SimpleChessEngine;
 
 void Position::DoMove(const Move& move)
 {
-  en_croissant_square_.reset();
+  irreversible_data_.en_croissant_square.reset();
   std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
              move);
   side_to_move_ = Flip(side_to_move_);
@@ -36,7 +36,7 @@ void Position::DoMove(const DoublePush& move)
   const auto direction = kPawnMoveDirection[static_cast<size_t>(us)];
   const auto to = Shift(Shift(from, direction), direction);
 
-  en_croissant_square_ = std::midpoint(from, to);
+  irreversible_data_.en_croissant_square = std::midpoint(from, to);
 
   RemovePiece(from, us);
   PlacePiece(to, Piece::kPawn, us);
@@ -85,8 +85,10 @@ void Position::DoMove(const Castling& move)
   PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us);
 }
 
-void Position::UndoMove(const Move& move)
+void Position::UndoMove(const Move& move, const IrreversibleData data)
 {
+  irreversible_data_ = data;
+
   side_to_move_ = Flip(side_to_move_);
   std::visit([this](const auto& unwrapped_move) { UndoMove(unwrapped_move); },
              move);
