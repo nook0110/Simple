@@ -31,6 +31,8 @@ class Position
     std::optional<BitIndex> en_croissant_square{};
 
     std::array<std::bitset<2>, kColors> castling_rights{};
+
+    bool operator==(const IrreversibleData&) const = default;
   };
 
   enum class CastlingRight

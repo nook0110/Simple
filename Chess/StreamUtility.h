@@ -1,30 +1,46 @@
 #pragma once
+#include <iostream>
 #include <ostream>
+#include <unordered_map>
 
 #include "Move.h"
 #include "Utility.h"
 
 namespace SimpleChessEngine
 {
+inline static std::unordered_map<char, std::pair<Piece, Player>> kPieces = {
+    {'p', {Piece::kPawn, Player::kBlack}},
+    {'P', {Piece::kPawn, Player::kWhite}},
+    {'n', {Piece::kKnight, Player::kBlack}},
+    {'N', {Piece::kKnight, Player::kWhite}},
+    {'b', {Piece::kBishop, Player::kBlack}},
+    {'B', {Piece::kBishop, Player::kWhite}},
+    {'r', {Piece::kRook, Player::kBlack}},
+    {'R', {Piece::kRook, Player::kWhite}},
+    {'q', {Piece::kQueen, Player::kBlack}},
+    {'Q', {Piece::kQueen, Player::kWhite}},
+    {'k', {Piece::kKing, Player::kBlack}},
+    {'K', {Piece::kKing, Player::kWhite}}};
+
 inline std::ostream& PrintFile(const File file,
                                std::ostream& stream = std::cout)
 {
-  stream << file + 'a';
+  stream << static_cast<char>(file + 'a');
   return stream;
 }
 
 inline std::ostream& PrintRank(const Rank rank,
                                std::ostream& stream = std::cout)
 {
-  stream << rank;
+  stream << rank + 1;
   return stream;
 }
 
 inline std::ostream& PrintCoordinates(const Coordinates coordinates,
                                       std::ostream& stream)
 {
-  PrintRank(coordinates.first, stream);
-  PrintFile(coordinates.second, stream);
+  PrintFile(coordinates.first, stream);
+  PrintRank(coordinates.second, stream);
 
   return stream;
 }

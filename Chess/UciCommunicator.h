@@ -6,9 +6,10 @@
 #include <thread>
 #include <variant>
 
-#include "MovePrinter.h"
+#include "MoveFactory.h"
 #include "Position.h"
 #include "SimpleChessEngine.h"
+#include "StreamUtility.h"
 
 namespace SimpleChessEngine
 {
@@ -19,7 +20,7 @@ class UciDebugPrinter final : public InfoPrinter
 
   void operator()(const DepthInfo& depth_info) const override
   {
-    o_stream_ << "info depth " << depth_info.current_depth << std::endl;
+    // o_stream_ << "info depth " << depth_info.current_depth << std::endl;
   }
 
   void operator()(const ScoreInfo& score_info) const override
@@ -34,10 +35,10 @@ class UciDebugPrinter final : public InfoPrinter
 
   void operator()(const PrincipalVariation& principal_variation) const override
   {
-    o_stream_ << "info pv ";
+    // o_stream_ << "info pv ";
     for (const auto& move : principal_variation.moves)
     {}
-    o_stream_ << std::endl;
+    // o_stream_ << std::endl;
   }
 
   void operator()(const BestMove& best_move) const override
@@ -119,6 +120,8 @@ class UciChessEngine
   void ParseIsReady(std::stringstream command);
   void ParseUciNewGame(std::stringstream command);
   void ParseFen(const std::string& fen);
+  void ParseStartPos();
+  void ParseMoves(const std::stringstream command);
   void ParsePosition(std::stringstream command);
   void ParseGo(std::stringstream command);
   void ParseStop(std::stringstream command);
@@ -133,6 +136,8 @@ class UciChessEngine
   std::ostream& o_stream_;
 
   SearchThread search_thread_;
+
+  Position position;
 
   bool quit_ = false;
 };
@@ -207,33 +212,58 @@ inline void UciChessEngine::ParseIsReady(std::stringstream command)
   Send("readyok");
 }
 
-inline void UciChessEngine::ParseUciNewGame(std::stringstream command)
+inline void UciChessEngine::ParseUciNewGame(std::stringstream command) {}
+
+inline void UciChessEngine::ParseFen(const std::string& fen)
 {
-  // ReSharper disable once StringLiteralTypo
-  Send("isready");
+  position = PositionFactory{}(fen);
 }
 
-inline void UciChessEngine::ParseFen(const std::string& fen) {}
+inline void UciChessEngine::ParseStartPos() { position = PositionFactory{}(); }
+
+inline void UciChessEngine::ParseMoves(std::stringstream command)
+{
+  std::string move;
+  while (!command.eof())
+  {
+    command >> move;
+    position.DoMove(MoveFactory{}(position, move));
+  }
+}
 
 inline void UciChessEngine::ParsePosition(std::stringstream command)
 {
-  std::string fen;
-  command >> fen;
+  std::string token;
 
-  ParseFen(fen);
+  command >> token;
+
+  if (token == "fen")
+  {
+    std::string board, side_to_move, castling_rights, rule50, move_number;
+    command >> board >> side_to_move >> castling_rights >> rule50 >>
+        move_number;
+    const auto fen = board + " " + side_to_move + " " + castling_rights + " " +
+                     rule50 + " " + move_number;
+    ParseFen(fen);
+  }
+  if (token == "startpos")
+  {
+    ParseStartPos();
+  }
+
+  command >> token;
+
+  if (token == "moves")
+  {
+    ParseMoves(std::move(command));
+  }
 }
 
 inline void UciChessEngine::ParseGo(std::stringstream command)
 {
   std::string token;
-  while (command >> token)
-  {
-    if (token == "searchmoves")
-    {
-      assert(false);
-    }
-  }
-  search_thread_.Start();
+
+  search_thread_.Start(std::move(position));
 }
 inline void UciChessEngine::ParseStop(std::stringstream command) {}
 

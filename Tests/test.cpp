@@ -258,8 +258,9 @@ TEST(DoMove, DoAndUndoEqualZero)
   for (const auto moves = MoveGenerator{}.GenerateMoves(pos);
        const auto& move : moves)
   {
+    const auto irreversible_data = pos.GetIrreversibleData();
     pos.DoMove(move);
-    pos.UndoMove(move, );
+    pos.UndoMove(move, irreversible_data);
 
     ASSERT_EQ(pos, start_pos);
   }
@@ -282,9 +283,10 @@ namespace MoveGeneratorTests
 
   for (const auto& move : moves)
   {
+    const auto irreversible_data = position.GetIrreversibleData();
     position.DoMove(move);
     answer += CountPossibleGames(position, depth - 1);
-    position.UndoMove(move, );
+    position.UndoMove(move, irreversible_data);
   }
 
   if (answer > 100000)

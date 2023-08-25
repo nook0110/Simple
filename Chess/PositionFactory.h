@@ -2,6 +2,7 @@
 #include <unordered_map>
 
 #include "Position.h"
+#include "StreamUtility.h"
 
 namespace SimpleChessEngine
 {
@@ -10,6 +11,8 @@ struct PositionFactory
   Position operator()(
       const std::string& fen =
           "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+  Position operator()(std::stringstream stream);
 };
 
 inline Position PositionFactory::operator()(const std::string& fen)
@@ -17,20 +20,6 @@ inline Position PositionFactory::operator()(const std::string& fen)
   Position position;
 
   static constexpr size_t kBoardSize = 8;
-
-  std::unordered_map<char, std::pair<Piece, Player>> pieces = {
-      {'p', {Piece::kPawn, Player::kBlack}},
-      {'P', {Piece::kPawn, Player::kWhite}},
-      {'n', {Piece::kKnight, Player::kBlack}},
-      {'N', {Piece::kKnight, Player::kWhite}},
-      {'b', {Piece::kBishop, Player::kBlack}},
-      {'B', {Piece::kBishop, Player::kWhite}},
-      {'r', {Piece::kRook, Player::kBlack}},
-      {'R', {Piece::kRook, Player::kWhite}},
-      {'q', {Piece::kQueen, Player::kBlack}},
-      {'Q', {Piece::kQueen, Player::kWhite}},
-      {'k', {Piece::kKing, Player::kBlack}},
-      {'K', {Piece::kKing, Player::kWhite}}};
 
   auto current = fen.begin();
 
@@ -48,7 +37,7 @@ inline Position PositionFactory::operator()(const std::string& fen)
         continue;
       }
 
-      const auto& [piece, color] = pieces[*current];
+      const auto& [piece, color] = kPieces[*current];
       position.PlacePiece(row * kBoardSize + column, piece, color);
 
       assert(piece != Piece::kNone);
@@ -70,4 +59,6 @@ inline Position PositionFactory::operator()(const std::string& fen)
 
   return position;
 }
+
+inline Position PositionFactory::operator()(std::stringstream stream) {}
 }  // namespace SimpleChessEngine

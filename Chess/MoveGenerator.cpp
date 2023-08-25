@@ -159,7 +159,7 @@ MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, true>(
   {
     auto moves = GenerateMovesFromSquare<Piece::kPawn, false>(position, from);
 
-    return ApplyPromotions(std::move(moves), position, from);
+    return moves;
   }
 
   return GenerateAttacksForPawn(position, from);
@@ -320,6 +320,8 @@ MoveGenerator::Moves MoveGenerator::ApplyPromotions(Moves moves,
                                                     const Position& position,
                                                     const BitIndex from)
 {
+  if (moves.empty()) return {};
+
   auto side_to_move = position.GetSideToMove();
 
   if (static constexpr std::array kIsPromoting = {6, 1};
@@ -331,6 +333,8 @@ MoveGenerator::Moves MoveGenerator::ApplyPromotions(Moves moves,
 
     const auto end = moves.end();
 
+    Moves other_promotions;
+
     for (auto it = moves.begin(); it != end; ++it)
     {
       auto promotion = static_cast<Promotion>(std::get<DefaultMove>(*it));
@@ -341,9 +345,11 @@ MoveGenerator::Moves MoveGenerator::ApplyPromotions(Moves moves,
       for (size_t piece = 1; piece < kPiecesToPromoteTo.size(); piece++)
       {
         promotion.promoted_to = kPiecesToPromoteTo[piece];
-        moves.emplace_back(promotion);
+        other_promotions.emplace_back(promotion);
       }
     }
+
+    moves.splice(moves.end(), other_promotions);
   }
 
   return moves;
