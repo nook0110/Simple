@@ -29,6 +29,11 @@ struct PrincipalVariation
   std::vector<Move> moves;
 };
 
+struct BestMove
+{
+  std::optional<Move> move;
+};
+
 class InfoPrinter
 {
  public:
@@ -38,6 +43,7 @@ class InfoPrinter
   virtual void operator()(const NodePerSecondInfo& nps_info) const {}
   virtual void operator()(const PrincipalVariation& principal_variation) const
   {}
+  virtual void operator()(const BestMove& best_move) const {}
 };
 
 /**
@@ -65,7 +71,12 @@ class ChessEngine
 
   void ComputeBestMove(std::chrono::milliseconds left_time);
 
-  [[nodiscard]] Move GetCurrentBestMove() const;
+  [[nodiscard]] std::optional<Move> GetCurrentBestMove() const;
+
+  void PrintBestMove() const
+  {
+    printer_->operator()(BestMove{GetCurrentBestMove()});
+  }
 
  private:
   template <class Info>
@@ -113,6 +124,8 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
     // increase the depth
     current_depth++;
   }
+
+  PrintBestMove();
 }
 
 inline void ChessEngine::ComputeBestMove(
@@ -183,9 +196,14 @@ inline void ChessEngine::ComputeBestMove(
       PrintInfo(PrincipalVariation({searcher_.GetCurrentBestMove().value()}));
     }
   }
+
+  PrintBestMove();
 }
 
-inline Move ChessEngine::GetCurrentBestMove() const { return {}; }
+inline std::optional<Move> ChessEngine::GetCurrentBestMove() const
+{
+  return searcher_.GetCurrentBestMove();
+}
 
 template <class Info>
 void ChessEngine::PrintInfo(const Info& info)

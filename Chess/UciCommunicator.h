@@ -4,7 +4,9 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <variant>
 
+#include "MovePrinter.h"
 #include "Position.h"
 #include "SimpleChessEngine.h"
 
@@ -38,6 +40,17 @@ class UciDebugPrinter final : public InfoPrinter
     o_stream_ << std::endl;
   }
 
+  void operator()(const BestMove& best_move) const override
+  {
+    if (best_move.move)
+    {
+      o_stream_ << "bestmove ";
+      std::visit([this](const auto& move) { o_stream_ << move; },
+                 best_move.move.value());
+      o_stream_ << std::endl;
+    }
+  }
+
  private:
   std::ostream& o_stream_;
 };
@@ -66,11 +79,12 @@ class SearchThread
   {
     Stop();
     thread_ = std::thread(
-        [this] { engine_.ComputeBestMove(std::chrono::seconds(1000)); });
+        [this] { engine_.ComputeBestMove(std::chrono::seconds(1)); });
   }
 
   void Stop()
   {
+    engine_.PrintBestMove();
     if (thread_ && thread_.value().joinable())
     {
       thread_.value().join();

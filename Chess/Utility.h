@@ -55,8 +55,9 @@ constexpr std::array<std::array<BitIndex, 2>, kColors>
 using Rank = int;
 using File = int;
 
-[[nodiscard]] constexpr std::pair<File, Rank> GetCoordinates(
-    const BitIndex square)
+using Coordinates = std::pair<File, Rank>;
+
+[[nodiscard]] constexpr Coordinates GetCoordinates(const BitIndex square)
 {
   return std::make_pair(square % kLineSize, square / kLineSize);
 }

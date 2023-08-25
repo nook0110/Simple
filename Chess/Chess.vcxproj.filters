@@ -101,5 +101,8 @@
     <ClInclude Include="Player.h">
       <Filter>Файлы заголовков\Position</Filter>
     </ClInclude>
+    <ClInclude Include="MovePrinter.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

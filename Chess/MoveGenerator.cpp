@@ -58,7 +58,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
   const auto piece = position.GetPiece(from);
 
   // check if piece exists
-  assert(position.GetAllPieces().test(from));
+  assert(position.GetAllPieces().Test(from));
 
   switch (piece)
   {
@@ -291,7 +291,9 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
   const auto push_direction =
       kPawnMoveDirection[static_cast<size_t>(side_to_move)];
 
-  if (const auto to = Shift(from, push_direction); !position.GetPiece(to))
+  const auto to = Shift(from, push_direction);
+
+  if (!position.GetPiece(to))
   {
     if (auto move = DefaultMove{from, to}; IsMoveValid(position, move))
     {
@@ -304,7 +306,8 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
        kDoubleMoveSpan[static_cast<size_t>(side_to_move)][file])
           .None())
   {
-    if (auto move = DoublePush{from}; IsMoveValid(position, move))
+    if (auto move = DoublePush{from, Shift(to, push_direction)};
+        IsMoveValid(position, move))
     {
       moves.emplace_back(move);
     }

@@ -316,7 +316,7 @@ TEST(GenerateMoves, ShannonNumberCheck)
 
 namespace BestMoveTests
 {
-Move ComputeBestMoveByTime(
+std::optional<Move> ComputeBestMoveByTime(
     const Position& position,
     const std::chrono::milliseconds left_time = std::chrono::seconds(5))
 {
@@ -328,7 +328,8 @@ Move ComputeBestMoveByTime(
   return engine.GetCurrentBestMove();
 }
 
-Move ComputeBestMoveByDepth(const Position& position, const size_t depth = 20)
+std::optional<Move> ComputeBestMoveByDepth(const Position& position,
+                                           const size_t depth = 20)
 {
   ChessEngine engine;
   engine.SetPosition(position);

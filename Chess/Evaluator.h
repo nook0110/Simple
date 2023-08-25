@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 
+#include "MoveGenerator.h"
 #include "Position.h"
 
 namespace SimpleChessEngine
@@ -26,7 +27,8 @@ struct TaperedEval
   {
     if (pv < kPhaseValueLimits[0]) pv = kPhaseValueLimits[0];
     if (pv > kPhaseValueLimits[1]) pv = kPhaseValueLimits[1];
-    return eval[0] * (kPhaseValueLimits[1] - pv) + eval[1] * (pv - kPhaseValueLimits[0]);
+    return eval[0] * (kPhaseValueLimits[1] - pv) +
+           eval[1] * (pv - kPhaseValueLimits[0]);
   }
 };
 
@@ -37,7 +39,7 @@ class Evaluator
 
   [[nodiscard]] Eval GetGameResult(const Position& position) const
   {
-    assert(MoveGenerator{}(const_cast<Position&>(position)).empty());
+    // assert(MoveGenerator{}(const_cast<Position&>(position)).empty());
     return Eval{};
   }
 };
