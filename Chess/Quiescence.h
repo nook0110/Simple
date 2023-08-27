@@ -36,7 +36,7 @@ inline Eval Quiescence::Search(Position& current_position, Eval alpha,
 
   if (stand_pat >= beta)
   {
-    return beta;
+    return stand_pat;
   }
   if (alpha < stand_pat)
   {
