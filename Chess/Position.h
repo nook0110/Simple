@@ -154,6 +154,11 @@ class Position
    */
   void UndoMove(const Castling& move);
 
+  void SetKingPositions(const BitIndex white, const BitIndex black)
+  {
+    king_position_ = {white, black};
+  }
+
   /**
    * \brief Gets hash of the position.
    *
