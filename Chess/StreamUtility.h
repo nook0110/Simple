@@ -99,7 +99,7 @@ inline std::ostream& operator<<(std::ostream& stream, const Promotion move)
 inline std::ostream& operator<<(std::ostream& stream, Castling move)
 {
   static constexpr std::array kCastlingNames = {std::string_view{"O-O"},
-                                                std::string_view{"O-O"}};
+                                                std::string_view{"O-O-O"}};
 
   return stream << kCastlingNames[static_cast<size_t>(move.side)];
 }

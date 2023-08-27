@@ -291,6 +291,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
 {
   Moves moves;
   static constexpr std::array kPawnDoublePushRank = {1, 6};
+  static constexpr std::array kIsPromoting = {6, 1};
 
   const auto [file, rank] = GetCoordinates(from);
   const auto side_to_move = position.GetSideToMove();
@@ -301,9 +302,20 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
 
   if (!position.GetPiece(to))
   {
-    if (auto move = PawnPush{from, to}; IsMoveValid(position, move))
+    if (kIsPromoting[static_cast<size_t>(side_to_move)] ==
+        GetCoordinates(from).second)
     {
-      moves.emplace_back(move);
+      if (auto move = DefaultMove{from, to}; IsMoveValid(position, move))
+      {
+        moves.emplace_back(move);
+      }
+    }
+    else
+    {
+      if (auto move = PawnPush{from, to}; IsMoveValid(position, move))
+      {
+        moves.emplace_back(move);
+      }
     }
   }
 
