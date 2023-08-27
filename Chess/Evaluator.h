@@ -35,13 +35,20 @@ struct TaperedEval
 class Evaluator
 {
  public:
+  explicit Evaluator(const Player searching_for) : searching_for_(searching_for)
+  {}
+
   Eval operator()(const Position& position, Eval alpha, Eval beta) const;
 
-  [[nodiscard]] static Eval GetGameResult(const Position& position)
+  [[nodiscard]] static Eval GetGameResult(const Player searching_for,
+                                          const Position& position)
   {
     // assert(MoveGenerator{}(const_cast<Position&>(position)).empty());
-    return Eval{position.GetSideToMove() == Player::kWhite ? 10000 : -10000};
+    return Eval{(position.GetSideToMove() == searching_for) ? 10000 : -10000};
   }
+
+ private:
+  Player searching_for_;
 };
 
 inline Eval Evaluator::operator()(const Position& position, Eval alpha,
@@ -77,6 +84,6 @@ inline Eval Evaluator::operator()(const Position& position, Eval alpha,
 
   eval += position.GetSideToMove() == Player::kWhite ? 10 : -10;
 
-  return eval;
+  return searching_for_ == Player::kWhite ? eval : -eval;
 }  // namespace SimpleChessEngine
 }  // namespace SimpleChessEngine

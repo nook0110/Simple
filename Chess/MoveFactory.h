@@ -3,6 +3,7 @@
 #include "Move.h"
 #include "Position.h"
 #include "StreamUtility.h"
+#include "Utility.h"
 
 namespace SimpleChessEngine
 {
@@ -36,6 +37,22 @@ inline Move MoveFactory::operator()(const Position& position,
 
   const auto [from, to] = ParseDefaultMove(move);
 
+  const auto piece_to_move = position.GetPiece(from);
+
+  if (piece_to_move == Piece::kKing)
+  {
+    if (!IsAdjacent(from, to))
+    {
+      static std::unordered_map<File, Castling::CastlingSide> castling_file = {
+          {1, Castling::CastlingSide::k000}, {6, Castling::CastlingSide::k00}};
+      static std::unordered_map<File, File> rook_from_file = {{1, 0}, {6, 7}};
+
+      auto [king_file, king_rank] = GetCoordinates(to);
+
+      return Castling{castling_file[king_file], from,
+                      GetSquare(rook_from_file[king_file], king_rank)};
+    }
+  }
   constexpr size_t kPromotionSize = 5;
   if (move.size() == 5)
   {
@@ -43,13 +60,12 @@ inline Move MoveFactory::operator()(const Position& position,
                      kPieces[move.back()].first};
   }
 
-  if (position.GetPiece(from) != Piece::kPawn)
+  if (piece_to_move != Piece::kPawn)
   {
     return DefaultMove{from, to, position.GetPiece(to)};
   }
 
-  if (constexpr BitIndex kDoublePushDelta = 16;
-      std::abs(from - to) == kDoublePushDelta)
+  if (!IsAdjacent(from, to))
   {
     return DoublePush{from, to};
   }

@@ -10,13 +10,8 @@ class Quiescence
   /**
    * \brief Constructor.
    *
-   * \param move_generator The move generator.
-   * \param evaluator The evaluator.
    */
-  explicit Quiescence(const MoveGenerator move_generator = MoveGenerator(),
-                      const Evaluator evaluator = Evaluator())
-      : move_generator_(move_generator), evaluator_(evaluator)
-  {}
+  explicit Quiescence(const Player searching_for) : evaluator_(searching_for) {}
 
   /**
    * \brief Performs the alpha-beta search algorithm.

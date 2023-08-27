@@ -31,16 +31,13 @@ class Searcher
   /**
    * \brief Constructor.
    *
-   * \param move_generator The move generator.
-   * \param quiescence_searcher Quiescence searcher.
    * \param position The initial position.
    */
-  explicit Searcher(const Position position = PositionFactory{}(),
-                    const MoveGenerator move_generator = MoveGenerator(),
-                    const Quiescence quiescence_searcher = Quiescence())
-      : current_position_(position),
-        move_generator_(move_generator),
-        quiescence_searcher_(quiescence_searcher)
+  explicit Searcher(const Position position = PositionFactory{}())
+      : searching_for_(position.GetSideToMove()),
+        current_position_(position),
+        move_generator_(MoveGenerator()),
+        quiescence_searcher_(position.GetSideToMove())
   {}
 
   /**
@@ -79,6 +76,8 @@ class Searcher
   [[nodiscard]] Eval Search(size_t remaining_depth, Eval alpha, Eval beta);
 
  private:
+  Player searching_for_;
+
   Move best_move_;
 
   Position current_position_;  //!< Current position.
@@ -117,7 +116,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // the search tree
   if (remaining_depth <= 0)
   {
-    return quiescence_searcher_.Search(current_position_, -beta, -alpha);
+    return quiescence_searcher_.Search(current_position_, alpha, beta);
   }
 
   // lambda function to analyze a move
@@ -155,7 +154,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // check if there are no possible moves
   if (moves.empty())
   {
-    return Evaluator::GetGameResult(current_position_);
+    return Evaluator::GetGameResult(searching_for_, current_position_);
   }
 
   // check if we have already searched this position
