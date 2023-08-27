@@ -34,10 +34,9 @@ class Searcher
    * \param position The initial position.
    */
   explicit Searcher(const Position position = PositionFactory{}())
-      : searching_for_(position.GetSideToMove()),
-        current_position_(position),
+      : current_position_(position),
         move_generator_(MoveGenerator()),
-        quiescence_searcher_(position.GetSideToMove())
+        quiescence_searcher_()
   {}
 
   /**
@@ -76,8 +75,6 @@ class Searcher
   [[nodiscard]] Eval Search(size_t remaining_depth, Eval alpha, Eval beta);
 
  private:
-  Player searching_for_;
-
   Move best_move_;
 
   Position current_position_;  //!< Current position.
@@ -154,7 +151,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // check if there are no possible moves
   if (moves.empty())
   {
-    return Evaluator::GetGameResult(searching_for_, current_position_);
+    return Evaluator::GetGameResult(current_position_);
   }
 
   // check if we have already searched this position

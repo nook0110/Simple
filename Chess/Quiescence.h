@@ -11,7 +11,7 @@ class Quiescence
    * \brief Constructor.
    *
    */
-  explicit Quiescence(const Player searching_for) : evaluator_(searching_for) {}
+  explicit Quiescence() : evaluator_() {}
 
   /**
    * \brief Performs the alpha-beta search algorithm.
