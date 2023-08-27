@@ -100,7 +100,9 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
 
   for (size_t current_depth = 0; current_depth < depth;)
   {
-    static constexpr auto window_size = 10;
+    PrintInfo(DepthInfo{current_depth});
+
+    static constexpr auto window_size = 100;
     const auto eval = searcher_.Search<true>(current_depth, alpha, beta);
 
     // check if true eval is out of window
@@ -126,6 +128,11 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
 
     // increase the depth
     current_depth++;
+
+    PrintInfo(ScoreInfo{eval});
+
+    PrintInfo(
+        PrincipalVariation({GetCurrentBestMove(), GetTranspositionTable()}));
   }
 
   PrintBestMove();
@@ -154,10 +161,8 @@ inline void ChessEngine::ComputeBestMove(
   {
     PrintInfo(DepthInfo{current_depth});
 
-    static constexpr auto window_size = 10;
+    static constexpr auto window_size = 100;
     const auto eval = searcher_.Search<true>(current_depth, alpha, beta);
-
-    PrintInfo(ScoreInfo{eval});
 
     // check if true eval is out of window
     if (eval <= alpha)
@@ -194,6 +199,8 @@ inline void ChessEngine::ComputeBestMove(
       // reset last change
       last_best_move_change = 0;
     }
+
+    PrintInfo(ScoreInfo{eval});
 
     previous_best_move = GetCurrentBestMove();
 

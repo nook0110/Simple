@@ -52,6 +52,11 @@ class Position
    */
   void PlacePiece(const BitIndex square, const Piece piece, const Player color)
   {
+    if (piece == Piece::kKing)
+    {
+      king_positions_[static_cast<size_t>(color)] = square;
+    }
+
     assert(!board_[square]);
     assert(piece);
     board_[square] = piece;
@@ -198,11 +203,6 @@ class Position
    * \param player Player whose's side to move.
    */
   void SetSideToMove(const Player player) { side_to_move_ = player; }
-
-  void SetKingPositions(const BitIndex white_king, const BitIndex black_king)
-  {
-    king_positions_ = {white_king, black_king};
-  }
 
   [[nodiscard]] Bitboard GetAllPawnAttacks(Player player) const;
 

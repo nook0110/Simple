@@ -64,8 +64,7 @@ class SearchThread
     engine_.SetPosition(position);
     StopThread();
 
-    thread_ = std::thread(
-        [this] { engine_.ComputeBestMove(std::chrono::seconds(1)); });
+    thread_ = std::thread([this] { engine_.ComputeBestMove(4); });
   }
 
   void Stop()
@@ -255,7 +254,10 @@ inline void UciChessEngine::ParseGo(std::stringstream command)
 
   StartSearch();
 }
-inline void UciChessEngine::ParseStop(std::stringstream command) {}
+inline void UciChessEngine::ParseStop(std::stringstream command)
+{
+  StopSearch();
+}
 
 inline void UciChessEngine::ParseQuit(std::stringstream command)
 {

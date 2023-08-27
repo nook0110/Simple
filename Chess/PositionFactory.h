@@ -23,8 +23,6 @@ inline Position PositionFactory::operator()(const std::string& fen)
 
   auto current = fen.begin();
 
-  BitIndex white_king{}, black_king{};
-
   for (int row = kBoardSize - 1; row >= 0; --row)
   {
     size_t column = 0;
@@ -43,14 +41,6 @@ inline Position PositionFactory::operator()(const std::string& fen)
       auto square = row * kBoardSize + column;
       position.PlacePiece(square, piece, color);
 
-      if (piece == Piece::kKing)
-      {
-        if (color == Player::kWhite)
-          white_king = square;
-        else
-          black_king = square;
-      }
-
       assert(piece != Piece::kNone);
 
       ++column;
@@ -67,8 +57,6 @@ inline Position PositionFactory::operator()(const std::string& fen)
     position.SetSideToMove(Player::kBlack);
 
   // TODO: Attributes
-
-  position.SetKingPositions(white_king, black_king);
 
   return position;
 }
