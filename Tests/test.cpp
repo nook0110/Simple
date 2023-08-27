@@ -353,7 +353,7 @@ class BestMoveTest : public testing::TestWithParam<std::string>
   [[nodiscard]] Move GetAnswer() const
   {
     const auto move = GetMove();
-    return MoveFactory{}(move);
+    return Move{};
   }
 
  private:

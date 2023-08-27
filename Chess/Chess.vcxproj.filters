@@ -101,8 +101,11 @@
     <ClInclude Include="Player.h">
       <Filter>Файлы заголовков\Position</Filter>
     </ClInclude>
+    <ClInclude Include="Quiescence.h">
+      <Filter>Файлы заголовков\Engine\Searcher</Filter>
+    </ClInclude>
     <ClInclude Include="StreamUtility.h">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Uci</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

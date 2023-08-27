@@ -1,5 +1,4 @@
 #pragma once
-#include <algorithm>
 #include <array>
 #include <bitset>
 #include <cassert>
@@ -199,6 +198,11 @@ class Position
    * \param player Player whose's side to move.
    */
   void SetSideToMove(const Player player) { side_to_move_ = player; }
+
+  void SetKingPositions(const BitIndex white_king, const BitIndex black_king)
+  {
+    king_positions_ = {white_king, black_king};
+  }
 
   [[nodiscard]] Bitboard GetAllPawnAttacks(Player player) const;
 

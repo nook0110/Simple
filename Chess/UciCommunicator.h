@@ -20,7 +20,7 @@ class UciDebugPrinter final : public InfoPrinter
 
   void operator()(const DepthInfo& depth_info) const override
   {
-    // o_stream_ << "info depth " << depth_info.current_depth << std::endl;
+    o_stream_ << "info depth " << depth_info.current_depth << std::endl;
   }
 
   void operator()(const ScoreInfo& score_info) const override
@@ -30,26 +30,17 @@ class UciDebugPrinter final : public InfoPrinter
 
   void operator()(const NodePerSecondInfo& nps_info) const override
   {
-    o_stream_ << "info nps " << nps_info.nodes_per_second << std::endl;
+    // o_stream_ << "info nps " << nps_info.nodes_per_second << std::endl;
   }
 
   void operator()(const PrincipalVariation& principal_variation) const override
-  {
-    // o_stream_ << "info pv ";
-    for (const auto& move : principal_variation.moves)
-    {}
-    // o_stream_ << std::endl;
-  }
+  {}
 
   void operator()(const BestMove& best_move) const override
   {
-    if (best_move.move)
-    {
-      o_stream_ << "bestmove ";
-      std::visit([this](const auto& move) { o_stream_ << move; },
-                 best_move.move.value());
-      o_stream_ << std::endl;
-    }
+    o_stream_ << "bestmove ";
+    std::visit([this](const auto& move) { o_stream_ << move; }, best_move.move);
+    o_stream_ << std::endl;
   }
 
  private:
@@ -71,14 +62,8 @@ class SearchThread
   void Start(const Position position)
   {
     engine_.SetPosition(position);
-    Stop();
-    thread_ = std::thread(
-        [this] { engine_.ComputeBestMove(std::chrono::seconds(1)); });
-  }
+    StopThread();
 
-  void Start()
-  {
-    Stop();
     thread_ = std::thread(
         [this] { engine_.ComputeBestMove(std::chrono::seconds(1)); });
   }
@@ -86,13 +71,18 @@ class SearchThread
   void Stop()
   {
     engine_.PrintBestMove();
+    StopThread();
+  }
+
+ private:
+  void StopThread()
+  {
     if (thread_ && thread_.value().joinable())
     {
       thread_.value().join();
     }
   }
 
- private:
   ChessEngine engine_;
 
   std::optional<std::thread> thread_;
@@ -144,7 +134,7 @@ class UciChessEngine
 
 inline UciChessEngine::~UciChessEngine() { StopSearch(); }
 
-inline void UciChessEngine::StartSearch() { search_thread_.Start(); }
+inline void UciChessEngine::StartSearch() { search_thread_.Start(position); }
 
 inline void UciChessEngine::StopSearch() { search_thread_.Stop(); }
 
@@ -263,7 +253,7 @@ inline void UciChessEngine::ParseGo(std::stringstream command)
 {
   std::string token;
 
-  search_thread_.Start(std::move(position));
+  StartSearch();
 }
 inline void UciChessEngine::ParseStop(std::stringstream command) {}
 

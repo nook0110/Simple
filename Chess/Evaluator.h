@@ -1,7 +1,5 @@
 #pragma once
-#include <cassert>
 
-#include "MoveGenerator.h"
 #include "Position.h"
 
 namespace SimpleChessEngine
@@ -10,8 +8,8 @@ using Eval = int;
 
 enum class GamePhase
 {
-  kMG,
-  kEG
+  kMiddleGame,
+  kEndGame
 };
 
 constexpr size_t kGamePhases = 2;
@@ -25,10 +23,12 @@ struct TaperedEval
   std::array<Eval, kGamePhases> eval;
   [[nodiscard]] Eval operator()(PhaseValue pv) const
   {
-    if (pv < kPhaseValueLimits[0]) pv = kPhaseValueLimits[0];
-    if (pv > kPhaseValueLimits[1]) pv = kPhaseValueLimits[1];
-    return eval[0] * (kPhaseValueLimits[1] - pv) +
-           eval[1] * (pv - kPhaseValueLimits[0]);
+    /*
+    if (pv < kPhaseValueLimits[???0]) pv = kPhaseValueLimits[???0];
+    if (pv > kPhaseValueLimits[???1]) pv = kPhaseValueLimits[???1];
+    return eval[???0] * (kPhaseValueLimits[???1] - pv) +
+           eval[???1] * (pv - kPhaseValueLimits[???0]);
+           */
   }
 };
 
@@ -37,16 +37,46 @@ class Evaluator
  public:
   Eval operator()(const Position& position, Eval alpha, Eval beta) const;
 
-  [[nodiscard]] Eval GetGameResult(const Position& position) const
+  [[nodiscard]] static Eval GetGameResult(const Position& position)
   {
     // assert(MoveGenerator{}(const_cast<Position&>(position)).empty());
-    return Eval{};
+    return Eval{position.GetSideToMove() == Player::kWhite ? 10000 : -10000};
   }
 };
 
 inline Eval Evaluator::operator()(const Position& position, Eval alpha,
                                   Eval beta) const
 {
-  return Eval{};
-}
+  auto eval = Eval{};
+
+  constexpr std::array piece_value{0, 100, 250, 350, 550, 1000, 0};
+
+  // get all pieces
+  auto pieces = position.GetPieces(Player::kWhite);
+
+  // generate moves for each piece
+  while (const auto from = pieces.GetFirstBit())
+  {
+    // get first piece
+    pieces.Reset(*from);
+
+    eval += piece_value[static_cast<size_t>(position.GetPiece(*from))];
+  }
+
+  // get all pieces
+  pieces = position.GetPieces(Player::kBlack);
+
+  // generate moves for each piece
+  while (const auto from = pieces.GetFirstBit())
+  {
+    // get first piece
+    pieces.Reset(*from);
+
+    eval -= piece_value[static_cast<size_t>(position.GetPiece(*from))];
+  }
+
+  eval += position.GetSideToMove() == Player::kWhite ? 10 : -10;
+
+  return eval;
+}  // namespace SimpleChessEngine
 }  // namespace SimpleChessEngine

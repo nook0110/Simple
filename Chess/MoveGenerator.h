@@ -23,7 +23,7 @@ class MoveGenerator
    *
    * \return All possible moves for the given position.
    */
-  template <bool only_attacks = false>
+  template <bool only_attacks>
   [[nodiscard]] Moves GenerateMoves(Position& position) const;
 
  private:
@@ -46,7 +46,7 @@ class MoveGenerator
    *
    * \return All possible moves for the given square.
    */
-  template <bool only_attacks = false>
+  template <bool only_attacks>
   [[nodiscard]] Moves GenerateMovesForPiece(Position& position,
                                             BitIndex from) const;
 
@@ -59,7 +59,7 @@ class MoveGenerator
    *
    * \return All possible moves for the given square and piece.
    */
-  template <Piece piece, bool only_attacks = false>
+  template <Piece piece, bool only_attacks>
   [[nodiscard]] Moves GenerateMovesFromSquare(Position& position,
                                               BitIndex from) const;
 

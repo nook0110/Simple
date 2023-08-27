@@ -26,12 +26,13 @@ struct NodePerSecondInfo
 
 struct PrincipalVariation
 {
-  std::vector<Move> moves;
+  const Move& best_move;
+  const TranspositionTable& table;
 };
 
 struct BestMove
 {
-  std::optional<Move> move;
+  const Move& move;
 };
 
 class InfoPrinter
@@ -71,7 +72,9 @@ class ChessEngine
 
   void ComputeBestMove(std::chrono::milliseconds left_time);
 
-  [[nodiscard]] std::optional<Move> GetCurrentBestMove() const;
+  [[nodiscard]] const Move& GetCurrentBestMove() const;
+
+  [[nodiscard]] const TranspositionTable& GetTranspositionTable() const;
 
   void PrintBestMove() const
   {
@@ -98,7 +101,7 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
   for (size_t current_depth = 0; current_depth < depth;)
   {
     static constexpr auto window_size = 10;
-    const auto eval = searcher_.Search(current_depth, alpha, beta);
+    const auto eval = searcher_.Search<true>(current_depth, alpha, beta);
 
     // check if true eval is out of window
     if (eval <= alpha)
@@ -152,7 +155,9 @@ inline void ChessEngine::ComputeBestMove(
     PrintInfo(DepthInfo{current_depth});
 
     static constexpr auto window_size = 10;
-    const auto eval = searcher_.Search(current_depth, alpha, beta);
+    const auto eval = searcher_.Search<true>(current_depth, alpha, beta);
+
+    PrintInfo(ScoreInfo{eval});
 
     // check if true eval is out of window
     if (eval <= alpha)
@@ -190,19 +195,23 @@ inline void ChessEngine::ComputeBestMove(
       last_best_move_change = 0;
     }
 
-    previous_best_move = searcher_.GetCurrentBestMove();
-    if (searcher_.GetCurrentBestMove().has_value())
-    {
-      PrintInfo(PrincipalVariation({searcher_.GetCurrentBestMove().value()}));
-    }
+    previous_best_move = GetCurrentBestMove();
+
+    PrintInfo(
+        PrincipalVariation({GetCurrentBestMove(), GetTranspositionTable()}));
   }
 
   PrintBestMove();
 }
 
-inline std::optional<Move> ChessEngine::GetCurrentBestMove() const
+inline const Move& ChessEngine::GetCurrentBestMove() const
 {
   return searcher_.GetCurrentBestMove();
+}
+
+inline const TranspositionTable& ChessEngine::GetTranspositionTable() const
+{
+  return searcher_.GetTranspositionTable();
 }
 
 template <class Info>

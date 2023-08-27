@@ -26,6 +26,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MoveFactory.h" />
+    <ClInclude Include="Quiescence.h" />
     <ClInclude Include="StreamUtility.h" />
     <ClInclude Include="Piece.h" />
     <ClInclude Include="Player.h" />

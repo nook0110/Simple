@@ -9,7 +9,7 @@ using namespace SimpleChessEngine;
 template <bool only_attacks>
 MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const
 {
-  // create moves, max amount moves 218
+  // create moves
   Moves moves;
 
   // get all pieces
@@ -22,7 +22,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const
     pieces.Reset(*from);
 
     // generate moves for piece
-    auto moves_for_piece = GenerateMovesForPiece(position, *from);
+    auto moves_for_piece = GenerateMovesForPiece<only_attacks>(position, *from);
 
     // add moves
     moves.splice(moves.end(), moves_for_piece);
@@ -63,27 +63,33 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
   switch (piece)
   {
     case Piece::kPawn:
-      moves = GenerateMovesFromSquare<Piece::kPawn>(position, from);
+      moves =
+          GenerateMovesFromSquare<Piece::kPawn, only_attacks>(position, from);
       break;
     case Piece::kKnight:
       // generate knight moves
-      moves = GenerateMovesFromSquare<Piece::kKnight>(position, from);
+      moves =
+          GenerateMovesFromSquare<Piece::kKnight, only_attacks>(position, from);
       break;
     case Piece::kBishop:
       // generate bishop moves
-      moves = GenerateMovesFromSquare<Piece::kBishop>(position, from);
+      moves =
+          GenerateMovesFromSquare<Piece::kBishop, only_attacks>(position, from);
       break;
     case Piece::kRook:
       // generate rook moves
-      moves = GenerateMovesFromSquare<Piece::kRook>(position, from);
+      moves =
+          GenerateMovesFromSquare<Piece::kRook, only_attacks>(position, from);
       break;
     case Piece::kQueen:
       // generate queen moves
-      moves = GenerateMovesFromSquare<Piece::kQueen>(position, from);
+      moves =
+          GenerateMovesFromSquare<Piece::kQueen, only_attacks>(position, from);
       break;
     case Piece::kKing:
       // generate king moves
-      moves = GenerateMovesFromSquare<Piece::kKing>(position, from);
+      moves =
+          GenerateMovesFromSquare<Piece::kKing, only_attacks>(position, from);
       break;
     case Piece::kNone:
       assert(false);

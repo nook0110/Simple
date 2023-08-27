@@ -5,6 +5,7 @@
 #include "Evaluator.h"
 #include "MoveGenerator.h"
 #include "PositionFactory.h"
+#include "Quiescence.h"
 #include "TranspositionTable.h"
 
 namespace SimpleChessEngine
@@ -31,15 +32,15 @@ class Searcher
    * \brief Constructor.
    *
    * \param move_generator The move generator.
-   * \param evaluator The evaluator.
+   * \param quiescence_searcher Quiescence searcher.
    * \param position The initial position.
    */
   explicit Searcher(const Position position = PositionFactory{}(),
                     const MoveGenerator move_generator = MoveGenerator(),
-                    const Evaluator evaluator = Evaluator())
+                    const Quiescence quiescence_searcher = Quiescence())
       : current_position_(position),
         move_generator_(move_generator),
-        evaluator_(evaluator)
+        quiescence_searcher_(quiescence_searcher)
   {}
 
   /**
@@ -61,7 +62,9 @@ class Searcher
    *
    * \return The current best move.
    */
-  [[nodiscard]] std::optional<Move> GetCurrentBestMove() const;
+  [[nodiscard]] const Move& GetCurrentBestMove() const;
+
+  [[nodiscard]] const TranspositionTable& GetTranspositionTable() const;
 
   /**
    * \brief Performs the alpha-beta search algorithm.
@@ -72,13 +75,16 @@ class Searcher
    *
    * \return Evaluation of subtree.
    */
+  template <bool start_of_search>
   [[nodiscard]] Eval Search(size_t remaining_depth, Eval alpha, Eval beta);
 
  private:
+  Move best_move_;
+
   Position current_position_;  //!< Current position.
 
   MoveGenerator move_generator_;  //!< Move generator.
-  Evaluator evaluator_;           //!< Evaluator.
+  Quiescence quiescence_searcher_;
 
   TranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
@@ -97,19 +103,21 @@ inline const Position& Searcher::GetPosition() const
   return current_position_;
 }
 
-inline std::optional<Move> Searcher::GetCurrentBestMove() const
+inline const Move& Searcher::GetCurrentBestMove() const { return best_move_; }
+
+inline const TranspositionTable& Searcher::GetTranspositionTable() const
 {
-  return best_moves_[current_position_];
+  return best_moves_;
 }
 
-inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
-                             const Eval beta)
+template <bool start_of_search>
+Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
 {
   // return the evaluation of the current position if we have reached the end of
   // the search tree
   if (remaining_depth <= 0)
   {
-    return evaluator_(current_position_, alpha, beta);
+    return quiescence_searcher_.Search(current_position_, -beta, -alpha);
   }
 
   // lambda function to analyze a move
@@ -122,13 +130,23 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
     // make the move and search the tree
     current_position_.DoMove(move);
     auto temp_eval =
-        -Search(remaining_depth - 1, -analyzed_beta, -analyzed_alpha);
+        -Search<false>(remaining_depth - 1, -analyzed_beta, -analyzed_alpha);
 
     // undo the move
     current_position_.UndoMove(move, irreversible_data);
 
     // return the evaluation
     return temp_eval;
+  };
+  // lambda function that sets best move
+  auto set_best_move = [this](const Move& move)
+  {
+    best_moves_[current_position_] = move;
+
+    if constexpr (start_of_search)
+    {
+      best_move_ = move;
+    }
   };
 
   // get all the possible moves
@@ -137,7 +155,7 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
   // check if there are no possible moves
   if (moves.empty())
   {
-    return evaluator_.GetGameResult(current_position_);
+    return Evaluator::GetGameResult(current_position_);
   }
 
   // check if we have already searched this position
@@ -160,7 +178,7 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
 
   const auto& first_move = moves.front();
 
-  auto best_eval = analyze_move(first_move, -beta, -alpha);
+  auto best_eval = analyze_move(first_move, alpha, beta);
 
   if (best_eval > alpha)
   {
@@ -173,7 +191,7 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
   }
 
   // set best move
-  best_moves_[current_position_] = moves.front();
+  set_best_move(moves.front());
 
   // delete first move
   std::iter_swap(moves.begin(), std::prev(moves.end()));
@@ -187,12 +205,13 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
     // make the move and search the tree
     current_position_.DoMove(move);
 
-    auto temp_eval = -Search(remaining_depth - 1, -alpha - 1, -alpha);
+    // ZWS
+    auto temp_eval = -Search<false>(remaining_depth - 1, -alpha - 1, -alpha);
 
-    // update the best move
+    // make a research (ZWS failed)
     if (temp_eval > alpha && temp_eval < beta)
     {
-      temp_eval = -Search(remaining_depth - 1, -alpha, -beta);
+      temp_eval = -Search<false>(remaining_depth - 1, -beta, -alpha);
 
       if (temp_eval > alpha)
       {
@@ -208,12 +227,12 @@ inline Eval Searcher::Search(const size_t remaining_depth, Eval alpha,
       // check if we have found a better move
       if (temp_eval >= beta)
       {
-        best_moves_[current_position_] = move;
+        set_best_move(move);
 
         return beta;
       }
 
-      best_moves_[current_position_] = move;
+      set_best_move(move);
 
       best_eval = temp_eval;
     }
