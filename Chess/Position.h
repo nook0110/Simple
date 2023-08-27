@@ -54,7 +54,7 @@ class Position
   {
     if (piece == Piece::kKing)
     {
-      king_positions_[static_cast<size_t>(color)] = square;
+      king_position_[static_cast<size_t>(color)] = square;
     }
 
     assert(!board_[square]);
@@ -256,7 +256,7 @@ class Position
 
   std::array<Piece, kBoardArea> board_{};  //!< Current position of pieces
 
-  std::array<BitIndex, kColors> king_positions_{};
+  std::array<BitIndex, kColors> king_position_{};
 
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_king_{};
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
@@ -313,7 +313,7 @@ inline Piece Position::GetPiece(const BitIndex index) const
 
 inline BitIndex Position::GetKingSquare(const Player player) const
 {
-  return king_positions_[static_cast<size_t>(player)];
+  return king_position_[static_cast<size_t>(player)];
 }
 
 inline bool Position::IsUnderAttack(const BitIndex square,

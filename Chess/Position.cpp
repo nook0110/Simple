@@ -25,6 +25,9 @@ void Position::DoMove(const DefaultMove& move)
   RemovePiece(from, us);
   RemovePiece(to, them);
   PlacePiece(to, piece_to_move, us);
+
+  if (piece_to_move == Piece::kKing)
+    king_position_[static_cast<size_t>(us)] = to;
 }
 
 void Position::DoMove(const DoublePush& move)
@@ -106,6 +109,9 @@ void Position::UndoMove(const DefaultMove& move)
   RemovePiece(to, us);
   if (!!captured_piece) PlacePiece(to, captured_piece, them);
   PlacePiece(from, piece_to_move, us);
+
+  if (piece_to_move == Piece::kKing)
+    king_position_[static_cast<size_t>(us)] = from;
 }
 
 void Position::UndoMove(const DoublePush& move)
