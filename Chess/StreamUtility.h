@@ -55,6 +55,16 @@ inline std::ostream& operator<<(std::ostream& stream, const DefaultMove move)
 
   return stream;
 }
+inline std::ostream& operator<<(std::ostream& stream, const PawnPush move)
+{
+  const auto from = GetCoordinates(move.from);
+  const auto to = GetCoordinates(move.to);
+
+  PrintCoordinates(from, stream);
+  PrintCoordinates(to, stream);
+
+  return stream;
+}
 inline std::ostream& operator<<(std::ostream& stream, const DoublePush move)
 {
   const auto from = GetCoordinates(move.from);

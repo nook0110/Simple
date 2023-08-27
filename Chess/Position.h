@@ -90,6 +90,8 @@ class Position
    */
   void DoMove(const DefaultMove& move);
 
+  void DoMove(const PawnPush& move);
+
   void DoMove(const DoublePush& move);
 
   /**
@@ -126,6 +128,8 @@ class Position
    * \param move Move to do.
    */
   void UndoMove(const DefaultMove& move);
+
+  void UndoMove(const PawnPush& move);
 
   void UndoMove(const DoublePush& move);
 

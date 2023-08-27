@@ -301,7 +301,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
 
   if (!position.GetPiece(to))
   {
-    if (auto move = DefaultMove{from, to}; IsMoveValid(position, move))
+    if (auto move = PawnPush{from, to}; IsMoveValid(position, move))
     {
       moves.emplace_back(move);
     }

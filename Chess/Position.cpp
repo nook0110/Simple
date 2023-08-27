@@ -30,14 +30,21 @@ void Position::DoMove(const DefaultMove& move)
     king_position_[static_cast<size_t>(us)] = to;
 }
 
-void Position::DoMove(const DoublePush& move)
+void Position::DoMove(const PawnPush& move)
 {
-  const auto from = move.from;
+  const auto [from, to] = move;
 
   const auto us = side_to_move_;
 
-  const auto direction = kPawnMoveDirection[static_cast<size_t>(us)];
-  const auto to = Shift(Shift(from, direction), direction);
+  RemovePiece(from, us);
+  PlacePiece(to, Piece::kPawn, us);
+}
+
+void Position::DoMove(const DoublePush& move)
+{
+  const auto [from, to] = move;
+
+  const auto us = side_to_move_;
 
   irreversible_data_.en_croissant_square = std::midpoint(from, to);
 
@@ -112,6 +119,16 @@ void Position::UndoMove(const DefaultMove& move)
 
   if (piece_to_move == Piece::kKing)
     king_position_[static_cast<size_t>(us)] = from;
+}
+
+void Position::UndoMove(const PawnPush& move)
+{
+  const auto [from, to] = move;
+
+  const auto us = side_to_move_;
+
+  RemovePiece(to, us);
+  PlacePiece(from, Piece::kPawn, us);
 }
 
 void Position::UndoMove(const DoublePush& move)

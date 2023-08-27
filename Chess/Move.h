@@ -14,10 +14,16 @@ struct DefaultMove
   Piece captured_piece{};
 };
 
+struct PawnPush
+{
+  bool operator==(const PawnPush&) const = default;
+
+  BitIndex from{};
+  BitIndex to{};
+};
+
 struct DoublePush
 {
-  DoublePush(const BitIndex from, const BitIndex to) : from(from), to(to) {}
-
   bool operator==(const DoublePush&) const = default;
 
   BitIndex from{};
@@ -59,5 +65,5 @@ struct Castling
 };
 
 using Move =
-    std::variant<DefaultMove, DoublePush, EnCroissant, Promotion, Castling>;
+    std::variant<DefaultMove, PawnPush, DoublePush, EnCroissant, Promotion, Castling>;
 }  // namespace SimpleChessEngine
