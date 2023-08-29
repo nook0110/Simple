@@ -44,7 +44,7 @@ inline Move MoveFactory::operator()(const Position& position,
     if (!IsAdjacent(from, to))
     {
       static std::unordered_map<File, Castling::CastlingSide> castling_file = {
-          {1, Castling::CastlingSide::k000}, {6, Castling::CastlingSide::k00}};
+          {2, Castling::CastlingSide::k000}, {6, Castling::CastlingSide::k00}};
       static std::unordered_map<File, File> rook_from_file = {{1, 0}, {6, 7}};
 
       auto [king_file, king_rank] = GetCoordinates(to);

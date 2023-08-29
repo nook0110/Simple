@@ -64,7 +64,7 @@ class SearchThread
     engine_.SetPosition(position);
     StopThread();
 
-    thread_ = std::thread([this] { engine_.ComputeBestMove(5); });
+    thread_ = std::thread([this] { engine_.ComputeBestMove(6); });
   }
 
   void Stop()
