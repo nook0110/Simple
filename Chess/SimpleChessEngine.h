@@ -55,6 +55,13 @@ class InfoPrinter
 class ChessEngine
 {
  public:
+  struct SearchTimeInfo
+  {
+    std::array<size_t, 2> player_time;
+
+    std::array<size_t, 2> player_inc;
+  };
+
   explicit ChessEngine(
       const Position position = PositionFactory{}(),
       std::unique_ptr<InfoPrinter> printer = std::make_unique<InfoPrinter>())
@@ -79,6 +86,11 @@ class ChessEngine
   void PrintBestMove() const
   {
     printer_->operator()(BestMove{GetCurrentBestMove()});
+  }
+
+  void PrintBestMove(const Move& move) const
+  {
+    printer_->operator()(BestMove{move});
   }
 
  private:
@@ -144,18 +156,19 @@ inline void ChessEngine::ComputeBestMove(
     const std::chrono::milliseconds left_time)
 {
   const auto start_time = std::chrono::high_resolution_clock::now();
-  const auto time_for_move = left_time / 2;
-  static constexpr size_t max_last_best_move_change =
-      std::numeric_limits<size_t>::max();
+  const auto time_for_move = left_time / 4;
+  constexpr auto kTimeRatio = 30;
+  static constexpr size_t max_last_best_move_change = 3;
 
   auto alpha = std::numeric_limits<Eval>::min();
   auto beta = std::numeric_limits<Eval>::max();
 
-  std::optional<Move> previous_best_move{};
+  Move previous_best_move{};
   size_t last_best_move_change{};
   for (size_t current_depth = 1;
-       std::chrono::high_resolution_clock::now() - start_time <
-           time_for_move  // check if we have time for another iteration
+       time_for_move >
+           (std::chrono::high_resolution_clock::now() - start_time) *
+               kTimeRatio  // check if we have time for another iteration
        &&
        last_best_move_change < max_last_best_move_change  // check if best move
                                                           // changed recently
@@ -210,7 +223,7 @@ inline void ChessEngine::ComputeBestMove(
         PrincipalVariation({GetCurrentBestMove(), GetTranspositionTable()}));
   }
 
-  PrintBestMove();
+  PrintBestMove(previous_best_move);
 }
 
 inline const Move& ChessEngine::GetCurrentBestMove() const

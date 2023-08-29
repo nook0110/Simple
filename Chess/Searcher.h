@@ -44,7 +44,7 @@ class Searcher
    *
    * \param position New position.
    */
-  void SetPosition(Position position);
+  void SetPosition(const Position& position);
 
   /**
    * \brief Returns the current position.
@@ -89,7 +89,7 @@ class Searcher
 
 namespace SimpleChessEngine
 {
-inline void Searcher::SetPosition(const Position position)
+inline void Searcher::SetPosition(const Position& position)
 {
   current_position_ = position;
 }
