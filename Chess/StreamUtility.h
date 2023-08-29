@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <iostream>
 #include <ostream>
 #include <unordered_map>
@@ -92,6 +93,10 @@ inline std::ostream& operator<<(std::ostream& stream, const Promotion move)
 
   PrintCoordinates(from, stream);
   PrintCoordinates(to, stream);
+
+  constexpr std::array pieces_name = {' ', 'p', 'n', 'b', 'r', 'q', 'k'};
+
+  std::cout << pieces_name[static_cast<size_t>(move.promoted_to)];
 
   return stream;
 }

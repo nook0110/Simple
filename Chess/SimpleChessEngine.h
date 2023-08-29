@@ -98,6 +98,8 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
   auto alpha = std::numeric_limits<Eval>::min() / 2;
   auto beta = std::numeric_limits<Eval>::max() / 2;
 
+  PrintInfo(ScoreInfo{searcher_.Search<true>(0, alpha, beta)});
+
   for (size_t current_depth = 1; current_depth < depth;)
   {
     PrintInfo(DepthInfo{current_depth});

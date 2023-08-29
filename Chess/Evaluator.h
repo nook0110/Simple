@@ -42,7 +42,7 @@ class Evaluator
   [[nodiscard]] static Eval GetGameResult(const Position& position)
   {
     // assert(MoveGenerator{}(const_cast<Position&>(position)).empty());
-    return Eval{(position.GetSideToMove() == Player::kWhite) ? 10000 : -10000};
+    return -10000;
   }
 };
 
@@ -79,6 +79,6 @@ inline Eval Evaluator::operator()(const Position& position, Eval alpha,
 
   eval += position.GetSideToMove() == Player::kWhite ? 10 : -10;
 
-  return eval;
+  return position.GetSideToMove() == Player::kWhite ? eval : -eval;
 }  // namespace SimpleChessEngine
 }  // namespace SimpleChessEngine
