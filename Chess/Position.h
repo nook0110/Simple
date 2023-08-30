@@ -165,7 +165,7 @@ class Position
    *
    * \return Hash of the position.
    */
-  [[nodiscard]] Hash GetHash() const { return Hash{}; }
+  [[nodiscard]] Hash GetHash() const { return hash_; }
 
   /**
    * \brief Gets all pieces on the board.
