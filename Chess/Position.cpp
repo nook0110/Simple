@@ -15,6 +15,7 @@ void Position::DoMove(const Move& move)
   std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
              move);
   side_to_move_ = Flip(side_to_move_);
+  hash_ ^= hasher_.stm_hash;
 }
 
 void Position::DoMove(const DefaultMove& move)
@@ -113,6 +114,7 @@ void Position::UndoMove(const Move& move, const IrreversibleData& data)
   {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
   }
+  hash_ ^= hasher_.stm_hash;
   side_to_move_ = Flip(side_to_move_);
   std::visit([this](const auto& unwrapped_move) { UndoMove(unwrapped_move); },
              move);
