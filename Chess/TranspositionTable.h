@@ -13,7 +13,7 @@ class TranspositionTable
   struct Node
   {
     Move move;
-    Hash true_hash;
+    Hash true_hash{};
     // sth else...
   };
 
@@ -33,7 +33,7 @@ class TranspositionTable
   }
 
  private:
-  static constexpr size_t kSize = 1 << 15;             //!< Size of the table.
-  std::array<Node, kSize> table_;  //!< The table.
+  static constexpr size_t kSize = 1 << 15;  //!< Size of the table.
+  std::array<Node, kSize> table_;           //!< The table.
 };
 }  // namespace SimpleChessEngine

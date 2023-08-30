@@ -137,7 +137,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // lambda function that sets best move
   auto set_best_move = [this](const Move& move)
   {
-    best_moves_[current_position_] = { move, current_position_.GetHash() };
+    best_moves_[current_position_] = {move, current_position_.GetHash()};
 
     if constexpr (start_of_search)
     {
@@ -163,9 +163,8 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
     std::iter_swap(std::ranges::find(moves, best_move), moves.begin());
 
     // sort all moves except first (PV-move)
-    std::stable_sort(std::next(moves.begin()), moves.end(),
-                     [](const Move& first, const Move& second)
-                     { return false; });
+
+    // TODO:
   }
   else
   {

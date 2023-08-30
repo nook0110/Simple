@@ -335,21 +335,52 @@ TEST(GenerateMoves, ShannonNumberCheck)
 
   static constexpr std::array<size_t, max_plies + 1> shannon_number = {
       1, 20, 400, 8902, 197281, 4865609, 119060324};
-  static constexpr std::array<size_t, max_plies + 1> en_croissants = {
+  static constexpr std::array<size_t, max_plies + 1> en_croissants_answer = {
       0, 0, 0, 0, 0, 258, 5248};
-  static constexpr std::array<size_t, max_plies + 1> castlings = {0, 0, 0, 0,
-                                                                  0, 0, 0};
+  static constexpr std::array<size_t, max_plies + 1> castlings_answer = {
+      0, 0, 0, 0, 0, 0, 0};
 
   for (size_t depth = 0; depth <= max_plies; ++depth)
   {
-    auto game_info = CountPossibleGames(start_position, depth);
+    auto [possible_games, en_croissants, castlings, ends_of_game] =
+        CountPossibleGames(start_position, depth);
 
     ASSERT_EQ(start_position, PositionFactory{}());
-    ASSERT_EQ(game_info.possible_games, shannon_number[depth]);
-    ASSERT_EQ(game_info.en_croissants, en_croissants[depth]);
-    ASSERT_EQ(game_info.castlings, castlings[depth]);
+    ASSERT_EQ(possible_games, shannon_number[depth]);
+    ASSERT_EQ(en_croissants, en_croissants_answer[depth]);
+    ASSERT_EQ(castlings, castlings_answer[depth]);
   }
 }
+
+struct GenTestCase
+{
+  std::string fen;
+
+  GameInfo info;
+};
+
+class GenerateMovesTest : public testing::TestWithParam<GenTestCase>
+{
+ protected:
+  void SetUp() override
+  {
+    const auto& [fen, info] = GetParam();
+
+    info_ = info;
+  }
+
+  [[nodiscard]] const Position& GetPosition() const { return position_; }
+
+  [[nodiscard]] const GameInfo& GetInfo() const { return info_; }
+
+ private:
+  void GeneratePosition() { position_ = PositionFactory{}(GetParam().fen); }
+
+  GameInfo info_;
+  Position position_;
+};
+
+TEST_P(GenerateMovesTest, Perft) {}
 }  // namespace MoveGeneratorTests
 
 namespace BestMoveTests
@@ -382,8 +413,8 @@ class BestMoveTest : public testing::TestWithParam<std::string>
  protected:
   void SetUp() override
   {
-    position_ = GeneratePosition();
-    answer_ = GenerateAnswer();
+    GeneratePosition();
+    GenerateAnswer();
   }
 
   [[nodiscard]] const Position& GetPosition() const { return position_; }
@@ -391,16 +422,16 @@ class BestMoveTest : public testing::TestWithParam<std::string>
   [[nodiscard]] const Move& GetAnswer() const { return answer_; }
 
  private:
-  [[nodiscard]] Position GeneratePosition() const
+  void GeneratePosition()
   {
     const auto fen = GetFen();
-    return PositionFactory{}(fen);
+    position_ = PositionFactory{}(fen);
   }
 
-  [[nodiscard]] Move GenerateAnswer()
+  void GenerateAnswer()
   {
     const auto move = GetMove();
-    return MoveFactory{}(GetPosition(), move);
+    answer_ = MoveFactory{}(GetPosition(), move);
   }
 
  private:

@@ -11,17 +11,21 @@ using Hash = uint64_t;
 struct Hasher
 {
   template <class RNG>
-  Hasher(RNG generator)
+  explicit Hasher(RNG generator)
   {
     for (auto& board : psqt_hash)
     {
       std::generate(board.begin(), board.end(), generator);
     }
-    std::generate(en_croissant_hash.begin(), en_croissant_hash.end(), generator);
+    std::generate(en_croissant_hash.begin(), en_croissant_hash.end(),
+                  generator);
     stm_hash = generator();
   }
-  std::array<std::array<Hash, kBoardArea>, kPieceTypes> psqt_hash;
-  std::array<Hash, kLineSize> en_croissant_hash;
+
+  bool operator==(const Hasher&) const = default;
+
+  std::array<std::array<Hash, kBoardArea>, kPieceTypes> psqt_hash{};
+  std::array<Hash, kLineSize> en_croissant_hash{};
   Hash stm_hash;
 };
 }  // namespace SimpleChessEngine
