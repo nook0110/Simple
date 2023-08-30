@@ -13,6 +13,12 @@
 
 namespace SimpleChessEngine
 {
+struct Info
+{
+  Position position;
+  ChessEngine::SearchTimeInfo info;
+};
+
 class UciDebugPrinter final : public InfoPrinter
 {
  public:
@@ -59,12 +65,18 @@ class SearchThread
                 std::make_unique<UciDebugPrinter>(o_stream))
   {}
 
-  void Start(const Position position)
+  void Start(const Info& info)
   {
-    engine_.SetPosition(position);
     StopThread();
+    engine_.SetPosition(info.position);
 
-    thread_ = std::thread([this] { engine_.ComputeBestMove(6); });
+    thread_ = std::thread(
+        [this, &info]
+        {
+          engine_.ComputeBestMove(std::chrono::milliseconds(
+              info.info.player_time[static_cast<size_t>(
+                  info.position.GetSideToMove())]));
+        });
   }
 
   void Stop()
@@ -110,9 +122,11 @@ class UciChessEngine
   void ParseUciNewGame(std::stringstream command);
   void ParseFen(const std::string& fen);
   void ParseStartPos();
-  void ParseMoves(const std::stringstream command);
+  void ParseMoves(std::stringstream command);
   void ParsePosition(std::stringstream command);
   void ParseGo(std::stringstream command);
+  void ParseMoveTime(std::stringstream command);
+  void ParsePlayersTime(std::stringstream command);
   void ParseStop(std::stringstream command);
   void ParseQuit(std::stringstream command);
 
@@ -126,14 +140,14 @@ class UciChessEngine
 
   SearchThread search_thread_;
 
-  Position position;
+  Info info_;
 
   bool quit_ = false;
 };
 
 inline UciChessEngine::~UciChessEngine() { StopSearch(); }
 
-inline void UciChessEngine::StartSearch() { search_thread_.Start(position); }
+inline void UciChessEngine::StartSearch() { search_thread_.Start(info_); }
 
 inline void UciChessEngine::StopSearch() { search_thread_.Stop(); }
 
@@ -205,10 +219,13 @@ inline void UciChessEngine::ParseUciNewGame(std::stringstream command) {}
 
 inline void UciChessEngine::ParseFen(const std::string& fen)
 {
-  position = PositionFactory{}(fen);
+  info_.position = PositionFactory{}(fen);
 }
 
-inline void UciChessEngine::ParseStartPos() { position = PositionFactory{}(); }
+inline void UciChessEngine::ParseStartPos()
+{
+  info_.position = PositionFactory{}();
+}
 
 inline void UciChessEngine::ParseMoves(std::stringstream command)
 {
@@ -216,7 +233,7 @@ inline void UciChessEngine::ParseMoves(std::stringstream command)
   while (!command.eof())
   {
     command >> move;
-    position.DoMove(MoveFactory{}(position, move));
+    info_.position.DoMove(MoveFactory{}(info_.position, move));
   }
 }
 
@@ -251,9 +268,68 @@ inline void UciChessEngine::ParsePosition(std::stringstream command)
 inline void UciChessEngine::ParseGo(std::stringstream command)
 {
   std::string token;
+  command >> token;
+  if (token == "wtime")
+  {
+    ParsePlayersTime(std::move(command));
+  }
+  if (token == "movetime")
+  {
+    ParseMoveTime(std::move(command));
+  }
 
   StartSearch();
 }
+
+inline void UciChessEngine::ParseMoveTime(std::stringstream command)
+{
+  std::string token;
+  command >> token;
+  const auto time = std::stoi(token);
+
+  info_.info.player_time[static_cast<size_t>(info_.position.GetSideToMove())] =
+      time;
+}
+
+inline void UciChessEngine::ParsePlayersTime(std::stringstream command)
+{
+  auto cur_player = Player::kWhite;
+
+  std::string token;
+
+  std::array<size_t, 2>* cur_change = &info_.info.player_time;
+  while (command >> token)
+  {
+    if (token == "wtime")
+    {
+      cur_change = &info_.info.player_time;
+      cur_player = Player::kWhite;
+      continue;
+    }
+    if (token == "btime")
+    {
+      cur_change = &info_.info.player_time;
+      cur_player = Player::kBlack;
+      continue;
+    }
+    if (token == "winc")
+    {
+      cur_change = &info_.info.player_inc;
+      cur_player = Player::kWhite;
+      continue;
+    }
+    if (token == "binc")
+    {
+      cur_change = &info_.info.player_inc;
+      cur_player = Player::kBlack;
+      continue;
+    }
+
+    const auto time = std::stoi(token);
+    (*cur_change)[static_cast<size_t>(cur_player)] = time;
+  }
+}
+
 inline void UciChessEngine::ParseStop(std::stringstream command)
 {
   StopSearch();

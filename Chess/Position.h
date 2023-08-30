@@ -121,7 +121,7 @@ class Position
    *
    * \param move Move to undo.
    */
-  void UndoMove(const Move& move, const IrreversibleData data);
+  void UndoMove(const Move& move, const IrreversibleData& data);
 
   /**
    * \brief Does given move.

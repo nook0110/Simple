@@ -95,7 +95,7 @@ void Position::DoMove(const Castling& move)
   PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us);
 }
 
-void Position::UndoMove(const Move& move, const IrreversibleData data)
+void Position::UndoMove(const Move& move, const IrreversibleData& data)
 {
   irreversible_data_ = data;
 
