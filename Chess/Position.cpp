@@ -7,7 +7,11 @@ using namespace SimpleChessEngine;
 
 void Position::DoMove(const Move& move)
 {
-  irreversible_data_.en_croissant_square.reset();
+  if (auto& ep_square = irreversible_data_.en_croissant_square; ep_square.has_value())
+  {
+    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
+    irreversible_data_.en_croissant_square.reset();
+  }
   std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
              move);
   side_to_move_ = Flip(side_to_move_);
@@ -23,7 +27,7 @@ void Position::DoMove(const DefaultMove& move)
   const auto piece_to_move = board_[from];
 
   RemovePiece(from, us);
-  RemovePiece(to, them);
+  if (!!captured_piece) RemovePiece(to, them);
   PlacePiece(to, piece_to_move, us);
 
   if (piece_to_move == Piece::kKing)
@@ -43,9 +47,11 @@ void Position::DoMove(const PawnPush& move)
 void Position::DoMove(const DoublePush& move)
 {
   const auto [from, to] = move;
+  const auto file = GetCoordinates(from).first;
 
   const auto us = side_to_move_;
 
+  hash_ ^= hasher_.en_croissant_hash[file];
   irreversible_data_.en_croissant_square = std::midpoint(from, to);
 
   RemovePiece(from, us);
@@ -76,7 +82,7 @@ void Position::DoMove(const Promotion& move)
   const auto them = Flip(us);
 
   RemovePiece(from, us);
-  RemovePiece(to, them);
+  if (!!captured_piece) RemovePiece(to, them);
   PlacePiece(to, promoted_to, us);
 }
 
@@ -97,8 +103,16 @@ void Position::DoMove(const Castling& move)
 
 void Position::UndoMove(const Move& move, const IrreversibleData& data)
 {
+  auto& ep_square = irreversible_data_.en_croissant_square;
+  if (ep_square.has_value())
+  {
+    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
+  }
   irreversible_data_ = data;
-
+  if (ep_square.has_value())
+  {
+    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
+  }
   side_to_move_ = Flip(side_to_move_);
   std::visit([this](const auto& unwrapped_move) { UndoMove(unwrapped_move); },
              move);
