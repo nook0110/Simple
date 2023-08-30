@@ -297,21 +297,22 @@ struct GameInfo
 
   const auto moves = MoveGenerator{}.GenerateMoves<false>(position);
 
-  if (moves.empty()) return {1, 0, 0, 1};
-
-  for (const auto& move : moves)
-  {
-    if (std::get_if<EnCroissant>(&move))
-    {
-      answer.en_croissants++;
-    }
-    if (std::get_if<Castling>(&move))
-    {
-      answer.castlings++;
-    }
-  }
   if (depth == 1)
   {
+    for (const auto& move : moves)
+    {
+      if (std::get_if<EnCroissant>(&move))
+      {
+        answer.en_croissants++;
+      }
+      if (std::get_if<Castling>(&move))
+      {
+        answer.castlings++;
+      }
+    }
+
+    if (moves.empty()) answer.ends_of_game += 1;
+
     answer.possible_games = moves.size();
     return answer;
   }
@@ -339,6 +340,8 @@ TEST(GenerateMoves, ShannonNumberCheck)
       0, 0, 0, 0, 0, 258, 5248};
   static constexpr std::array<size_t, max_plies + 1> castlings_answer = {
       0, 0, 0, 0, 0, 0, 0};
+  static constexpr std::array<size_t, max_plies> ends_of_game_answer = {
+      0, 0, 0, 0, 8, 347};
 
   for (size_t depth = 0; depth <= max_plies; ++depth)
   {
@@ -349,6 +352,7 @@ TEST(GenerateMoves, ShannonNumberCheck)
     ASSERT_EQ(possible_games, shannon_number[depth]);
     ASSERT_EQ(en_croissants, en_croissants_answer[depth]);
     ASSERT_EQ(castlings, castlings_answer[depth]);
+    ASSERT_EQ(ends_of_game, ends_of_game_answer[depth - 1]);
   }
 }
 
@@ -356,7 +360,7 @@ struct GenTestCase
 {
   std::string fen;
 
-  GameInfo info;
+  std::vector<GameInfo> infos;
 };
 
 class GenerateMovesTest : public testing::TestWithParam<GenTestCase>
@@ -364,23 +368,56 @@ class GenerateMovesTest : public testing::TestWithParam<GenTestCase>
  protected:
   void SetUp() override
   {
-    const auto& [fen, info] = GetParam();
-
-    info_ = info;
+    const auto& [fen, infos] = GetParam();
+    infos_ = infos;
   }
 
   [[nodiscard]] const Position& GetPosition() const { return position_; }
 
-  [[nodiscard]] const GameInfo& GetInfo() const { return info_; }
+  [[nodiscard]] const GameInfo& GetInfo(const size_t depth) const
+  {
+    return infos_[depth];
+  }
+
+  [[nodiscard]] const size_t& GetMaxDepth() const { return infos_.size(); }
 
  private:
   void GeneratePosition() { position_ = PositionFactory{}(GetParam().fen); }
 
-  GameInfo info_;
+  std::vector<GameInfo> infos_;
   Position position_;
 };
 
-TEST_P(GenerateMovesTest, Perft) {}
+TEST_P(GenerateMovesTest, Perft)
+{
+  auto position = GetPosition();
+
+  for (size_t depth = 1; depth <= GetMaxDepth(); ++depth)
+  {
+    auto [possible_games, en_croissants, castlings, ends_of_game] =
+        CountPossibleGames(position, depth);
+
+    const auto& [possible_games_answer, en_croissants_answer, castlings_answer,
+                 ends_of_game_answer] = GetInfo(depth);
+
+    ASSERT_EQ(position, GetPosition());
+    ASSERT_EQ(possible_games, possible_games_answer);
+    ASSERT_EQ(en_croissants, en_croissants_answer);
+    ASSERT_EQ(castlings, castlings_answer);
+  }
+}
+
+INSTANTIATE_TEST_CASE_P(
+    PerftTests, GenerateMovesTest,
+    testing::Values(GenTestCase{
+        R"(r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - )",
+        {
+            {48, 0, 2, 0},                // depth 1
+            {2039, 1, 91, 0},             // depth 2
+            {97862, 45, 3162, 1},         // depth 3
+            {4085603, 1929, 128013, 43},  // depth 3
+            {193690690, 45, 3162, 1},     // depth 3
+        }}));
 }  // namespace MoveGeneratorTests
 
 namespace BestMoveTests
@@ -434,7 +471,6 @@ class BestMoveTest : public testing::TestWithParam<std::string>
     answer_ = MoveFactory{}(GetPosition(), move);
   }
 
- private:
   [[nodiscard]] std::string GetFen() const
   {
     const auto& epd = GetParam();
@@ -466,7 +502,7 @@ class BestMoveTest : public testing::TestWithParam<std::string>
 
 TEST_P(BestMoveTest, FindBestMove)
 {
-  const auto position = GetPosition();
+  const auto& position = GetPosition();
 
   const auto first_answer =
       ComputeBestMoveByTime(position, std::chrono::seconds(10));
