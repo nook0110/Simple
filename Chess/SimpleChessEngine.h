@@ -158,7 +158,7 @@ inline void ChessEngine::ComputeBestMove(
   const auto start_time = std::chrono::high_resolution_clock::now();
   const auto time_for_move = left_time / 4;
   constexpr auto kTimeRatio = 30;
-  static constexpr size_t max_last_best_move_change = 3;
+  static constexpr size_t max_last_best_move_change = 5;
 
   auto alpha = std::numeric_limits<Eval>::min();
   auto beta = std::numeric_limits<Eval>::max();
