@@ -255,7 +255,7 @@ TEST(DoMove, DoAndUndoEqualZero)
   const auto start_pos = PositionFactory{}();
   Position pos = start_pos;
 
-  for (const auto moves = MoveGenerator{}.GenerateMoves(pos);
+  for (const auto moves = MoveGenerator{}.GenerateMoves<false>(pos);
        const auto& move : moves)
   {
     const auto irreversible_data = pos.GetIrreversibleData();
@@ -269,17 +269,52 @@ TEST(DoMove, DoAndUndoEqualZero)
 
 namespace MoveGeneratorTests
 {
-[[nodiscard]] size_t CountPossibleGames(Position& position, const size_t depth)
+struct GameInfo
 {
-  if (depth == 0) return 1;
+  size_t possible_games;
 
-  size_t answer{};
+  size_t en_croissants;
+  size_t castlings;
 
-  const auto moves = MoveGenerator{}.GenerateMoves(position);
+  size_t ends_of_game;
 
-  if (moves.empty()) return 1;
+  GameInfo& operator+=(const GameInfo& other)
+  {
+    possible_games += other.possible_games;
+    en_croissants += other.en_croissants;
+    castlings += other.castlings;
+    ends_of_game += other.ends_of_game;
+    return *this;
+  }
+};
 
-  if (depth == 1) return moves.size();
+[[nodiscard]] GameInfo CountPossibleGames(Position& position,
+                                          const size_t depth)
+{
+  if (depth == 0) return {1, 0, 0, 0};
+
+  GameInfo answer{};
+
+  const auto moves = MoveGenerator{}.GenerateMoves<false>(position);
+
+  if (moves.empty()) return {1, 0, 0, 1};
+
+  for (const auto& move : moves)
+  {
+    if (std::get_if<EnCroissant>(&move))
+    {
+      answer.en_croissants++;
+    }
+    if (std::get_if<Castling>(&move))
+    {
+      answer.castlings++;
+    }
+  }
+  if (depth == 1)
+  {
+    answer.possible_games = moves.size();
+    return answer;
+  }
 
   for (const auto& move : moves)
   {
@@ -287,11 +322,6 @@ namespace MoveGeneratorTests
     position.DoMove(move);
     answer += CountPossibleGames(position, depth - 1);
     position.UndoMove(move, irreversible_data);
-  }
-
-  if (answer > 100000)
-  {
-    std::cout << answer << " ";
   }
 
   return answer;
@@ -303,15 +333,21 @@ TEST(GenerateMoves, ShannonNumberCheck)
 
   constexpr size_t max_plies = 6;
 
-  constexpr std::array<size_t, max_plies + 1> shannon_number = {
+  static constexpr std::array<size_t, max_plies + 1> shannon_number = {
       1, 20, 400, 8902, 197281, 4865609, 119060324};
+  static constexpr std::array<size_t, max_plies + 1> en_croissants = {
+      0, 0, 0, 0, 0, 258, 5248};
+  static constexpr std::array<size_t, max_plies + 1> castlings = {0, 0, 0, 0,
+                                                                  0, 0, 0};
 
   for (size_t depth = 0; depth <= max_plies; ++depth)
   {
-    auto possible_games = CountPossibleGames(start_position, depth);
+    auto game_info = CountPossibleGames(start_position, depth);
 
     ASSERT_EQ(start_position, PositionFactory{}());
-    ASSERT_EQ(possible_games, shannon_number[depth]);
+    ASSERT_EQ(game_info.possible_games, shannon_number[depth]);
+    ASSERT_EQ(game_info.en_croissants, en_croissants[depth]);
+    ASSERT_EQ(game_info.castlings, castlings[depth]);
   }
 }
 }  // namespace MoveGeneratorTests
@@ -331,7 +367,7 @@ std::optional<Move> ComputeBestMoveByTime(
 }
 
 std::optional<Move> ComputeBestMoveByDepth(const Position& position,
-                                           const size_t depth = 20)
+                                           const size_t depth = 5)
 {
   ChessEngine engine;
   engine.SetPosition(position);
@@ -344,16 +380,27 @@ std::optional<Move> ComputeBestMoveByDepth(const Position& position,
 class BestMoveTest : public testing::TestWithParam<std::string>
 {
  protected:
+  void SetUp() override
+  {
+    position_ = GeneratePosition();
+    answer_ = GenerateAnswer();
+  }
+
+  [[nodiscard]] const Position& GetPosition() const { return position_; }
+
+  [[nodiscard]] const Move& GetAnswer() const { return answer_; }
+
+ private:
   [[nodiscard]] Position GeneratePosition() const
   {
     const auto fen = GetFen();
     return PositionFactory{}(fen);
   }
 
-  [[nodiscard]] Move GetAnswer() const
+  [[nodiscard]] Move GenerateAnswer()
   {
     const auto move = GetMove();
-    return Move{};
+    return MoveFactory{}(GetPosition(), move);
   }
 
  private:
@@ -381,14 +428,18 @@ class BestMoveTest : public testing::TestWithParam<std::string>
 
     return epd.substr(move_start + 1, end_of_move - move_start);
   }
+
+  Position position_;
+  Move answer_;
 };
 
 TEST_P(BestMoveTest, FindBestMove)
 {
-  const auto position = GeneratePosition();
+  const auto position = GetPosition();
 
-  const auto first_answer = ComputeBestMoveByTime(position);
-  const auto second_answer = ComputeBestMoveByDepth(position);
+  const auto first_answer =
+      ComputeBestMoveByTime(position, std::chrono::seconds(10));
+  const auto second_answer = ComputeBestMoveByDepth(position, 8);
 
   ASSERT_EQ(first_answer, GetAnswer());
   ASSERT_EQ(second_answer, GetAnswer());
