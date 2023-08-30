@@ -162,7 +162,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
     // find the best move in moves
 
     if (const auto pv = std::ranges::find(moves, best_move); pv != moves.end())
-      std::iter_swap(std::ranges::find(moves, best_move), moves.begin());
+      std::iter_swap(pv, moves.begin());
 
     // sort all moves except first (PV-move)
 

@@ -277,8 +277,9 @@ MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
       }
       else if (position.GetEnCroissantSquare() == to)
       {
-        if (IsMoveValid(position, move))
-          moves.emplace_back(EnCroissant{from, to});
+        if (const EnCroissant en_croissant{from, to};
+            IsMoveValid(position, en_croissant))
+          moves.emplace_back(en_croissant);
       }
     }
   }
