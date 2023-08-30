@@ -13,24 +13,27 @@ class TranspositionTable
   struct Node
   {
     Move move;
+    Hash true_hash;
     // sth else...
   };
 
-  [[nodiscard]] bool Contains(const Position& position) const { return false; }
-
-  std::optional<Move>& operator[](const Position& position)
+  [[nodiscard]] bool Contains(const Position& position) const
   {
-    return table_[hasher_(position)];
+    return position.GetHash() == operator[](position).true_hash;
   }
 
-  const std::optional<Move>& operator[](const Position& position) const
+  Node& operator[](const Position& position)
   {
-    return table_[hasher_(position)];
+    return table_[position.GetHash() & (kSize - 1)];
+  }
+
+  const Node& operator[](const Position& position) const
+  {
+    return table_[position.GetHash() & (kSize - 1)];
   }
 
  private:
-  static constexpr size_t kSize = 10;             //!< Size of the table.
-  std::array<std::optional<Move>, kSize> table_;  //!< The table.
-  Hasher hasher_;                                 //!< The hasher.
+  static constexpr size_t kSize = 1 << 15;             //!< Size of the table.
+  std::array<Node, kSize> table_;  //!< The table.
 };
 }  // namespace SimpleChessEngine

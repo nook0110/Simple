@@ -137,7 +137,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // lambda function that sets best move
   auto set_best_move = [this](const Move& move)
   {
-    best_moves_[current_position_] = move;
+    best_moves_[current_position_] = { move, current_position_.GetHash() };
 
     if constexpr (start_of_search)
     {
@@ -157,7 +157,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // check if we have already searched this position
   if (best_moves_.Contains(current_position_))
   {
-    const auto& best_move = best_moves_[current_position_];
+    const auto& best_move = best_moves_[current_position_].move;
 
     // find the best move in moves
     std::iter_swap(std::ranges::find(moves, best_move), moves.begin());

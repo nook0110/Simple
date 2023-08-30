@@ -2,6 +2,7 @@
 #include <array>
 #include <bitset>
 #include <cassert>
+#include <random>
 
 #include "Attacks.h"
 #include "Bitboard.h"
@@ -57,7 +58,7 @@ class Position
     board_[square] = piece;
     pieces_by_color_[static_cast<size_t>(color)].Set(square);
     pieces_by_type_[static_cast<size_t>(piece)].Set(square);
-    // TODO: hash update
+    hash_ ^= hasher_.psqt_hash[static_cast<size_t>(piece)][square];
   }
 
   /**
@@ -73,7 +74,7 @@ class Position
     pieces_by_type_[static_cast<size_t>(piece)].Reset(square);
     pieces_by_color_[static_cast<size_t>(color)].Reset(square);
     board_[square] = Piece::kNone;
-    // TODO: hash update
+    hash_ ^= hasher_.psqt_hash[static_cast<size_t>(piece)][square];
   }
 
   /**
@@ -264,6 +265,9 @@ class Position
 
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_king_{};
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
+
+  Hash hash_{};
+  Hasher hasher_{std::mt19937_64(80085)};
 };
 
 inline Bitboard Position::GetAllPieces() const
