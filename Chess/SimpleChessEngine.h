@@ -27,7 +27,6 @@ struct NodePerSecondInfo
 struct PrincipalVariation
 {
   const Move& best_move;
-  const TranspositionTable& table;
 };
 
 struct BestMove
@@ -144,9 +143,6 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
     current_depth++;
 
     PrintInfo(ScoreInfo{eval});
-
-    PrintInfo(
-        PrincipalVariation({GetCurrentBestMove(), GetTranspositionTable()}));
   }
 
   PrintBestMove();
@@ -158,7 +154,7 @@ inline void ChessEngine::ComputeBestMove(
   const auto start_time = std::chrono::high_resolution_clock::now();
   const auto time_for_move = left_time / 4;
   constexpr auto kTimeRatio = 30;
-  static constexpr size_t max_last_best_move_change = 4;
+  static constexpr size_t max_last_best_move_change = 5;
 
   auto alpha = std::numeric_limits<Eval>::min();
   auto beta = std::numeric_limits<Eval>::max();
@@ -176,7 +172,7 @@ inline void ChessEngine::ComputeBestMove(
   {
     PrintInfo(DepthInfo{current_depth});
 
-    static constexpr auto window_size = 1000;
+    static constexpr auto window_size = 100;
     const auto eval = searcher_.Search<true>(current_depth, alpha, beta);
 
     PrintInfo(ScoreInfo{eval});
@@ -219,8 +215,7 @@ inline void ChessEngine::ComputeBestMove(
 
     previous_best_move = GetCurrentBestMove();
 
-    PrintInfo(
-        PrincipalVariation({GetCurrentBestMove(), GetTranspositionTable()}));
+    PrintInfo(PrincipalVariation(previous_best_move));
   }
 
   PrintBestMove(previous_best_move);

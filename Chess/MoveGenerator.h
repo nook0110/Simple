@@ -14,6 +14,8 @@ namespace SimpleChessEngine
 class MoveGenerator
 {
  public:
+  MoveGenerator() { moves_.reserve(256); }
+
   using Moves = std::vector<Move>;
 
   /**
@@ -24,7 +26,7 @@ class MoveGenerator
    * \return All possible moves for the given position.
    */
   template <bool only_attacks>
-  [[nodiscard]] Moves GenerateMoves(Position& position) const;
+  [[nodiscard]] Moves GenerateMoves(Position& position);
 
  private:
   [[nodiscard]] static bool IsMoveValid(Position& position, const Move& move)
@@ -73,5 +75,7 @@ class MoveGenerator
   static void ApplyPromotions(Moves::iterator begin, Moves::iterator end,
                               Moves& moves, const Position& position,
                               BitIndex from);
+
+  Moves moves_;
 };
 }  // namespace SimpleChessEngine

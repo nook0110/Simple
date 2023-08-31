@@ -41,7 +41,12 @@ class UciDebugPrinter final : public InfoPrinter
   }
 
   void operator()(const PrincipalVariation& principal_variation) const override
-  {}
+  {
+    o_stream_ << "info bestmove ";
+    std::visit([this](const auto& move) { o_stream_ << move; },
+               principal_variation.best_move);
+    o_stream_ << std::endl;
+  }
 
   void operator()(const BestMove& best_move) const override
   {
@@ -247,12 +252,12 @@ inline void UciChessEngine::ParsePosition(std::stringstream command)
 
   if (token == "fen")
   {
-    std::string board, side_to_move, castling_rights, en_croissant, rule50, move_number;
-    command >> board >> side_to_move >> castling_rights >> rule50 >> en_croissant >>
+    std::string board, side_to_move, castling_rights, en_croissant, rule50,
         move_number;
+    command >> board >> side_to_move >> castling_rights >> rule50 >>
+        en_croissant >> move_number;
     const auto fen = board + " " + side_to_move + " " + castling_rights + " " +
-                     en_croissant + " " +
-                     rule50 + " " + move_number;
+                     en_croissant + " " + rule50 + " " + move_number;
     ParseFen(fen);
   }
   if (token == "startpos")

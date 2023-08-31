@@ -7,11 +7,9 @@
 using namespace SimpleChessEngine;
 
 template <bool only_attacks>
-MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const
+MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
 {
-  // create moves
-  Moves moves;
-  moves.reserve(218);
+  moves_.clear();
 
   // get all pieces
   auto pieces = position.GetPieces(position.GetSideToMove());
@@ -23,18 +21,18 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const
     pieces.Reset(*from);
 
     // generate moves for piece
-    GenerateMovesForPiece<only_attacks>(moves, position, *from);
+    GenerateMovesForPiece<only_attacks>(moves_, position, *from);
   }
 
   // return moves
-  return moves;
+  return moves_;
 }
 
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<true>(
-    Position& position) const;
+    Position& position);
 
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<false>(
-    Position& position) const;
+    Position& position);
 
 template <>
 void MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(

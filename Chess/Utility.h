@@ -206,7 +206,7 @@ inline std::array<std::array<Bitboard, kBoardArea>, kColors> pawn_attacks{};
 
 inline void InitPawnAttacks()
 {
-  for (auto color : { Player::kWhite, Player::kBlack })
+  for (auto color : {Player::kWhite, Player::kBlack})
   {
     for (BitIndex square = 0; square < kBoardArea; ++square)
     {
@@ -221,7 +221,7 @@ inline void InitPawnAttacks()
 }
 
 [[nodiscard]] inline Bitboard GetPawnAttacks(const BitIndex square,
-  const Player side)
+                                             const Player side)
 {
   return pawn_attacks[static_cast<size_t>(side)][square];
 }
