@@ -14,7 +14,7 @@ namespace SimpleChessEngine
 class MoveGenerator
 {
  public:
-  using Moves = std::list<Move>;
+  using Moves = std::vector<Move>;
 
   /**
    * \brief Generates all possible moves for a given position.
@@ -47,8 +47,8 @@ class MoveGenerator
    * \return All possible moves for the given square.
    */
   template <bool only_attacks>
-  [[nodiscard]] Moves GenerateMovesForPiece(Position& position,
-                                            BitIndex from) const;
+  void GenerateMovesForPiece(Moves& moves, Position& position,
+                             BitIndex from) const;
 
   /**
    * \brief Generates all possible moves for a given square with given piece.
@@ -60,18 +60,18 @@ class MoveGenerator
    * \return All possible moves for the given square and piece.
    */
   template <Piece piece, bool only_attacks>
-  [[nodiscard]] Moves GenerateMovesFromSquare(Position& position,
-                                              BitIndex from) const;
+  void GenerateMovesFromSquare(Moves& moves, Position& position,
+                               BitIndex from) const;
 
-  [[nodiscard]] Moves GenerateCastling(const Position& position) const;
+  void GenerateCastling(Moves& moves, const Position& position) const;
 
-  [[nodiscard]] static Moves GenerateAttacksForPawn(Position& position,
-                                                    BitIndex from);
+  static void GenerateAttacksForPawn(Moves& moves, Position& position,
+                                     BitIndex from);
 
-  [[nodiscard]] static Moves GenerateMovesForPawn(Position& position,
-                                                  BitIndex from);
-  [[nodiscard]] static Moves ApplyPromotions(Moves moves,
-                                             const Position& position,
-                                             BitIndex from);
+  static void GenerateMovesForPawn(Moves& moves, Position& position,
+                                   BitIndex from);
+  static void ApplyPromotions(Moves::iterator begin, Moves::iterator end,
+                              Moves& moves, const Position& position,
+                              BitIndex from);
 };
 }  // namespace SimpleChessEngine

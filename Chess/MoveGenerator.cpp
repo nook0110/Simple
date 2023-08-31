@@ -11,6 +11,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const
 {
   // create moves
   Moves moves;
+  moves.reserve(218);
 
   // get all pieces
   auto pieces = position.GetPieces(position.GetSideToMove());
@@ -22,10 +23,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const
     pieces.Reset(*from);
 
     // generate moves for piece
-    auto moves_for_piece = GenerateMovesForPiece<only_attacks>(position, *from);
-
-    // add moves
-    moves.splice(moves.end(), moves_for_piece);
+    GenerateMovesForPiece<only_attacks>(moves, position, *from);
   }
 
   // return moves
@@ -39,21 +37,17 @@ template MoveGenerator::Moves MoveGenerator::GenerateMoves<false>(
     Position& position) const;
 
 template <>
-MoveGenerator::Moves
-MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
-    Position& position, BitIndex from) const;
+void MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
+    Moves& moves, Position& position, BitIndex from) const;
 
 template <>
-MoveGenerator::Moves MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, true>(
-    Position& position, BitIndex from) const;
+void MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, true>(
+    Moves& moves, Position& position, BitIndex from) const;
 
 template <bool only_attacks>
-MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
-    Position& position, const BitIndex from) const
+void MoveGenerator::GenerateMovesForPiece(Moves& moves, Position& position,
+                                          const BitIndex from) const
 {
-  // create moves, max amount moves 218
-  Moves moves;
-
   // get piece and side to move
   const auto piece = position.GetPiece(from);
 
@@ -63,33 +57,34 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
   switch (piece)
   {
     case Piece::kPawn:
-      moves =
-          GenerateMovesFromSquare<Piece::kPawn, only_attacks>(position, from);
+
+      GenerateMovesFromSquare<Piece::kPawn, only_attacks>(moves, position,
+                                                          from);
       break;
     case Piece::kKnight:
       // generate knight moves
-      moves =
-          GenerateMovesFromSquare<Piece::kKnight, only_attacks>(position, from);
+      GenerateMovesFromSquare<Piece::kKnight, only_attacks>(moves, position,
+                                                            from);
       break;
     case Piece::kBishop:
       // generate bishop moves
-      moves =
-          GenerateMovesFromSquare<Piece::kBishop, only_attacks>(position, from);
+      GenerateMovesFromSquare<Piece::kBishop, only_attacks>(moves, position,
+                                                            from);
       break;
     case Piece::kRook:
       // generate rook moves
-      moves =
-          GenerateMovesFromSquare<Piece::kRook, only_attacks>(position, from);
+      GenerateMovesFromSquare<Piece::kRook, only_attacks>(moves, position,
+                                                          from);
       break;
     case Piece::kQueen:
       // generate queen moves
-      moves =
-          GenerateMovesFromSquare<Piece::kQueen, only_attacks>(position, from);
+      GenerateMovesFromSquare<Piece::kQueen, only_attacks>(moves, position,
+                                                           from);
       break;
     case Piece::kKing:
       // generate king moves
-      moves =
-          GenerateMovesFromSquare<Piece::kKing, only_attacks>(position, from);
+      GenerateMovesFromSquare<Piece::kKing, only_attacks>(moves, position,
+                                                          from);
       break;
     case Piece::kNone:
       assert(false);
@@ -97,18 +92,13 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPiece(
     default:
       break;
   }
-
-  // return moves
-  return moves;
 }
 
 template <Piece piece, bool only_attacks>
-MoveGenerator::Moves MoveGenerator::GenerateMovesFromSquare(
-    Position& position, const BitIndex from) const
+void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
+                                            const BitIndex from) const
 {
   assert(position.GetPiece(from) == piece);
-
-  Moves moves;
 
   // get all squares that piece attacks
   const auto attacks =
@@ -144,18 +134,13 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesFromSquare(
 
   if constexpr (piece == Piece::kKing)
   {
-    auto castling = GenerateCastling(position);
-    moves.splice(moves.end(), castling);
+    GenerateCastling(moves, position);
   }
-
-  // return moves
-  return moves;
 }
 
 template <>
-inline MoveGenerator::Moves
-MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, true>(
-    Position& position, const BitIndex from) const
+inline void MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, true>(
+    Moves& moves, Position& position, const BitIndex from) const
 {
   auto side_to_move = position.GetSideToMove();
 
@@ -163,37 +148,34 @@ MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, true>(
       GetCoordinates(from).second ==
       kIsPromoting[static_cast<size_t>(side_to_move)])
   {
-    auto moves = GenerateMovesFromSquare<Piece::kPawn, false>(position, from);
+    GenerateMovesFromSquare<Piece::kPawn, false>(moves, position, from);
 
-    return moves;
+    return;
   }
 
-  return GenerateAttacksForPawn(position, from);
+  return GenerateAttacksForPawn(moves, position, from);
 }
 
 template <>
-inline MoveGenerator::Moves
-MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
-    Position& position, const BitIndex from) const
+inline void MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
+    Moves& moves, Position& position, const BitIndex from) const
 {
-  Moves moves = GenerateAttacksForPawn(position, from);
+  const auto start = moves.end();
 
-  auto ordinary_moves = GenerateMovesForPawn(position, from);
+  GenerateAttacksForPawn(moves, position, from);
 
-  moves.splice(moves.end(), ordinary_moves);
+  GenerateMovesForPawn(moves, position, from);
 
-  return ApplyPromotions(std::move(moves), position, from);
+  return ApplyPromotions(start, moves.end(), moves, position, from);
 }
 
-MoveGenerator::Moves MoveGenerator::GenerateCastling(
-    const Position& position) const
+void MoveGenerator::GenerateCastling(Moves& moves,
+                                     const Position& position) const
 {
   if (position.IsUnderCheck())
   {
-    return {};
+    return;
   }
-
-  Moves moves;
 
   const auto side_to_move = position.GetSideToMove();
 
@@ -209,15 +191,11 @@ MoveGenerator::Moves MoveGenerator::GenerateCastling(
       moves.emplace_back(Castling{castling_side, king_square, rook_square});
     }
   }
-
-  return moves;
 }
 
-MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
-                                                           const BitIndex from)
+void MoveGenerator::GenerateAttacksForPawn(Moves& moves, Position& position,
+                                           const BitIndex from)
 {
-  Moves moves;
-
   auto side_to_move = position.GetSideToMove();
 
   for (static constexpr std::array<std::array<Compass, 2>, kColors>
@@ -243,14 +221,11 @@ MoveGenerator::Moves MoveGenerator::GenerateAttacksForPawn(Position& position,
       }
     }
   }
-
-  return moves;
 }
 
-MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
-                                                         const BitIndex from)
+void MoveGenerator::GenerateMovesForPawn(Moves& moves, Position& position,
+                                         const BitIndex from)
 {
-  Moves moves;
   static constexpr std::array kPawnDoublePushRank = {1, 6};
   static constexpr std::array kIsPromoting = {6, 1};
 
@@ -291,15 +266,14 @@ MoveGenerator::Moves MoveGenerator::GenerateMovesForPawn(Position& position,
       moves.emplace_back(move);
     }
   }
-
-  return moves;
 }
 
-MoveGenerator::Moves MoveGenerator::ApplyPromotions(Moves moves,
-                                                    const Position& position,
-                                                    const BitIndex from)
+void MoveGenerator::ApplyPromotions(const Moves::iterator begin,
+                                    const Moves::iterator end, Moves& moves,
+                                    const Position& position,
+                                    const BitIndex from)
 {
-  if (moves.empty()) return {};
+  if (moves.empty()) return;
 
   auto side_to_move = position.GetSideToMove();
 
@@ -310,11 +284,7 @@ MoveGenerator::Moves MoveGenerator::ApplyPromotions(Moves moves,
     static constexpr std::array kPiecesToPromoteTo = {
         Piece::kKnight, Piece::kBishop, Piece::kRook, Piece::kQueen};
 
-    const auto end = moves.end();
-
-    Moves other_promotions;
-
-    for (auto it = moves.begin(); it != end; ++it)
+    for (auto it = begin; it != end; ++it)
     {
       auto promotion = static_cast<Promotion>(std::get<DefaultMove>(*it));
       promotion.promoted_to = kPiecesToPromoteTo.front();
@@ -324,12 +294,8 @@ MoveGenerator::Moves MoveGenerator::ApplyPromotions(Moves moves,
       for (size_t piece = 1; piece < kPiecesToPromoteTo.size(); piece++)
       {
         promotion.promoted_to = kPiecesToPromoteTo[piece];
-        other_promotions.emplace_back(promotion);
+        moves.emplace_back(promotion);
       }
     }
-
-    moves.splice(moves.end(), other_promotions);
   }
-
-  return moves;
 }
