@@ -264,4 +264,6 @@ void Position::UndoMove(const Castling& move)
   PlacePiece(rook_from, Piece::kRook, us);
   RemovePiece(kKingCastlingDestination[color_idx][side_idx], us);
   RemovePiece(kRookCastlingDestination[color_idx][side_idx], us);
+
+    king_position_[static_cast<size_t>(us)] = king_from;
 }
