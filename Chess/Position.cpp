@@ -7,20 +7,26 @@ using namespace SimpleChessEngine;
 
 void Position::DoMove(const Move& move)
 {
-  if (auto& ep_square = irreversible_data_.en_croissant_square; ep_square.has_value())
+  if (const auto& ep_square = irreversible_data_.en_croissant_square;
+      ep_square.has_value())
   {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
     irreversible_data_.en_croissant_square.reset();
   }
-  for (auto color : {0, 1})
+  for (const auto color : {Player::kWhite, Player::kBlack})
   {
-    hash_ ^= hasher_.cr_hash[color][irreversible_data_.castling_rights[color].to_ulong()];
+    hash_ ^= hasher_.cr_hash[static_cast<size_t>(
+        color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
+                    .to_ulong()];
   }
   std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
              move);
-  for (int color : {0, 1})
+
+  for (const auto color : {Player::kWhite, Player::kBlack})
   {
-    hash_ ^= hasher_.cr_hash[color][irreversible_data_.castling_rights[color].to_ulong()];
+    hash_ ^= hasher_.cr_hash[static_cast<size_t>(
+        color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
+                    .to_ulong()];
   }
   side_to_move_ = Flip(side_to_move_);
   hash_ ^= hasher_.stm_hash;
@@ -45,19 +51,24 @@ void Position::DoMove(const DefaultMove& move)
     irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
   }
 
-  for (int castling_side : {0, 1})
+  for (auto castling_side :
+       {Castling::CastlingSide::k00, Castling::CastlingSide::k000})
   {
-    auto our_rook = rook_positions_[static_cast<size_t>(us)][castling_side];
-    auto their_rook = rook_positions_[static_cast<size_t>(them)][castling_side];
+    const auto our_rook = rook_positions_[static_cast<size_t>(us)]
+                                         [static_cast<size_t>(castling_side)];
+    const auto their_rook = rook_positions_[static_cast<size_t>(them)]
+                                           [static_cast<size_t>(castling_side)];
     if (from == our_rook)
     {
-      irreversible_data_.castling_rights[static_cast<size_t>(us)] &= 
-        ~static_cast<char>(kCastlingRightsForSide[castling_side]);
+      irreversible_data_.castling_rights[static_cast<size_t>(us)] &=
+          ~static_cast<char>(
+              kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
     }
     if (to == their_rook)
     {
       irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
-        ~static_cast<char>(kCastlingRightsForSide[castling_side]);
+          ~static_cast<char>(
+              kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
     }
   }
 }
@@ -113,13 +124,16 @@ void Position::DoMove(const Promotion& move)
   if (!!captured_piece) RemovePiece(to, them);
   PlacePiece(to, promoted_to, us);
 
-  for (int castling_side : {0, 1})
+  for (const auto castling_side :
+       {Castling::CastlingSide::k00, Castling::CastlingSide::k000})
   {
-    auto their_rook = rook_positions_[static_cast<size_t>(them)][castling_side];
+    const auto their_rook = rook_positions_[static_cast<size_t>(them)]
+                                           [static_cast<size_t>(castling_side)];
     if (to == their_rook)
     {
       irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
-        ~static_cast<char>(kCastlingRightsForSide[castling_side]);
+          ~static_cast<char>(
+              kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
     }
   }
 }
@@ -137,25 +151,29 @@ void Position::DoMove(const Castling& move)
   RemovePiece(rook_from, us);
   PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us);
   PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us);
-  
+
   irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
 }
 
 void Position::UndoMove(const Move& move, const IrreversibleData& data)
 {
-  auto& ep_square = irreversible_data_.en_croissant_square;
-  for (auto color : {0, 1})
+  const auto& ep_square = irreversible_data_.en_croissant_square;
+  for (const auto color : {Player::kWhite, Player::kBlack})
   {
-    hash_ ^= hasher_.cr_hash[color][irreversible_data_.castling_rights[color].to_ulong()];
+    hash_ ^= hasher_.cr_hash[static_cast<size_t>(
+        color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
+                    .to_ulong()];
   }
   if (ep_square.has_value())
   {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
   }
   irreversible_data_ = data;
-  for (auto color : {0, 1})
+  for (const auto color : {Player::kWhite, Player::kBlack})
   {
-    hash_ ^= hasher_.cr_hash[color][irreversible_data_.castling_rights[color].to_ulong()];
+    hash_ ^= hasher_.cr_hash[static_cast<size_t>(
+        color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
+                    .to_ulong()];
   }
   if (ep_square.has_value())
   {

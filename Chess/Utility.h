@@ -93,8 +93,8 @@ enum class CastlingRights
   kAll = k00 | k000
 };
 
-constexpr std::array<CastlingRights, 2> kCastlingRightsForSide = { CastlingRights::k00,
-                                                                   CastlingRights::k000 };
+constexpr std::array<CastlingRights, 2> kCastlingRightsForSide = {
+    CastlingRights::k00, CastlingRights::k000};
 
 enum class Compass
 {
@@ -209,7 +209,8 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
 constexpr std::array kCheckers = {Piece::kKnight, Piece::kBishop, Piece::kRook,
                                   Piece::kQueen};
 
-inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> bishop_between{};
+inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea>
+    bishop_between{};
 inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_between{};
 
 [[nodiscard]] inline std::string DrawBitboard(const Bitboard b)

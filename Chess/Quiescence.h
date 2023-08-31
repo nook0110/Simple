@@ -52,7 +52,7 @@ inline Eval Quiescence::Search(Position& current_position, Eval alpha,
 
     // make the move and search the tree
     current_position.DoMove(move);
-    auto temp_eval = -Search(current_position, -beta, -alpha);
+    const auto temp_eval = -Search(current_position, -beta, -alpha);
 
     // undo the move
     current_position.UndoMove(move, irreversible_data);

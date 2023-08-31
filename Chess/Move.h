@@ -64,6 +64,6 @@ struct Castling
   bool operator==(const Castling&) const = default;
 };
 
-using Move =
-    std::variant<DefaultMove, PawnPush, DoublePush, EnCroissant, Promotion, Castling>;
+using Move = std::variant<DefaultMove, PawnPush, DoublePush, EnCroissant,
+                          Promotion, Castling>;
 }  // namespace SimpleChessEngine

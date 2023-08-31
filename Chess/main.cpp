@@ -8,8 +8,8 @@ int main()
   SimpleChessEngine::Position pos = start_pos;
 
   for (const auto moves =
-    SimpleChessEngine::MoveGenerator{}.GenerateMoves<false>(pos);
-    const auto & move : moves)
+           SimpleChessEngine::MoveGenerator{}.GenerateMoves<false>(pos);
+       const auto& move : moves)
   {
     const auto irreversible_data = pos.GetIrreversibleData();
     pos.DoMove(move);

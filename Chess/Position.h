@@ -153,30 +153,25 @@ class Position
     const auto us_idx = static_cast<size_t>(us);
     const auto cs_idx = static_cast<size_t>(castling_side);
 
-    if (!irreversible_data_.castling_rights[us_idx]
-        .test(cs_idx))
-      return false;
+    if (!irreversible_data_.castling_rights[us_idx].test(cs_idx)) return false;
 
     const auto king_position = king_position_[us_idx];
     const auto rook_position = rook_positions_[us_idx][cs_idx];
 
-    const auto obstacles = 
-      GetAllPieces() 
-      & ~GetBitboardOfSquare(king_position)
-      & ~GetBitboardOfSquare(rook_position);
-    
+    const auto obstacles = GetAllPieces() &
+                           ~GetBitboardOfSquare(king_position) &
+                           ~GetBitboardOfSquare(rook_position);
+
     auto king_path = castling_squares_for_king_[us_idx][cs_idx];
 
-    if (((king_path | castling_squares_for_rook_[us_idx][cs_idx])
-      & obstacles)
-      .Any())
+    if (((king_path | castling_squares_for_rook_[us_idx][cs_idx]) & obstacles)
+            .Any())
       return false;
 
     while (const auto square = king_path.GetFirstBit())
     {
       king_path.Reset(*square);
-      if (IsUnderAttack(*square, us))
-        return false;
+      if (IsUnderAttack(*square, us)) return false;
     }
 
     return true;
@@ -259,7 +254,8 @@ class Position
 
   [[nodiscard]] BitIndex GetKingSquare(Player player) const;
 
-  [[nodiscard]] BitIndex GetCastlingRookSquare(Player player, Castling::CastlingSide side) const;
+  [[nodiscard]] BitIndex GetCastlingRookSquare(
+      Player player, Castling::CastlingSide side) const;
 
   [[nodiscard]] Bitboard Attackers(BitIndex square) const;
 
@@ -374,9 +370,11 @@ inline BitIndex Position::GetKingSquare(const Player player) const
   return king_position_[static_cast<size_t>(player)];
 }
 
-inline BitIndex Position::GetCastlingRookSquare(Player player, Castling::CastlingSide side) const
+inline BitIndex Position::GetCastlingRookSquare(
+    Player player, Castling::CastlingSide side) const
 {
-  return rook_positions_[static_cast<size_t>(player)][static_cast<size_t>(side)];
+  return rook_positions_[static_cast<size_t>(player)]
+                        [static_cast<size_t>(side)];
 }
 
 inline bool Position::IsUnderAttack(const BitIndex square,
