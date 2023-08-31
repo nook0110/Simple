@@ -73,7 +73,8 @@ inline Position PositionFactory::operator()(const std::string& fen)
 
   // TODO: Attributes
 
-  position.SetKingPositions(kings[0], kings[1]);
+  position.SetKingPositions(kings);
+  position.SetRookPositions(rooks);
   std::array<std::array<Bitboard, 2>, kColors> cs_king = 
   { 
     {

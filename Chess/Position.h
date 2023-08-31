@@ -35,14 +35,6 @@ class Position
     bool operator==(const IrreversibleData&) const = default;
   };
 
-  enum class CastlingRight
-  {
-    kNone,
-    k00 = 1,
-    k000 = 2,
-    kAll = k00 | k000
-  };
-
   /**
    * \brief Places a piece with a color on a chosen square.
    *
@@ -155,9 +147,14 @@ class Position
    */
   void UndoMove(const Castling& move);
 
-  void SetKingPositions(const BitIndex white, const BitIndex black)
+  void SetKingPositions(const std::array<BitIndex, 2>& king_position)
   {
-    king_position_ = {white, black};
+    king_position_ = king_position;
+  }
+
+  void SetRookPositions(const std::array<std::array<BitIndex, 2>, kColors>& rook_positions)
+  {
+    rook_positions_ = rook_positions;
   }
 
   void SetCastlingSquares(const std::array<std::array<Bitboard, 2>, kColors>& cs_king,
@@ -269,6 +266,7 @@ class Position
   std::array<Piece, kBoardArea> board_{};  //!< Current position of pieces
 
   std::array<BitIndex, kColors> king_position_{};
+  std::array<std::array<BitIndex, 2>, kColors> rook_positions_{}; // doesn't need to be updated
 
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_king_{};
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};

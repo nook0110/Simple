@@ -85,6 +85,17 @@ using Coordinates = std::pair<File, Rank>;
   return std::max(std::abs(x_first - x_second), std::abs(y_first - y_second));
 }
 
+enum class CastlingRights
+{
+  kNone,
+  k00 = 1,
+  k000 = 2,
+  kAll = k00 | k000
+};
+
+constexpr std::array<CastlingRights, 2> kCastlingRightsForSide = { CastlingRights::k00,
+                                                                   CastlingRights::k000 };
+
 enum class Compass
 {
   kNorth = kLineSize,

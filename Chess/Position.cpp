@@ -12,8 +12,16 @@ void Position::DoMove(const Move& move)
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
     irreversible_data_.en_croissant_square.reset();
   }
+  for (auto color : {0, 1})
+  {
+    hash_ ^= hasher_.cr_hash[color][irreversible_data_.castling_rights[color].to_ulong()];
+  }
   std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
              move);
+  for (int color : {0, 1})
+  {
+    hash_ ^= hasher_.cr_hash[color][irreversible_data_.castling_rights[color].to_ulong()];
+  }
   side_to_move_ = Flip(side_to_move_);
   hash_ ^= hasher_.stm_hash;
 }
@@ -32,7 +40,26 @@ void Position::DoMove(const DefaultMove& move)
   PlacePiece(to, piece_to_move, us);
 
   if (piece_to_move == Piece::kKing)
+  {
     king_position_[static_cast<size_t>(us)] = to;
+    irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
+  }
+
+  for (int castling_side : {0, 1})
+  {
+    auto our_rook = rook_positions_[static_cast<size_t>(us)][castling_side];
+    auto their_rook = rook_positions_[static_cast<size_t>(them)][castling_side];
+    if (from == our_rook)
+    {
+      irreversible_data_.castling_rights[static_cast<size_t>(us)] &= 
+        ~static_cast<char>(kCastlingRightsForSide[castling_side]);
+    }
+    if (to == their_rook)
+    {
+      irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
+        ~static_cast<char>(kCastlingRightsForSide[castling_side]);
+    }
+  }
 }
 
 void Position::DoMove(const PawnPush& move)
@@ -85,6 +112,16 @@ void Position::DoMove(const Promotion& move)
   RemovePiece(from, us);
   if (!!captured_piece) RemovePiece(to, them);
   PlacePiece(to, promoted_to, us);
+
+  for (int castling_side : {0, 1})
+  {
+    auto their_rook = rook_positions_[static_cast<size_t>(them)][castling_side];
+    if (to == their_rook)
+    {
+      irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
+        ~static_cast<char>(kCastlingRightsForSide[castling_side]);
+    }
+  }
 }
 
 void Position::DoMove(const Castling& move)
@@ -100,16 +137,26 @@ void Position::DoMove(const Castling& move)
   RemovePiece(rook_from, us);
   PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us);
   PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us);
+  
+  irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
 }
 
 void Position::UndoMove(const Move& move, const IrreversibleData& data)
 {
   auto& ep_square = irreversible_data_.en_croissant_square;
+  for (auto color : {0, 1})
+  {
+    hash_ ^= hasher_.cr_hash[color][irreversible_data_.castling_rights[color].to_ulong()];
+  }
   if (ep_square.has_value())
   {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
   }
   irreversible_data_ = data;
+  for (auto color : {0, 1})
+  {
+    hash_ ^= hasher_.cr_hash[color][irreversible_data_.castling_rights[color].to_ulong()];
+  }
   if (ep_square.has_value())
   {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
