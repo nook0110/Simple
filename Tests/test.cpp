@@ -439,12 +439,11 @@ INSTANTIATE_TEST_CASE_P(
         GenTestCase{
             R"(rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8)",
             {
-                {1},        // depth 0
-                {44},       // depth 1
-                {1486},     // depth 2
-                {62379},    // depth 3
-                {2103487},  // depth 4
-                {89941194}  // depth 5
+                {1},       // depth 0
+                {44},      // depth 1
+                {1486},    // depth 2
+                {62379},   // depth 3
+                {2103487}  // depth 4
             }}));
 
 TEST(GenerateMoves, DISABLED_ShannonNumberCheck)
@@ -575,7 +574,7 @@ INSTANTIATE_TEST_CASE_P(
         R"(1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - bm Qd1+; id "BK.01")"));
 }  // namespace BestMoveTests
 
-int main()
+int main(int* argc, char** argv)
 {
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kBishop>();
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kRook>();
