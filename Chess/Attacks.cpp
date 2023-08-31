@@ -44,6 +44,28 @@ template <Piece sliding_piece>
   return result;
 }
 
+template <Piece sliding_piece>
+void InitBetween()
+{
+  assert(IsWeakSlidingPiece(sliding_piece));
+  for (BitIndex sq = 0; sq < kBoardArea; ++sq)
+  {
+    for (auto direction : GetStepDelta<sliding_piece>())
+    {
+      Bitboard result{};
+      Bitboard step{};
+      for (BitIndex temp = sq; step.Any(); result |= step)
+      {
+        if constexpr (sliding_piece == Piece::kBishop)
+          bishop_between[sq][temp] = result;
+        else
+          rook_between[sq][temp] = result;
+        step = DoShiftIfValid(temp, direction).value_or(Bitboard{});
+      }
+    }
+  }
+}
+
 template <Piece sliding_piece, size_t table_size>
 AttackTable<sliding_piece, table_size>::AttackTable()
 {

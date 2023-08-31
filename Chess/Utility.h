@@ -198,6 +198,9 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
 constexpr std::array kCheckers = {Piece::kKnight, Piece::kBishop, Piece::kRook,
                                   Piece::kQueen};
 
+inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> bishop_between;
+inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_between;
+
 [[nodiscard]] inline std::string DrawBitboard(const Bitboard b)
 {
   std::string s = "+---+---+---+---+---+---+---+---+\n";
