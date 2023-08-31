@@ -17,11 +17,19 @@ struct PositionFactory
 
 inline Position PositionFactory::operator()(const std::string& fen)
 {
+  std::stringstream fen_stream;
+
+  fen_stream << fen;
+
   Position position;
 
   static constexpr size_t kBoardSize = 8;
 
-  auto current = fen.begin();
+  std::string board;
+
+  fen_stream >> board;
+
+  auto current = board.begin();
 
   std::array<BitIndex, kColors> kings{};
   std::array<std::array<BitIndex, 2>, kColors> rooks{};
@@ -66,12 +74,34 @@ inline Position PositionFactory::operator()(const std::string& fen)
     ++current;
   }
 
-  if (*current == 'w')
+  std::string side_to_move;
+  fen_stream >> side_to_move;
+
+  if (side_to_move == "w")
     position.SetSideToMove(Player::kWhite);
   else
     position.SetSideToMove(Player::kBlack);
 
   // TODO: Attributes
+  std::string castling_rights;
+  fen_stream >> castling_rights;
+
+  for (auto castling_right : castling_rights)
+  {
+    switch (castling_right)
+    {
+      case 'K':
+        break;
+      case 'k':
+        break;
+      case 'Q':
+        break;
+      case 'q':
+        break;
+      default:
+        assert(false);
+    }
+  }
 
   position.SetKingPositions(kings);
   position.SetRookPositions(rooks);
