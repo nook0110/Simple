@@ -71,7 +71,7 @@ inline Position PositionFactory::operator()(const std::string& fen)
     }
 
     // skip '/'
-    ++current;
+    if (current != board.end()) ++current;
   }
 
   std::string side_to_move;
@@ -112,6 +112,8 @@ inline Position PositionFactory::operator()(const std::string& fen)
         assert(false);
     }
   }
+
+  position.SetCastlingRights(castling_rights);
 
   position.SetKingPositions(kings);
   position.SetRookPositions(rooks);

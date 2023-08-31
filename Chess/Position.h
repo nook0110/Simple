@@ -147,6 +147,53 @@ class Position
    */
   void UndoMove(const Castling& move);
 
+  [[nodiscard]] bool CanCastle(const Castling::CastlingSide castling_side) const
+  {
+    if (!irreversible_data_.castling_rights[static_cast<size_t>(side_to_move_)]
+                                           [static_cast<size_t>(castling_side)])
+      return false;
+
+    if (const auto all_pieces = GetAllPieces();
+        (GetCastlingSquares<Piece::kKing>(castling_side) & all_pieces |
+         GetCastlingSquares<Piece::kRook>(castling_side) & all_pieces)
+            .Any())
+      return false;
+
+    const auto king_square = GetKingSquare(side_to_move_);
+
+    const auto to =
+        kKingCastlingDestination[static_cast<size_t>(side_to_move_)]
+                                [static_cast<size_t>(castling_side)];
+    Compass direction{};
+
+    if (to - king_square > 0)
+    {
+      direction = Compass::kEast;
+    }
+    if (to - king_square < 0)
+    {
+      direction = Compass::kWest;
+    }
+
+    auto square_to_check = king_square;
+
+    bool is_any_square_under_attack{};
+
+    while (square_to_check != to)
+    {
+      square_to_check = Shift(square_to_check, direction);
+      if (IsUnderAttack(square_to_check, side_to_move_))
+      {
+        is_any_square_under_attack = true;
+        break;
+      }
+    }
+
+    if (is_any_square_under_attack) return false;
+
+    return true;
+  }
+
   void SetCastlingRights(const std::array<std::bitset<2>, 2>& castling_rights)
   {
     irreversible_data_.castling_rights = castling_rights;

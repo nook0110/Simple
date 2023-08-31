@@ -204,50 +204,15 @@ MoveGenerator::Moves MoveGenerator::GenerateCastling(
   static constexpr std::array kCastlingSides = {Castling::CastlingSide::k00,
                                                 Castling::CastlingSide::k000};
   for (auto castling_side : kCastlingSides)
-    if (castling_rights[static_cast<size_t>(side_to_move)]
-                       [static_cast<size_t>(castling_side)])
-    {
-      if (const auto all_pieces = position.GetAllPieces();
-          (position.GetCastlingSquares<Piece::kKing>(castling_side) &
-               all_pieces |
-           position.GetCastlingSquares<Piece::kRook>(castling_side) &
-               all_pieces)
-              .Any())
+  {
+      if (position.CanCastle(castling_side))
       {
-        continue;
+        const auto to =
+            kKingCastlingDestination[static_cast<size_t>(side_to_move)]
+                                    [static_cast<size_t>(castling_side)];
+
+        moves.emplace_back(Castling{castling_side, king_square, to});
       }
-
-      const auto to =
-          kKingCastlingDestination[static_cast<size_t>(side_to_move)]
-                                  [static_cast<size_t>(castling_side)];
-      Compass direction{};
-
-      if (to - king_square > 0)
-      {
-        direction = Compass::kEast;
-      }
-      if (to - king_square < 0)
-      {
-        direction = Compass::kWest;
-      }
-
-      auto square_to_check = king_square;
-
-      bool is_any_square_under_attack{};
-
-      while (square_to_check != to)
-      {
-        square_to_check = Shift(square_to_check, direction);
-        if (position.IsUnderAttack(square_to_check, side_to_move))
-        {
-          is_any_square_under_attack = true;
-          break;
-        }
-      }
-
-      if (is_any_square_under_attack) continue;
-
-      moves.emplace_back(Castling{castling_side, king_square, to});
     }
 
   return moves;
