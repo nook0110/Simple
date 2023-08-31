@@ -262,6 +262,8 @@ class Position
 
   [[nodiscard]] BitIndex GetKingSquare(Player player) const;
 
+  [[nodiscard]] BitIndex GetCastlingRookSquare(Player player, Castling::CastlingSide side) const;
+
   [[nodiscard]] Bitboard Attackers(BitIndex square) const;
 
   [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us) const;
@@ -373,6 +375,11 @@ inline Piece Position::GetPiece(const BitIndex index) const
 inline BitIndex Position::GetKingSquare(const Player player) const
 {
   return king_position_[static_cast<size_t>(player)];
+}
+
+inline BitIndex Position::GetCastlingRookSquare(Player player, Castling::CastlingSide side) const
+{
+  return rook_positions_[static_cast<size_t>(player)][static_cast<size_t>(side)];
 }
 
 inline bool Position::IsUnderAttack(const BitIndex square,

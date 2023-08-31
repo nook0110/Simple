@@ -195,23 +195,17 @@ MoveGenerator::Moves MoveGenerator::GenerateCastling(
 
   Moves moves;
 
-  const auto& castling_rights = position.GetCastlingRights();
-
   const auto side_to_move = position.GetSideToMove();
 
   const auto king_square = position.GetKingSquare(side_to_move);
 
-  static constexpr std::array kCastlingSides = {Castling::CastlingSide::k00,
-                                                Castling::CastlingSide::k000};
-  for (auto castling_side : kCastlingSides)
+  for (const auto castling_side : { Castling::CastlingSide::k00,
+                                                Castling::CastlingSide::k000 })
   {
       if (position.CanCastle(castling_side))
       {
-        const auto to =
-            kKingCastlingDestination[static_cast<size_t>(side_to_move)]
-                                    [static_cast<size_t>(castling_side)];
-
-        moves.emplace_back(Castling{castling_side, king_square, to});
+        const auto rook_square = position.GetCastlingRookSquare(side_to_move, castling_side);
+        moves.emplace_back(Castling{castling_side, king_square, rook_square});
       }
     }
 
