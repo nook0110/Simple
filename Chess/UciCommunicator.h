@@ -7,6 +7,7 @@
 #include <variant>
 
 #include "MoveFactory.h"
+#include "Perft.h"
 #include "Position.h"
 #include "SimpleChessEngine.h"
 #include "StreamUtility.h"
@@ -124,6 +125,7 @@ class UciChessEngine
   void ParseStartPos();
   void ParseMoves(std::stringstream command);
   void ParsePosition(std::stringstream command);
+  void ParsePerft(std::stringstream command);
   void ParseGo(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
   void ParsePlayersTime(std::stringstream command);
@@ -245,10 +247,11 @@ inline void UciChessEngine::ParsePosition(std::stringstream command)
 
   if (token == "fen")
   {
-    std::string board, side_to_move, castling_rights, rule50, move_number;
-    command >> board >> side_to_move >> castling_rights >> rule50 >>
+    std::string board, side_to_move, castling_rights, en_croissant, rule50, move_number;
+    command >> board >> side_to_move >> castling_rights >> rule50 >> en_croissant >>
         move_number;
     const auto fen = board + " " + side_to_move + " " + castling_rights + " " +
+                     en_croissant + " " +
                      rule50 + " " + move_number;
     ParseFen(fen);
   }
@@ -265,10 +268,26 @@ inline void UciChessEngine::ParsePosition(std::stringstream command)
   }
 }
 
+inline void UciChessEngine::ParsePerft(std::stringstream command)
+{
+  std::string token;
+  command >> token;
+  const auto depth = std::stoull(token);
+
+  Perft(o_stream_, info_.position, depth);
+}
+
 inline void UciChessEngine::ParseGo(std::stringstream command)
 {
   std::string token;
   command >> token;
+
+  if (token == "perft")
+  {
+    ParsePerft(std::move(command));
+    return;
+  }
+
   if (token == "wtime")
   {
     ParsePlayersTime(std::move(command));

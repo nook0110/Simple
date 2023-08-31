@@ -152,6 +152,8 @@ void Position::DoMove(const Castling& move)
   PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us);
   PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us);
 
+    king_position_[static_cast<size_t>(us)] =
+      kKingCastlingDestination[color_idx][side_idx];
   irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
 }
 

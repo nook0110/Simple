@@ -378,9 +378,9 @@ TEST_P(GenerateMovesTest, Perft)
     EXPECT_EQ(position, GetPosition());
     EXPECT_EQ(position.GetHash(), GetPosition().GetHash());
     if (possible_games_answer)
-      ASSERT_EQ(*possible_games, *possible_games_answer);
-    if (en_croissants_answer) ASSERT_EQ(*en_croissants, *en_croissants_answer);
-    if (castlings_answer) ASSERT_EQ(*castlings, *castlings_answer);
+      EXPECT_EQ(*possible_games, *possible_games_answer);
+    if (en_croissants_answer) EXPECT_EQ(*en_croissants, *en_croissants_answer);
+    if (castlings_answer) EXPECT_EQ(*castlings, *castlings_answer);
   }
 }
 

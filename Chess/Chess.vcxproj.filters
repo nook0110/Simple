@@ -107,5 +107,8 @@
     <ClInclude Include="StreamUtility.h">
       <Filter>Файлы заголовков\Uci</Filter>
     </ClInclude>
+    <ClInclude Include="Perft.h">
+      <Filter>Файлы заголовков\Position</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
