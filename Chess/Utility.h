@@ -184,17 +184,6 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
                                     : std::nullopt;
 }
 
-[[nodiscard]] inline Bitboard GetPawnAttacks(const BitIndex square,
-                                             const Player side)
-{
-  Bitboard res{};
-  for (const auto step : kPawnAttackDirections[static_cast<size_t>(side)])
-  {
-    res |= GetShiftIfValid(square, step).value_or(Bitboard{});
-  }
-  return res;
-}
-
 [[nodiscard]] constexpr bool IsSlidingPiece(const Piece piece)
 {
   return piece == Piece::kBishop || piece == Piece::kRook ||
@@ -212,6 +201,30 @@ constexpr std::array kCheckers = {Piece::kKnight, Piece::kBishop, Piece::kRook,
 inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea>
     bishop_between{};
 inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_between{};
+
+inline std::array<std::array<Bitboard, kBoardArea>, kColors> pawn_attacks{};
+
+inline void InitPawnAttacks()
+{
+  for (auto color : { Player::kWhite, Player::kBlack })
+  {
+    for (BitIndex square = 0; square < kBoardArea; ++square)
+    {
+      Bitboard res{};
+      for (const auto step : kPawnAttackDirections[static_cast<size_t>(color)])
+      {
+        res |= GetShiftIfValid(square, step).value_or(Bitboard{});
+      }
+      pawn_attacks[static_cast<size_t>(color)][square] = res;
+    }
+  }
+}
+
+[[nodiscard]] inline Bitboard GetPawnAttacks(const BitIndex square,
+  const Player side)
+{
+  return pawn_attacks[static_cast<size_t>(side)][square];
+}
 
 [[nodiscard]] inline std::string DrawBitboard(const Bitboard b)
 {

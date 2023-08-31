@@ -354,7 +354,7 @@ class GenerateMovesTest : public testing::TestWithParam<GenTestCase>
     return infos_[depth];
   }
 
-  [[nodiscard]] const size_t& GetMaxDepth() const { return infos_.size(); }
+  [[nodiscard]] const size_t GetMaxDepth() const { return infos_.size(); }
 
  private:
   void GeneratePosition() { position_ = PositionFactory{}(GetParam().fen); }
@@ -579,6 +579,7 @@ int main()
 {
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kBishop>();
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kRook>();
+  SimpleChessEngine::InitPawnAttacks();
 
   RUN_ALL_TESTS();
 }
