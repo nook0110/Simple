@@ -83,20 +83,30 @@ inline Position PositionFactory::operator()(const std::string& fen)
     position.SetSideToMove(Player::kBlack);
 
   // TODO: Attributes
-  std::string castling_rights;
-  fen_stream >> castling_rights;
+  std::string castling_rights_string;
+  fen_stream >> castling_rights_string;
 
-  for (auto castling_right : castling_rights)
+  std::array<std::bitset<2>, 2> castling_rights;
+
+  for (auto castling_right : castling_rights_string)
   {
     switch (castling_right)
     {
       case 'K':
+        castling_rights[static_cast<size_t>(Player::kWhite)] |=
+            static_cast<size_t>(CastlingRights::k00);
         break;
       case 'k':
+        castling_rights[static_cast<size_t>(Player::kBlack)] |=
+            static_cast<size_t>(CastlingRights::k00);
         break;
       case 'Q':
+        castling_rights[static_cast<size_t>(Player::kWhite)] |=
+            static_cast<size_t>(CastlingRights::k000);
         break;
       case 'q':
+        castling_rights[static_cast<size_t>(Player::kBlack)] |=
+            static_cast<size_t>(CastlingRights::k000);
         break;
       default:
         assert(false);
@@ -105,32 +115,16 @@ inline Position PositionFactory::operator()(const std::string& fen)
 
   position.SetKingPositions(kings);
   position.SetRookPositions(rooks);
-  std::array<std::array<Bitboard, 2>, kColors> cs_king = 
-  { 
-    {
-    {
-      rook_between[kings[0]][kKingCastlingDestination[0][0]],
-      rook_between[kings[0]][kKingCastlingDestination[0][1]]
-    },
-    {
-      rook_between[kings[1]][kKingCastlingDestination[1][0]],
-      rook_between[kings[1]][kKingCastlingDestination[1][1]]
-    }
-    }
-  };
-  std::array<std::array<Bitboard, 2>, kColors> cs_rook =
-  {
-    {
-    {
-      rook_between[rooks[0][0]][kRookCastlingDestination[0][0]],
-      rook_between[rooks[0][1]][kRookCastlingDestination[0][1]]
-    },
-    {
-      rook_between[rooks[1][0]][kRookCastlingDestination[1][0]],
-      rook_between[rooks[1][1]][kRookCastlingDestination[1][1]]
-    }
-    }
-  };
+  std::array<std::array<Bitboard, 2>, kColors> cs_king = {
+      {{rook_between[kings[0]][kKingCastlingDestination[0][0]],
+        rook_between[kings[0]][kKingCastlingDestination[0][1]]},
+       {rook_between[kings[1]][kKingCastlingDestination[1][0]],
+        rook_between[kings[1]][kKingCastlingDestination[1][1]]}}};
+  std::array<std::array<Bitboard, 2>, kColors> cs_rook = {
+      {{rook_between[rooks[0][0]][kRookCastlingDestination[0][0]],
+        rook_between[rooks[0][1]][kRookCastlingDestination[0][1]]},
+       {rook_between[rooks[1][0]][kRookCastlingDestination[1][0]],
+        rook_between[rooks[1][1]][kRookCastlingDestination[1][1]]}}};
   position.SetCastlingSquares(cs_king, cs_rook);
 
   return position;
