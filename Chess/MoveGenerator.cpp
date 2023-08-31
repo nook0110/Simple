@@ -158,13 +158,13 @@ template <>
 inline void MoveGenerator::GenerateMovesFromSquare<Piece::kPawn, false>(
     Moves& moves, Position& position, const BitIndex from) const
 {
-  const auto start = moves.end();
+  const auto start = moves.size();
 
   GenerateAttacksForPawn(moves, position, from);
 
   GenerateMovesForPawn(moves, position, from);
 
-  return ApplyPromotions(start, moves.end(), moves, position, from);
+  return ApplyPromotions(start, moves.size(), moves, position, from);
 }
 
 void MoveGenerator::GenerateCastling(Moves& moves,
@@ -266,8 +266,8 @@ void MoveGenerator::GenerateMovesForPawn(Moves& moves, Position& position,
   }
 }
 
-void MoveGenerator::ApplyPromotions(const Moves::iterator begin,
-                                    const Moves::iterator end, Moves& moves,
+void MoveGenerator::ApplyPromotions(const size_t begin, const size_t end,
+                                    Moves& moves,
                                     const Position& position,
                                     const BitIndex from)
 {
@@ -284,10 +284,10 @@ void MoveGenerator::ApplyPromotions(const Moves::iterator begin,
 
     for (auto it = begin; it != end; ++it)
     {
-      auto promotion = static_cast<Promotion>(std::get<DefaultMove>(*it));
+      auto promotion = static_cast<Promotion>(std::get<DefaultMove>(moves[it]));
       promotion.promoted_to = kPiecesToPromoteTo.front();
 
-      *it = promotion;
+      moves[it] = promotion;
 
       for (size_t piece = 1; piece < kPiecesToPromoteTo.size(); piece++)
       {

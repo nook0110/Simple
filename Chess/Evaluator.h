@@ -42,7 +42,7 @@ class Evaluator
   [[nodiscard]] static Eval GetGameResult(const Position& position)
   {
     // assert(MoveGenerator{}(const_cast<Position&>(position)).empty());
-    return -10000;
+    return -3000;
   }
 };
 

@@ -72,7 +72,7 @@ class MoveGenerator
 
   static void GenerateMovesForPawn(Moves& moves, Position& position,
                                    BitIndex from);
-  static void ApplyPromotions(Moves::iterator begin, Moves::iterator end,
+  static void ApplyPromotions(size_t begin, size_t end,
                               Moves& moves, const Position& position,
                               BitIndex from);
 
