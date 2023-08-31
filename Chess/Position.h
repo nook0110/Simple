@@ -172,9 +172,6 @@ class Position
       .Any())
       return false;
 
-    if (IsUnderCheck())
-      return false;
-
     while (const auto square = king_path.GetFirstBit())
     {
       king_path.Reset(*square);
