@@ -45,7 +45,7 @@ template <Piece sliding_piece>
 }
 
 template <Piece sliding_piece>
-void InitBetween()
+void SimpleChessEngine::InitBetween()
 {
   assert(IsWeakSlidingPiece(sliding_piece));
   for (BitIndex sq = 0; sq < kBoardArea; ++sq)
@@ -66,8 +66,8 @@ void InitBetween()
   }
 }
 
-template void InitBetween<Piece::kBishop>();
-template void InitBetween<Piece::kRook>();
+template void SimpleChessEngine::InitBetween<Piece::kBishop>();
+template void SimpleChessEngine::InitBetween<Piece::kRook>();
 
 template <Piece sliding_piece, size_t table_size>
 AttackTable<sliding_piece, table_size>::AttackTable()
