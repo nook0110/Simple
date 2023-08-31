@@ -160,6 +160,13 @@ class Position
     king_position_ = {white, black};
   }
 
+  void SetCastlingSquares(const std::array<std::array<Bitboard, 2>, kColors>& cs_king,
+    const std::array<std::array<Bitboard, 2>, kColors>& cs_rook)
+  {
+    castling_squares_for_king_ = cs_king;
+    castling_squares_for_rook_ = cs_rook;
+  }
+
   /**
    * \brief Gets hash of the position.
    *

@@ -53,7 +53,7 @@ void SimpleChessEngine::InitBetween()
     for (auto direction : GetStepDelta<sliding_piece>())
     {
       Bitboard result{};
-      Bitboard step{};
+      Bitboard step{~kEmptyBoard};
       for (BitIndex temp = sq; step.Any(); result |= step)
       {
         if constexpr (sliding_piece == Piece::kBishop)
