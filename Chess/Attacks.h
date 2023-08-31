@@ -214,4 +214,7 @@ template class AttackTable<Piece::kBishop>;
 template class AttackTable<Piece::kRook>;
 template class AttackTable<Piece::kQueen>;
 template class AttackTable<Piece::kKing>;
+
+template <Piece sliding_piece>
+void InitBetween();
 }  // namespace SimpleChessEngine
