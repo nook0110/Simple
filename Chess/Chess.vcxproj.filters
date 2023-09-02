@@ -34,6 +34,9 @@
     <Filter Include="Файлы заголовков\Bitboard">
       <UniqueIdentifier>{65142925-dfe0-4a48-9f75-e2822e8daafa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Файлы заголовков\Engine\Evaluation">
+      <UniqueIdentifier>{a06324c4-239d-4499-8391-19ba9f39a746}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MoveGenerator.cpp">
@@ -49,7 +52,7 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="Evaluation.cpp">
-      <Filter>Исходные файлы</Filter>
+      <Filter>Файлы заголовков\Engine\Evaluation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -69,9 +72,6 @@
       <Filter>Файлы заголовков\Engine\Searcher</Filter>
     </ClInclude>
     <ClInclude Include="Hasher.h">
-      <Filter>Файлы заголовков\Engine\Searcher</Filter>
-    </ClInclude>
-    <ClInclude Include="Evaluation.h">
       <Filter>Файлы заголовков\Engine\Searcher</Filter>
     </ClInclude>
     <ClInclude Include="Piece.h">
@@ -112,6 +112,12 @@
     </ClInclude>
     <ClInclude Include="Perft.h">
       <Filter>Файлы заголовков\Position</Filter>
+    </ClInclude>
+    <ClInclude Include="Evaluation.h">
+      <Filter>Файлы заголовков\Engine\Evaluation</Filter>
+    </ClInclude>
+    <ClInclude Include="PSQT.h">
+      <Filter>Файлы заголовков\Engine\Evaluation</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
