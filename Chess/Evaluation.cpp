@@ -12,29 +12,32 @@ namespace SimpleChessEngine
       eval[static_cast<size_t>(GamePhase::kEndGame)] * (mg_limit - pv)) / kLimitsDifference;
   }
 
-  [[nodiscard]] TaperedEval operator+(const TaperedEval& first, const TaperedEval& second)
-  {
-    auto copy = first;
-    copy += second;
-    return copy;
-  }
+[[nodiscard]] TaperedEval operator+(const TaperedEval& first,
+                                    const TaperedEval& second)
+{
+  auto copy = first;
+  copy += second;
+  return copy;
+}
 
-  [[nodiscard]] TaperedEval operator-(const TaperedEval& first, const TaperedEval& second)
-  {
-    auto copy = first;
-    copy -= second;
-    return copy;
-  }
+[[nodiscard]] TaperedEval operator-(const TaperedEval& first,
+                                    const TaperedEval& second)
+{
+  auto copy = first;
+  copy -= second;
+  return copy;
+}
 
-  [[nodiscard]] Eval Position::Evaluate() const
-  {
-    const auto us = side_to_move_;
-    const auto them = Flip(us);
-    const auto us_idx = static_cast<size_t>(us);
-    const auto them_idx = static_cast<size_t>(them);
+[[nodiscard]] Eval Position::Evaluate() const
+{
+  const auto us = side_to_move_;
+  const auto them = Flip(us);
+  const auto us_idx = static_cast<size_t>(us);
+  const auto them_idx = static_cast<size_t>(them);
 
-    TaperedEval result{};
-    result += evaluation_data_.material[us_idx] - evaluation_data_.material[them_idx];
+  TaperedEval result{};
+  result +=
+      evaluation_data_.material[us_idx] - evaluation_data_.material[them_idx];
 
     Eval tapered = result(evaluation_data_.non_pawn_material);
 

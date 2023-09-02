@@ -91,8 +91,8 @@ enum class CastlingRights
   kAll = k00 | k000
 };
 
-constexpr std::array<CastlingRights, 2> kCastlingRightsForSide = {
-    CastlingRights::k00, CastlingRights::k000};
+constexpr std::array kCastlingRightsForSide = {CastlingRights::k00,
+                                               CastlingRights::k000};
 
 enum class Compass
 {
