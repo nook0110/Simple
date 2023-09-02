@@ -151,7 +151,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // check if there are no possible moves
   if (moves.empty())
   {
-    return Eval{ -100000 };
+    return Eval{-100000};
   }
 
   // check if we have already searched this position
