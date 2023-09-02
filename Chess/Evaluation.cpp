@@ -42,7 +42,7 @@ namespace SimpleChessEngine
   result +=
       evaluation_data_.material[us_idx] - evaluation_data_.material[them_idx];
 
-  Eval tapered = result(evaluation_data_.non_pawn_material);
+  const Eval tapered = result(evaluation_data_.non_pawn_material);
 
   return tapered + kTempoBonus;
 }

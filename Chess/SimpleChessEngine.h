@@ -122,7 +122,7 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
     if (eval <= alpha)
     {
       // search again with a wider window
-      alpha -= window_size;
+      alpha = eval - window_size;
 
       continue;
     }
@@ -131,7 +131,7 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
     if (eval >= beta)
     {
       // search again with a wider window
-      beta += window_size;
+      beta = eval + window_size;
       continue;
     }
 
@@ -152,9 +152,9 @@ inline void ChessEngine::ComputeBestMove(
     const std::chrono::milliseconds left_time)
 {
   const auto start_time = std::chrono::high_resolution_clock::now();
-  const auto time_for_move = left_time / 2;
+  const auto time_for_move = left_time / 3;
   constexpr auto kTimeRatio = 45;
-  static constexpr size_t max_last_best_move_change = 5;
+  static constexpr size_t max_last_best_move_change = 4;
 
   auto alpha = std::numeric_limits<Eval>::min();
   auto beta = std::numeric_limits<Eval>::max();
@@ -172,7 +172,7 @@ inline void ChessEngine::ComputeBestMove(
   {
     PrintInfo(DepthInfo{current_depth});
 
-    static constexpr auto window_size = 200;
+    static constexpr auto window_size = 25;
     const auto eval = searcher_.Search<true>(current_depth, alpha, beta);
 
     PrintInfo(ScoreInfo{eval});
@@ -181,7 +181,7 @@ inline void ChessEngine::ComputeBestMove(
     if (eval <= alpha)
     {
       // search again with a wider window
-      alpha -= window_size;
+      alpha = eval - window_size;
 
       continue;
     }
@@ -190,7 +190,7 @@ inline void ChessEngine::ComputeBestMove(
     if (eval >= beta)
     {
       // search again with a wider window
-      beta += window_size;
+      beta = eval + window_size;
       continue;
     }
 
