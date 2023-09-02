@@ -1,5 +1,6 @@
 #pragma once
-#include "Evaluation.h"
+#include "Evaluator.h"
+#include "MoveGenerator.h"
 #include "Position.h"
 
 namespace SimpleChessEngine

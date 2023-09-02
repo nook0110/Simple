@@ -1,5 +1,6 @@
 #pragma once
-#include <list>
+
+#include <vector>
 
 #include "Move.h"
 #include "Position.h"
@@ -72,9 +73,8 @@ class MoveGenerator
 
   static void GenerateMovesForPawn(Moves& moves, Position& position,
                                    BitIndex from);
-  static void ApplyPromotions(Moves::iterator begin, Moves::iterator end,
-                              Moves& moves, const Position& position,
-                              BitIndex from);
+  static void ApplyPromotions(size_t begin, size_t end, Moves& moves,
+                              const Position& position, BitIndex from);
 
   Moves moves_;
 };

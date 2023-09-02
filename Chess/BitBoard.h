@@ -25,7 +25,7 @@ class Bitboard
    * \brief Constructs a bitboard from its value.
    */
 
-  constexpr explicit Bitboard(const uint64_t value) : value_(value) {}
+  constexpr explicit Bitboard(const unsigned long long value) : value_(value) {}
 
   constexpr Bitboard() {}
 
@@ -105,10 +105,17 @@ class Bitboard
   }
 
  private:
-  uint64_t value_{};
+  unsigned long long value_{};
 };
 
-inline size_t Bitboard::Count() const { return _mm_popcnt_u64(value_); }
+inline size_t Bitboard::Count() const
+{
+#ifdef __GNUC__
+  return __builtin_popcountll(value_);
+#elif defined(_MSC_VER)
+  return _mm_popcnt_u64(value_);
+#endif
+}
 
 inline std::optional<BitIndex> Bitboard::GetFirstBit() const
 {
