@@ -1,5 +1,5 @@
 #pragma once
-#include "Evaluator.h"
+#include "Evaluation.h"
 #include "Position.h"
 
 namespace SimpleChessEngine
@@ -11,7 +11,7 @@ class Quiescence
    * \brief Constructor.
    *
    */
-  explicit Quiescence() : evaluator_() {}
+  Quiescence() = default;
 
   /**
    * \brief Performs the alpha-beta search algorithm.
@@ -26,13 +26,12 @@ class Quiescence
 
  private:
   MoveGenerator move_generator_;  //!< Move generator.
-  Evaluator evaluator_;           //!< Evaluator.
 };
 
 inline Eval Quiescence::Search(Position& current_position, Eval alpha,
                                const Eval beta)
 {
-  const auto stand_pat = evaluator_(current_position, alpha, beta);
+  const auto stand_pat = current_position.Evaluate();
 
   if (stand_pat >= beta)
   {

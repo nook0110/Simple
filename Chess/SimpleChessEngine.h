@@ -3,7 +3,7 @@
 #include <variant>
 #include <vector>
 
-#include "Evaluator.h"
+#include "Evaluation.h"
 #include "Move.h"
 #include "Searcher.h"
 

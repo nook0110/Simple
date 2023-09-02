@@ -6,6 +6,7 @@
 
 #include "Attacks.h"
 #include "Bitboard.h"
+#include "Evaluation.h"
 #include "Hasher.h"
 #include "Move.h"
 #include "Piece.h"
@@ -24,7 +25,12 @@ class Position
 {
  public:
   struct EvaluationData
-  {};
+  {
+    Eval non_pawn_material{};
+    std::array<TaperedEval, kColors> material{};
+  };
+
+  [[nodiscard]] Eval Evaluate() const;
 
   struct IrreversibleData
   {
@@ -50,6 +56,9 @@ class Position
     board_[square] = piece;
     pieces_by_color_[static_cast<size_t>(color)].Set(square);
     pieces_by_type_[static_cast<size_t>(piece)].Set(square);
+    evaluation_data_.material[static_cast<size_t>(color)] += kPieceValues[static_cast<size_t>(piece)];
+    if (piece != Piece::kPawn)
+      evaluation_data_.non_pawn_material += kPieceValues[static_cast<size_t>(piece)].eval[0];
     hash_ ^= hasher_.psqt_hash[static_cast<size_t>(piece)][square];
   }
 
@@ -66,6 +75,9 @@ class Position
     pieces_by_type_[static_cast<size_t>(piece)].Reset(square);
     pieces_by_color_[static_cast<size_t>(color)].Reset(square);
     board_[square] = Piece::kNone;
+    evaluation_data_.material[static_cast<size_t>(color)] -= kPieceValues[static_cast<size_t>(piece)];
+    if (piece != Piece::kPawn)
+      evaluation_data_.non_pawn_material -= kPieceValues[static_cast<size_t>(piece)].eval[0];
     hash_ ^= hasher_.psqt_hash[static_cast<size_t>(piece)][square];
   }
 
@@ -294,6 +306,7 @@ class Position
   bool operator==(const Position& other) const = default;
 
  private:
+  EvaluationData evaluation_data_;
   IrreversibleData irreversible_data_;
 
   Player side_to_move_{};  //!< Whose side to move.

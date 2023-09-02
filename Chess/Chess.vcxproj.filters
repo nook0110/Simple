@@ -48,6 +48,9 @@
     <ClCompile Include="Attacks.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="Evaluation.cpp">
+      <Filter>Файлы заголовков\Engine\Searcher</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Move.h">
@@ -68,7 +71,7 @@
     <ClInclude Include="Hasher.h">
       <Filter>Файлы заголовков\Engine\Searcher</Filter>
     </ClInclude>
-    <ClInclude Include="Evaluator.h">
+    <ClInclude Include="Evaluation.h">
       <Filter>Файлы заголовков\Engine\Searcher</Filter>
     </ClInclude>
     <ClInclude Include="Piece.h">

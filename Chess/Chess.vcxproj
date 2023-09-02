@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Attacks.cpp" />
+    <ClCompile Include="Evaluation.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MoveGenerator.cpp" />
     <ClCompile Include="Position.cpp" />
@@ -37,7 +38,7 @@
     <ClInclude Include="Bitboard.h" />
     <ClInclude Include="BitScan.h" />
     <ClInclude Include="SimpleChessEngine.h" />
-    <ClInclude Include="Evaluator.h" />
+    <ClInclude Include="Evaluation.h" />
     <ClInclude Include="Hasher.h" />
     <ClInclude Include="TranspositionTable.h" />
     <ClInclude Include="Move.h" />
