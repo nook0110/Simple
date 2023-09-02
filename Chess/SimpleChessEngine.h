@@ -178,7 +178,7 @@ inline void ChessEngine::ComputeBestMove(
     PrintInfo(ScoreInfo{eval});
 
     // check if true eval is out of window
-    if (eval <= alpha)
+    if (eval < alpha)
     {
       // search again with a wider window
       alpha = eval - window_size;
@@ -187,7 +187,7 @@ inline void ChessEngine::ComputeBestMove(
     }
 
     // check if true eval is out of window
-    if (eval >= beta)
+    if (eval > beta)
     {
       // search again with a wider window
       beta = eval + window_size;
