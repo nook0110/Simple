@@ -64,4 +64,8 @@ namespace SimpleChessEngine
     kPieceValues[static_cast<size_t>(Piece::kRook)].eval[static_cast<size_t>(GamePhase::kMiddleGame)] * 4 +
     kPieceValues[static_cast<size_t>(Piece::kBishop)].eval[static_cast<size_t>(GamePhase::kMiddleGame)] * 4
   };
+
+  constexpr PhaseValue kLimitsDifference = kPhaseValueLimits[0] - kPhaseValueLimits[1];
+
+  constexpr Eval kTempoBonus = 20;
 }  // namespace SimpleChessEngine
