@@ -11,6 +11,7 @@
 #include "Move.h"
 #include "Piece.h"
 #include "Player.h"
+#include "PSQT.h"
 #include "Utility.h"
 
 namespace SimpleChessEngine
@@ -30,6 +31,7 @@ class Position
 
     Eval non_pawn_material{};
     std::array<TaperedEval, kColors> material{};
+    std::array<TaperedEval, kColors> psqt{};
   };
 
   [[nodiscard]] Eval Evaluate() const;
@@ -60,6 +62,8 @@ class Position
     pieces_by_type_[static_cast<size_t>(piece)].Set(square);
     evaluation_data_.material[static_cast<size_t>(color)] +=
         kPieceValues[static_cast<size_t>(piece)];
+    evaluation_data_.psqt[static_cast<size_t>(color)] += 
+      kPSQT[static_cast<size_t>(color)][static_cast<size_t>(piece)][square];
     if (piece != Piece::kPawn)
       evaluation_data_.non_pawn_material +=
           kPieceValues[static_cast<size_t>(piece)].eval[0];
@@ -81,6 +85,8 @@ class Position
     board_[square] = Piece::kNone;
     evaluation_data_.material[static_cast<size_t>(color)] -=
         kPieceValues[static_cast<size_t>(piece)];
+    evaluation_data_.psqt[static_cast<size_t>(color)] -=
+      kPSQT[static_cast<size_t>(color)][static_cast<size_t>(piece)][square];
     if (piece != Piece::kPawn)
       evaluation_data_.non_pawn_material -=
           kPieceValues[static_cast<size_t>(piece)].eval[0];

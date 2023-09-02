@@ -566,6 +566,7 @@ int main(int* argc, char** argv)
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kBishop>();
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kRook>();
   SimpleChessEngine::InitPawnAttacks();
+  SimpleChessEngine::InitPSQT();
 
   RUN_ALL_TESTS();
 }

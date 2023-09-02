@@ -41,6 +41,8 @@ namespace SimpleChessEngine
   TaperedEval result{};
   result +=
       evaluation_data_.material[us_idx] - evaluation_data_.material[them_idx];
+  result +=
+      evaluation_data_.psqt[us_idx] - evaluation_data_.psqt[them_idx];
 
   const Eval tapered = result(evaluation_data_.non_pawn_material);
 
