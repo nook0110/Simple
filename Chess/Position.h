@@ -26,6 +26,8 @@ class Position
  public:
   struct EvaluationData
   {
+    bool operator==(const EvaluationData&) const = default;
+
     Eval non_pawn_material{};
     std::array<TaperedEval, kColors> material{};
   };

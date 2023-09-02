@@ -2,15 +2,18 @@
 
 namespace SimpleChessEngine
 {
-  [[nodiscard]] Eval TaperedEval::operator()(PhaseValue pv) const
-  {
-    const auto mg_limit = kPhaseValueLimits[static_cast<size_t>(GamePhase::kMiddleGame)];
-    const auto eg_limit = kPhaseValueLimits[static_cast<size_t>(GamePhase::kEndGame)];
-    if (pv < mg_limit) pv = mg_limit;
-    if (pv > eg_limit) pv = eg_limit;
-    return (eval[static_cast<size_t>(GamePhase::kMiddleGame)] * (pv - eg_limit) +
-      eval[static_cast<size_t>(GamePhase::kEndGame)] * (mg_limit - pv)) / kLimitsDifference;
-  }
+[[nodiscard]] Eval TaperedEval::operator()(PhaseValue pv) const
+{
+  const auto mg_limit =
+      kPhaseValueLimits[static_cast<size_t>(GamePhase::kMiddleGame)];
+  const auto eg_limit =
+      kPhaseValueLimits[static_cast<size_t>(GamePhase::kEndGame)];
+  if (pv < mg_limit) pv = mg_limit;
+  if (pv > eg_limit) pv = eg_limit;
+  return (eval[static_cast<size_t>(GamePhase::kMiddleGame)] * (pv - eg_limit) +
+          eval[static_cast<size_t>(GamePhase::kEndGame)] * (mg_limit - pv)) /
+         kLimitsDifference;
+}
 
 [[nodiscard]] TaperedEval operator+(const TaperedEval& first,
                                     const TaperedEval& second)
@@ -39,8 +42,8 @@ namespace SimpleChessEngine
   result +=
       evaluation_data_.material[us_idx] - evaluation_data_.material[them_idx];
 
-    Eval tapered = result(evaluation_data_.non_pawn_material);
+  Eval tapered = result(evaluation_data_.non_pawn_material);
 
-    return tapered + kTempoBonus;
-  }
+  return tapered + kTempoBonus;
 }
+}  // namespace SimpleChessEngine

@@ -6,6 +6,7 @@
 #include "../Chess/Attacks.cpp"
 #include "../Chess/Attacks.h"
 #include "../Chess/BitBoard.h"
+#include "../Chess/Evaluation.cpp"
 #include "../Chess/MoveFactory.h"
 #include "../Chess/MoveGenerator.cpp"
 #include "../Chess/MoveGenerator.h"

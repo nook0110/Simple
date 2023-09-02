@@ -49,7 +49,7 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="Evaluation.cpp">
-      <Filter>Файлы заголовков\Engine\Searcher</Filter>
+      <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
