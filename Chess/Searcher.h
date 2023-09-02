@@ -230,7 +230,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
       {
         set_best_move(move);
 
-        return beta;
+        return temp_eval;
       }
 
       set_best_move(move);
