@@ -151,7 +151,11 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // check if there are no possible moves
   if (moves.empty())
   {
-    return Eval{-100000};
+    if (current_position_.IsUnderCheck())
+    {
+      return kMateValue * remaining_depth;
+    }
+    return Eval{};
   }
 
   // check if we have already searched this position

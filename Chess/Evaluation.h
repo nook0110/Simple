@@ -76,4 +76,6 @@ constexpr PhaseValue kLimitsDifference =
     kPhaseValueLimits[0] - kPhaseValueLimits[1];
 
 constexpr Eval kTempoBonus = 20;
+
+constexpr Eval kMateValue = -1e5;
 }  // namespace SimpleChessEngine
