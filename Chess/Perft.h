@@ -1,4 +1,6 @@
 #pragma once
+#include <ostream>
+
 #include "MoveGenerator.h"
 #include "Position.h"
 namespace SimpleChessEngine

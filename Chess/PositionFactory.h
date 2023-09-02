@@ -1,4 +1,5 @@
 #pragma once
+#include <sstream>
 #include <unordered_map>
 
 #include "Position.h"
@@ -108,8 +109,6 @@ inline Position PositionFactory::operator()(const std::string& fen)
         castling_rights[static_cast<size_t>(Player::kBlack)] |=
             static_cast<size_t>(CastlingRights::k000);
         break;
-      default:
-        assert(false);
     }
   }
 

@@ -1,17 +1,20 @@
 #pragma once
-
 #include <algorithm>
+#include <array>
+
+#include "Utility.h"
 
 namespace SimpleChessEngine
 {
 class Position;
 
-using Hash = uint64_t;
+using Hash = unsigned long long;
 
 struct Hasher
 {
   template <class RNG>
   explicit Hasher(RNG generator)
+
   {
     for (auto& board : psqt_hash)
     {
