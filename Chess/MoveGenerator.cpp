@@ -267,8 +267,7 @@ void MoveGenerator::GenerateMovesForPawn(Moves& moves, Position& position,
 }
 
 void MoveGenerator::ApplyPromotions(const size_t begin, const size_t end,
-                                    Moves& moves,
-                                    const Position& position,
+                                    Moves& moves, const Position& position,
                                     const BitIndex from)
 {
   if (moves.empty()) return;

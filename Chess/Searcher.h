@@ -109,8 +109,8 @@ inline const TranspositionTable& Searcher::GetTranspositionTable() const
 template <bool start_of_search>
 Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
 {
-  // return the evaluation of the current position if we have reached the end of
-  // the search tree
+  // return the evaluation of the current position if we have reached the
+  // end of the search tree
   if (remaining_depth <= 0)
   {
     return quiescence_searcher_.Search(current_position_, alpha, beta);

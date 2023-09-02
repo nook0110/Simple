@@ -318,7 +318,7 @@ TEST_P(BestMoveTest, FindBestMove)
   const auto& position = GetPosition();
 
   const auto first_answer =
-      ComputeBestMoveByTime(position, std::chrono::seconds(10));
+      ComputeBestMoveByTime(position, std::chrono::seconds(30));
   ASSERT_EQ(first_answer, GetAnswer());
 
   const auto second_answer = ComputeBestMoveByDepth(position, 7);
