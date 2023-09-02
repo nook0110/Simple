@@ -172,7 +172,7 @@ inline void ChessEngine::ComputeBestMove(
   {
     PrintInfo(DepthInfo{current_depth});
 
-    static constexpr auto window_size = 25;
+    static constexpr auto window_size = 200;
     const auto eval = searcher_.Search<true>(current_depth, alpha, beta);
 
     PrintInfo(ScoreInfo{eval});
