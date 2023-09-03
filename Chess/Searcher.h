@@ -199,8 +199,10 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   moves.pop_back();
 
   // search the tree
-  for (auto& move : moves)
+  for (size_t move_idx = 1; move_idx < moves.size(); ++move_idx)
   {
+    const auto& move = moves[move_idx];
+
     const auto irreversible_data = current_position_.GetIrreversibleData();
 
     // make the move and search the tree

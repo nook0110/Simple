@@ -152,12 +152,12 @@ inline void ChessEngine::ComputeBestMove(
     const std::chrono::milliseconds left_time)
 {
   const auto start_time = std::chrono::high_resolution_clock::now();
-  const auto time_for_move = left_time / 3;
-  constexpr auto kTimeRatio = 45;
+  const auto time_for_move = left_time / 4;
+  constexpr auto kTimeRatio = 35;
   static constexpr size_t max_last_best_move_change = 4;
 
-  auto alpha = std::numeric_limits<Eval>::min();
-  auto beta = std::numeric_limits<Eval>::max();
+  auto alpha = std::numeric_limits<Eval>::min() / 2;
+  auto beta = std::numeric_limits<Eval>::max() / 2;
 
   Move previous_best_move{};
   size_t last_best_move_change{};
@@ -178,7 +178,7 @@ inline void ChessEngine::ComputeBestMove(
     PrintInfo(ScoreInfo{eval});
 
     // check if true eval is out of window
-    if (eval < alpha)
+    if (eval <= alpha)
     {
       // search again with a wider window
       alpha = eval - window_size;
@@ -187,7 +187,7 @@ inline void ChessEngine::ComputeBestMove(
     }
 
     // check if true eval is out of window
-    if (eval > beta)
+    if (eval >= beta)
     {
       // search again with a wider window
       beta = eval + window_size;
