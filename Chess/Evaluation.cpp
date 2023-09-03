@@ -8,8 +8,7 @@ namespace SimpleChessEngine
       kPhaseValueLimits[static_cast<size_t>(GamePhase::kMiddleGame)];
   const auto eg_limit =
       kPhaseValueLimits[static_cast<size_t>(GamePhase::kEndGame)];
-  if (pv < mg_limit) pv = mg_limit;
-  if (pv > eg_limit) pv = eg_limit;
+  pv = std::clamp(pv, eg_limit, mg_limit);
   return (eval[static_cast<size_t>(GamePhase::kMiddleGame)] * (pv - eg_limit) +
           eval[static_cast<size_t>(GamePhase::kEndGame)] * (mg_limit - pv)) /
          kLimitsDifference;
