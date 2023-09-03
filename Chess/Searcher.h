@@ -153,7 +153,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   {
     if (current_position_.IsUnderCheck())
     {
-      return kMateValue * remaining_depth;
+      return kMateValue - static_cast<Eval>(remaining_depth);
     }
     return Eval{};
   }
