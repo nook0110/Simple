@@ -131,6 +131,7 @@ class UciChessEngine
   void ParseMoves(std::stringstream command);
   void ParsePosition(std::stringstream command);
   void ParsePerft(std::stringstream command);
+  void ParseEvaluate();
   void ParseGo(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
   void ParsePlayersTime(std::stringstream command);
@@ -282,6 +283,11 @@ inline void UciChessEngine::ParsePerft(std::stringstream command)
   Perft(o_stream_, info_.position, depth);
 }
 
+inline void UciChessEngine::ParseEvaluate()
+{
+  o_stream_ << "eval: " << info_.position.Evaluate() << " cp" << std::endl;
+}
+
 inline void UciChessEngine::ParseGo(std::stringstream command)
 {
   std::string token;
@@ -290,6 +296,12 @@ inline void UciChessEngine::ParseGo(std::stringstream command)
   if (token == "perft")
   {
     ParsePerft(std::move(command));
+    return;
+  }
+
+  if (token == "evaluate")
+  {
+    ParseEvaluate();
     return;
   }
 
