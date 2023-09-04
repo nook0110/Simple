@@ -15,13 +15,13 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
   auto pieces = position.GetPieces(position.GetSideToMove());
 
   // generate moves for each piece
-  while (const auto from = pieces.GetFirstBit())
+  while (pieces.Any())
   {
     // get first piece
-    pieces.Reset(*from);
+    const auto from = pieces.PopFirstBit();
 
     // generate moves for piece
-    GenerateMovesForPiece<only_attacks>(moves_, position, *from);
+    GenerateMovesForPiece<only_attacks>(moves_, position, from);
   }
 
   // return moves
@@ -118,12 +118,11 @@ void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
     valid_moves &= enemy_piece;
   }
 
-  while (const auto to = valid_moves.GetFirstBit())
+  while (valid_moves.Any())
   {
-    valid_moves.Reset(to.value());
+    const auto to = valid_moves.PopFirstBit();
 
-    if (auto move =
-            DefaultMove{from, to.value(), position.GetPiece(to.value())};
+    if (auto move = DefaultMove{from, to, position.GetPiece(to)};
         IsMoveValid(position, move))
     {
       moves.emplace_back(move);
@@ -270,7 +269,7 @@ void MoveGenerator::ApplyPromotions(const size_t begin, const size_t end,
                                     Moves& moves, const Position& position,
                                     const BitIndex from)
 {
-  if (moves.empty()) return;
+  if (begin == end || moves.empty()) return;
 
   auto side_to_move = position.GetSideToMove();
 

@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 
 #ifdef __GNUC__
 #define USE_GCC_BUILTINS
@@ -11,26 +12,18 @@
 #pragma intrinsic(_BitScanForward)
 #endif
 
-#include <bitset>
-#include <optional>
+using BitIndex = unsigned long;
 
-using BitIndex = size_t;
-
-inline std::optional<BitIndex> BitScan(const size_t mask)
+inline BitIndex BitScan(const size_t mask)
 {
+  assert(mask);
 #ifdef USE_GCC_BUILTINS
-  if (!mask) return std::nullopt;
-  const size_t idx = __builtin_ctzll(mask);
-  return idx;
+  return __builtin_ctzll(mask);
 #elif defined(USE_MSVC_INTRINSICS)
   unsigned long index;
-  if (_BitScanForward64(&index, mask))
-  {
-    return index;
-  }
-  return std::nullopt;
+  _BitScanForward64(&index, mask);
+  return index;
 #endif
-  return std::nullopt;
 }
 
 #undef USE_GCC_BUILTINS

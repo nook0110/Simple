@@ -9,9 +9,9 @@
 #include "Evaluation.h"
 #include "Hasher.h"
 #include "Move.h"
+#include "PSQT.h"
 #include "Piece.h"
 #include "Player.h"
-#include "PSQT.h"
 #include "Utility.h"
 
 namespace SimpleChessEngine
@@ -62,8 +62,8 @@ class Position
     pieces_by_type_[static_cast<size_t>(piece)].Set(square);
     evaluation_data_.material[static_cast<size_t>(color)] +=
         kPieceValues[static_cast<size_t>(piece)];
-    evaluation_data_.psqt[static_cast<size_t>(color)] += 
-      kPSQT[static_cast<size_t>(color)][static_cast<size_t>(piece)][square];
+    evaluation_data_.psqt[static_cast<size_t>(color)] +=
+        kPSQT[static_cast<size_t>(color)][static_cast<size_t>(piece)][square];
     if (piece != Piece::kPawn)
       evaluation_data_.non_pawn_material +=
           kPieceValues[static_cast<size_t>(piece)].eval[0];
@@ -86,7 +86,7 @@ class Position
     evaluation_data_.material[static_cast<size_t>(color)] -=
         kPieceValues[static_cast<size_t>(piece)];
     evaluation_data_.psqt[static_cast<size_t>(color)] -=
-      kPSQT[static_cast<size_t>(color)][static_cast<size_t>(piece)][square];
+        kPSQT[static_cast<size_t>(color)][static_cast<size_t>(piece)][square];
     if (piece != Piece::kPawn)
       evaluation_data_.non_pawn_material -=
           kPieceValues[static_cast<size_t>(piece)].eval[0];
@@ -192,10 +192,11 @@ class Position
             .Any())
       return false;
 
-    while (const auto square = king_path.GetFirstBit())
+    while (king_path.Any())
     {
-      king_path.Reset(*square);
-      if (IsUnderAttack(*square, us)) return false;
+      if (const auto square = king_path.PopFirstBit();
+          IsUnderAttack(square, us))
+        return false;
     }
 
     return true;

@@ -72,9 +72,11 @@ class Bitboard
 
   constexpr bool operator==(const Bitboard& other) const = default;
 
-  size_t Count() const;
+  [[nodiscard]] size_t Count() const;
 
-  [[nodiscard]] std::optional<BitIndex> GetFirstBit() const;
+  [[nodiscard]] BitIndex GetFirstBit() const;
+
+  BitIndex PopFirstBit();
 
   constexpr Bitboard operator-(const Bitboard& other) const;
   Bitboard& operator-=(const Bitboard& other);
@@ -117,9 +119,17 @@ inline size_t Bitboard::Count() const
 #endif
 }
 
-inline std::optional<BitIndex> Bitboard::GetFirstBit() const
+inline BitIndex Bitboard::GetFirstBit() const
 {
+  assert(Any());
   return BitScan(value_);
+}
+
+inline BitIndex Bitboard::PopFirstBit()
+{
+  const BitIndex bit = GetFirstBit();
+  Reset(bit);
+  return bit;
 }
 
 constexpr Bitboard Bitboard::operator-(const Bitboard& other) const

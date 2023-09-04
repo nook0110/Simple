@@ -52,6 +52,7 @@ size_t Perft(std::ostream& o_stream, Position& position, const size_t depth)
   if constexpr (print)
   {
     o_stream << "Leafs: " << answer << std::endl;
+    o_stream << nodes << std::endl;
   }
   return answer;
 }
