@@ -10,7 +10,8 @@ size_t Perft(std::ostream& o_stream, Position& position, const size_t depth)
 {
   if (depth == 0) return 1;
 
-  const auto moves = MoveGenerator{}.GenerateMoves<false>(position);
+  const auto moves =
+      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kDefault>(position);
 
   size_t answer{};
 
@@ -52,7 +53,6 @@ size_t Perft(std::ostream& o_stream, Position& position, const size_t depth)
   if constexpr (print)
   {
     o_stream << "Leafs: " << answer << std::endl;
-    o_stream << nodes << std::endl;
   }
   return answer;
 }

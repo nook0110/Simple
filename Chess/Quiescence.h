@@ -45,7 +45,9 @@ inline Eval Quiescence::Search(Position& current_position, Eval alpha,
 
   // get all the attacks moves
 
-  for (const auto moves = move_generator_.GenerateMoves<true>(current_position);
+  for (const auto moves =
+           move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
+               current_position);
        const auto& move : moves)
   {
     const auto irreversible_data = current_position.GetIrreversibleData();

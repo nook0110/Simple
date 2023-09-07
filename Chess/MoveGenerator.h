@@ -15,6 +15,12 @@ namespace SimpleChessEngine
 class MoveGenerator
 {
  public:
+  enum class Type
+  {
+    kDefault,
+    kQuiescence
+  };
+
   MoveGenerator() { moves_.reserve(256); }
 
   using Moves = std::vector<Move>;
@@ -26,7 +32,7 @@ class MoveGenerator
    *
    * \return All possible moves for the given position.
    */
-  template <bool only_attacks>
+  template <Type type>
   [[nodiscard]] Moves GenerateMoves(Position& position);
 
  private:
@@ -49,9 +55,9 @@ class MoveGenerator
    *
    * \return All possible moves for the given square.
    */
-  template <bool only_attacks>
+  template <Piece piece>
   void GenerateMovesForPiece(Moves& moves, Position& position,
-                             BitIndex from) const;
+                             Bitboard target) const;
 
   /**
    * \brief Generates all possible moves for a given square with given piece.
@@ -62,19 +68,11 @@ class MoveGenerator
    *
    * \return All possible moves for the given square and piece.
    */
-  template <Piece piece, bool only_attacks>
-  void GenerateMovesFromSquare(Moves& moves, Position& position,
-                               BitIndex from) const;
+  template <Piece piece>
+  void GenerateMovesFromSquare(Moves& moves, Position& position, BitIndex from,
+                               Bitboard target) const;
 
-  void GenerateCastling(Moves& moves, const Position& position) const;
-
-  static void GenerateAttacksForPawn(Moves& moves, Position& position,
-                                     BitIndex from);
-
-  static void GenerateMovesForPawn(Moves& moves, Position& position,
-                                   BitIndex from);
-  static void ApplyPromotions(size_t begin, size_t end, Moves& moves,
-                              const Position& position, BitIndex from);
+  static void GenerateCastling(Moves& moves, const Position& position);
 
   Moves moves_;
 };
