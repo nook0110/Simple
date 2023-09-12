@@ -24,7 +24,7 @@ TEST(GetFirstBit, NoBits)
   constexpr Bitboard bitboard;
 
   // should be nullopt
-  ASSERT_FALSE(bitboard.GetFirstBit());
+  ASSERT_FALSE(bitboard.Any());
 }
 
 TEST(GetFirstBit, AllBits)
@@ -34,10 +34,10 @@ TEST(GetFirstBit, AllBits)
   bitboard.Set();
 
   // should not be nullopt
-  ASSERT_TRUE(bitboard.GetFirstBit());
+  ASSERT_TRUE(bitboard.Any());
 
   // should be first (0-index) bit
-  ASSERT_EQ(bitboard.GetFirstBit().value(), 0);
+  ASSERT_EQ(bitboard.GetFirstBit(), 0);
 }
 
 TEST(GetFirstBit, EachBit)
@@ -49,9 +49,9 @@ TEST(GetFirstBit, EachBit)
     bitboard.Set(i);
 
     // should not be nullopt
-    ASSERT_TRUE(bitboard.GetFirstBit());
+    ASSERT_TRUE(bitboard.Any());
     // should be i
-    ASSERT_EQ(bitboard.GetFirstBit().value(), i);
+    ASSERT_EQ(bitboard.GetFirstBit(), i);
   }
 }
 }  // namespace BitBoardTests
@@ -380,7 +380,8 @@ struct GameInfo
 
   GameInfo answer{0, 0, 0, 0};
 
-  const auto moves = MoveGenerator{}.GenerateMoves<false>(position);
+  const auto moves =
+      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kDefault>(position);
 
   if (depth == 1)
   {
