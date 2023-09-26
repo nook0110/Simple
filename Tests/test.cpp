@@ -340,7 +340,8 @@ TEST(DoMove, DoAndUndoEqualZero)
   const auto start_pos = PositionFactory{}();
   Position pos = start_pos;
 
-  for (const auto moves = MoveGenerator{}.GenerateMoves<false>(pos);
+  for (const auto moves =
+           MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kDefault>(pos);
        const auto& move : moves)
   {
     const auto irreversible_data = pos.GetIrreversibleData();
@@ -440,7 +441,7 @@ class GenerateMovesTest : public testing::TestWithParam<GenTestCase>
     return infos_[depth];
   }
 
-  [[nodiscard]] const size_t GetMaxDepth() const { return infos_.size(); }
+  [[nodiscard]] size_t GetMaxDepth() const { return infos_.size(); }
 
  private:
   void GeneratePosition() { position_ = PositionFactory{}(GetParam().fen); }
@@ -474,7 +475,7 @@ INSTANTIATE_TEST_CASE_P(
     PerftTests, GenerateMovesTest,
     ::testing::Values(
         GenTestCase{
-            R"(r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - )",
+            R"(r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1)",
             {
                 {1, 0, 0, 0},                // depth 0
                 {48, 0, 2, 0},               // depth 1
