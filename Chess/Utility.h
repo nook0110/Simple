@@ -18,8 +18,11 @@ constexpr size_t kColors = 2;
 constexpr size_t kPieceTypes =
     7;  // For Pawn, Knight, Bishop, Rook, Queen, King and Empty Square
 
-constexpr Bitboard kFileA{0x0101010101010101ULL};
-constexpr Bitboard kRank1{0xFF};
+namespace 
+{
+constexpr Bitboard kFileA{ 0x0101010101010101ULL };
+constexpr Bitboard kRank1{ 0xFF };
+}
 
 constexpr std::array kRankBB = {kRank1,
                                 kRank1 << static_cast<size_t>(kLineSize) * 1,
@@ -105,6 +108,11 @@ enum class Compass
   kSouthEast = kSouth + kEast,
   kNorthEast = kNorth + kEast
 };
+
+constexpr Compass Invert(const Compass direction)
+{
+  return Compass{ -static_cast<int>(direction) };
+}
 
 [[nodiscard]] inline Bitboard Shift(const Bitboard bb, const Compass direction)
 {
@@ -199,9 +207,18 @@ constexpr std::array kCheckers = {Piece::kKnight, Piece::kBishop, Piece::kRook,
 inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea>
     bishop_between{};
 inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_between{};
-inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea>
-bishop_ray{};
+inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> bishop_ray{};
 inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_ray{};
+
+inline Bitboard Between(const BitIndex from, const BitIndex to)
+{
+  return bishop_between[from][to] | rook_between[from][to];
+}
+
+inline Bitboard Ray(const BitIndex from, const BitIndex to)
+{
+  return bishop_ray[from][to] | rook_ray[from][to];
+}
 
 inline std::array<std::array<Bitboard, kBoardArea>, kColors> pawn_attacks{};
 

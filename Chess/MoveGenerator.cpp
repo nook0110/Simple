@@ -13,12 +13,14 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
 
   const auto us = position.GetSideToMove();
 
-  auto target = Bitboard{}.Set();
+  auto target = Bitboard{}.Set() & ~position.GetPieces(us);
 
   if constexpr (type == Type::kQuiescence)
   {
     target &= position.GetPieces(Flip(us));
   }
+
+  position.ComputePins();
 
   // generate moves for piece
   GenerateMovesForPiece<Piece::kPawn>(moves_, position, target);
@@ -62,22 +64,22 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
     Moves& moves, Position& position, const Bitboard target) const
 {
   const auto us = position.GetSideToMove();
+  const auto us_idx = static_cast<size_t>(us);
+  const auto them = Flip(us);
+  const auto them_idx = static_cast<size_t>(them);
 
   const auto pawns = position.GetPiecesByType<Piece::kPawn>(us);
   const auto promotion_rank = us == Player::kWhite ? kRankBB[6] : kRankBB[1];
-  const auto direction =
-      us == Player::kWhite ? Compass::kNorth : Compass::kSouth;
+  const auto direction = kPawnMoveDirection[us_idx];
+  const auto opposite_direction = kPawnMoveDirection[them_idx];
 
-  const auto opposite_direction =
-      us == Player::kWhite ? Compass::kSouth : Compass::kNorth;
-
-  const auto not_promoting_pawns = pawns & ~promotion_rank;
-
-  const auto valid_squares = ~position.GetAllPieces() & target;
+  const auto non_promoting_pawns = pawns & ~promotion_rank;
+  
+  const auto valid_squares = ~position.GetPieces(them) & target;
 
   const auto third_rank = us == Player::kWhite ? kRankBB[2] : kRankBB[5];
 
-  auto push = Shift(not_promoting_pawns, direction) & valid_squares;
+  auto push = Shift(non_promoting_pawns, direction) & valid_squares;
 
   const auto double_push_pawns = push & third_rank;
 
@@ -103,23 +105,17 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
 
   static constexpr std::array cant_attack_files = {kFileBB[0], kFileBB[7]};
 
-  const auto attacks =
-      (us == Player::kWhite)
-          ? std::array{Compass::kNorthWest, Compass::kNorthEast}
-          : std::array{Compass::kSouthWest, Compass::kSouthEast};
+  const auto attacks = kPawnAttackDirections[us_idx];
 
-  const auto opposite_attacks =
-      (us == Player::kWhite)
-          ? std::array{Compass::kSouthEast, Compass::kSouthWest}
-          : std::array{Compass::kNorthEast, Compass::kNorthWest};
+  const auto opposite_attacks = kPawnAttackDirections[them_idx];
 
-  const auto enemy_pieces = position.GetPieces(Flip(us));
+  const auto enemy_pieces = position.GetPieces(them);
 
   const auto en_croissant_square = position.GetEnCroissantSquare();
 
   const std::array attacks_to = {
-      Shift(not_promoting_pawns & ~cant_attack_files.front(), attacks.front()),
-      Shift(not_promoting_pawns & ~cant_attack_files.back(), attacks.back())};
+      Shift(non_promoting_pawns & ~cant_attack_files.front(), attacks.front()),
+      Shift(non_promoting_pawns & ~cant_attack_files.back(), attacks.back())};
 
   for (size_t attack_direction = 0; attack_direction < attacks.size();
        ++attack_direction)
@@ -227,8 +223,14 @@ void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
   // get our pieces
   const auto& our_pieces = position.GetPieces(side_to_move);
 
-  // remove moves into our pieces
-  auto valid_moves = attacks & ~our_pieces & target;
+  // if the piece is pinned we can only move in pin direction
+  if (position.GetIrreversibleData().blockers[static_cast<size_t>(side_to_move)].Test(from))
+  {
+    target &= Ray(position.GetKingSquare(side_to_move), from);
+  }
+  
+  // we move only in target squares
+  auto valid_moves = attacks & target;
 
   while (valid_moves.Any())
   {
