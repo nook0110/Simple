@@ -53,9 +53,8 @@ void SimpleChessEngine::InitBetween()
     for (auto direction : GetStepDelta<sliding_piece>())
     {
       Bitboard result{};
-      Bitboard step{1ull};
       BitIndex temp = sq;
-      for (step.Any(); result |= step)
+      for (Bitboard step{1ull}; step.Any(); result |= step)
       {
         if constexpr (sliding_piece == Piece::kBishop)
           bishop_between[sq][temp] = result;

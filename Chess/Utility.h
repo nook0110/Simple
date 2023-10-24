@@ -18,11 +18,11 @@ constexpr size_t kColors = 2;
 constexpr size_t kPieceTypes =
     7;  // For Pawn, Knight, Bishop, Rook, Queen, King and Empty Square
 
-namespace 
+namespace
 {
-constexpr Bitboard kFileA{ 0x0101010101010101ULL };
-constexpr Bitboard kRank1{ 0xFF };
-}
+constexpr Bitboard kFileA{0x0101010101010101ULL};
+constexpr Bitboard kRank1{0xFF};
+}  // namespace
 
 constexpr std::array kRankBB = {kRank1,
                                 kRank1 << static_cast<size_t>(kLineSize) * 1,
@@ -111,7 +111,7 @@ enum class Compass
 
 constexpr Compass Invert(const Compass direction)
 {
-  return Compass{ -static_cast<int>(direction) };
+  return Compass{-static_cast<int>(direction)};
 }
 
 [[nodiscard]] inline Bitboard Shift(const Bitboard bb, const Compass direction)

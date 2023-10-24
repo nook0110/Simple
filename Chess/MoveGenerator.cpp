@@ -20,7 +20,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
     target &= position.GetPieces(Flip(us));
   }
 
-  position.ComputePins();
+  position.ComputePins(us);
 
   // generate moves for piece
   GenerateMovesForPiece<Piece::kPawn>(moves_, position, target);
@@ -60,8 +60,9 @@ void MoveGenerator::GenerateMovesForPiece(Moves& moves, Position& position,
 }
 
 template <>
-void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
-    Moves& moves, Position& position, Bitboard target) const
+void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(Moves& moves,
+                                                        Position& position,
+                                                        Bitboard target) const
 {
   const auto us = position.GetSideToMove();
   const auto us_idx = static_cast<size_t>(us);
@@ -74,7 +75,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
   const auto opposite_direction = kPawnMoveDirection[them_idx];
 
   const auto non_promoting_pawns = pawns & ~promotion_rank;
-  
+
   const auto valid_squares = ~position.GetPieces(them) & target;
 
   const auto third_rank = us == Player::kWhite ? kRankBB[2] : kRankBB[5];
@@ -196,8 +197,9 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
 }
 
 template <>
-void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(
-    Moves& moves, Position& position, Bitboard target) const
+void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(Moves& moves,
+                                                        Position& position,
+                                                        Bitboard target) const
 {
   const auto us = position.GetSideToMove();
 
@@ -226,11 +228,13 @@ void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
   const auto& our_pieces = position.GetPieces(side_to_move);
 
   // if the piece is pinned we can only move in pin direction
-  if (position.GetIrreversibleData().blockers[static_cast<size_t>(side_to_move)].Test(from))
+  if (position.GetIrreversibleData()
+          .blockers[static_cast<size_t>(side_to_move)]
+          .Test(from))
   {
     target &= Ray(position.GetKingSquare(side_to_move), from);
   }
-  
+
   // we move only in target squares
   auto valid_moves = attacks & target;
 

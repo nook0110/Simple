@@ -454,21 +454,29 @@ inline Bitboard Position::Attackers(const BitIndex square) const
              pieces_by_type_[static_cast<size_t>(Piece::kKing)];
 }
 
-void Position::ComputePins(const Player player)
+inline void Position::ComputePins(const Player player)
 {
   const BitIndex king_square = GetKingSquare(player);
-  
+
   const Bitboard all_pieces = GetAllPieces();
-  
-  const Bitboard diagonal_blockers = AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces);
-  const Bitboard horizontal_blockers = AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces);
 
-  Bitboard diagonal_pinners = AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces ^ diagonal_blockers)
-    & (GetPiecesByType<Piece::kBishop>(Flip(player)) | GetPiecesByType<Piece::kQueen>(Flip(player)));
-  Bitboard horizontal_pinners = AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces ^ horizontal_blockers)
-    & (GetPiecesByType<Piece::kRook>(Flip(player)) | GetPiecesByType<Piece::kQueen>(Flip(player)));
+  const Bitboard diagonal_blockers =
+      AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces);
+  const Bitboard horizontal_blockers =
+      AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces);
 
-  irreversible_data_.pinners[static_cast<size_t>(player)] = diagonal_pinners | horizontal_pinners;
+  Bitboard diagonal_pinners = AttackTable<Piece::kBishop>::GetAttackMap(
+                                  king_square, all_pieces ^ diagonal_blockers) &
+                              (GetPiecesByType<Piece::kBishop>(Flip(player)) |
+                               GetPiecesByType<Piece::kQueen>(Flip(player)));
+  Bitboard horizontal_pinners =
+      AttackTable<Piece::kRook>::GetAttackMap(
+          king_square, all_pieces ^ horizontal_blockers) &
+      (GetPiecesByType<Piece::kRook>(Flip(player)) |
+       GetPiecesByType<Piece::kQueen>(Flip(player)));
+
+  irreversible_data_.pinners[static_cast<size_t>(player)] =
+      diagonal_pinners | horizontal_pinners;
 
   Bitboard& blockers = irreversible_data_.blockers[static_cast<size_t>(player)];
   while (diagonal_pinners.Any())
