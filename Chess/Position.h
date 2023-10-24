@@ -287,7 +287,7 @@ class Position
 
   [[nodiscard]] Bitboard Attackers(BitIndex square) const;
 
-  void ComputePins(const Player player);
+  void ComputePins(const Player us);
 
   [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us) const;
 
@@ -454,31 +454,35 @@ inline Bitboard Position::Attackers(const BitIndex square) const
              pieces_by_type_[static_cast<size_t>(Piece::kKing)];
 }
 
-inline void Position::ComputePins(const Player player)
+inline void Position::ComputePins(const Player us)
 {
-  const BitIndex king_square = GetKingSquare(player);
+  const Player them = Flip(us);
+
+  const size_t us_idx = static_cast<size_t>(us);
+
+  const BitIndex king_square = GetKingSquare(us);
 
   const Bitboard all_pieces = GetAllPieces();
 
   const Bitboard diagonal_blockers =
-      AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces);
+      AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces) & all_pieces;
   const Bitboard horizontal_blockers =
-      AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces);
+      AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces) & all_pieces;
 
   Bitboard diagonal_pinners = AttackTable<Piece::kBishop>::GetAttackMap(
                                   king_square, all_pieces ^ diagonal_blockers) &
-                              (GetPiecesByType<Piece::kBishop>(Flip(player)) |
-                               GetPiecesByType<Piece::kQueen>(Flip(player)));
+                              (GetPiecesByType<Piece::kBishop>(them) |
+                               GetPiecesByType<Piece::kQueen>(them));
   Bitboard horizontal_pinners =
       AttackTable<Piece::kRook>::GetAttackMap(
           king_square, all_pieces ^ horizontal_blockers) &
-      (GetPiecesByType<Piece::kRook>(Flip(player)) |
-       GetPiecesByType<Piece::kQueen>(Flip(player)));
+      (GetPiecesByType<Piece::kRook>(them) |
+       GetPiecesByType<Piece::kQueen>(them));
 
-  irreversible_data_.pinners[static_cast<size_t>(player)] =
+  irreversible_data_.pinners[us_idx] =
       diagonal_pinners | horizontal_pinners;
 
-  Bitboard& blockers = irreversible_data_.blockers[static_cast<size_t>(player)];
+  Bitboard& blockers = irreversible_data_.blockers[us_idx];
   while (diagonal_pinners.Any())
   {
     const BitIndex square = diagonal_pinners.PopFirstBit();
