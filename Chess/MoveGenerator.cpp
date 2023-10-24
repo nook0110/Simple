@@ -35,18 +35,17 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
     return moves_;
   }
 
+  // compute pins
+  position.ComputePins(us);
+
+  // generate moves for piece
+  GenerateMovesForPiece<Piece::kKing>(moves_, position, target);
   // is in check
   if (king_attacker.Any())
   {
     target &= Ray(king_square, king_attacker.GetFirstBit());
   }
-
-  // compute pins
-  position.ComputePins(us);
-
-  // generate moves for piece
   GenerateMovesForPiece<Piece::kPawn>(moves_, position, target);
-  GenerateMovesForPiece<Piece::kKing>(moves_, position, target);
   std::erase_if(moves_, [&position](const Move& move)
                 { return !IsMoveValid(position, move); });
 
@@ -129,9 +128,15 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(Moves& moves,
 
   static constexpr std::array cant_attack_files = {kFileBB[0], kFileBB[7]};
 
-  const auto attacks = kPawnAttackDirections[us_idx];
+  const auto attacks =
+      (us == Player::kWhite)
+          ? std::array{Compass::kNorthWest, Compass::kNorthEast}
+          : std::array{Compass::kSouthWest, Compass::kSouthEast};
 
-  const auto opposite_attacks = kPawnAttackDirections[them_idx];
+ const auto opposite_attacks =
+      (us == Player::kWhite)
+          ? std::array{Compass::kSouthEast, Compass::kSouthWest}
+          : std::array{Compass::kNorthEast, Compass::kNorthWest};
 
   const auto enemy_pieces = position.GetPieces(them);
 
