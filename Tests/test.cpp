@@ -13,6 +13,7 @@
 #include "../Chess/Position.cpp"
 #include "../Chess/PositionFactory.h"
 #include "../Chess/SimpleChessEngine.h"
+#include "../Chess/StreamUtility.h"
 
 using namespace SimpleChessEngine;
 
@@ -320,11 +321,27 @@ TEST_P(BestMoveTest, FindBestMove)
 
   const auto first_answer =
       ComputeBestMoveByTime(position, std::chrono::seconds(30));
-  ASSERT_EQ(first_answer, GetAnswer());
+  EXPECT_EQ(first_answer, GetAnswer());
+  if (first_answer != GetAnswer())
+  {
+    std::cout << "First answer: ";
+
+    std::visit([this](const auto& move) { std::cout << move; }, first_answer);
+
+    std::cout << std::endl;
+  }
 
   const auto second_answer = ComputeBestMoveByDepth(position, 7);
+  if (second_answer != GetAnswer())
+  {
+    std::cout << "Second answer: ";
 
-  ASSERT_EQ(second_answer, GetAnswer());
+    std::visit([this](const auto& move) { std::cout << move; }, second_answer);
+
+    std::cout << std::endl;
+  }
+
+  EXPECT_EQ(second_answer, GetAnswer());
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -483,7 +500,7 @@ INSTANTIATE_TEST_CASE_P(
                 {97862, 45, 3162, 0},        // depth 3
                 {4085603, 1929, 128013, 1},  // depth 4
             }},
-        GenTestCase{R"(8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -)",
+        GenTestCase{R"(8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1)",
                     {
                         {1, 0, 0, 0},            // depth 0
                         {14, 0, 0, 0},           // depth 1
