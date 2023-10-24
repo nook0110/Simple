@@ -42,6 +42,9 @@ class Position
 
     std::array<std::bitset<2>, kColors> castling_rights{};
 
+    std::array<Bitboard, kColors> pinners;
+    std::array<Bitboard, kColors> blockers;
+
     bool operator==(const IrreversibleData&) const = default;
   };
 
@@ -284,6 +287,8 @@ class Position
 
   [[nodiscard]] Bitboard Attackers(BitIndex square) const;
 
+  void ComputePins(const Player player);
+
   [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us) const;
 
   /**
@@ -447,6 +452,35 @@ inline Bitboard Position::Attackers(const BitIndex square) const
              pieces_by_type_[static_cast<size_t>(Piece::kQueen)] |
          AttackTable<Piece::kKing>::GetAttackMap(square, GetAllPieces()) &
              pieces_by_type_[static_cast<size_t>(Piece::kKing)];
+}
+
+void Position::ComputePins(const Player player)
+{
+  const BitIndex king_square = GetKingSquare(player);
+  
+  const Bitboard all_pieces = GetAllPieces();
+  
+  const Bitboard diagonal_blockers = AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces);
+  const Bitboard horizontal_blockers = AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces);
+
+  Bitboard diagonal_pinners = AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces ^ diagonal_blockers)
+    & (GetPiecesByType<Piece::kBishop>(Flip(player)) | GetPiecesByType<Piece::kQueen>(Flip(player)));
+  Bitboard horizontal_pinners = AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces ^ horizontal_blockers)
+    & (GetPiecesByType<Piece::kRook>(Flip(player)) | GetPiecesByType<Piece::kQueen>(Flip(player)));
+
+  irreversible_data_.pinners[static_cast<size_t>(player)] = diagonal_pinners | horizontal_pinners;
+
+  Bitboard& blockers = irreversible_data_.blockers[static_cast<size_t>(player)];
+  while (diagonal_pinners.Any())
+  {
+    const BitIndex square = diagonal_pinners.PopFirstBit();
+    blockers |= bishop_between[square][king_square] & diagonal_blockers;
+  }
+  while (horizontal_pinners.Any())
+  {
+    const BitIndex square = horizontal_pinners.PopFirstBit();
+    blockers |= rook_between[square][king_square] & horizontal_blockers;
+  }
 }
 
 inline Position::IrreversibleData Position::GetIrreversibleData() const

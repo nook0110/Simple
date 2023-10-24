@@ -78,6 +78,8 @@ class Bitboard
 
   BitIndex PopFirstBit();
 
+  [[nodiscard]] bool MoreThanOne() const;
+
   constexpr Bitboard operator-(const Bitboard& other) const;
   Bitboard& operator-=(const Bitboard& other);
 
@@ -130,6 +132,11 @@ inline BitIndex Bitboard::PopFirstBit()
   const BitIndex bit = GetFirstBit();
   Reset(bit);
   return bit;
+}
+
+inline bool Bitboard::MoreThanOne() const
+{
+  return (*this & (*this - Bitboard{1})).Any();
 }
 
 constexpr Bitboard Bitboard::operator-(const Bitboard& other) const
