@@ -4,6 +4,7 @@
 
 namespace SimpleChessEngine
 {
+// clang-format off
 inline std::array<std::array<std::array<TaperedEval, kBoardArea>, kPieceTypes>,
                   kColors>
     kPSQT = {{
@@ -54,6 +55,7 @@ inline std::array<std::array<std::array<TaperedEval, kBoardArea>, kPieceTypes>,
             {-30, -40}, {-50, -70}, {-20, -40}, {-30, -40}, {-40, -30},
             {-40, -30}, {-30, -40}, {-20, -40}, {-50, -70}}},
           // Rooks
+
           {{{-30, 0}, {}, {}, {}, {}, {}, {}, {-30, 0}, {}, {}, {}, {}, {},
             {},       {}, {}, {}, {}, {}, {}, {},       {}, {}, {}, {}, {},
             {},       {}, {}, {}, {}, {}, {}, {},       {}, {}, {}, {}, {},
@@ -81,6 +83,7 @@ inline std::array<std::array<std::array<TaperedEval, kBoardArea>, kPieceTypes>,
         // Black pieces table is initialized symmetrically to the white pieces
         // table
     }};
+// clang-format on
 
 inline void InitPSQT()
 {
