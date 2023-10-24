@@ -199,6 +199,9 @@ constexpr std::array kCheckers = {Piece::kKnight, Piece::kBishop, Piece::kRook,
 inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea>
     bishop_between{};
 inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_between{};
+inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea>
+bishop_ray{};
+inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_ray{};
 
 inline std::array<std::array<Bitboard, kBoardArea>, kColors> pawn_attacks{};
 
