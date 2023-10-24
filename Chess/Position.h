@@ -458,39 +458,46 @@ inline void Position::ComputePins(const Player us)
 {
   const Player them = Flip(us);
 
-  const size_t us_idx = static_cast<size_t>(us);
+  const auto us_idx = static_cast<size_t>(us);
 
   const BitIndex king_square = GetKingSquare(us);
 
   const Bitboard all_pieces = GetAllPieces();
 
   const Bitboard diagonal_blockers =
-      AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces) & all_pieces;
+      AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces) &
+      all_pieces;
   const Bitboard horizontal_blockers =
-      AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces) & all_pieces;
+      AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces) &
+      all_pieces;
 
   Bitboard diagonal_pinners = AttackTable<Piece::kBishop>::GetAttackMap(
                                   king_square, all_pieces ^ diagonal_blockers) &
                               (GetPiecesByType<Piece::kBishop>(them) |
-                               GetPiecesByType<Piece::kQueen>(them));
+                               GetPiecesByType<Piece::kQueen>(them)) &
+                              ~diagonal_blockers;
   Bitboard horizontal_pinners =
       AttackTable<Piece::kRook>::GetAttackMap(
           king_square, all_pieces ^ horizontal_blockers) &
       (GetPiecesByType<Piece::kRook>(them) |
-       GetPiecesByType<Piece::kQueen>(them));
+       GetPiecesByType<Piece::kQueen>(them)) &
+      ~horizontal_blockers;
 
-  irreversible_data_.pinners[us_idx] =
-      diagonal_pinners | horizontal_pinners;
+  irreversible_data_.pinners[us_idx] = diagonal_pinners | horizontal_pinners;
 
   Bitboard& blockers = irreversible_data_.blockers[us_idx];
   while (diagonal_pinners.Any())
   {
     const BitIndex square = diagonal_pinners.PopFirstBit();
+
+    assert(bishop_between[square][king_square].MoreThanOne());
     blockers |= bishop_between[square][king_square] & diagonal_blockers;
   }
   while (horizontal_pinners.Any())
   {
     const BitIndex square = horizontal_pinners.PopFirstBit();
+
+    assert(rook_between[square][king_square].MoreThanOne());
     blockers |= rook_between[square][king_square] & horizontal_blockers;
   }
 }

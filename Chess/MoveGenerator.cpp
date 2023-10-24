@@ -43,7 +43,8 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
   // is in check
   if (king_attacker.Any())
   {
-    target &= Ray(king_square, king_attacker.GetFirstBit());
+    const auto attacker = king_attacker.GetFirstBit();
+    target &= Between(king_square, attacker) | GetBitboardOfSquare(attacker);
   }
   GenerateMovesForPiece<Piece::kPawn>(moves_, position, target);
   std::erase_if(moves_, [&position](const Move& move)
@@ -56,6 +57,9 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
 
   GenerateCastling(moves_, position);
 
+  assert(std::all_of(moves_.begin(), moves_.end(),
+                     [&position](const Move& move)
+                     { return IsMoveValid(position, move); }));
   // return moves
   return moves_;
 }
@@ -98,7 +102,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(Moves& moves,
 
   const auto non_promoting_pawns = pawns & ~promotion_rank;
 
-  const auto valid_squares = ~position.GetPieces(them) & target;
+  const auto valid_squares = ~position.GetAllPieces();
 
   const auto third_rank = us == Player::kWhite ? kRankBB[2] : kRankBB[5];
 
@@ -106,6 +110,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(Moves& moves,
 
   const auto double_push_pawns = push & third_rank;
 
+  push &= target;
   while (push.Any())
   {
     const auto to = push.PopFirstBit();
@@ -117,6 +122,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(Moves& moves,
 
   auto double_push = Shift(double_push_pawns, direction) & valid_squares;
 
+  double_push &= target;
   while (double_push.Any())
   {
     const auto to = double_push.PopFirstBit();
@@ -133,7 +139,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(Moves& moves,
           ? std::array{Compass::kNorthWest, Compass::kNorthEast}
           : std::array{Compass::kSouthWest, Compass::kSouthEast};
 
- const auto opposite_attacks =
+  const auto opposite_attacks =
       (us == Player::kWhite)
           ? std::array{Compass::kSouthEast, Compass::kSouthWest}
           : std::array{Compass::kNorthEast, Compass::kNorthWest};
