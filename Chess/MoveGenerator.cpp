@@ -61,7 +61,7 @@ void MoveGenerator::GenerateMovesForPiece(Moves& moves, Position& position,
 
 template <>
 void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
-    Moves& moves, Position& position, const Bitboard target) const
+    Moves& moves, Position& position, Bitboard target) const
 {
   const auto us = position.GetSideToMove();
   const auto us_idx = static_cast<size_t>(us);
@@ -197,11 +197,13 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
 
 template <>
 void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(
-    Moves& moves, Position& position, const Bitboard target) const
+    Moves& moves, Position& position, Bitboard target) const
 {
   const auto us = position.GetSideToMove();
 
   const auto king_pos = position.GetKingSquare(us);
+
+  target &= ~position.GetAllPawnAttacks(Flip(us));
 
   GenerateMovesFromSquare<Piece::kKing>(moves, position, king_pos, target);
 }
