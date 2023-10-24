@@ -12,6 +12,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
   moves_.clear();
 
   const auto us = position.GetSideToMove();
+  const auto them = Flip(us);
 
   auto target = Bitboard{}.Set() & ~position.GetPieces(us);
 
@@ -20,18 +21,40 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
     target &= position.GetPieces(Flip(us));
   }
 
+  const auto king_square = position.GetKingSquare(us);
+  const auto king_attacker =
+      position.Attackers(king_square) & position.GetPieces(them);
+
+  // Double-check check
+  if (king_attacker.MoreThanOne())
+  {
+    GenerateMovesForPiece<Piece::kKing>(moves_, position, target);
+    erase_if(moves_, [&position](const Move& move)
+             { return !IsMoveValid(position, move); });
+
+    return moves_;
+  }
+
+  // is in check
+  if (king_attacker.Any())
+  {
+    target &= Ray(king_square, king_attacker.GetFirstBit());
+  }
+
+  // compute pins
   position.ComputePins(us);
 
   // generate moves for piece
   GenerateMovesForPiece<Piece::kPawn>(moves_, position, target);
+  GenerateMovesForPiece<Piece::kKing>(moves_, position, target);
+  std::erase_if(moves_, [&position](const Move& move)
+                { return !IsMoveValid(position, move); });
+
   GenerateMovesForPiece<Piece::kKnight>(moves_, position, target);
   GenerateMovesForPiece<Piece::kBishop>(moves_, position, target);
   GenerateMovesForPiece<Piece::kRook>(moves_, position, target);
   GenerateMovesForPiece<Piece::kQueen>(moves_, position, target);
-  GenerateMovesForPiece<Piece::kKing>(moves_, position, target);
 
-  erase_if(moves_, [&position](const Move& move)
-           { return !IsMoveValid(position, move); });
   GenerateCastling(moves_, position);
 
   // return moves
