@@ -572,5 +572,5 @@ int main(int argc, char** argv)
   SimpleChessEngine::InitPawnAttacks();
   SimpleChessEngine::InitPSQT();
 
-  RUN_ALL_TESTS();
+  return RUN_ALL_TESTS();
 }
