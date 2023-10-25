@@ -50,7 +50,7 @@ inline Position PositionFactory::operator()(const std::string& fen)
       }
 
       const auto& [piece, color] = kPieces[*current];
-      auto square = static_cast<BitIndex>(row * kBoardSize + column);
+      BitIndex square = row * kBoardSize + column;
       position.PlacePiece(square, piece, color);
 
       const auto us = static_cast<size_t>(color);

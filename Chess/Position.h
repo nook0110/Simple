@@ -42,9 +42,6 @@ class Position
 
     std::array<std::bitset<2>, kColors> castling_rights{};
 
-    std::array<Bitboard, kColors> pinners;
-    std::array<Bitboard, kColors> blockers;
-
     bool operator==(const IrreversibleData&) const = default;
   };
 
@@ -287,8 +284,6 @@ class Position
 
   [[nodiscard]] Bitboard Attackers(BitIndex square) const;
 
-  void ComputePins(const Player us);
-
   [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us) const;
 
   /**
@@ -452,58 +447,6 @@ inline Bitboard Position::Attackers(const BitIndex square) const
              pieces_by_type_[static_cast<size_t>(Piece::kQueen)] |
          AttackTable<Piece::kKing>::GetAttackMap(square, GetAllPieces()) &
              pieces_by_type_[static_cast<size_t>(Piece::kKing)];
-}
-
-inline void Position::ComputePins(const Player us)
-{
-  const Player them = Flip(us);
-
-  const auto us_idx = static_cast<size_t>(us);
-
-  const BitIndex king_square = GetKingSquare(us);
-
-  const Bitboard all_pieces = GetAllPieces();
-
-  const Bitboard diagonal_blockers =
-      AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces) &
-      all_pieces;
-  const Bitboard horizontal_blockers =
-      AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces) &
-      all_pieces;
-
-  Bitboard diagonal_pinners = AttackTable<Piece::kBishop>::GetAttackMap(
-                                  king_square, all_pieces ^ diagonal_blockers) &
-                              (GetPiecesByType<Piece::kBishop>(them) |
-                               GetPiecesByType<Piece::kQueen>(them)) &
-                              ~diagonal_blockers;
-  Bitboard horizontal_pinners =
-      AttackTable<Piece::kRook>::GetAttackMap(
-          king_square, all_pieces ^ horizontal_blockers) &
-      (GetPiecesByType<Piece::kRook>(them) |
-       GetPiecesByType<Piece::kQueen>(them)) &
-      ~horizontal_blockers;
-
-  irreversible_data_.pinners[us_idx] = diagonal_pinners | horizontal_pinners;
-
-  Bitboard& blockers = irreversible_data_.blockers[us_idx];
-  while (diagonal_pinners.Any())
-  {
-    const BitIndex square = diagonal_pinners.PopFirstBit();
-
-    const auto blockers_between =
-        bishop_between[square][king_square] & diagonal_blockers;
-    assert(blockers_between.Any() && !blockers_between.MoreThanOne());
-    blockers |= blockers_between;
-  }
-  while (horizontal_pinners.Any())
-  {
-    const BitIndex square = horizontal_pinners.PopFirstBit();
-
-    const auto blockers_between =
-        rook_between[square][king_square] & horizontal_blockers;
-    assert(blockers_between.Any() && !blockers_between.MoreThanOne());
-    blockers |= blockers_between;
-  }
 }
 
 inline Position::IrreversibleData Position::GetIrreversibleData() const
