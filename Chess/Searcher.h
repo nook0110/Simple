@@ -146,7 +146,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   };
 
   // get all the possible moves
-  auto moves = move_generator_.GenerateMoves<false>(current_position_);
+  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kDefault>(current_position_);
 
   // check if there are no possible moves
   if (moves.empty())

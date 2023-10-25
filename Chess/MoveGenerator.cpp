@@ -13,7 +13,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
 
   const auto us = position.GetSideToMove();
 
-  auto target = Bitboard{}.Set();
+  auto target = ~position.GetPieces(us);
 
   if constexpr (type == Type::kQuiescence)
   {
@@ -224,11 +224,16 @@ void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
   // get whose move is now
   const auto side_to_move = position.GetSideToMove();
 
-  // get our pieces
-  const auto& our_pieces = position.GetPieces(side_to_move);
+  // if the piece is pinned we can only move in pin direction
+  if (position.GetIrreversibleData()
+    .blockers[static_cast<size_t>(side_to_move)]
+    .Test(from))
+  {
+    target &= Ray(position.GetKingSquare(side_to_move), from);
+  }
 
   // remove moves into our pieces
-  auto valid_moves = attacks & ~our_pieces & target;
+  auto valid_moves = attacks & target;
 
   while (valid_moves.Any())
   {

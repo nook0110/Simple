@@ -53,14 +53,22 @@ void SimpleChessEngine::InitBetween()
     for (auto direction : GetStepDelta<sliding_piece>())
     {
       Bitboard result{};
-      Bitboard step{~kEmptyBoard};
-      for (BitIndex temp = sq; step.Any(); result |= step)
+      BitIndex temp = sq;
+      for (Bitboard step{ ~kEmptyBoard }; step.Any(); result |= step)
       {
         if constexpr (sliding_piece == Piece::kBishop)
           bishop_between[sq][temp] = result;
         else
           rook_between[sq][temp] = result;
         step = DoShiftIfValid(temp, direction).value_or(Bitboard{});
+      }
+      temp = sq;
+      while (DoShiftIfValid(temp, direction))
+      {
+        if constexpr (sliding_piece == Piece::kBishop)
+          bishop_ray[sq][temp] = result;
+        else
+          rook_ray[sq][temp] = result;
       }
     }
   }
