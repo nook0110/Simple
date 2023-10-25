@@ -563,8 +563,10 @@ TEST(GenerateMoves, ShannonNumberCheck)
 }
 }  // namespace MoveGeneratorTests
 
-int main(int* argc, char** argv)
+int main(int argc, char** argv)
 {
+  testing::InitGoogleTest(&argc, argv);
+
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kBishop>();
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kRook>();
   SimpleChessEngine::InitPawnAttacks();
