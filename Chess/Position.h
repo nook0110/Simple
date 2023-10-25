@@ -490,15 +490,19 @@ inline void Position::ComputePins(const Player us)
   {
     const BitIndex square = diagonal_pinners.PopFirstBit();
 
-    assert(bishop_between[square][king_square].MoreThanOne());
-    blockers |= bishop_between[square][king_square] & diagonal_blockers;
+    const auto blockers_between =
+        bishop_between[square][king_square] & diagonal_blockers;
+    assert(blockers_between.Any() && !blockers_between.MoreThanOne());
+    blockers |= blockers_between;
   }
   while (horizontal_pinners.Any())
   {
     const BitIndex square = horizontal_pinners.PopFirstBit();
 
-    assert(rook_between[square][king_square].MoreThanOne());
-    blockers |= rook_between[square][king_square] & horizontal_blockers;
+    const auto blockers_between =
+        rook_between[square][king_square] & horizontal_blockers;
+    assert(blockers_between.Any() && !blockers_between.MoreThanOne());
+    blockers |= blockers_between;
   }
 }
 
