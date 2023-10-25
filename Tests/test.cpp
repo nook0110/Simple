@@ -279,58 +279,6 @@ struct BestMoveCase
   std::string fen;
   std::string bm;
 };
-
-class DISABLED_BestMoveTest : public testing::TestWithParam<BestMoveCase>
-{
- protected:
-  void SetUp() override
-  {
-    GeneratePosition();
-    GenerateAnswer();
-  }
-
-  [[nodiscard]] const Position& GetPosition() const { return position_; }
-
-  [[nodiscard]] const Move& GetAnswer() const { return answer_; }
-
- private:
-  void GeneratePosition()
-  {
-    const auto fen = GetFen();
-    position_ = PositionFactory{}(fen);
-  }
-
-  void GenerateAnswer()
-  {
-    const auto move = GetMove();
-    answer_ = MoveFactory{}(GetPosition(), move);
-  }
-
-  [[nodiscard]] const std::string& GetFen() const { return GetParam().fen; }
-
-  [[nodiscard]] const std::string& GetMove() const { return GetParam().bm; }
-
-  Position position_;
-  Move answer_;
-};
-
-TEST_P(DISABLED_BestMoveTest, FindBestMove)
-{
-  const auto& position = GetPosition();
-
-  const auto first_answer =
-      ComputeBestMoveByTime(position, std::chrono::seconds(30));
-  ASSERT_EQ(first_answer, GetAnswer());
-
-  const auto second_answer = ComputeBestMoveByDepth(position, 7);
-
-  ASSERT_EQ(second_answer, GetAnswer());
-}
-
-INSTANTIATE_TEST_CASE_P(
-    Name, DISABLED_BestMoveTest,
-    testing::Values(BestMoveCase{
-        R"(1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - -)", "d6d1"}));
 }  // namespace BestMoveTests
 
 namespace PositionTest
