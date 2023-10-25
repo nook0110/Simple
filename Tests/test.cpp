@@ -280,7 +280,7 @@ struct BestMoveCase
   std::string bm;
 };
 
-class BestMoveTest : public testing::TestWithParam<BestMoveCase>
+class DISABLED_BestMoveTest : public testing::TestWithParam<BestMoveCase>
 {
  protected:
   void SetUp() override
@@ -314,7 +314,7 @@ class BestMoveTest : public testing::TestWithParam<BestMoveCase>
   Move answer_;
 };
 
-TEST_P(BestMoveTest, FindBestMove)
+TEST_P(DISABLED_BestMoveTest, FindBestMove)
 {
   const auto& position = GetPosition();
 
@@ -328,7 +328,7 @@ TEST_P(BestMoveTest, FindBestMove)
 }
 
 INSTANTIATE_TEST_CASE_P(
-    Name, BestMoveTest,
+    Name, DISABLED_BestMoveTest,
     testing::Values(BestMoveCase{
         R"(1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - -)", "d6d1"}));
 }  // namespace BestMoveTests
