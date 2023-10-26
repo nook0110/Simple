@@ -54,7 +54,7 @@ void SimpleChessEngine::InitBetween()
     {
       Bitboard result{};
       BitIndex temp = sq;
-      for (Bitboard step{ ~kEmptyBoard }; step.Any(); result |= step)
+      for (Bitboard step{~kEmptyBoard}; step.Any(); result |= step)
       {
         if constexpr (sliding_piece == Piece::kBishop)
           bishop_between[sq][temp] = result;

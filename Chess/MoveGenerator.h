@@ -45,11 +45,14 @@ class MoveGenerator
     {
       if (position.GetPiece(default_move->from) == Piece::kKing)
       {
-        return !position.IsUnderAttack(default_move->to, us, GetBitboardOfSquare(default_move->from));
+        return !position.IsUnderAttack(default_move->to, us,
+                                       GetBitboardOfSquare(default_move->from));
       }
       assert(position.GetPiece(default_move->from) == Piece::kPawn);
-      return !irreversible_data.blockers[static_cast<size_t>(us)].Test(default_move->from) ||
-        Ray(position.GetKingSquare(us), default_move->from).Test(default_move->to);
+      return !irreversible_data.blockers[static_cast<size_t>(us)].Test(
+                 default_move->from) ||
+             Ray(position.GetKingSquare(us), default_move->from)
+                 .Test(default_move->to);
     }
     if (std::holds_alternative<EnCroissant>(move))
     {
@@ -60,20 +63,26 @@ class MoveGenerator
     }
     BitIndex from{};
     BitIndex to{};
-    std::visit([&from, &to](const auto& unwrapped_move)
-      {
-        if constexpr (std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, PawnPush> ||
-                      std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, DoublePush> ||
-                      std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, Promotion>)
+    std::visit(
+        [&from, &to](const auto& unwrapped_move)
         {
-          from = unwrapped_move.from;
-          to = unwrapped_move.to;
-          return;
-        }
-        assert(false);
-      }, move);
+          if constexpr (
+              std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
+                           PawnPush> ||
+              std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
+                           DoublePush> ||
+              std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
+                           Promotion>)
+          {
+            from = unwrapped_move.from;
+            to = unwrapped_move.to;
+            return;
+          }
+          assert(false);
+        },
+        move);
     return !irreversible_data.blockers[static_cast<size_t>(us)].Test(from) ||
-            Ray(position.GetKingSquare(us), from).Test(to);
+           Ray(position.GetKingSquare(us), from).Test(to);
   }
 
   /**
