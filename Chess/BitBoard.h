@@ -1,8 +1,10 @@
 #pragma once
 
+#if defined(_MSC_VER)
 #define USE_MSVC_INTRINSICS
 
 #include <intrin.h>
+#endif
 
 #include <optional>
 
