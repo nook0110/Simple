@@ -39,7 +39,6 @@ class MoveGenerator
   [[nodiscard]] static bool IsMoveValid(Position& position, const Move& move)
   {
     const auto us = position.GetSideToMove();
-    const auto irreversible_data = position.GetIrreversibleData();
 
     if (const auto default_move = std::get_if<DefaultMove>(&move))
     {
@@ -48,11 +47,12 @@ class MoveGenerator
         return !position.IsUnderAttack(default_move->to, us, GetBitboardOfSquare(default_move->from));
       }
       assert(position.GetPiece(default_move->from) == Piece::kPawn);
-      return !irreversible_data.blockers[static_cast<size_t>(us)].Test(default_move->from) ||
+      return !position.GetIrreversibleData().blockers[static_cast<size_t>(us)].Test(default_move->from) ||
         Ray(position.GetKingSquare(us), default_move->from).Test(default_move->to);
     }
     if (std::holds_alternative<EnCroissant>(move))
     {
+      const auto irreversible_data = position.GetIrreversibleData();
       position.DoMove(move);
       const auto valid = !position.IsUnderCheck(us);
       position.UndoMove(move, irreversible_data);
@@ -72,7 +72,7 @@ class MoveGenerator
         }
         assert(false);
       }, move);
-    return !irreversible_data.blockers[static_cast<size_t>(us)].Test(from) ||
+    return !position.GetIrreversibleData().blockers[static_cast<size_t>(us)].Test(from) ||
             Ray(position.GetKingSquare(us), from).Test(to);
   }
 

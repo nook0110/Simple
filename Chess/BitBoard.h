@@ -1,14 +1,19 @@
 #pragma once
 
-#if defined(_MSC_VER)
-#define USE_MSVC_INTRINSICS
-
-#include <intrin.h>
-#endif
-
 #include <optional>
 
 #include "BitScan.h"
+
+#ifdef __GNUC__
+#define USE_GCC_BUILTINS
+#pragma GCC target("avx2,bmi,bmi2,popcnt,lzcnt")
+#elif defined(_MSC_VER)
+#define USE_MSVC_INTRINSICS
+#include <intrin.h>
+
+#include "nmmintrin.h"
+#pragma intrinsic(_BitScanForward)
+#endif
 
 /**
  * \brief Class that represents a bitboard.
@@ -116,9 +121,9 @@ private:
 
 inline size_t Bitboard::Count() const
 {
-#ifdef __GNUC__
+#ifdef USE_GCC_BUILTINS
   return __builtin_popcountll(value_);
-#elif defined(_MSC_VER)
+#elif defined(USE_MSVC_INTRINSICS)
   return _mm_popcnt_u64(value_);
 #endif
 }

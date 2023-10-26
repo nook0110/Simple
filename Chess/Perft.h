@@ -10,8 +10,10 @@ size_t Perft(std::ostream& o_stream, Position& position, const size_t depth)
 {
   if (depth == 0) return 1;
 
+  static auto move_generator = MoveGenerator{};
+
   const auto moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kDefault>(position);
+      move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(position);
 
   size_t answer{};
 

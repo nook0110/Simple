@@ -297,8 +297,10 @@ namespace MoveGeneratorTests
 
     GameInfo answer{ 0, 0, 0, 0 };
 
+    static auto move_generator = MoveGenerator{};
+
     const auto moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kDefault>(position);
+      move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(position);
 
     if (depth == 1)
     {
