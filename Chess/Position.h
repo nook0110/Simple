@@ -45,7 +45,11 @@ namespace SimpleChessEngine
       std::array<Bitboard, kColors> pinners{};
       std::array<Bitboard, kColors> blockers{};
 
-      bool operator==(const IrreversibleData&) const = default;
+      bool operator==(const IrreversibleData& other) const
+      {
+        return std::tie(en_croissant_square, castling_rights) ==
+          std::tie(other.en_croissant_square, other.castling_rights);
+      }
     };
 
     /**
@@ -285,11 +289,11 @@ namespace SimpleChessEngine
     [[nodiscard]] BitIndex GetCastlingRookSquare(
       Player player, Castling::CastlingSide side) const;
 
-    [[nodiscard]] Bitboard Attackers(BitIndex square) const;
+    [[nodiscard]] Bitboard Attackers(BitIndex square, const Bitboard transparent = kEmptyBoard) const;
 
     void ComputePins(const Player us);
 
-    [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us) const;
+    [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us, const Bitboard transparent = kEmptyBoard) const;
 
     /**
      * \brief Checks if current player is under check.
@@ -321,7 +325,11 @@ namespace SimpleChessEngine
      *
      * \return True if positions are the same, false otherwise.
      */
-    bool operator==(const Position& other) const = default;
+    bool operator==(const Position& other) const
+    {
+      return std::tie(hash_, side_to_move_, pieces_by_type_, pieces_by_color_, irreversible_data_) ==
+        std::tie(other.hash_, other.side_to_move_, other.pieces_by_type_, other.pieces_by_color_, other.irreversible_data_);
+    }
 
   private:
     EvaluationData evaluation_data_;
@@ -409,9 +417,9 @@ namespace SimpleChessEngine
   }
 
   inline bool Position::IsUnderAttack(const BitIndex square,
-    const Player us) const
+    const Player us, const Bitboard transparent) const
   {
-    return (Attackers(square) & pieces_by_color_[static_cast<size_t>(Flip(us))])
+    return (Attackers(square, transparent) & pieces_by_color_[static_cast<size_t>(Flip(us))])
       .Any();
   }
 
@@ -436,21 +444,22 @@ namespace SimpleChessEngine
     return irreversible_data_.castling_rights;
   }
 
-  inline Bitboard Position::Attackers(const BitIndex square) const
+  inline Bitboard Position::Attackers(const BitIndex square, const Bitboard transparent) const
   {
+    const Bitboard occupancy = GetAllPieces() & ~transparent;
     return GetPawnAttacks(square, Player::kWhite) &
       GetPiecesByType<Piece::kPawn>(Player::kBlack) |
       GetPawnAttacks(square, Player::kBlack) &
       GetPiecesByType<Piece::kPawn>(Player::kWhite) |
-      AttackTable<Piece::kKnight>::GetAttackMap(square, GetAllPieces()) &
+      AttackTable<Piece::kKnight>::GetAttackMap(square, occupancy) &
       pieces_by_type_[static_cast<size_t>(Piece::kKnight)] |
-      AttackTable<Piece::kBishop>::GetAttackMap(square, GetAllPieces()) &
+      AttackTable<Piece::kBishop>::GetAttackMap(square, occupancy) &
       pieces_by_type_[static_cast<size_t>(Piece::kBishop)] |
-      AttackTable<Piece::kRook>::GetAttackMap(square, GetAllPieces()) &
+      AttackTable<Piece::kRook>::GetAttackMap(square, occupancy) &
       pieces_by_type_[static_cast<size_t>(Piece::kRook)] |
-      AttackTable<Piece::kQueen>::GetAttackMap(square, GetAllPieces()) &
+      AttackTable<Piece::kQueen>::GetAttackMap(square, occupancy) &
       pieces_by_type_[static_cast<size_t>(Piece::kQueen)] |
-      AttackTable<Piece::kKing>::GetAttackMap(square, GetAllPieces()) &
+      AttackTable<Piece::kKing>::GetAttackMap(square, occupancy) &
       pieces_by_type_[static_cast<size_t>(Piece::kKing)];
   }
 
