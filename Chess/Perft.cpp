@@ -1,5 +1,7 @@
 #include "Perft.h"
 
+#include <optional>
+
 namespace SimpleChessEngine
 {
   template <bool print>
@@ -7,8 +9,10 @@ namespace SimpleChessEngine
   {
     if (depth == 0) return 1;
 
+    static auto move_generator = MoveGenerator{};
+
     const auto moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kDefault>(position);
+      move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(position);
 
     size_t answer{};
 
@@ -54,6 +58,6 @@ namespace SimpleChessEngine
     return answer;
   }
 
-  template size_t Perft<true>(std::ostream& o_stream, Position& position, const size_t depth);
   template size_t Perft<false>(std::ostream& o_stream, Position& position, const size_t depth);
+  template size_t Perft<true>(std::ostream& o_stream, Position& position, const size_t depth);
 }

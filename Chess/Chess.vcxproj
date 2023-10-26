@@ -23,6 +23,7 @@
     <ClCompile Include="Evaluation.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MoveGenerator.cpp" />
+    <ClCompile Include="Perft.cpp" />
     <ClCompile Include="Position.cpp" />
   </ItemGroup>
   <ItemGroup>

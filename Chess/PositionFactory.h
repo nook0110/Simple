@@ -131,5 +131,8 @@ inline Position PositionFactory::operator()(const std::string& fen)
   return position;
 }
 
-inline Position PositionFactory::operator()(std::stringstream stream) {}
+inline Position PositionFactory::operator()(std::stringstream stream) 
+{
+  return Position{};
+}
 }  // namespace SimpleChessEngine
