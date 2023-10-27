@@ -91,27 +91,27 @@ inline MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
   if (king_attacker.MoreThanOne())
   {
     GenerateMovesForPiece<Piece::kKing>(moves_, position, target);
-    erase_if(moves_, [&position](const Move& move)
-      { return !IsMoveValid(position, move); });
-
     return moves_;
   }
 
   // compute pins
   position.ComputePins(us);
 
-  // generate moves for piece
-  GenerateMovesForPiece<Piece::kKing>(moves_, position, target);
+  const auto king_target = target;
+
   // is in check
   if (king_attacker.Any())
   {
     const auto attacker = king_attacker.GetFirstBit();
     target &= Between(king_square, attacker) | GetBitboardOfSquare(attacker);
   }
+
   GenerateMovesForPiece<Piece::kPawn>(moves_, position, target);
   std::erase_if(moves_, [&position](const Move& move)
     { return !IsMoveValid(position, move); });
 
+  // generate moves for piece
+  GenerateMovesForPiece<Piece::kKing>(moves_, position, king_target);
   GenerateMovesForPiece<Piece::kKnight>(moves_, position, target);
   GenerateMovesForPiece<Piece::kBishop>(moves_, position, target);
   GenerateMovesForPiece<Piece::kRook>(moves_, position, target);
@@ -290,10 +290,44 @@ inline void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(Moves& moves,
   Bitboard target) const
 {
   const auto us = position.GetSideToMove();
+  const auto them = Flip(us);
 
   const auto king_pos = position.GetKingSquare(us);
+  const auto king_mask = GetBitboardOfSquare(king_pos);
+
+  const auto occupancy = position.GetAllPieces() ^ king_mask;
+  
+  // we prevent the king from going to squares attacked by enemy pieces
 
   target &= ~position.GetAllPawnAttacks(Flip(us));
+
+  Bitboard attackers{};
+  
+  attackers = position.GetPiecesByType<Piece::kKnight>(them);
+  while (attackers.Any())
+  {
+    target &= ~AttackTable<Piece::kKnight>::GetAttackMap(attackers.PopFirstBit(), occupancy);
+  }
+
+  attackers = position.GetPiecesByType<Piece::kBishop>(them);
+  while (attackers.Any())
+  {
+    target &= ~AttackTable<Piece::kBishop>::GetAttackMap(attackers.PopFirstBit(), occupancy);
+  }
+
+  attackers = position.GetPiecesByType<Piece::kRook>(them);
+  while (attackers.Any())
+  {
+    target &= ~AttackTable<Piece::kRook>::GetAttackMap(attackers.PopFirstBit(), occupancy);
+  }
+
+  attackers = position.GetPiecesByType<Piece::kQueen>(them);
+  while (attackers.Any())
+  {
+    target &= ~AttackTable<Piece::kQueen>::GetAttackMap(attackers.PopFirstBit(), occupancy);
+  }
+
+  target &= ~AttackTable<Piece::kKing>::GetAttackMap(position.GetKingSquare(them), occupancy);
 
   GenerateMovesFromSquare<Piece::kKing>(moves, position, king_pos, target);
 }

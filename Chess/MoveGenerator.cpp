@@ -10,16 +10,6 @@ namespace SimpleChessEngine
   {
     const auto us = position.GetSideToMove();
 
-    if (const auto default_move = std::get_if<DefaultMove>(&move))
-    {
-      if (position.GetPiece(default_move->from) == Piece::kKing)
-      {
-        return !position.IsUnderAttack(default_move->to, us, GetBitboardOfSquare(default_move->from));
-      }
-      assert(position.GetPiece(default_move->from) == Piece::kPawn);
-      return !position.GetIrreversibleData().blockers[static_cast<size_t>(us)].Test(default_move->from) ||
-        Ray(position.GetKingSquare(us), default_move->from).Test(default_move->to);
-    }
     if (std::holds_alternative<EnCroissant>(move))
     {
       const auto irreversible_data = position.GetIrreversibleData();
@@ -28,11 +18,13 @@ namespace SimpleChessEngine
       position.UndoMove(move, irreversible_data);
       return valid;
     }
+
     BitIndex from{};
     BitIndex to{};
     std::visit([&from, &to](const auto& unwrapped_move)
       {
-        if constexpr (std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, PawnPush> ||
+        if constexpr (std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, DefaultMove> ||
+          std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, PawnPush> ||
           std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, DoublePush> ||
           std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, Promotion>)
         {
