@@ -34,7 +34,7 @@ template <Piece sliding_piece, size_t table_size = GetTableSize(sliding_piece)>
 class AttackTable
 {
  public:
-  static Bitboard GetAttackMap(BitIndex square, const Bitboard& occupied);
+  static Bitboard GetAttackMap(BitIndex square, Bitboard occupied);
 
   AttackTable();
 
@@ -58,7 +58,7 @@ size_t AttackTable<piece, table_size>::GetAttackTableAddress(
 
 template <Piece piece, size_t table_size>
 Bitboard AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
-                                                      const Bitboard& occupied)
+                                                      Bitboard occupied)
 {
   static constexpr std::array king_attacks = {770ull,
                                               1797ull,
