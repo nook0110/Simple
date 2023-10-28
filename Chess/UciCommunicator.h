@@ -45,7 +45,8 @@ class UciDebugPrinter final : public InfoPrinter
     o_stream_ << "info nps " << nps_info.nodes_per_second << std::endl;
   }
 
-  void operator()(const PrincipalVariationInfo& principal_variation) const override
+  void operator()(
+      const PrincipalVariationInfo& principal_variation) const override
   {
     o_stream_ << "info bestmove ";
     std::visit([this](const auto& move) { o_stream_ << move; },
@@ -90,8 +91,11 @@ class SearchThread
         [this, &info]
         {
           engine_.ComputeBestMove(std::chrono::milliseconds(
-              info.info.player_time[static_cast<size_t>(
-                  info.position.GetSideToMove())]));
+                                      info.info.player_time[static_cast<size_t>(
+                                          info.position.GetSideToMove())]),
+                                  std::chrono::milliseconds(
+                                      info.info.player_inc[static_cast<size_t>(
+                                          info.position.GetSideToMove())]));
         });
   }
 

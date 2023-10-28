@@ -51,10 +51,10 @@ class InfoPrinter
   virtual void operator()(const ScoreInfo& score_info) const {}
   virtual void operator()(const NodesInfo& nodes_info) const {}
   virtual void operator()(const NodePerSecondInfo& nps_info) const {}
-  virtual void operator()(const PrincipalVariationInfo& principal_variation) const
-  {}
   virtual void operator()(
-      const PrincipalVariationHitsInfo& pv_hits_info) const
+      const PrincipalVariationInfo& principal_variation) const
+  {}
+  virtual void operator()(const PrincipalVariationHitsInfo& pv_hits_info) const
   {}
   virtual void operator()(const BestMoveInfo& best_move) const {}
 };
@@ -89,7 +89,8 @@ class ChessEngine
 
   void ComputeBestMove(size_t depth);
 
-  void ComputeBestMove(std::chrono::milliseconds left_time);
+  void ComputeBestMove(const std::chrono::milliseconds left_time,
+                       const std::chrono::milliseconds inc_time);
 
   [[nodiscard]] const Move& GetCurrentBestMove() const;
 
@@ -162,12 +163,13 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
 }
 
 inline void ChessEngine::ComputeBestMove(
-    const std::chrono::milliseconds left_time)
+    const std::chrono::milliseconds left_time,
+    const std::chrono::milliseconds inc_time = {})
 {
   const auto start_time = std::chrono::high_resolution_clock::now();
   constexpr size_t kAverageGameLength = 50;
 
-  const auto time_for_move = left_time / kAverageGameLength;
+  const auto time_for_move = left_time / kAverageGameLength + inc_time;
   constexpr auto kTimeRatio = 5;
   static constexpr size_t max_last_best_move_change = 7;
 
