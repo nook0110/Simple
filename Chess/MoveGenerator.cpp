@@ -6,58 +6,67 @@
 
 namespace SimpleChessEngine
 {
-  [[nodiscard]] bool MoveGenerator::IsMoveValid(Position& position, const Move& move)
+[[nodiscard]] bool MoveGenerator::IsMoveValid(Position& position,
+                                              const Move& move)
+{
+  const auto us = position.GetSideToMove();
+
+  if (std::holds_alternative<EnCroissant>(move))
   {
-    const auto us = position.GetSideToMove();
+    const auto irreversible_data = position.GetIrreversibleData();
+    position.DoMove(move);
+    const auto valid = !position.IsUnderCheck(us);
+    position.UndoMove(move, irreversible_data);
+    return valid;
+  }
 
-    if (std::holds_alternative<EnCroissant>(move))
-    {
-      const auto irreversible_data = position.GetIrreversibleData();
-      position.DoMove(move);
-      const auto valid = !position.IsUnderCheck(us);
-      position.UndoMove(move, irreversible_data);
-      return valid;
-    }
-
-    BitIndex from{};
-    BitIndex to{};
-    std::visit([&from, &to](const auto& unwrapped_move)
+  BitIndex from{};
+  BitIndex to{};
+  std::visit(
+      [&from, &to](const auto& unwrapped_move)
       {
-        if constexpr (std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, DefaultMove> ||
-          std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, PawnPush> ||
-          std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, DoublePush> ||
-          std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>, Promotion>)
+        if constexpr (
+            std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
+                         DefaultMove> ||
+            std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
+                         PawnPush> ||
+            std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
+                         DoublePush> ||
+            std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
+                         Promotion>)
         {
           from = unwrapped_move.from;
           to = unwrapped_move.to;
           return;
         }
         assert(false);
-      }, move);
-    return !position.GetIrreversibleData().blockers[static_cast<size_t>(us)].Test(from) ||
-      Ray(position.GetKingSquare(us), from).Test(to);
+      },
+      move);
+  return !position.GetIrreversibleData().blockers[static_cast<size_t>(us)].Test(
+             from) ||
+         Ray(position.GetKingSquare(us), from).Test(to);
+}
+
+void MoveGenerator::GenerateCastling(Moves& moves, const Position& position)
+{
+  if (position.IsUnderCheck())
+  {
+    return;
   }
 
-  void MoveGenerator::GenerateCastling(Moves& moves, const Position& position)
+  const auto side_to_move = position.GetSideToMove();
+
+  const auto king_square = position.GetKingSquare(side_to_move);
+
+  for (const auto castling_side :
+       {Castling::CastlingSide::k00, Castling::CastlingSide::k000})
   {
-    if (position.IsUnderCheck())
+    if (position.CanCastle(castling_side))
     {
-      return;
-    }
-
-    const auto side_to_move = position.GetSideToMove();
-
-    const auto king_square = position.GetKingSquare(side_to_move);
-
-    for (const auto castling_side :
-      { Castling::CastlingSide::k00, Castling::CastlingSide::k000 })
-    {
-      if (position.CanCastle(castling_side))
-      {
-        const auto rook_square =
+      const auto rook_square =
           position.GetCastlingRookSquare(side_to_move, castling_side);
-        moves.emplace_back(Castling{ castling_side, king_square, rook_square });
-      }
+      moves.emplace_back(Castling{castling_side, king_square, rook_square});
     }
   }
 }
+}  // namespace SimpleChessEngine
