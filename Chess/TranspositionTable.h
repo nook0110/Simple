@@ -23,12 +23,12 @@ class TranspositionTable
 
   Node& operator[](const Position& position)
   {
-    return table_[position.GetHash() & (kSize - 1)];
+    return table_[position.GetHash() % (kSize - 1)];
   }
 
   const Node& operator[](const Position& position) const
   {
-    return table_[position.GetHash() & (kSize - 1)];
+    return table_[position.GetHash() % (kSize - 1)];
   }
 
  private:

@@ -18,19 +18,29 @@ struct ScoreInfo
   Eval current_eval = Eval{};
 };
 
+struct NodesInfo
+{
+  size_t nodes = 0;
+};
+
 struct NodePerSecondInfo
 {
   size_t nodes_per_second = 0;
 };
 
-struct PrincipalVariation
+struct PrincipalVariationInfo
 {
   const Move& best_move;
 };
 
-struct BestMove
+struct BestMoveInfo
 {
   const Move& move;
+};
+
+struct PrincipalVariationHitsInfo
+{
+  std::size_t pv_hits{};
 };
 
 class InfoPrinter
@@ -39,10 +49,14 @@ class InfoPrinter
   virtual ~InfoPrinter() = default;
   virtual void operator()(const DepthInfo& depth_info) const {}
   virtual void operator()(const ScoreInfo& score_info) const {}
+  virtual void operator()(const NodesInfo& nodes_info) const {}
   virtual void operator()(const NodePerSecondInfo& nps_info) const {}
-  virtual void operator()(const PrincipalVariation& principal_variation) const
+  virtual void operator()(const PrincipalVariationInfo& principal_variation) const
   {}
-  virtual void operator()(const BestMove& best_move) const {}
+  virtual void operator()(
+      const PrincipalVariationHitsInfo& pv_hits_info) const
+  {}
+  virtual void operator()(const BestMoveInfo& best_move) const {}
 };
 
 /**
@@ -83,12 +97,12 @@ class ChessEngine
 
   void PrintBestMove() const
   {
-    printer_->operator()(BestMove{GetCurrentBestMove()});
+    printer_->operator()(BestMoveInfo{GetCurrentBestMove()});
   }
 
   void PrintBestMove(const Move& move) const
   {
-    printer_->operator()(BestMove{move});
+    printer_->operator()(BestMoveInfo{move});
   }
 
  private:
@@ -155,7 +169,7 @@ inline void ChessEngine::ComputeBestMove(
 
   const auto time_for_move = left_time / kAverageGameLength;
   constexpr auto kTimeRatio = 5;
-  static constexpr size_t max_last_best_move_change = 5;
+  static constexpr size_t max_last_best_move_change = 7;
 
   auto alpha = std::numeric_limits<Eval>::min() / 2;
   auto beta = std::numeric_limits<Eval>::max() / 2;
@@ -216,7 +230,14 @@ inline void ChessEngine::ComputeBestMove(
 
     previous_best_move = GetCurrentBestMove();
 
-    PrintInfo(PrincipalVariation(previous_best_move));
+    PrintInfo(PrincipalVariationInfo(previous_best_move));
+    PrintInfo(NodesInfo{searcher_.GetSearchedNodes()});
+    PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
+        searcher_.GetSearchedNodes() /
+        (std::chrono::duration<double>{
+             std::chrono::high_resolution_clock::now() - start_time})
+            .count())});
+    PrintInfo(PrincipalVariationHitsInfo{searcher_.GetPVHits()});
   }
 
   PrintBestMove(previous_best_move);
