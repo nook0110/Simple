@@ -69,7 +69,7 @@ inline Move MoveFactory::operator()(const Position& position,
     return DoublePush{from, to};
   }
 
-  if (position.GetPiece(to) == Piece::kNone)
+  if (to == position.GetEnCroissantSquare())
   {
     return EnCroissant{from, to};
   }
