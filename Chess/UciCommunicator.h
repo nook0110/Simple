@@ -35,10 +35,7 @@ class UciDebugPrinter final : public InfoPrinter
     o_stream_ << "info score cp " << score_info.current_eval << std::endl;
   }
 
-  void operator()(const NodePerSecondInfo& nps_info) const override
-  {
-    // o_stream_ << "info nps " << nps_info.nodes_per_second << std::endl;
-  }
+  void operator()(const NodePerSecondInfo& nps_info) const override {}
 
   void operator()(const PrincipalVariation& principal_variation) const override
   {
@@ -110,7 +107,10 @@ class UciChessEngine
  public:
   explicit UciChessEngine(std::istream& i_stream = std::cin,
                           std::ostream& o_stream = std::cout)
-      : i_stream_(i_stream), o_stream_(o_stream), search_thread_(o_stream)
+      : i_stream_(i_stream),
+        o_stream_(o_stream),
+        search_thread_(o_stream),
+        info_()
   {}
 
   ~UciChessEngine();
@@ -124,14 +124,14 @@ class UciChessEngine
   void ParseCommand(std::stringstream command);
 
   void ParseUci(std::stringstream command);
-  void ParseIsReady(std::stringstream command);
-  void ParseUciNewGame(std::stringstream command);
+  void ParseIsReady(std::stringstream command) const;
+  static void ParseUciNewGame(std::stringstream command);
   void ParseFen(const std::string& fen);
   void ParseStartPos();
   void ParseMoves(std::stringstream command);
   void ParsePosition(std::stringstream command);
   void ParsePerft(std::stringstream command);
-  void ParseEvaluate();
+  void ParseEvaluate() const;
   void ParseGo(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
   void ParsePlayersTime(std::stringstream command);
@@ -217,7 +217,7 @@ inline void UciChessEngine::ParseUci(std::stringstream command)
   Send("uciok");
 }
 
-inline void UciChessEngine::ParseIsReady(std::stringstream command)
+inline void UciChessEngine::ParseIsReady(std::stringstream command) const
 {
   // ReSharper disable once StringLiteralTypo
   Send("readyok");
@@ -283,7 +283,7 @@ inline void UciChessEngine::ParsePerft(std::stringstream command)
   Perft(o_stream_, info_.position, depth);
 }
 
-inline void UciChessEngine::ParseEvaluate()
+inline void UciChessEngine::ParseEvaluate() const
 {
   o_stream_ << "eval: " << info_.position.Evaluate() << " cp" << std::endl;
 }

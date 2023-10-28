@@ -4,6 +4,7 @@
 
 #include "Move.h"
 #include "Position.h"
+#include "Utility.h"
 
 namespace SimpleChessEngine
 {
@@ -42,7 +43,8 @@ class MoveGenerator
    * \brief Generates all possible moves for a given square.
    *
    * \param position The position.
-   * \param from The square.
+   * \param moves Container where to add possible moves.
+   * \param target Target squares.
    *
    * \return All possible moves for the given square.
    */
@@ -54,8 +56,10 @@ class MoveGenerator
    * \brief Generates all possible moves for a given square with given piece.
    *
    * \tparam piece The piece.
+   * \param moves Container where to add moves.
    * \param position The position.
    * \param from The square.
+   * \param target Target squares.
    *
    * \return All possible moves for the given square and piece.
    */
@@ -69,7 +73,7 @@ class MoveGenerator
 };
 
 template <MoveGenerator::Type type>
-inline MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
+MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
 {
   moves_.clear();
 
@@ -124,9 +128,8 @@ inline MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
 }
 
 template <Piece piece>
-inline void MoveGenerator::GenerateMovesForPiece(Moves& moves,
-                                                 Position& position,
-                                                 const Bitboard target) const
+void MoveGenerator::GenerateMovesForPiece(Moves& moves, Position& position,
+                                          const Bitboard target) const
 {
   static_assert(piece != Piece::kPawn && piece != Piece::kKing);
 
@@ -301,9 +304,7 @@ inline void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(
 
   target &= ~position.GetAllPawnAttacks(Flip(us));
 
-  Bitboard attackers{};
-
-  attackers = position.GetPiecesByType<Piece::kKnight>(them);
+  Bitboard attackers = position.GetPiecesByType<Piece::kKnight>(them);
   while (attackers.Any())
   {
     target &= ~AttackTable<Piece::kKnight>::GetAttackMap(
@@ -338,10 +339,9 @@ inline void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(
 }
 
 template <Piece piece>
-inline void MoveGenerator::GenerateMovesFromSquare(Moves& moves,
-                                                   Position& position,
-                                                   const BitIndex from,
-                                                   Bitboard target) const
+void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
+                                            const BitIndex from,
+                                            Bitboard target) const
 {
   assert(position.GetPiece(from) == piece);
 
@@ -351,9 +351,6 @@ inline void MoveGenerator::GenerateMovesFromSquare(Moves& moves,
 
   // get whose move is now
   const auto side_to_move = position.GetSideToMove();
-
-  // get our pieces
-  const auto& our_pieces = position.GetPieces(side_to_move);
 
   // if the piece is pinned we can only move in pin direction
   if (position.GetIrreversibleData()

@@ -6,9 +6,6 @@
 #pragma GCC target("avx2,bmi,bmi2,popcnt,lzcnt")
 #elif defined(_MSC_VER)
 #define USE_MSVC_INTRINSICS
-#include <intrin.h>
-
-#include "nmmintrin.h"
 #pragma intrinsic(_BitScanForward)
 #endif
 

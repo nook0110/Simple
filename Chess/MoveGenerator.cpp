@@ -2,8 +2,6 @@
 
 #include <cassert>
 
-#include "Attacks.h"
-
 namespace SimpleChessEngine
 {
 [[nodiscard]] bool MoveGenerator::IsMoveValid(Position& position,
@@ -23,17 +21,13 @@ namespace SimpleChessEngine
   BitIndex from{};
   BitIndex to{};
   std::visit(
-      [&from, &to](const auto& unwrapped_move)
+      [&from, &to]<typename MoveType>(const MoveType& unwrapped_move)
       {
-        if constexpr (
-            std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
-                         DefaultMove> ||
-            std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
-                         PawnPush> ||
-            std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
-                         DoublePush> ||
-            std::same_as<std::remove_cvref_t<decltype(unwrapped_move)>,
-                         Promotion>)
+        if constexpr (std::same_as<std::remove_cvref_t<MoveType>,
+                                   DefaultMove> ||
+                      std::same_as<std::remove_cvref_t<MoveType>, PawnPush> ||
+                      std::same_as<std::remove_cvref_t<MoveType>, DoublePush> ||
+                      std::same_as<std::remove_cvref_t<MoveType>, Promotion>)
         {
           from = unwrapped_move.from;
           to = unwrapped_move.to;

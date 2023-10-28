@@ -1,6 +1,5 @@
 #pragma once
 #include <array>
-#include <optional>
 
 #include "Hasher.h"
 #include "Move.h"

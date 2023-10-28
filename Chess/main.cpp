@@ -1,4 +1,3 @@
-#include "Perft.h"
 #include "UciCommunicator.h"
 
 int main()

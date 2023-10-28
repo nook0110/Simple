@@ -304,14 +304,13 @@ class Position
   [[nodiscard]] BitIndex GetCastlingRookSquare(
       Player player, Castling::CastlingSide side) const;
 
-  [[nodiscard]] Bitboard Attackers(
-      BitIndex square, const Bitboard transparent = kEmptyBoard) const;
+  [[nodiscard]] Bitboard Attackers(BitIndex square,
+                                   Bitboard transparent = kEmptyBoard) const;
 
-  void ComputePins(const Player us);
+  void ComputePins(Player us);
 
-  [[nodiscard]] bool IsUnderAttack(
-      BitIndex square, Player us,
-      const Bitboard transparent = kEmptyBoard) const;
+  [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us,
+                                   Bitboard transparent = kEmptyBoard) const;
 
   /**
    * \brief Checks if current player is under check.

@@ -1,6 +1,7 @@
 #include "Perft.h"
 
-#include <optional>
+#include "MoveGenerator.h"
+#include "StreamUtility.h"
 
 namespace SimpleChessEngine
 {
@@ -26,7 +27,7 @@ size_t Perft(std::ostream& o_stream, Position& position, const size_t depth)
       o_stream << ": ";
     }
 
-    size_t cur_answer{};
+    size_t cur_answer;
 
     if (depth > 1)
     {
@@ -59,7 +60,7 @@ size_t Perft(std::ostream& o_stream, Position& position, const size_t depth)
 }
 
 template size_t Perft<false>(std::ostream& o_stream, Position& position,
-                             const size_t depth);
+                             size_t depth);
 template size_t Perft<true>(std::ostream& o_stream, Position& position,
-                            const size_t depth);
+                            size_t depth);
 }  // namespace SimpleChessEngine

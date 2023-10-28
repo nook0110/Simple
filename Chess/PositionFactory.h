@@ -11,12 +11,12 @@ struct PositionFactory
 {
   Position operator()(
       const std::string& fen =
-          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") const;
 
-  Position operator()(std::stringstream stream);
+  Position operator()(std::stringstream stream) const;
 };
 
-inline Position PositionFactory::operator()(const std::string& fen)
+inline Position PositionFactory::operator()(const std::string& fen) const
 {
   std::stringstream fen_stream;
 
@@ -50,7 +50,7 @@ inline Position PositionFactory::operator()(const std::string& fen)
       }
 
       const auto& [piece, color] = kPieces[*current];
-      BitIndex square = row * kBoardSize + column;
+      auto square = static_cast<BitIndex>(row * kBoardSize + column);
       position.PlacePiece(square, piece, color);
 
       const auto us = static_cast<size_t>(color);
@@ -109,6 +109,8 @@ inline Position PositionFactory::operator()(const std::string& fen)
         castling_rights[static_cast<size_t>(Player::kBlack)] |=
             static_cast<size_t>(CastlingRights::k000);
         break;
+      default:
+        assert(false);
     }
   }
 
@@ -131,7 +133,7 @@ inline Position PositionFactory::operator()(const std::string& fen)
   return position;
 }
 
-inline Position PositionFactory::operator()(std::stringstream stream)
+inline Position PositionFactory::operator()(std::stringstream stream) const
 {
   return Position{};
 }

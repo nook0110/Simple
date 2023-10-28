@@ -1,7 +1,5 @@
 #pragma once
 
-#include <optional>
-
 #include "BitScan.h"
 
 #ifdef __GNUC__
@@ -9,7 +7,6 @@
 #pragma GCC target("avx2,bmi,bmi2,popcnt,lzcnt")
 #elif defined(_MSC_VER)
 #define USE_MSVC_INTRINSICS
-#include <intrin.h>
 
 #include "nmmintrin.h"
 #pragma intrinsic(_BitScanForward)
@@ -34,7 +31,7 @@ class Bitboard
 
   constexpr explicit Bitboard(const unsigned long long value) : value_(value) {}
 
-  constexpr Bitboard() {}
+  constexpr Bitboard() = default;
 
   [[nodiscard]] constexpr bool Any() const { return static_cast<bool>(value_); }
   [[nodiscard]] constexpr bool None() const
@@ -72,7 +69,7 @@ class Bitboard
     return *this;
   }
 
-  constexpr bool Test(const size_t pos) const
+  [[nodiscard]] constexpr bool Test(const size_t pos) const
   {
     return static_cast<bool>(value_ & 1ull << pos);
   }
