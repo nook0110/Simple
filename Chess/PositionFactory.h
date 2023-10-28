@@ -110,7 +110,7 @@ inline Position PositionFactory::operator()(const std::string& fen) const
             static_cast<size_t>(CastlingRights::k000);
         break;
       default:
-        assert(false);
+        break;
     }
   }
 

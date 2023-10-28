@@ -169,12 +169,11 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
       std::iter_swap(pv, moves.begin());
 
     // sort all moves except first (PV-move)
-
-    // TODO:
+    std::sort(std::next(moves.begin()), moves.end(), std::greater{});
   }
   else
   {
-    // std::stable_sort(moves.begin(), moves.end());
+    std::ranges::sort(moves, std::greater{});
   }
 
   const auto& first_move = moves.front();
