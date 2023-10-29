@@ -171,7 +171,7 @@ inline void ChessEngine::ComputeBestMove(
 
   const auto time_for_move = left_time / kAverageGameLength + inc_time;
   constexpr auto kTimeRatio = 5;
-  static constexpr size_t max_last_best_move_change = 7;
+  static constexpr size_t max_last_best_move_change = 10;
 
   auto alpha = std::numeric_limits<Eval>::min() / 2;
   auto beta = std::numeric_limits<Eval>::max() / 2;
