@@ -57,7 +57,7 @@ size_t AttackTable<piece, table_size>::GetAttackTableAddress(
 
 template <Piece piece, size_t table_size>
 Bitboard AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
-                                                      Bitboard occupied)
+                                                      const Bitboard occupied)
 {
   static constexpr std::array king_attacks = {770ull,
                                               1797ull,

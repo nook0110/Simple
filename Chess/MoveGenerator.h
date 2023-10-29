@@ -110,7 +110,15 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
     target &= Between(king_square, attacker) | GetBitboardOfSquare(attacker);
   }
 
-  GenerateMovesForPiece<Piece::kPawn>(moves_, position, target);
+  if constexpr (type == Type::kQuiescence)
+  {
+    GenerateMovesForPiece<Piece::kPawn>(moves_, position,
+                                        target | (kRankBB[0] | kRankBB[7]));
+  }
+  else
+  {
+    GenerateMovesForPiece<Piece::kPawn>(moves_, position, target);
+  }
   std::erase_if(moves_, [&position](const Move& move)
                 { return !IsMoveValid(position, move); });
 
@@ -145,7 +153,7 @@ void MoveGenerator::GenerateMovesForPiece(Moves& moves, Position& position,
 
 template <>
 inline void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
-    Moves& moves, Position& position, Bitboard target) const
+    Moves& moves, Position& position, const Bitboard target) const
 {
   const auto us = position.GetSideToMove();
   const auto us_idx = static_cast<size_t>(us);

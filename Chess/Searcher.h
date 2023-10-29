@@ -186,17 +186,22 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // check if we have already searched this position
   if (best_moves_.Contains(current_position_))
   {
-    debug_info_.pv_hits++;
-
     const auto& best_move = best_moves_[current_position_].move;
 
     // find the best move in moves
-
     if (const auto pv = std::ranges::find(moves, best_move); pv != moves.end())
+    {
+      debug_info_.pv_hits++;
+
       std::iter_swap(pv, moves.begin());
 
-    // sort all moves except first (PV-move)
-    std::sort(std::next(moves.begin()), moves.end(), std::greater{});
+      // sort all moves except first (PV-move)
+      std::sort(std::next(moves.begin()), moves.end(), std::greater{});
+    }
+    else
+    {
+      std::ranges::sort(moves, std::greater{});
+    }
   }
   else
   {
