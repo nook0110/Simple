@@ -152,6 +152,7 @@ class Position
    *
    * \param move Move to do.
    */
+
   void DoMove(const Castling& move);
 
   /**

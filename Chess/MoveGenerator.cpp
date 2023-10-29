@@ -64,3 +64,4 @@ void MoveGenerator::GenerateCastling(Moves& moves, const Position& position)
   }
 }
 }  // namespace SimpleChessEngine
+
