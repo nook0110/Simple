@@ -1,6 +1,5 @@
 #pragma once
 #include <array>
-#include <optional>
 
 #include "Hasher.h"
 #include "Move.h"
@@ -24,16 +23,16 @@ class TranspositionTable
 
   Node& operator[](const Position& position)
   {
-    return table_[position.GetHash() & (kSize - 1)];
+    return table_[position.GetHash() % kSize];
   }
 
   const Node& operator[](const Position& position) const
   {
-    return table_[position.GetHash() & (kSize - 1)];
+    return table_[position.GetHash() % kSize];
   }
 
  private:
-  static constexpr size_t kSize = 1 << 10;  //!< Size of the table.
+  static constexpr size_t kSize = 1 << 25;  //!< Size of the table.
   std::array<Node, kSize> table_;           //!< The table.
 };
 }  // namespace SimpleChessEngine

@@ -64,17 +64,16 @@ class Position
   {
     assert(!board_[square]);
     assert(piece);
+    const auto piece_idx = static_cast<size_t>(piece);
+    const auto color_idx = static_cast<size_t>(color);
     board_[square] = piece;
-    pieces_by_color_[static_cast<size_t>(color)].Set(square);
-    pieces_by_type_[static_cast<size_t>(piece)].Set(square);
-    evaluation_data_.material[static_cast<size_t>(color)] +=
-        kPieceValues[static_cast<size_t>(piece)];
-    evaluation_data_.psqt[static_cast<size_t>(color)] +=
-        kPSQT[static_cast<size_t>(color)][static_cast<size_t>(piece)][square];
+    pieces_by_type_[piece_idx].Set(square);
+    pieces_by_color_[color_idx].Set(square);
+    evaluation_data_.material[color_idx] += kPieceValues[piece_idx];
+    evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][square];
     if (piece != Piece::kPawn)
-      evaluation_data_.non_pawn_material +=
-          kPieceValues[static_cast<size_t>(piece)].eval[0];
-    hash_ ^= hasher_.psqt_hash[static_cast<size_t>(piece)][square];
+      evaluation_data_.non_pawn_material += kPieceValues[piece_idx].eval[0];
+    hash_ ^= hasher_.psqt_hash[piece_idx][square];
   }
 
   /**
@@ -86,18 +85,34 @@ class Position
    */
   void RemovePiece(const BitIndex square, const Player color)
   {
-    auto piece = board_[square];
-    pieces_by_type_[static_cast<size_t>(piece)].Reset(square);
-    pieces_by_color_[static_cast<size_t>(color)].Reset(square);
+    const auto piece = board_[square];
+    const auto piece_idx = static_cast<size_t>(piece);
+    const auto color_idx = static_cast<size_t>(color);
+    pieces_by_type_[piece_idx].Reset(square);
+    pieces_by_color_[color_idx].Reset(square);
     board_[square] = Piece::kNone;
-    evaluation_data_.material[static_cast<size_t>(color)] -=
-        kPieceValues[static_cast<size_t>(piece)];
-    evaluation_data_.psqt[static_cast<size_t>(color)] -=
-        kPSQT[static_cast<size_t>(color)][static_cast<size_t>(piece)][square];
+    evaluation_data_.material[color_idx] -= kPieceValues[piece_idx];
+    evaluation_data_.psqt[color_idx] -= kPSQT[color_idx][piece_idx][square];
     if (piece != Piece::kPawn)
-      evaluation_data_.non_pawn_material -=
-          kPieceValues[static_cast<size_t>(piece)].eval[0];
-    hash_ ^= hasher_.psqt_hash[static_cast<size_t>(piece)][square];
+      evaluation_data_.non_pawn_material -= kPieceValues[piece_idx].eval[0];
+    hash_ ^= hasher_.psqt_hash[piece_idx][square];
+  }
+
+  void MovePiece(const BitIndex from, const BitIndex to, const Player color)
+  {
+    const auto piece = board_[from];
+    const auto piece_idx = static_cast<size_t>(piece);
+    const auto color_idx = static_cast<size_t>(color);
+    pieces_by_type_[piece_idx].Reset(from);
+    pieces_by_color_[color_idx].Reset(from);
+    pieces_by_type_[piece_idx].Set(to);
+    pieces_by_color_[color_idx].Set(to);
+    board_[from] = Piece::kNone;
+    board_[to] = piece;
+    evaluation_data_.psqt[color_idx] -= kPSQT[color_idx][piece_idx][from];
+    evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][to];
+    hash_ ^= hasher_.psqt_hash[piece_idx][from];
+    hash_ ^= hasher_.psqt_hash[piece_idx][to];
   }
 
   /**
@@ -137,6 +152,7 @@ class Position
    *
    * \param move Move to do.
    */
+
   void DoMove(const Castling& move);
 
   /**
@@ -289,14 +305,13 @@ class Position
   [[nodiscard]] BitIndex GetCastlingRookSquare(
       Player player, Castling::CastlingSide side) const;
 
-  [[nodiscard]] Bitboard Attackers(
-      BitIndex square, const Bitboard transparent = kEmptyBoard) const;
+  [[nodiscard]] Bitboard Attackers(BitIndex square,
+                                   Bitboard transparent = kEmptyBoard) const;
 
-  void ComputePins(const Player us);
+  void ComputePins(Player us);
 
-  [[nodiscard]] bool IsUnderAttack(
-      BitIndex square, Player us,
-      const Bitboard transparent = kEmptyBoard) const;
+  [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us,
+                                   Bitboard transparent = kEmptyBoard) const;
 
   /**
    * \brief Checks if current player is under check.

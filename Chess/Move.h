@@ -12,6 +12,11 @@ struct DefaultMove
   BitIndex from{};
   BitIndex to{};
   Piece captured_piece{};
+
+  auto operator<=>(const DefaultMove& other) const
+  {
+    return captured_piece <=> other.captured_piece;
+  };
 };
 
 struct PawnPush
@@ -20,6 +25,8 @@ struct PawnPush
 
   BitIndex from{};
   BitIndex to{};
+
+  auto operator<=>(const PawnPush&) const = default;
 };
 
 struct DoublePush
@@ -28,6 +35,8 @@ struct DoublePush
 
   BitIndex from{};
   BitIndex to{};
+
+  auto operator<=>(const DoublePush&) const = default;
 };
 
 struct EnCroissant
@@ -36,6 +45,8 @@ struct EnCroissant
   BitIndex to{};
 
   bool operator==(const EnCroissant&) const = default;
+
+  auto operator<=>(const EnCroissant&) const = default;
 };
 
 struct Promotion : DefaultMove
@@ -46,6 +57,8 @@ struct Promotion : DefaultMove
   }
 
   Piece promoted_to{};
+
+  auto operator<=>(const Promotion&) const = default;
 };
 
 struct Castling
@@ -62,8 +75,10 @@ struct Castling
   BitIndex rook_from{};
 
   bool operator==(const Castling&) const = default;
+
+  auto operator<=>(const Castling&) const = default;
 };
 
-using Move = std::variant<DefaultMove, PawnPush, DoublePush, EnCroissant,
-                          Promotion, Castling>;
+using Move = std::variant<PawnPush, DoublePush, Castling, EnCroissant,
+                          DefaultMove, Promotion>;
 }  // namespace SimpleChessEngine

@@ -54,6 +54,9 @@
     <ClCompile Include="Evaluation.cpp">
       <Filter>Файлы заголовков\Engine\Evaluation</Filter>
     </ClCompile>
+    <ClCompile Include="Perft.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Move.h">

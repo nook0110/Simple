@@ -6,7 +6,6 @@
 #include "../Chess/Attacks.cpp"
 #include "../Chess/Attacks.h"
 #include "../Chess/BitBoard.h"
-#include "../Chess/Evaluation.cpp"
 #include "../Chess/MoveFactory.h"
 #include "../Chess/MoveGenerator.cpp"
 #include "../Chess/MoveGenerator.h"
@@ -297,8 +296,10 @@ struct GameInfo
 
   GameInfo answer{0, 0, 0, 0};
 
+  static auto move_generator = MoveGenerator{};
+
   const auto moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kDefault>(position);
+      move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(position);
 
   if (depth == 1)
   {

@@ -35,12 +35,18 @@ class UciDebugPrinter final : public InfoPrinter
     o_stream_ << "info score cp " << score_info.current_eval << std::endl;
   }
 
-  void operator()(const NodePerSecondInfo& nps_info) const override
+  void operator()(const NodesInfo& nodes_info) const override
   {
-    // o_stream_ << "info nps " << nps_info.nodes_per_second << std::endl;
+    o_stream_ << "info nodes " << nodes_info.nodes << std::endl;
   }
 
-  void operator()(const PrincipalVariation& principal_variation) const override
+  void operator()(const NodePerSecondInfo& nps_info) const override
+  {
+    o_stream_ << "info nps " << nps_info.nodes_per_second << std::endl;
+  }
+
+  void operator()(
+      const PrincipalVariationInfo& principal_variation) const override
   {
     o_stream_ << "info bestmove ";
     std::visit([this](const auto& move) { o_stream_ << move; },
@@ -48,7 +54,12 @@ class UciDebugPrinter final : public InfoPrinter
     o_stream_ << std::endl;
   }
 
-  void operator()(const BestMove& best_move) const override
+  void operator()(const PrincipalVariationHitsInfo& pv_hits_info) const override
+  {
+    o_stream_ << "info hits " << pv_hits_info.pv_hits << std::endl;
+  }
+
+  void operator()(const BestMoveInfo& best_move) const override
   {
     o_stream_ << "bestmove ";
     std::visit([this](const auto& move) { o_stream_ << move; }, best_move.move);
@@ -80,8 +91,11 @@ class SearchThread
         [this, &info]
         {
           engine_.ComputeBestMove(std::chrono::milliseconds(
-              info.info.player_time[static_cast<size_t>(
-                  info.position.GetSideToMove())]));
+                                      info.info.player_time[static_cast<size_t>(
+                                          info.position.GetSideToMove())]),
+                                  std::chrono::milliseconds(
+                                      info.info.player_inc[static_cast<size_t>(
+                                          info.position.GetSideToMove())]));
         });
   }
 
@@ -110,7 +124,10 @@ class UciChessEngine
  public:
   explicit UciChessEngine(std::istream& i_stream = std::cin,
                           std::ostream& o_stream = std::cout)
-      : i_stream_(i_stream), o_stream_(o_stream), search_thread_(o_stream)
+      : i_stream_(i_stream),
+        o_stream_(o_stream),
+        search_thread_(o_stream),
+        info_()
   {}
 
   ~UciChessEngine();
@@ -124,14 +141,14 @@ class UciChessEngine
   void ParseCommand(std::stringstream command);
 
   void ParseUci(std::stringstream command);
-  void ParseIsReady(std::stringstream command);
-  void ParseUciNewGame(std::stringstream command);
+  void ParseIsReady(std::stringstream command) const;
+  static void ParseUciNewGame(std::stringstream command);
   void ParseFen(const std::string& fen);
   void ParseStartPos();
   void ParseMoves(std::stringstream command);
   void ParsePosition(std::stringstream command);
   void ParsePerft(std::stringstream command);
-  void ParseEvaluate();
+  void ParseEvaluate() const;
   void ParseGo(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
   void ParsePlayersTime(std::stringstream command);
@@ -217,7 +234,7 @@ inline void UciChessEngine::ParseUci(std::stringstream command)
   Send("uciok");
 }
 
-inline void UciChessEngine::ParseIsReady(std::stringstream command)
+inline void UciChessEngine::ParseIsReady(std::stringstream command) const
 {
   // ReSharper disable once StringLiteralTypo
   Send("readyok");
@@ -280,10 +297,17 @@ inline void UciChessEngine::ParsePerft(std::stringstream command)
   command >> token;
   const auto depth = std::stoull(token);
 
-  Perft(o_stream_, info_.position, depth);
+  const auto start_time = std::chrono::high_resolution_clock::now();
+  const auto nodes = Perft(o_stream_, info_.position, depth);
+  const auto time = std::chrono::duration<double>(
+                        std::chrono::high_resolution_clock::now() - start_time)
+                        .count();
+  o_stream_ << "Time: " << time << " seconds" << std::endl;
+  UciDebugPrinter{o_stream_}(
+      NodePerSecondInfo{static_cast<size_t>(nodes / time)});
 }
 
-inline void UciChessEngine::ParseEvaluate()
+inline void UciChessEngine::ParseEvaluate() const
 {
   o_stream_ << "eval: " << info_.position.Evaluate() << " cp" << std::endl;
 }

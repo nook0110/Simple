@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <memory>
 
 #include "BitBoard.h"
@@ -34,13 +33,13 @@ template <Piece sliding_piece, size_t table_size = GetTableSize(sliding_piece)>
 class AttackTable
 {
  public:
-  static Bitboard GetAttackMap(BitIndex square, const Bitboard& occupied);
+  static Bitboard GetAttackMap(BitIndex square, Bitboard occupied);
 
   AttackTable();
 
  private:
   static size_t GetAttackTableAddress(BitIndex square,
-                                      const Bitboard& occupied = kEmptyBoard);
+                                      Bitboard occupied = kEmptyBoard);
 
   std::array<Bitboard, table_size> table_ = {};
   std::array<size_t, kBoardArea> base_ = {};
@@ -50,7 +49,7 @@ class AttackTable
 
 template <Piece piece, size_t table_size>
 size_t AttackTable<piece, table_size>::GetAttackTableAddress(
-    const BitIndex square, const Bitboard& occupied)
+    const BitIndex square, Bitboard occupied)
 {
   assert(IsWeakSlidingPiece(piece));
   return self_->base_[square] + self_->magic_[square].GetIndex(occupied);
@@ -58,7 +57,7 @@ size_t AttackTable<piece, table_size>::GetAttackTableAddress(
 
 template <Piece piece, size_t table_size>
 Bitboard AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
-                                                      const Bitboard& occupied)
+                                                      Bitboard occupied)
 {
   static constexpr std::array king_attacks = {770ull,
                                               1797ull,

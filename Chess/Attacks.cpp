@@ -1,5 +1,6 @@
 #include "Attacks.h"
 
+#include <chrono>
 #include <random>
 
 using namespace SimpleChessEngine;
@@ -115,7 +116,9 @@ AttackTable<sliding_piece, table_size>::AttackTable()
     {
       for (magic_[sq].magic = kEmptyBoard;
            (magic_[sq].magic * magic_[sq].mask >> 56).Count() < 6;)
-        magic_[sq].magic = Bitboard{gen() & gen() & gen()};  // sparse random
+        magic_[sq].magic =
+            Bitboard{gen() & gen() &  // NOLINT(misc-redundant-expression)
+                     gen()};          // sparse random
       ++attempt_count;
       for (i = 0; i < offset; ++i)
       {

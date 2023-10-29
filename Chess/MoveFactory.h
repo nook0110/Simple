@@ -53,8 +53,7 @@ inline Move MoveFactory::operator()(const Position& position,
                       GetSquare(rook_from_file[king_file], king_rank)};
     }
   }
-  constexpr size_t kPromotionSize = 5;
-  if (move.size() == 5)
+  if (constexpr size_t kPromotionSize = 5; move.size() == kPromotionSize)
   {
     return Promotion{{from, to, position.GetPiece(to)},
                      kPieces[move.back()].first};
@@ -70,7 +69,7 @@ inline Move MoveFactory::operator()(const Position& position,
     return DoublePush{from, to};
   }
 
-  if (position.GetPiece(to) == Piece::kNone)
+  if (to == position.GetEnCroissantSquare())
   {
     return EnCroissant{from, to};
   }
@@ -84,12 +83,9 @@ inline MoveFactory::ParsedMove MoveFactory::ParseDefaultMove(
   constexpr size_t first_file = 0, first_rank = 1, second_file = 2,
                    second_rank = 3;
 
-  ParsedMove parsed_move{};
-
-  parsed_move.from =
-      GetSquare(move[first_file] - 'a', move[first_rank] - '0' - 1);
-  parsed_move.to =
-      GetSquare(move[second_file] - 'a', move[second_rank] - '0' - 1);
+  const ParsedMove parsed_move{
+      GetSquare(move[first_file] - 'a', move[first_rank] - '0' - 1),
+      GetSquare(move[second_file] - 'a', move[second_rank] - '0' - 1)};
 
   return parsed_move;
 }

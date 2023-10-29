@@ -1,14 +1,16 @@
 #pragma once
 
-#if defined(_MSC_VER)
+#include "BitScan.h"
+
+#ifdef __GNUC__
+#define USE_GCC_BUILTINS
+#pragma GCC target("avx2,bmi,bmi2,popcnt,lzcnt")
+#elif defined(_MSC_VER)
 #define USE_MSVC_INTRINSICS
 
-#include <intrin.h>
+#include "nmmintrin.h"
+#pragma intrinsic(_BitScanForward)
 #endif
-
-#include <optional>
-
-#include "BitScan.h"
 
 /**
  * \brief Class that represents a bitboard.
@@ -29,7 +31,7 @@ class Bitboard
 
   constexpr explicit Bitboard(const unsigned long long value) : value_(value) {}
 
-  constexpr Bitboard() {}
+  constexpr Bitboard() = default;
 
   [[nodiscard]] constexpr bool Any() const { return static_cast<bool>(value_); }
   [[nodiscard]] constexpr bool None() const
@@ -67,7 +69,7 @@ class Bitboard
     return *this;
   }
 
-  constexpr bool Test(const size_t pos) const
+  [[nodiscard]] constexpr bool Test(const size_t pos) const
   {
     return static_cast<bool>(value_ & 1ull << pos);
   }
@@ -116,9 +118,9 @@ class Bitboard
 
 inline size_t Bitboard::Count() const
 {
-#ifdef __GNUC__
+#ifdef USE_GCC_BUILTINS
   return __builtin_popcountll(value_);
-#elif defined(_MSC_VER)
+#elif defined(USE_MSVC_INTRINSICS)
   return _mm_popcnt_u64(value_);
 #endif
 }

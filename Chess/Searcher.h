@@ -1,6 +1,5 @@
 #pragma once
 #include <algorithm>
-#include <optional>
 
 #include "Evaluation.h"
 #include "MoveGenerator.h"
@@ -74,6 +73,13 @@ class Searcher
   template <bool start_of_search>
   [[nodiscard]] Eval Search(size_t remaining_depth, Eval alpha, Eval beta);
 
+  [[nodiscard]] std::size_t GetSearchedNodes() const
+  {
+    return debug_info_.searched_nodes;
+  }
+
+  [[nodiscard]] std::size_t GetPVHits() const { return debug_info_.pv_hits; }
+
  private:
   Move best_move_;
 
@@ -84,6 +90,14 @@ class Searcher
 
   TranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
+
+  struct DebugInfo
+  {
+    std::size_t searched_nodes{};
+    std::size_t pv_hits{};
+  };
+
+  DebugInfo debug_info_;
 };
 }  // namespace SimpleChessEngine
 
@@ -109,12 +123,21 @@ inline const TranspositionTable& Searcher::GetTranspositionTable() const
 template <bool start_of_search>
 Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
 {
+  if constexpr (start_of_search)
+  {
+    debug_info_ = DebugInfo{};
+  }
   // return the evaluation of the current position if we have reached the
   // end of the search tree
   if (remaining_depth <= 0)
   {
-    return quiescence_searcher_.Search(current_position_, alpha, beta);
+    const auto eval =
+        quiescence_searcher_.Search<true>(current_position_, alpha, beta);
+    debug_info_.searched_nodes += quiescence_searcher_.GetSearchedNodes();
+    return eval;
   }
+
+  debug_info_.searched_nodes++;
 
   // lambda function to analyze a move
   auto analyze_move = [this, remaining_depth](const auto& move,
@@ -134,6 +157,7 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
     // return the evaluation
     return temp_eval;
   };
+
   // lambda function that sets best move
   auto set_best_move = [this](const Move& move)
   {
@@ -162,6 +186,8 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // check if we have already searched this position
   if (best_moves_.Contains(current_position_))
   {
+    debug_info_.pv_hits++;
+
     const auto& best_move = best_moves_[current_position_].move;
 
     // find the best move in moves
@@ -170,12 +196,11 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
       std::iter_swap(pv, moves.begin());
 
     // sort all moves except first (PV-move)
-
-    // TODO:
+    std::sort(std::next(moves.begin()), moves.end(), std::greater{});
   }
   else
   {
-    // std::stable_sort(moves.begin(), moves.end());
+    std::ranges::sort(moves, std::greater{});
   }
 
   const auto& first_move = moves.front();
@@ -226,15 +251,13 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
 
     if (temp_eval > best_eval)
     {
+      set_best_move(move);
+
       // check if we have found a better move
       if (temp_eval >= beta)
       {
-        set_best_move(move);
-
         return temp_eval;
       }
-
-      set_best_move(move);
 
       best_eval = temp_eval;
     }

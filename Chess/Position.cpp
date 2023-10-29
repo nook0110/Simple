@@ -41,9 +41,8 @@ void Position::DoMove(const DefaultMove& move)
 
   const auto piece_to_move = board_[from];
 
-  RemovePiece(from, us);
   if (!!captured_piece) RemovePiece(to, them);
-  PlacePiece(to, piece_to_move, us);
+  MovePiece(from, to, us);
 
   if (piece_to_move == Piece::kKing)
   {
@@ -79,8 +78,7 @@ void Position::DoMove(const PawnPush& move)
 
   const auto us = side_to_move_;
 
-  RemovePiece(from, us);
-  PlacePiece(to, Piece::kPawn, us);
+  MovePiece(from, to, us);
 }
 
 void Position::DoMove(const DoublePush& move)
@@ -93,8 +91,7 @@ void Position::DoMove(const DoublePush& move)
   hash_ ^= hasher_.en_croissant_hash[file];
   irreversible_data_.en_croissant_square = std::midpoint(from, to);
 
-  RemovePiece(from, us);
-  PlacePiece(to, Piece::kPawn, us);
+  MovePiece(from, to, us);
 }
 
 void Position::DoMove(const EnCroissant& move)
@@ -107,9 +104,8 @@ void Position::DoMove(const EnCroissant& move)
   const auto capture_square =
       Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
 
-  RemovePiece(from, us);
   RemovePiece(capture_square, them);
-  PlacePiece(to, Piece::kPawn, us);
+  MovePiece(from, to, us);
 }
 
 void Position::DoMove(const Promotion& move)
@@ -196,9 +192,8 @@ void Position::UndoMove(const DefaultMove& move)
 
   const auto piece_to_move = board_[to];
 
-  RemovePiece(to, us);
+  MovePiece(to, from, us);
   if (!!captured_piece) PlacePiece(to, captured_piece, them);
-  PlacePiece(from, piece_to_move, us);
 
   if (piece_to_move == Piece::kKing)
     king_position_[static_cast<size_t>(us)] = from;
@@ -210,8 +205,7 @@ void Position::UndoMove(const PawnPush& move)
 
   const auto us = side_to_move_;
 
-  RemovePiece(to, us);
-  PlacePiece(from, Piece::kPawn, us);
+  MovePiece(to, from, us);
 }
 
 void Position::UndoMove(const DoublePush& move)
@@ -222,8 +216,7 @@ void Position::UndoMove(const DoublePush& move)
 
   const auto to = move.to;
 
-  RemovePiece(to, us);
-  PlacePiece(from, Piece::kPawn, us);
+  MovePiece(to, from, us);
 }
 
 void Position::UndoMove(const EnCroissant& move)
@@ -236,9 +229,8 @@ void Position::UndoMove(const EnCroissant& move)
   const auto capture_square =
       Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
 
-  RemovePiece(to, us);
+  MovePiece(to, from, us);
   PlacePiece(capture_square, Piece::kPawn, them);
-  PlacePiece(from, Piece::kPawn, us);
 }
 
 void Position::UndoMove(const Promotion& move)

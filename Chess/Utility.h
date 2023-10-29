@@ -3,6 +3,7 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <optional>
 #include <string>
 
 #include "BitBoard.h"
@@ -18,11 +19,8 @@ constexpr size_t kColors = 2;
 constexpr size_t kPieceTypes =
     7;  // For Pawn, Knight, Bishop, Rook, Queen, King and Empty Square
 
-namespace
-{
 constexpr Bitboard kFileA{0x0101010101010101ULL};
 constexpr Bitboard kRank1{0xFF};
-}  // namespace
 
 constexpr std::array kRankBB = {kRank1,
                                 kRank1 << static_cast<size_t>(kLineSize) * 1,
