@@ -176,6 +176,20 @@ inline void ChessEngine::ComputeBestMove(
   auto alpha = std::numeric_limits<Eval>::min() / 2;
   auto beta = std::numeric_limits<Eval>::max() / 2;
 
+  constexpr auto reset_window = [](auto& down, auto& up)
+  {
+    static constexpr auto window_size = 200;
+    down = window_size;
+    up = window_size;
+  };
+
+  Eval down_window_size = 0;
+  Eval up_window_size = 0;
+
+  reset_window(down_window_size, up_window_size);
+
+  Searcher::DebugInfo info{};
+
   Move previous_best_move{};
   size_t last_best_move_change{};
   for (size_t current_depth = 1;
@@ -187,10 +201,11 @@ inline void ChessEngine::ComputeBestMove(
                                                           // changed recently
        ;)
   {
+    static constexpr auto window_resize_coefficient = 2;
     PrintInfo(DepthInfo{current_depth});
 
-    static constexpr auto window_size = 200;
     const auto eval = searcher_.Search<true>(current_depth, alpha, beta);
+    info += searcher_.GetInfo();
 
     PrintInfo(ScoreInfo{eval});
 
@@ -198,7 +213,8 @@ inline void ChessEngine::ComputeBestMove(
     if (eval <= alpha)
     {
       // search again with a wider window
-      alpha = eval - window_size;
+      alpha = eval - down_window_size;
+      down_window_size *= window_resize_coefficient;
 
       continue;
     }
@@ -207,13 +223,17 @@ inline void ChessEngine::ComputeBestMove(
     if (eval >= beta)
     {
       // search again with a wider window
-      beta = eval + window_size;
+      beta = eval + up_window_size;
+      up_window_size *= window_resize_coefficient;
+
       continue;
     }
 
+    reset_window(down_window_size, up_window_size);
+
     // set the window
-    alpha = eval - window_size;
-    beta = eval + window_size;
+    alpha = eval - down_window_size;
+    beta = eval + up_window_size;
 
     // increase the depth
     current_depth++;
@@ -233,13 +253,14 @@ inline void ChessEngine::ComputeBestMove(
     previous_best_move = GetCurrentBestMove();
 
     PrintInfo(PrincipalVariationInfo(previous_best_move));
-    PrintInfo(NodesInfo{searcher_.GetSearchedNodes()});
+    PrintInfo(NodesInfo{info.searched_nodes});
     PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
-        searcher_.GetSearchedNodes() /
+        info.searched_nodes /
         (std::chrono::duration<double>{
              std::chrono::high_resolution_clock::now() - start_time})
             .count())});
-    PrintInfo(PrincipalVariationHitsInfo{searcher_.GetPVHits()});
+    PrintInfo(PrincipalVariationHitsInfo{info.pv_hits});
+    info = Searcher::DebugInfo{};
   }
 
   PrintBestMove(previous_best_move);

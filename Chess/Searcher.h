@@ -27,6 +27,19 @@ namespace SimpleChessEngine
 class Searcher
 {
  public:
+  struct DebugInfo
+  {
+    std::size_t searched_nodes{};
+    std::size_t pv_hits{};
+
+    DebugInfo& operator+=(const DebugInfo& other)
+    {
+      searched_nodes += other.searched_nodes;
+      pv_hits += other.pv_hits;
+      return *this;
+    }
+  };
+
   /**
    * \brief Constructor.
    *
@@ -73,6 +86,8 @@ class Searcher
   template <bool start_of_search>
   [[nodiscard]] Eval Search(size_t remaining_depth, Eval alpha, Eval beta);
 
+  [[nodiscard]] const DebugInfo& GetInfo() const { return debug_info_; }
+
   [[nodiscard]] std::size_t GetSearchedNodes() const
   {
     return debug_info_.searched_nodes;
@@ -90,12 +105,6 @@ class Searcher
 
   TranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
-
-  struct DebugInfo
-  {
-    std::size_t searched_nodes{};
-    std::size_t pv_hits{};
-  };
 
   DebugInfo debug_info_;
 };

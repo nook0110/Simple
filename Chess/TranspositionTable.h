@@ -32,7 +32,7 @@ class TranspositionTable
   }
 
  private:
-  static constexpr size_t kSize = 1 << 25;  //!< Size of the table.
+  static constexpr size_t kSize = 1 << 10;  //!< Size of the table.
   std::array<Node, kSize> table_;           //!< The table.
 };
 }  // namespace SimpleChessEngine
