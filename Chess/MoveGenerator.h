@@ -102,23 +102,24 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position)
   position.ComputePins(us);
 
   const auto king_target = target;
+  auto pawn_target = target;
 
+  if constexpr (type == Type::kQuiescence)
+  {
+    pawn_target |= (kRankBB[0] | kRankBB[7]);
+  }
   // is in check
   if (king_attacker.Any())
   {
     const auto attacker = king_attacker.GetFirstBit();
-    target &= Between(king_square, attacker) | GetBitboardOfSquare(attacker);
+    const auto ray =
+        Between(king_square, attacker) | GetBitboardOfSquare(attacker);
+    target &= ray;
+    pawn_target &= ray;
   }
 
-  if constexpr (type == Type::kQuiescence)
-  {
-    GenerateMovesForPiece<Piece::kPawn>(moves_, position,
-                                        target | (kRankBB[0] | kRankBB[7]));
-  }
-  else
-  {
-    GenerateMovesForPiece<Piece::kPawn>(moves_, position, target);
-  }
+  GenerateMovesForPiece<Piece::kPawn>(moves_, position, pawn_target);
+
   std::erase_if(moves_, [&position](const Move& move)
                 { return !IsMoveValid(position, move); });
 
