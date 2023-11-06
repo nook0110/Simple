@@ -178,7 +178,7 @@ inline void ChessEngine::ComputeBestMove(
 
   constexpr auto reset_window = [](auto& down, auto& up)
   {
-    static constexpr auto window_size = 200;
+    static constexpr auto window_size = 20;
     down = window_size;
     up = window_size;
   };
@@ -213,7 +213,7 @@ inline void ChessEngine::ComputeBestMove(
     if (eval <= alpha)
     {
       // search again with a wider window
-      alpha = eval - down_window_size;
+      alpha = alpha - down_window_size;
       down_window_size *= window_resize_coefficient;
 
       continue;
@@ -223,7 +223,7 @@ inline void ChessEngine::ComputeBestMove(
     if (eval >= beta)
     {
       // search again with a wider window
-      beta = eval + up_window_size;
+      beta = beta + up_window_size;
       up_window_size *= window_resize_coefficient;
 
       continue;
