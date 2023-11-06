@@ -4,6 +4,7 @@
 #include "Evaluation.h"
 #include "MoveGenerator.h"
 #include "PositionFactory.h"
+#include "PVTable.h"
 #include "Quiescence.h"
 #include "TranspositionTable.h"
 
@@ -105,6 +106,8 @@ class Searcher
 
   TranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
+
+  PVTable principle_variation_; //!< PV table to store principal variation from the previous iteration of ID
 
   DebugInfo debug_info_;
 };

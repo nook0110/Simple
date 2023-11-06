@@ -18,6 +18,7 @@ constexpr int kLineSize = 8;
 constexpr size_t kColors = 2;
 constexpr size_t kPieceTypes =
     7;  // For Pawn, Knight, Bishop, Rook, Queen, King and Empty Square
+constexpr size_t kMaxSearchPly = 1 << 8;
 
 constexpr Bitboard kFileA{0x0101010101010101ULL};
 constexpr Bitboard kRank1{0xFF};
