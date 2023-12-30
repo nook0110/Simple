@@ -13,13 +13,13 @@ class PVTable
   [[nodiscard]] const Move& GetPV(const size_t id_ply,
                                   const size_t remaining_depth) const
   {
-    return table_[(id_ply * kMaxSearchPly) | remaining_depth];
+    return table_[(id_ply * kMaxSearchPly) | (remaining_depth - 1)];
   }
 
   void SetPV(const Move& move, const size_t id_ply,
              const size_t remaining_depth)
   {
-    table_[(id_ply * kMaxSearchPly) | remaining_depth] = move;
+    table_[(id_ply * kMaxSearchPly) | (remaining_depth - 1)] = move;
   }
 
   void FetchNextLayer(const size_t ply)
