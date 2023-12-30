@@ -48,9 +48,14 @@ class UciDebugPrinter final : public InfoPrinter
   void operator()(
       const PrincipalVariationInfo& principal_variation) const override
   {
-    o_stream_ << "info bestmove ";
-    std::visit([this](const auto& move) { o_stream_ << move; },
-               principal_variation.best_move);
+    o_stream_ << "info pv";
+    for (const auto move : principal_variation.best_moves)
+    {
+      o_stream_ << " ";
+      std::visit([this](const auto& unwrapped_move)
+                 { o_stream_ << unwrapped_move; },
+                 move);
+    }
     o_stream_ << std::endl;
   }
 

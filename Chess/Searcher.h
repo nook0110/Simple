@@ -98,6 +98,8 @@ class Searcher
 
   [[nodiscard]] std::size_t GetPVHits() const { return debug_info_.pv_hits; }
 
+  [[nodiscard]] const PVTable& GetPV() const { return principle_variation_; }
+
  private:
   Move best_move_;
 

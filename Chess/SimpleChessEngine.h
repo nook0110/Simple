@@ -30,7 +30,7 @@ struct NodePerSecondInfo
 
 struct PrincipalVariationInfo
 {
-  const Move& best_move;
+  std::vector<Move> best_moves;
 };
 
 struct BestMoveInfo
@@ -237,9 +237,6 @@ inline void ChessEngine::ComputeBestMove(
     alpha = eval - down_window_size;
     beta = eval + up_window_size;
 
-    // increase the depth
-    current_depth++;
-
     // check if best move changed
     if (previous_best_move == searcher_.GetCurrentBestMove())
     {
@@ -253,8 +250,12 @@ inline void ChessEngine::ComputeBestMove(
     }
 
     previous_best_move = GetCurrentBestMove();
-
-    PrintInfo(PrincipalVariationInfo(previous_best_move));
+    PrincipalVariationInfo pv;
+    for (size_t depth = current_depth; depth > 1; --depth)
+    {
+      pv.best_moves.push_back(searcher_.GetPV().GetPV(current_depth, depth));
+    }
+    PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
     PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
         info.searched_nodes /
@@ -263,6 +264,9 @@ inline void ChessEngine::ComputeBestMove(
             .count())});
     PrintInfo(PrincipalVariationHitsInfo{info.pv_hits});
     info = Searcher::DebugInfo{};
+
+    // increase the depth
+    current_depth++;
   }
 
   PrintBestMove(previous_best_move);
