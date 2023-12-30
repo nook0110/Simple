@@ -15,6 +15,7 @@ class PVTable
   {
     return table_[(id_ply * kMaxSearchPly) | remaining_depth];
   }
+
   void SetPV(const Move& move, const size_t id_ply,
              const size_t remaining_depth)
   {
