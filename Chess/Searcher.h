@@ -3,8 +3,8 @@
 
 #include "Evaluation.h"
 #include "MoveGenerator.h"
-#include "PositionFactory.h"
 #include "PVTable.h"
+#include "PositionFactory.h"
 #include "Quiescence.h"
 #include "TranspositionTable.h"
 
@@ -78,14 +78,16 @@ class Searcher
   /**
    * \brief Performs the alpha-beta search algorithm.
    *
+   * \param max_depth max_depth for search
    * \param remaining_depth The remaining depth.
    * \param alpha The current alpha value.
    * \param beta The current beta value.
    *
    * \return Evaluation of subtree.
    */
-  template <bool start_of_search>
-  [[nodiscard]] Eval Search(size_t remaining_depth, Eval alpha, Eval beta);
+  template <bool is_pv>
+  [[nodiscard]] Eval Search(size_t max_depth, size_t remaining_depth,
+                            Eval alpha, Eval beta);
 
   [[nodiscard]] const DebugInfo& GetInfo() const { return debug_info_; }
 
@@ -107,7 +109,8 @@ class Searcher
   TranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
 
-  PVTable principle_variation_; //!< PV table to store principal variation from the previous iteration of ID
+  PVTable principle_variation_;  //!< PV table to store principal variation from
+                                 //!< the previous iteration of ID
 
   DebugInfo debug_info_;
 };
@@ -132,10 +135,20 @@ inline const TranspositionTable& Searcher::GetTranspositionTable() const
   return best_moves_;
 }
 
-template <bool start_of_search>
-Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
+template <bool is_pv>
+Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
+                      Eval alpha, const Eval beta)
 {
-  if constexpr (start_of_search)
+  if constexpr (is_pv)
+  {
+    if (remaining_depth == 1)
+    {
+      return Search<false>(max_depth, remaining_depth, alpha, beta);
+    }
+  }
+
+  const bool is_start_of_search = max_depth == remaining_depth;
+  if (is_start_of_search)
   {
     debug_info_ = DebugInfo{};
   }
@@ -151,33 +164,19 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
 
   debug_info_.searched_nodes++;
 
-  // lambda function to analyze a move
-  auto analyze_move = [this, remaining_depth](const auto& move,
-                                              const auto analyzed_alpha,
-                                              const auto analyzed_beta)
-  {
-    const auto irreversible_data = current_position_.GetIrreversibleData();
-
-    // make the move and search the tree
-    current_position_.DoMove(move);
-    auto temp_eval =
-        -Search<false>(remaining_depth - 1, -analyzed_beta, -analyzed_alpha);
-
-    // undo the move
-    current_position_.UndoMove(move, irreversible_data);
-
-    // return the evaluation
-    return temp_eval;
-  };
-
   // lambda function that sets best move
-  auto set_best_move = [this](const Move& move)
+  auto set_best_move =
+      [this, is_start_of_search, max_depth, remaining_depth](const Move& move)
   {
     best_moves_[current_position_] = {move, current_position_.GetHash()};
 
-    if constexpr (start_of_search)
+    if (is_start_of_search)
     {
       best_move_ = move;
+    }
+    if constexpr (is_pv)
+    {
+      principle_variation_.SetPV(move, max_depth, remaining_depth);
     }
   };
 
@@ -195,13 +194,24 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
     return Eval{};
   }
 
-  // check if we have already searched this position
-  if (best_moves_.Contains(current_position_))
-  {
-    const auto& best_move = best_moves_[current_position_].move;
+  const Move* best_move{};
 
+  if constexpr (is_pv)
+  {
+    best_move = &principle_variation_.GetPV(max_depth, remaining_depth);
+  }
+  else
+  {
+    // check if we have already searched this position
+    if (best_moves_.Contains(current_position_))
+    {
+      best_move = &best_moves_[current_position_].move;
+    }
+  }
+  if (best_move)
+  {
     // find the best move in moves
-    if (const auto pv = std::ranges::find(moves, best_move); pv != moves.end())
+    if (const auto pv = std::ranges::find(moves, *best_move); pv != moves.end())
     {
       debug_info_.pv_hits++;
 
@@ -210,10 +220,6 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
       // sort all moves except first (PV-move)
       std::sort(std::next(moves.begin()), moves.end(), std::greater{});
     }
-    else
-    {
-      std::ranges::sort(moves, std::greater{});
-    }
   }
   else
   {
@@ -221,8 +227,13 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   }
 
   const auto& first_move = moves.front();
-
-  auto best_eval = analyze_move(first_move, alpha, beta);
+  const auto irreversible_data = current_position_.GetIrreversibleData();
+  // make the move and search the tree
+  current_position_.DoMove(first_move);
+  auto best_eval =
+      -Search<is_pv>(max_depth, remaining_depth - 1, -beta, -alpha);
+  // undo the move
+  current_position_.UndoMove(first_move, irreversible_data);
 
   if (best_eval > alpha)
   {
@@ -244,18 +255,17 @@ Eval Searcher::Search(const size_t remaining_depth, Eval alpha, const Eval beta)
   // search the tree
   for (const auto& move : moves)
   {
-    const auto irreversible_data = current_position_.GetIrreversibleData();
-
     // make the move and search the tree
     current_position_.DoMove(move);
 
     // ZWS
-    auto temp_eval = -Search<false>(remaining_depth - 1, -alpha - 1, -alpha);
+    auto temp_eval =
+        -Search<false>(max_depth, remaining_depth - 1, -alpha - 1, -alpha);
 
     // make a research (ZWS failed)
     if (temp_eval > alpha && temp_eval < beta)
     {
-      temp_eval = -Search<false>(remaining_depth - 1, -beta, -alpha);
+      temp_eval = -Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
 
       if (temp_eval > alpha)
       {

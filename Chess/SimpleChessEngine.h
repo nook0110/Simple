@@ -123,14 +123,15 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
   auto alpha = std::numeric_limits<Eval>::min() / 2;
   auto beta = std::numeric_limits<Eval>::max() / 2;
 
-  PrintInfo(ScoreInfo{searcher_.Search<true>(0, alpha, beta)});
+  PrintInfo(ScoreInfo{searcher_.Search<true>(0, 0, alpha, beta)});
 
   for (size_t current_depth = 1; current_depth < depth;)
   {
     PrintInfo(DepthInfo{current_depth});
 
     static constexpr auto window_size = 100;
-    const auto eval = searcher_.Search<true>(current_depth, alpha, beta);
+    const auto eval =
+        searcher_.Search<true>(current_depth, current_depth, alpha, beta);
 
     // check if true eval is out of window
     if (eval <= alpha)
@@ -204,7 +205,8 @@ inline void ChessEngine::ComputeBestMove(
     static constexpr auto window_resize_coefficient = 2;
     PrintInfo(DepthInfo{current_depth});
 
-    const auto eval = searcher_.Search<true>(current_depth, alpha, beta);
+    const auto eval =
+        searcher_.Search<true>(current_depth, current_depth, alpha, beta);
     info += searcher_.GetInfo();
 
     PrintInfo(ScoreInfo{eval});
