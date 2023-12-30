@@ -26,7 +26,7 @@ class PVTable
   {
     std::copy(table_.begin() + (ply - 1) * kMaxSearchPly,
               table_.begin() + (((ply - 1) * kMaxSearchPly) | (ply - 1)),
-              table_.begin() + ((ply * kMaxSearchPly) | 1));
+              table_.begin() + ply * kMaxSearchPly);
   }
 
  private:
