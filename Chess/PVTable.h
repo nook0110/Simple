@@ -1,9 +1,9 @@
 #pragma once
 
+#include <algorithm>
+
 #include "Move.h"
 #include "Utility.h"
-
-#include <algorithm>
 
 namespace SimpleChessEngine
 {
@@ -24,7 +24,9 @@ class PVTable
 
   void FetchNextLayer(const size_t ply)
   {
-    std::copy(table_.begin() + (ply - 1) * kMaxSearchPly, table_.begin() + (((ply - 1) * kMaxSearchPly) | (ply - 1)), table_.begin() + ((ply * kMaxSearchPly) | 1));
+    std::copy(table_.begin() + (ply - 1) * kMaxSearchPly,
+              table_.begin() + (((ply - 1) * kMaxSearchPly) | (ply - 1)),
+              table_.begin() + ((ply * kMaxSearchPly) | 1));
   }
 
  private:
