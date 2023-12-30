@@ -176,6 +176,9 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
     {
       best_move_ = move;
     }
+
+    principle_variation_.SetPV(move, remaining_depth, remaining_depth);
+    principle_variation_.FetchNextLayer(remaining_depth);
   };
 
   // get all the possible moves
@@ -241,8 +244,6 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
     }
 
     alpha = best_eval;
-    principle_variation_.SetPV(first_move, remaining_depth, remaining_depth);
-    principle_variation_.FetchNextLayer(remaining_depth);
   }
 
   // set best move
@@ -278,8 +279,6 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
 
     if (temp_eval > best_eval)
     {
-      principle_variation_.SetPV(move, remaining_depth, remaining_depth);
-      principle_variation_.FetchNextLayer(remaining_depth);
       set_best_move(move);
 
       // check if we have found a better move
