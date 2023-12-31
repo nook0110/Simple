@@ -255,6 +255,7 @@ inline void ChessEngine::ComputeBestMove(
     {
       pv.best_moves.push_back(searcher_.GetPV().GetPV(current_depth, depth));
     }
+    PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
     PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
         info.searched_nodes /
@@ -263,7 +264,6 @@ inline void ChessEngine::ComputeBestMove(
             .count())});
     PrintInfo(PrincipalVariationHitsInfo{info.pv_hits});
     info = Searcher::DebugInfo{};
-    PrintInfo(pv);
 
     // increase the depth
     current_depth++;
