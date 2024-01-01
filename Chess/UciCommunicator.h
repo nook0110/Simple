@@ -48,7 +48,8 @@ class UciDebugPrinter final : public InfoPrinter
   void operator()(
       const PrincipalVariationInfo& principal_variation) const override
   {
-    o_stream_ << "info pv";
+    o_stream_ << "info depth " << principal_variation.best_moves.size() + 1
+              << "info pv";
     for (const auto move : principal_variation.best_moves)
     {
       o_stream_ << " ";
