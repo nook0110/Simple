@@ -262,13 +262,13 @@ inline void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
     const auto from = Shift(to, opposite_direction);
 
     moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kKnight});
+        Promotion{{from, to, position.GetPiece(to)}, Piece::kQueen});
     moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kBishop});
+        Promotion{{from, to, position.GetPiece(to)}, Piece::kKnight});
     moves.emplace_back(
         Promotion{{from, to, position.GetPiece(to)}, Piece::kRook});
     moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kQueen});
+        Promotion{{from, to, position.GetPiece(to)}, Piece::kBishop});
   }
 
   for (size_t attack_direction = 0; attack_direction < attacks.size();

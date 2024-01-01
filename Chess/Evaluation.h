@@ -67,10 +67,10 @@ constexpr std::array kPhaseValueLimits = {
             2,
     kPieceValues[static_cast<size_t>(Piece::kRook)]
                 .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
-            4 +
+            2 +
         kPieceValues[static_cast<size_t>(Piece::kBishop)]
                 .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
-            4};
+            2};
 
 constexpr PhaseValue kLimitsDifference =
     kPhaseValueLimits[0] - kPhaseValueLimits[1];

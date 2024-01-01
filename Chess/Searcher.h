@@ -8,8 +8,7 @@
 #include "Quiescence.h"
 #include "TranspositionTable.h"
 
-namespace SimpleChessEngine
-{
+namespace SimpleChessEngine {
 /**
  * \brief A simple implementation of the alpha-beta search algorithm.
  *
@@ -25,16 +24,13 @@ namespace SimpleChessEngine
  *
  *  \author nook0110
  */
-class Searcher
-{
+class Searcher {
  public:
-  struct DebugInfo
-  {
+  struct DebugInfo {
     std::size_t searched_nodes{};
     std::size_t pv_hits{};
 
-    DebugInfo& operator+=(const DebugInfo& other)
-    {
+    DebugInfo& operator+=(const DebugInfo& other) {
       searched_nodes += other.searched_nodes;
       pv_hits += other.pv_hits;
       return *this;
@@ -49,8 +45,7 @@ class Searcher
   explicit Searcher(const Position position = PositionFactory{}())
       : current_position_(position),
         move_generator_(MoveGenerator()),
-        quiescence_searcher_()
-  {}
+        quiescence_searcher_() {}
 
   /**
    * \brief Sets the current position.
@@ -91,8 +86,7 @@ class Searcher
 
   [[nodiscard]] const DebugInfo& GetInfo() const { return debug_info_; }
 
-  [[nodiscard]] std::size_t GetSearchedNodes() const
-  {
+  [[nodiscard]] std::size_t GetSearchedNodes() const {
     return debug_info_.searched_nodes;
   }
 
@@ -101,6 +95,24 @@ class Searcher
   [[nodiscard]] const PVTable& GetPV() const { return principle_variation_; }
 
  private:
+  bool CompareMoves(const Move& lhs, const Move& rhs) const {
+    if (lhs.index() != rhs.index()) return lhs.index() < rhs.index();
+    if (!std::holds_alternative<DefaultMove>(lhs)) return false;
+    const auto lhs_ptr = std::get_if<DefaultMove>(&lhs);
+    const auto rhs_ptr = std::get_if<DefaultMove>(&rhs);
+    return kPieceValues[static_cast<size_t>(
+                            current_position_.GetPiece(lhs_ptr->to))]
+                   .eval[0] -
+               kPieceValues[static_cast<size_t>(
+                                current_position_.GetPiece(lhs_ptr->from))]
+                   .eval[0] <
+           kPieceValues[static_cast<size_t>(
+                            current_position_.GetPiece(rhs_ptr->to))]
+                   .eval[0] -
+               kPieceValues[static_cast<size_t>(
+                                current_position_.GetPiece(rhs_ptr->from))]
+                   .eval[0];
+  }
   Move best_move_;
 
   Position current_position_;  //!< Current position.
@@ -118,46 +130,37 @@ class Searcher
 };
 }  // namespace SimpleChessEngine
 
-namespace SimpleChessEngine
-{
-inline void Searcher::SetPosition(const Position& position)
-{
+namespace SimpleChessEngine {
+inline void Searcher::SetPosition(const Position& position) {
   current_position_ = position;
 }
 
-inline const Position& Searcher::GetPosition() const
-{
+inline const Position& Searcher::GetPosition() const {
   return current_position_;
 }
 
 inline const Move& Searcher::GetCurrentBestMove() const { return best_move_; }
 
-inline const TranspositionTable& Searcher::GetTranspositionTable() const
-{
+inline const TranspositionTable& Searcher::GetTranspositionTable() const {
   return best_moves_;
 }
 
 template <bool is_pv>
 Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
-                      Eval alpha, const Eval beta)
-{
-  if constexpr (is_pv)
-  {
-    if (remaining_depth == 1)
-    {
+                      Eval alpha, const Eval beta) {
+  if constexpr (is_pv) {
+    if (remaining_depth == 1) {
       return Search<false>(max_depth, remaining_depth, alpha, beta);
     }
   }
 
   const bool is_start_of_search = max_depth == remaining_depth;
-  if (is_start_of_search)
-  {
+  if (is_start_of_search) {
     debug_info_ = DebugInfo{};
   }
   // return the evaluation of the current position if we have reached the
   // end of the search tree
-  if (remaining_depth <= 0)
-  {
+  if (remaining_depth <= 0) {
     const auto eval =
         quiescence_searcher_.Search<true>(current_position_, alpha, beta);
     debug_info_.searched_nodes += quiescence_searcher_.GetSearchedNodes();
@@ -167,13 +170,11 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
   debug_info_.searched_nodes++;
 
   // lambda function that sets best move
-  auto set_best_move =
-      [this, is_start_of_search, max_depth, remaining_depth](const Move& move)
-  {
+  auto set_best_move = [this, is_start_of_search, max_depth,
+                        remaining_depth](const Move& move) {
     best_moves_[current_position_] = {move, current_position_.GetHash()};
 
-    if (is_start_of_search)
-    {
+    if (is_start_of_search) {
       best_move_ = move;
     }
 
@@ -186,10 +187,8 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
       current_position_);
 
   // check if there are no possible moves
-  if (moves.empty())
-  {
-    if (current_position_.IsUnderCheck())
-    {
+  if (moves.empty()) {
+    if (current_position_.IsUnderCheck()) {
       return kMateValue - static_cast<Eval>(remaining_depth);
     }
     return Eval{};
@@ -197,34 +196,31 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
 
   const Move* best_move{};
 
-  if constexpr (is_pv)
-  {
+  if constexpr (is_pv) {
     best_move = &principle_variation_.GetPV(max_depth, remaining_depth);
-  }
-  else
-  {
+  } else {
     // check if we have already searched this position
-    if (best_moves_.Contains(current_position_))
-    {
+    if (best_moves_.Contains(current_position_)) {
       best_move = &best_moves_[current_position_].move;
     }
   }
-  if (best_move)
-  {
+  if (best_move) {
     // find the best move in moves
-    if (const auto pv = std::ranges::find(moves, *best_move); pv != moves.end())
-    {
+    if (const auto pv = std::ranges::find(moves, *best_move);
+        pv != moves.end()) {
       debug_info_.pv_hits++;
 
       std::iter_swap(pv, moves.begin());
 
       // sort all moves except first (PV-move)
-      std::sort(std::next(moves.begin()), moves.end(), std::greater{});
+      std::stable_sort(std::next(moves.begin()), moves.end(), [this](const Move& lhs, const Move& rhs) {
+                         return !CompareMoves(lhs, rhs);
+                       });
     }
-  }
-  else
-  {
-    std::ranges::sort(moves, std::greater{});
+  } else {
+    std::ranges::stable_sort(moves, [this](const Move& lhs, const Move& rhs) {
+      return !CompareMoves(lhs, rhs);
+    });
   }
 
   const auto& first_move = moves.front();
@@ -236,10 +232,8 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
   // undo the move
   current_position_.UndoMove(first_move, irreversible_data);
 
-  if (best_eval > alpha)
-  {
-    if (best_eval >= beta)
-    {
+  if (best_eval > alpha) {
+    if (best_eval >= beta) {
       return best_eval;
     }
 
@@ -254,8 +248,7 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
   moves.pop_back();
 
   // search the tree
-  for (const auto& move : moves)
-  {
+  for (const auto& move : moves) {
     // make the move and search the tree
     current_position_.DoMove(move);
 
@@ -264,12 +257,10 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
         -Search<false>(max_depth, remaining_depth - 1, -alpha - 1, -alpha);
 
     // make a research (ZWS failed)
-    if (temp_eval > alpha && temp_eval < beta)
-    {
+    if (temp_eval > alpha && temp_eval < beta) {
       temp_eval = -Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
 
-      if (temp_eval > alpha)
-      {
+      if (temp_eval > alpha) {
         alpha = temp_eval;
       }
     }
@@ -277,13 +268,11 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
     // undo the move
     current_position_.UndoMove(move, irreversible_data);
 
-    if (temp_eval > best_eval)
-    {
+    if (temp_eval > best_eval) {
       set_best_move(move);
 
       // check if we have found a better move
-      if (temp_eval >= beta)
-      {
+      if (temp_eval >= beta) {
         return temp_eval;
       }
 

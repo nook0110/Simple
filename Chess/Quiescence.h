@@ -29,6 +29,25 @@ class Quiescence
   [[nodiscard]] std::size_t GetSearchedNodes() const { return searched_nodes_; }
 
  private:
+  bool CompareMoves(const Move& lhs, const Move& rhs, const Position& current_position) const {
+    if (lhs.index() != rhs.index()) return lhs.index() < rhs.index();
+    if (!std::holds_alternative<DefaultMove>(lhs)) return false;
+    const auto lhs_ptr = std::get_if<DefaultMove>(&lhs);
+    const auto rhs_ptr = std::get_if<DefaultMove>(&rhs);
+    return kPieceValues[static_cast<size_t>(
+                            current_position.GetPiece(lhs_ptr->to))]
+                   .eval[0] -
+               kPieceValues[static_cast<size_t>(
+                                current_position.GetPiece(lhs_ptr->from))]
+                   .eval[0] <
+           kPieceValues[static_cast<size_t>(
+                            current_position.GetPiece(rhs_ptr->to))]
+                   .eval[0] -
+               kPieceValues[static_cast<size_t>(
+                                current_position.GetPiece(rhs_ptr->from))]
+                   .eval[0];
+  }
+
   MoveGenerator move_generator_;  //!< Move generator.
 
   std::size_t searched_nodes_{};
@@ -55,11 +74,14 @@ Eval Quiescence::Search(Position& current_position, Eval alpha, const Eval beta)
   }
 
   // get all the attacks moves
+  auto moves =
+      move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
+          current_position);
+  std::ranges::stable_sort(moves, [this, &current_position](const Move& lhs, const Move& rhs) {
+    return !CompareMoves(lhs, rhs, current_position);
+  });
 
-  for (const auto moves =
-           move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
-               current_position);
-       const auto& move : moves)
+  for (const auto& move : moves)
   {
     const auto irreversible_data = current_position.GetIrreversibleData();
 

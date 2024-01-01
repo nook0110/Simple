@@ -79,6 +79,6 @@ struct Castling
   auto operator<=>(const Castling&) const = default;
 };
 
-using Move = std::variant<PawnPush, DoublePush, Castling, EnCroissant,
-                          DefaultMove, Promotion>;
+using Move = std::variant<PawnPush, DoublePush, EnCroissant, DefaultMove,
+                          Castling, Promotion>;
 }  // namespace SimpleChessEngine
