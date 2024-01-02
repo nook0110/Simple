@@ -123,44 +123,80 @@ inline void ChessEngine::ComputeBestMove(const size_t depth)
   auto alpha = std::numeric_limits<Eval>::min() / 2;
   auto beta = std::numeric_limits<Eval>::max() / 2;
 
-  PrintInfo(ScoreInfo{searcher_.Search<true>(0, 0, alpha, beta)});
+  constexpr auto reset_window = [](auto& down, auto& up) {
+    static constexpr auto window_size = 20;
+    down = window_size;
+    up = window_size;
+  };
 
-  for (size_t current_depth = 1; current_depth < depth;)
-  {
+  Eval down_window_size = 0;
+  Eval up_window_size = 0;
+
+  reset_window(down_window_size, up_window_size);
+
+  Searcher::DebugInfo info{};
+
+  Move previous_best_move{};
+  size_t last_best_move_change{};
+  for (size_t current_depth = 1;
+       current_depth < depth;) {
+    static constexpr auto window_resize_coefficient = 2;
     PrintInfo(DepthInfo{current_depth});
 
-    static constexpr auto window_size = 100;
     const auto eval =
         searcher_.Search<true>(current_depth, current_depth, alpha, beta);
+    info += searcher_.GetInfo();
+
+    PrintInfo(ScoreInfo{eval});
 
     // check if true eval is out of window
-    if (eval <= alpha)
-    {
+    if (eval <= alpha) {
       // search again with a wider window
-      alpha = eval - window_size;
+      alpha = alpha - down_window_size;
+      down_window_size *= window_resize_coefficient;
 
       continue;
     }
 
     // check if true eval is out of window
-    if (eval >= beta)
-    {
+    if (eval >= beta) {
       // search again with a wider window
-      beta = eval + window_size;
+      beta = beta + up_window_size;
+      up_window_size *= window_resize_coefficient;
+
       continue;
     }
+
+    reset_window(down_window_size, up_window_size);
 
     // set the window
-    alpha = eval - window_size;
-    beta = eval + window_size;
+    alpha = eval - down_window_size;
+    beta = eval + up_window_size;
+
+    // check if best move changed
+    if (previous_best_move == searcher_.GetCurrentBestMove()) {
+      // increase last change
+      ++last_best_move_change;
+    } else {
+      // reset last change
+      last_best_move_change = 0;
+    }
+
+    previous_best_move = GetCurrentBestMove();
+    PrincipalVariationInfo pv;
+    for (size_t depth = current_depth; depth > 1; --depth) {
+      pv.best_moves.push_back(searcher_.GetPV().GetPV(current_depth, depth));
+    }
+    PrintInfo(pv);
+    PrintInfo(NodesInfo{info.searched_nodes});
+    PrintInfo(PrincipalVariationHitsInfo{info.pv_hits});
+    info = Searcher::DebugInfo{};
 
     // increase the depth
     current_depth++;
-
-    PrintInfo(ScoreInfo{eval});
   }
 
-  PrintBestMove();
+  PrintBestMove(previous_best_move);
 }
 
 inline void ChessEngine::ComputeBestMove(

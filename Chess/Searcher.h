@@ -163,7 +163,7 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
   if (remaining_depth <= 0) {
     const auto eval =
         quiescence_searcher_.Search<true>(current_position_, alpha, beta);
-    debug_info_.searched_nodes += quiescence_searcher_.GetSearchedNodes();
+    // debug_info_.searched_nodes += quiescence_searcher_.GetSearchedNodes();
     return eval;
   }
 
@@ -214,12 +214,12 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
 
       // sort all moves except first (PV-move)
       std::stable_sort(std::next(moves.begin()), moves.end(), [this](const Move& lhs, const Move& rhs) {
-                         return !CompareMoves(lhs, rhs);
+                         return CompareMoves(rhs, lhs);
                        });
     }
   } else {
     std::ranges::stable_sort(moves, [this](const Move& lhs, const Move& rhs) {
-      return !CompareMoves(lhs, rhs);
+      return CompareMoves(rhs, lhs);
     });
   }
 

@@ -78,7 +78,7 @@ Eval Quiescence::Search(Position& current_position, Eval alpha, const Eval beta)
       move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
           current_position);
   std::ranges::stable_sort(moves, [this, &current_position](const Move& lhs, const Move& rhs) {
-    return !CompareMoves(lhs, rhs, current_position);
+    return CompareMoves(rhs, lhs, current_position);
   });
 
   for (const auto& move : moves)
