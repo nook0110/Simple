@@ -28,6 +28,7 @@ class Searcher {
  public:
   struct DebugInfo {
     std::size_t searched_nodes{};
+    std::size_t quiescence_nodes{};
     std::size_t pv_hits{};
 
     DebugInfo& operator+=(const DebugInfo& other) {
@@ -67,8 +68,6 @@ class Searcher {
    * \return The current best move.
    */
   [[nodiscard]] const Move& GetCurrentBestMove() const;
-
-  [[nodiscard]] const TranspositionTable& GetTranspositionTable() const;
 
   /**
    * \brief Performs the alpha-beta search algorithm.
@@ -120,7 +119,7 @@ class Searcher {
   MoveGenerator move_generator_;  //!< Move generator.
   Quiescence quiescence_searcher_;
 
-  TranspositionTable
+  TranspositionTable<1 << 24>
       best_moves_;  //!< Transposition-table to store the best moves.
 
   PVTable principle_variation_;  //!< PV table to store principal variation from
@@ -141,10 +140,6 @@ inline const Position& Searcher::GetPosition() const {
 
 inline const Move& Searcher::GetCurrentBestMove() const { return best_move_; }
 
-inline const TranspositionTable& Searcher::GetTranspositionTable() const {
-  return best_moves_;
-}
-
 template <bool is_pv>
 Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
                       Eval alpha, const Eval beta) {
@@ -163,7 +158,7 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
   if (remaining_depth <= 0) {
     const auto eval =
         quiescence_searcher_.Search<true>(current_position_, alpha, beta);
-    // debug_info_.searched_nodes += quiescence_searcher_.GetSearchedNodes();
+    debug_info_.quiescence_nodes += quiescence_searcher_.GetSearchedNodes();
     return eval;
   }
 

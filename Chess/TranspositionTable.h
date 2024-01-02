@@ -6,8 +6,10 @@
 #include "Position.h"
 namespace SimpleChessEngine
 {
+template <size_t TableSize>
 class TranspositionTable
 {
+  static_assert(!(TableSize & (TableSize - 1)));
  public:
   struct Node
   {
@@ -23,16 +25,15 @@ class TranspositionTable
 
   Node& operator[](const Position& position)
   {
-    return table_[position.GetHash() % kSize];
+    return table_[position.GetHash() % TableSize];
   }
 
   const Node& operator[](const Position& position) const
   {
-    return table_[position.GetHash() % kSize];
+    return table_[position.GetHash() % TableSize];
   }
 
  private:
-  static constexpr size_t kSize = 1 << 25;  //!< Size of the table.
-  std::array<Node, kSize> table_;           //!< The table.
+  std::array<Node, TableSize> table_;           //!< The table.
 };
 }  // namespace SimpleChessEngine

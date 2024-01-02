@@ -2,6 +2,7 @@
 #include "Evaluation.h"
 #include "MoveGenerator.h"
 #include "Position.h"
+#include "TranspositionTable.h"
 
 namespace SimpleChessEngine
 {
@@ -47,6 +48,13 @@ class Quiescence
                                 current_position.GetPiece(rhs_ptr->from))]
                    .eval[0];
   }
+  
+  static constexpr Eval kSmallDelta =
+      2 * kPieceValues[static_cast<size_t>(Piece::kPawn)].eval[1];
+  static constexpr Eval kBigDelta =
+      kPieceValues[static_cast<size_t>(Piece::kQueen)].eval[1];
+
+  TranspositionTable<1 << 24> best_moves_;
 
   MoveGenerator move_generator_;  //!< Move generator.
 
@@ -68,6 +76,11 @@ Eval Quiescence::Search(Position& current_position, Eval alpha, const Eval beta)
   {
     return stand_pat;
   }
+
+  if (stand_pat + kBigDelta < alpha) {
+    return alpha;
+  }
+
   if (alpha < stand_pat)
   {
     alpha = stand_pat;
@@ -77,12 +90,28 @@ Eval Quiescence::Search(Position& current_position, Eval alpha, const Eval beta)
   auto moves =
       move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
           current_position);
+
   std::ranges::stable_sort(moves, [this, &current_position](const Move& lhs, const Move& rhs) {
     return CompareMoves(rhs, lhs, current_position);
   });
 
-  for (const auto& move : moves)
-  {
+  if (best_moves_.Contains(current_position)) {
+    const auto tt_move = best_moves_[current_position].move;
+    if (auto it = std::find(moves.begin(), moves.end(), tt_move); it != moves.end()) {
+      std::iter_swap(it, moves.begin());
+    }
+  }
+
+  for (const auto& move : moves) {
+    if (std::holds_alternative<DefaultMove>(move) &&
+        stand_pat +
+                kPieceValues[static_cast<size_t>(std::get_if<DefaultMove>(&move)
+                                                     ->captured_piece)]
+                    .eval[1] +
+                kSmallDelta <
+            alpha)
+      continue;
+      
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree
@@ -94,6 +123,8 @@ Eval Quiescence::Search(Position& current_position, Eval alpha, const Eval beta)
 
     if (temp_eval > alpha)
     {
+      best_moves_[current_position] = {move, current_position.GetHash()};
+
       if (temp_eval >= beta)
       {
         return temp_eval;

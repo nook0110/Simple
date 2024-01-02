@@ -94,8 +94,6 @@ class ChessEngine
 
   [[nodiscard]] const Move& GetCurrentBestMove() const;
 
-  [[nodiscard]] const TranspositionTable& GetTranspositionTable() const;
-
   void PrintBestMove() const
   {
     printer_->operator()(BestMoveInfo{GetCurrentBestMove()});
@@ -243,7 +241,7 @@ inline void ChessEngine::ComputeBestMove(
 
     const auto eval =
         searcher_.Search<true>(current_depth, current_depth, alpha, beta);
-    info += searcher_.GetInfo();
+    info = searcher_.GetInfo();
 
     PrintInfo(ScoreInfo{eval});
 
@@ -293,6 +291,7 @@ inline void ChessEngine::ComputeBestMove(
     }
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
+    PrintInfo(NodesInfo{info.quiescence_nodes});
     PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
         info.searched_nodes /
         (std::chrono::duration<double>{
@@ -311,11 +310,6 @@ inline void ChessEngine::ComputeBestMove(
 inline const Move& ChessEngine::GetCurrentBestMove() const
 {
   return searcher_.GetCurrentBestMove();
-}
-
-inline const TranspositionTable& ChessEngine::GetTranspositionTable() const
-{
-  return searcher_.GetTranspositionTable();
 }
 
 template <class Info>
