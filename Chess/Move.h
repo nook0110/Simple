@@ -81,4 +81,23 @@ struct Castling
 
 using Move = std::variant<PawnPush, DoublePush, EnCroissant, DefaultMove,
                           Castling, Promotion>;
+
+inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const Move& move) 
+{
+  return std::visit([](const auto& unwrapped_move) { return GetMoveData(unwrapped_move); },
+             move);
+}
+
+inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const DefaultMove& move) {
+  return {move.from, move.to, move.captured_piece};
+}
+
+inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const Promotion& move) {
+  return {move.from, move.to, move.captured_piece};
+}
+
+inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const EnCroissant& move) {
+  return {move.from, move.to, Piece::kPawn};
+}
+
 }  // namespace SimpleChessEngine

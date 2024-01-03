@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include "Evaluation.h"
+#include "KillerTable.h"
 #include "MoveGenerator.h"
 #include "PVTable.h"
 #include "PositionFactory.h"
@@ -94,36 +95,76 @@ class Searcher {
   [[nodiscard]] const PVTable& GetPV() const { return principle_variation_; }
 
  private:
-  bool CompareMoves(const Move& lhs, const Move& rhs) const {
-    if (lhs.index() != rhs.index()) return lhs.index() < rhs.index();
-    if (!std::holds_alternative<DefaultMove>(lhs)) return false;
-    const auto lhs_ptr = std::get_if<DefaultMove>(&lhs);
-    const auto rhs_ptr = std::get_if<DefaultMove>(&rhs);
-    return kPieceValues[static_cast<size_t>(
-                            current_position_.GetPiece(lhs_ptr->to))]
-                   .eval[0] -
-               kPieceValues[static_cast<size_t>(
-                                current_position_.GetPiece(lhs_ptr->from))]
-                   .eval[0] <
-           kPieceValues[static_cast<size_t>(
-                            current_position_.GetPiece(rhs_ptr->to))]
-                   .eval[0] -
-               kPieceValues[static_cast<size_t>(
-                                current_position_.GetPiece(rhs_ptr->from))]
-                   .eval[0];
-  }
-  Move best_move_;
 
+  std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
+  OrderMoves(MoveGenerator::Moves::iterator first,
+             MoveGenerator::Moves::iterator last, const size_t ply) const
+  {
+    MoveGenerator::Moves::iterator quiet_begin;
+    quiet_begin = std::partition(first, last, [this](const Move& move) {
+      if (std::holds_alternative<Promotion>(move) ||
+          std::holds_alternative<EnCroissant>(move))
+        return true;
+      if (!std::holds_alternative<DefaultMove>(move)) return false;
+      const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
+      return static_cast<size_t>(captured_piece) >=
+             static_cast<size_t>(current_position_.GetPiece(from));
+      });
+    MoveGenerator::Moves::iterator quiet_end;
+    quiet_end = std::partition(quiet_begin, last, [](const Move& move) {
+      if (!std::holds_alternative<DefaultMove>(move)) return true;
+      const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
+      return !captured_piece;
+    });
+    std::sort(first, quiet_begin, [this](const Move& lhs, const Move& rhs) {
+      const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
+      const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
+      const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
+      const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
+      const auto moving_idx_lhs =
+          -static_cast<int>(current_position_.GetPiece(from_lhs));
+      const auto moving_idx_rhs =
+          -static_cast<int>(current_position_.GetPiece(from_rhs));
+      return std::tie(captured_idx_lhs, moving_idx_lhs) >
+             std::tie(captured_idx_rhs, moving_idx_rhs);
+      });
+    std::sort(quiet_end, last, [this](const Move& lhs, const Move& rhs) { 
+      const auto [from_lhs, to_lhs, captured_piece_lhs] = std::get<DefaultMove>(lhs);
+      const auto [from_rhs, to_rhs, captured_piece_rhs] =
+          std::get<DefaultMove>(rhs);
+      const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
+      const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
+      const auto moving_idx_lhs =
+          -static_cast<int>(current_position_.GetPiece(from_lhs));
+      const auto moving_idx_rhs =
+          -static_cast<int>(current_position_.GetPiece(from_rhs));
+      return std::tie(captured_idx_lhs, moving_idx_lhs)
+             > std::tie(captured_idx_rhs, moving_idx_rhs);
+      });
+    for (size_t i = 0; i < killers_.AvailableKillerCount(ply); ++i) {
+      const auto killer = killers_.Get(ply, i);
+      if (auto it = std::find(quiet_begin, quiet_end, killer); it != quiet_end) {
+        std::iter_swap(quiet_begin, it);
+        ++quiet_begin;
+      }
+    }
+    return {quiet_begin, quiet_end};
+  }
+
+  Move best_move_;
+  
   Position current_position_;  //!< Current position.
 
   MoveGenerator move_generator_;  //!< Move generator.
   Quiescence quiescence_searcher_;
 
-  TranspositionTable<1 << 24>
+  TranspositionTable<1 << 25>
       best_moves_;  //!< Transposition-table to store the best moves.
 
   PVTable principle_variation_;  //!< PV table to store principal variation from
                                  //!< the previous iteration of ID
+  
+  KillerTable<2> killers_;
 
   DebugInfo debug_info_;
 };
@@ -206,17 +247,11 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
       debug_info_.pv_hits++;
 
       std::iter_swap(pv, moves.begin());
-
-      // sort all moves except first (PV-move)
-      std::stable_sort(std::next(moves.begin()), moves.end(), [this](const Move& lhs, const Move& rhs) {
-                         return CompareMoves(rhs, lhs);
-                       });
     }
-  } else {
-    std::ranges::stable_sort(moves, [this](const Move& lhs, const Move& rhs) {
-      return CompareMoves(rhs, lhs);
-    });
   }
+
+  auto [quiet_begin, quiet_end] = OrderMoves(moves.begin() + static_cast<bool>(best_move), 
+                                             moves.end(), max_depth - remaining_depth);
 
   const auto& first_move = moves.front();
   const auto irreversible_data = current_position_.GetIrreversibleData();
@@ -238,12 +273,15 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
   // set best move
   set_best_move(moves.front());
 
-  // delete first move
-  std::iter_swap(moves.begin(), std::prev(moves.end()));
-  moves.pop_back();
+  bool is_quiet = false;
 
   // search the tree
-  for (const auto& move : moves) {
+  for (auto it = std::next(moves.begin()); it != moves.end(); ++it) {
+
+    const auto move = *it;
+
+    if (it == quiet_begin) is_quiet = true;
+    if (it == quiet_end) is_quiet = false;
     // make the move and search the tree
     current_position_.DoMove(move);
 
@@ -268,6 +306,9 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
 
       // check if we have found a better move
       if (temp_eval >= beta) {
+        if (is_quiet) {
+          killers_.TryAdd(max_depth - remaining_depth, move);
+        }
         return temp_eval;
       }
 

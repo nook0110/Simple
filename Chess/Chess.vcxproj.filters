@@ -128,5 +128,8 @@
     <ClInclude Include="PVTable.h">
       <Filter>Файлы заголовков\Engine\Searcher</Filter>
     </ClInclude>
+    <ClInclude Include="KillerTable.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
