@@ -3,10 +3,8 @@
 #include "MoveGenerator.h"
 #include "Position.h"
 
-namespace SimpleChessEngine
-{
-class Quiescence
-{
+namespace SimpleChessEngine {
+class Quiescence {
  public:
   /**
    * \brief Constructor.
@@ -29,7 +27,8 @@ class Quiescence
   [[nodiscard]] std::size_t GetSearchedNodes() const { return searched_nodes_; }
 
  private:
-  bool CompareMoves(const Move& lhs, const Move& rhs, const Position& current_position) const {
+  bool CompareMoves(const Move& lhs, const Move& rhs,
+                    const Position& current_position) const {
     if (lhs.index() != rhs.index()) return lhs.index() < rhs.index();
     if (!std::holds_alternative<DefaultMove>(lhs)) return false;
     const auto lhs_ptr = std::get_if<DefaultMove>(&lhs);
@@ -47,7 +46,7 @@ class Quiescence
                                 current_position.GetPiece(rhs_ptr->from))]
                    .eval[0];
   }
-  
+
   static constexpr Eval kSmallDelta =
       2 * kPieceValues[static_cast<size_t>(Piece::kPawn)].eval[1];
   static constexpr Eval kBigDelta =
@@ -59,18 +58,16 @@ class Quiescence
 };
 
 template <bool start_of_search>
-Eval Quiescence::Search(Position& current_position, Eval alpha, const Eval beta)
-{
-  if constexpr (start_of_search)
-  {
+Eval Quiescence::Search(Position& current_position, Eval alpha,
+                        const Eval beta) {
+  if constexpr (start_of_search) {
     searched_nodes_ = 0;
   }
   searched_nodes_++;
 
   const auto stand_pat = current_position.Evaluate();
 
-  if (stand_pat >= beta)
-  {
+  if (stand_pat >= beta) {
     return stand_pat;
   }
 
@@ -78,19 +75,18 @@ Eval Quiescence::Search(Position& current_position, Eval alpha, const Eval beta)
     return alpha;
   }
 
-  if (alpha < stand_pat)
-  {
+  if (alpha < stand_pat) {
     alpha = stand_pat;
   }
 
   // get all the attacks moves
-  auto moves =
-      move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
-          current_position);
+  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
+      current_position);
 
-  std::ranges::stable_sort(moves, [this, &current_position](const Move& lhs, const Move& rhs) {
-    return CompareMoves(rhs, lhs, current_position);
-  });
+  std::ranges::stable_sort(
+      moves, [this, &current_position](const Move& lhs, const Move& rhs) {
+        return CompareMoves(rhs, lhs, current_position);
+      });
 
   for (const auto& move : moves) {
     if (std::holds_alternative<DefaultMove>(move) &&
@@ -101,7 +97,7 @@ Eval Quiescence::Search(Position& current_position, Eval alpha, const Eval beta)
                 kSmallDelta <
             alpha)
       continue;
-      
+
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree
@@ -111,10 +107,8 @@ Eval Quiescence::Search(Position& current_position, Eval alpha, const Eval beta)
     // undo the move
     current_position.UndoMove(move, irreversible_data);
 
-    if (temp_eval > alpha)
-    {
-      if (temp_eval >= beta)
-      {
+    if (temp_eval > alpha) {
+      if (temp_eval >= beta) {
         return temp_eval;
       }
 
