@@ -98,7 +98,7 @@ class Searcher {
 
   std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
   OrderMoves(MoveGenerator::Moves::iterator first,
-             MoveGenerator::Moves::iterator last, const size_t ply) const
+             MoveGenerator::Moves::iterator last, const size_t ply, const size_t color_idx) const
   {
     MoveGenerator::Moves::iterator quiet_begin;
     quiet_begin = std::partition(first, last, [this](const Move& move) {
@@ -116,7 +116,7 @@ class Searcher {
       const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
       return !captured_piece;
     });
-    std::sort(first, quiet_begin, [this](const Move& lhs, const Move& rhs) {
+    const auto CompareCaptures = [this](const Move& lhs, const Move& rhs) {
       const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
       const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
       const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
@@ -127,20 +127,9 @@ class Searcher {
           -static_cast<int>(current_position_.GetPiece(from_rhs));
       return std::tie(captured_idx_lhs, moving_idx_lhs) >
              std::tie(captured_idx_rhs, moving_idx_rhs);
-      });
-    std::sort(quiet_end, last, [this](const Move& lhs, const Move& rhs) { 
-      const auto [from_lhs, to_lhs, captured_piece_lhs] = std::get<DefaultMove>(lhs);
-      const auto [from_rhs, to_rhs, captured_piece_rhs] =
-          std::get<DefaultMove>(rhs);
-      const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
-      const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
-      const auto moving_idx_lhs =
-          -static_cast<int>(current_position_.GetPiece(from_lhs));
-      const auto moving_idx_rhs =
-          -static_cast<int>(current_position_.GetPiece(from_rhs));
-      return std::tie(captured_idx_lhs, moving_idx_lhs)
-             > std::tie(captured_idx_rhs, moving_idx_rhs);
-      });
+    };
+    std::sort(first, quiet_begin, CompareCaptures);
+    std::sort(quiet_end, last, CompareCaptures);
     for (size_t i = 0; i < killers_.AvailableKillerCount(ply); ++i) {
       const auto killer = killers_.Get(ply, i);
       if (auto it = std::find(quiet_begin, quiet_end, killer); it != quiet_end) {
@@ -148,6 +137,12 @@ class Searcher {
         ++quiet_begin;
       }
     }
+    std::sort(quiet_begin, quiet_end, [this, color_idx](const Move& lhs, const Move& rhs) {
+      const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
+      const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
+      return history_[color_idx][from_lhs][to_lhs] >
+             history_[color_idx][from_rhs][to_rhs];
+    });
     return {quiet_begin, quiet_end};
   }
 
@@ -158,11 +153,13 @@ class Searcher {
   MoveGenerator move_generator_;  //!< Move generator.
   Quiescence quiescence_searcher_;
 
+  PVTable principle_variation_;  //!< PV table to store principal variation from
+                                 //!< the previous iteration of ID
+
   TranspositionTable<1 << 25>
       best_moves_;  //!< Transposition-table to store the best moves.
 
-  PVTable principle_variation_;  //!< PV table to store principal variation from
-                                 //!< the previous iteration of ID
+  std::array<std::array<std::array<uint64_t, kBoardArea + 1>, kBoardArea + 1>, kColors> history_;
   
   KillerTable<2> killers_;
 
@@ -191,8 +188,18 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
   }
 
   const bool is_start_of_search = max_depth == remaining_depth;
+  const auto color_idx = static_cast<size_t>(current_position_.GetSideToMove());
+
   if (is_start_of_search) {
     debug_info_ = DebugInfo{};
+    killers_.Clear();
+    for (unsigned color = 0; color < kColors; ++color) {
+      for (BitIndex from = 0; from <= kBoardArea; ++from) {
+        for (BitIndex to = 0; to <= kBoardArea; ++to) {
+          history_[color][from][to] = 0ull;
+        }
+      }
+    }
   }
   // return the evaluation of the current position if we have reached the
   // end of the search tree
@@ -251,7 +258,7 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
   }
 
   auto [quiet_begin, quiet_end] = OrderMoves(moves.begin() + static_cast<bool>(best_move), 
-                                             moves.end(), max_depth - remaining_depth);
+                                             moves.end(), max_depth - remaining_depth, color_idx);
 
   const auto& first_move = moves.front();
   const auto irreversible_data = current_position_.GetIrreversibleData();
@@ -307,6 +314,8 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
       // check if we have found a better move
       if (temp_eval >= beta) {
         if (is_quiet) {
+          const auto [from, to, captured_piece] = GetMoveData(move);
+          history_[color_idx][from][to] += remaining_depth * remaining_depth;
           killers_.TryAdd(max_depth - remaining_depth, move);
         }
         return temp_eval;
