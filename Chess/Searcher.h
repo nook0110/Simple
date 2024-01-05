@@ -34,6 +34,7 @@ class Searcher {
 
     DebugInfo& operator+=(const DebugInfo& other) {
       searched_nodes += other.searched_nodes;
+      quiescence_nodes += other.quiescence_nodes;
       pv_hits += other.pv_hits;
       return *this;
     }
@@ -95,11 +96,9 @@ class Searcher {
   [[nodiscard]] const PVTable& GetPV() const { return principle_variation_; }
 
  private:
-
   std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
   OrderMoves(MoveGenerator::Moves::iterator first,
-             MoveGenerator::Moves::iterator last, const size_t ply, const size_t color_idx) const
-  {
+             MoveGenerator::Moves::iterator last, const size_t ply) const {
     MoveGenerator::Moves::iterator quiet_begin;
     quiet_begin = std::partition(first, last, [this](const Move& move) {
       if (std::holds_alternative<Promotion>(move) ||
@@ -109,7 +108,7 @@ class Searcher {
       const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
       return static_cast<size_t>(captured_piece) >=
              static_cast<size_t>(current_position_.GetPiece(from));
-      });
+    });
     MoveGenerator::Moves::iterator quiet_end;
     quiet_end = std::partition(quiet_begin, last, [](const Move& move) {
       if (!std::holds_alternative<DefaultMove>(move)) return true;
@@ -132,7 +131,8 @@ class Searcher {
     std::sort(quiet_end, last, CompareCaptures);
     for (size_t i = 0; i < killers_.AvailableKillerCount(ply); ++i) {
       const auto killer = killers_.Get(ply, i);
-      if (auto it = std::find(quiet_begin, quiet_end, killer); it != quiet_end) {
+      if (auto it = std::find(quiet_begin, quiet_end, killer);
+          it != quiet_end) {
         std::iter_swap(quiet_begin, it);
         ++quiet_begin;
       }
@@ -147,7 +147,7 @@ class Searcher {
   }
 
   Move best_move_;
-  
+
   Position current_position_;  //!< Current position.
 
   MoveGenerator move_generator_;  //!< Move generator.
@@ -257,8 +257,9 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
     }
   }
 
-  auto [quiet_begin, quiet_end] = OrderMoves(moves.begin() + static_cast<bool>(best_move), 
-                                             moves.end(), max_depth - remaining_depth, color_idx);
+  auto [quiet_begin, quiet_end] =
+      OrderMoves(moves.begin() + static_cast<bool>(best_move), moves.end(),
+                 max_depth - remaining_depth);
 
   const auto& first_move = moves.front();
   const auto irreversible_data = current_position_.GetIrreversibleData();
@@ -284,7 +285,6 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
 
   // search the tree
   for (auto it = std::next(moves.begin()); it != moves.end(); ++it) {
-
     const auto move = *it;
 
     if (it == quiet_begin) is_quiet = true;

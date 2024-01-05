@@ -10,8 +10,7 @@
 #include "Piece.h"
 #include "Player.h"
 
-namespace SimpleChessEngine
-{
+namespace SimpleChessEngine {
 constexpr size_t kBoardArea = 64;
 constexpr Bitboard kEmptyBoard = Bitboard{};
 constexpr int kLineSize = 8;
@@ -57,47 +56,36 @@ using File = int;
 
 using Coordinates = std::pair<File, Rank>;
 
-[[nodiscard]] constexpr Coordinates GetCoordinates(const BitIndex square)
-{
+[[nodiscard]] constexpr Coordinates GetCoordinates(const BitIndex square) {
   return std::make_pair(square % kLineSize, square / kLineSize);
 }
 
-[[nodiscard]] constexpr BitIndex GetSquare(const File file, const Rank rank)
-{
+[[nodiscard]] constexpr BitIndex GetSquare(const File file, const Rank rank) {
   assert(file >= 0 && file < kLineSize);
   assert(rank >= 0 && rank < kLineSize);
   return static_cast<BitIndex>(rank << 3 | file);
 }
 
 [[nodiscard]] inline int ManhattanDistance(const BitIndex first,
-                                           const BitIndex second)
-{
+                                           const BitIndex second) {
   const auto [x_first, y_first] = GetCoordinates(first);
   const auto [x_second, y_second] = GetCoordinates(second);
   return std::abs(x_first - x_second) + std::abs(y_first - y_second);
 }
 
 [[nodiscard]] inline int KingDistance(const BitIndex first,
-                                      const BitIndex second)
-{
+                                      const BitIndex second) {
   const auto [x_first, y_first] = GetCoordinates(first);
   const auto [x_second, y_second] = GetCoordinates(second);
   return std::max(std::abs(x_first - x_second), std::abs(y_first - y_second));
 }
 
-enum class CastlingRights
-{
-  kNone,
-  k00 = 1,
-  k000 = 2,
-  kAll = k00 | k000
-};
+enum class CastlingRights { kNone, k00 = 1, k000 = 2, kAll = k00 | k000 };
 
 constexpr std::array kCastlingRightsForSide = {CastlingRights::k00,
                                                CastlingRights::k000};
 
-enum class Compass
-{
+enum class Compass {
   kNorth = kLineSize,
   kWest = -1,
   kSouth = -kLineSize,
@@ -108,15 +96,13 @@ enum class Compass
   kNorthEast = kNorth + kEast
 };
 
-constexpr Compass Invert(const Compass direction)
-{
+constexpr Compass Invert(const Compass direction) {
   return Compass{-static_cast<int>(direction)};
 }
 
-[[nodiscard]] inline Bitboard Shift(const Bitboard bb, const Compass direction)
-{
-  switch (direction)
-  {
+[[nodiscard]] inline Bitboard Shift(const Bitboard bb,
+                                    const Compass direction) {
+  switch (direction) {
     case Compass::kNorth:
       return bb << kLineSize;
     case Compass::kSouth:
@@ -139,8 +125,7 @@ constexpr Compass Invert(const Compass direction)
 }
 
 [[nodiscard]] constexpr BitIndex Shift(const BitIndex square,
-                                       const Compass direction)
-{
+                                       const Compass direction) {
   return square + static_cast<BitIndex>(direction);
 }
 
@@ -149,54 +134,46 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
     {{Compass::kNorthWest, Compass::kNorthEast},
      {Compass::kSouthWest, Compass::kSouthEast}}};
 
-[[nodiscard]] inline bool IsOk(const BitIndex square)
-{
+[[nodiscard]] inline bool IsOk(const BitIndex square) {
   return square < kBoardArea;
 }
 
-[[nodiscard]] inline Bitboard GetBitboardOfSquare(const BitIndex square)
-{
+[[nodiscard]] inline Bitboard GetBitboardOfSquare(const BitIndex square) {
   return Bitboard{1ull << square};
 }
 
 [[nodiscard]] inline bool IsAdjacent(const BitIndex sq_first,
-                                     const BitIndex sq_second)
-{
+                                     const BitIndex sq_second) {
   return KingDistance(sq_first, sq_second) == 1;
 }
 
 [[nodiscard]] inline bool IsShiftValid(const BitIndex shifted_square,
-                                       const BitIndex square)
-{
+                                       const BitIndex square) {
   return IsOk(shifted_square) && IsAdjacent(square, shifted_square);
 }
 
 [[nodiscard]] inline std::optional<Bitboard> GetShiftIfValid(
-    const BitIndex square, const Compass shift)
-{
+    const BitIndex square, const Compass shift) {
   const BitIndex new_square = Shift(square, shift);
   return IsShiftValid(new_square, square)
              ? std::optional{GetBitboardOfSquare(new_square)}
              : std::nullopt;
 }
 
-[[nodiscard]] inline std::optional<Bitboard> DoShiftIfValid(BitIndex& square,
-                                                            const Compass shift)
-{
+[[nodiscard]] inline std::optional<Bitboard> DoShiftIfValid(
+    BitIndex& square, const Compass shift) {
   const BitIndex copy = square;
   square += static_cast<int>(shift);
   return IsShiftValid(square, copy) ? std::optional{GetBitboardOfSquare(square)}
                                     : std::nullopt;
 }
 
-[[nodiscard]] constexpr bool IsSlidingPiece(const Piece piece)
-{
+[[nodiscard]] constexpr bool IsSlidingPiece(const Piece piece) {
   return piece == Piece::kBishop || piece == Piece::kRook ||
          piece == Piece::kQueen;
 }
 
-[[nodiscard]] constexpr bool IsWeakSlidingPiece(const Piece piece)
-{
+[[nodiscard]] constexpr bool IsWeakSlidingPiece(const Piece piece) {
   return IsSlidingPiece(piece) && piece != Piece::kQueen;
 }
 
@@ -209,27 +186,22 @@ inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_between{};
 inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> bishop_ray{};
 inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_ray{};
 
-inline Bitboard Between(const BitIndex from, const BitIndex to)
-{
+inline Bitboard Between(const BitIndex from, const BitIndex to) {
   return bishop_between[from][to] | rook_between[from][to];
 }
 
-inline Bitboard Ray(const BitIndex from, const BitIndex to)
-{
+inline Bitboard Ray(const BitIndex from, const BitIndex to) {
   return bishop_ray[from][to] | rook_ray[from][to];
 }
 
 inline std::array<std::array<Bitboard, kBoardArea>, kColors> pawn_attacks{};
 
-inline void InitPawnAttacks()
-{
-  for (auto color : {Player::kWhite, Player::kBlack})
-  {
-    for (BitIndex square = 0; square < kBoardArea; ++square)
-    {
+inline void InitPawnAttacks() {
+  for (auto color : {Player::kWhite, Player::kBlack}) {
+    for (BitIndex square = 0; square < kBoardArea; ++square) {
       Bitboard res{};
-      for (const auto step : kPawnAttackDirections[static_cast<size_t>(color)])
-      {
+      for (const auto step :
+           kPawnAttackDirections[static_cast<size_t>(color)]) {
         res |= GetShiftIfValid(square, step).value_or(Bitboard{});
       }
       pawn_attacks[static_cast<size_t>(color)][square] = res;
@@ -238,19 +210,15 @@ inline void InitPawnAttacks()
 }
 
 [[nodiscard]] inline Bitboard GetPawnAttacks(const BitIndex square,
-                                             const Player side)
-{
+                                             const Player side) {
   return pawn_attacks[static_cast<size_t>(side)][square];
 }
 
-[[nodiscard]] inline std::string DrawBitboard(const Bitboard b)
-{
+[[nodiscard]] inline std::string DrawBitboard(const Bitboard b) {
   std::string s = "+---+---+---+---+---+---+---+---+\n";
 
-  for (Rank r = 7; r >= 0; --r)
-  {
-    for (File f = 0; f <= 7; ++f)
-    {
+  for (Rank r = 7; r >= 0; --r) {
+    for (File f = 0; f <= 7; ++f) {
       s += (b & GetBitboardOfSquare(GetSquare(f, r))).Any() ? "| X " : "|   ";
     }
 
