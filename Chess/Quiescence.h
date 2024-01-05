@@ -30,22 +30,18 @@ class Quiescence
 
  private:
   bool CompareMoves(const Move& lhs, const Move& rhs, const Position& current_position) const {
-    if (lhs.index() != rhs.index()) return lhs.index() < rhs.index();
+    if (lhs.index() != rhs.index()) return lhs.index() > rhs.index();
     if (!std::holds_alternative<DefaultMove>(lhs)) return false;
-    const auto lhs_ptr = std::get_if<DefaultMove>(&lhs);
-    const auto rhs_ptr = std::get_if<DefaultMove>(&rhs);
-    return kPieceValues[static_cast<size_t>(
-                            current_position.GetPiece(lhs_ptr->to))]
-                   .eval[0] -
-               kPieceValues[static_cast<size_t>(
-                                current_position.GetPiece(lhs_ptr->from))]
-                   .eval[0] <
-           kPieceValues[static_cast<size_t>(
-                            current_position.GetPiece(rhs_ptr->to))]
-                   .eval[0] -
-               kPieceValues[static_cast<size_t>(
-                                current_position.GetPiece(rhs_ptr->from))]
-                   .eval[0];
+    const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
+    const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
+    const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
+    const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
+    const auto moving_idx_lhs =
+        -static_cast<int>(current_position.GetPiece(from_lhs));
+    const auto moving_idx_rhs =
+        -static_cast<int>(current_position.GetPiece(from_rhs));
+    return std::tie(captured_idx_lhs, moving_idx_lhs) >
+           std::tie(captured_idx_rhs, moving_idx_rhs);
   }
   
   static constexpr Eval kSmallDelta =
@@ -88,8 +84,8 @@ Eval Quiescence::Search(Position& current_position, Eval alpha, const Eval beta)
       move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
           current_position);
 
-  std::ranges::stable_sort(moves, [this, &current_position](const Move& lhs, const Move& rhs) {
-    return CompareMoves(rhs, lhs, current_position);
+  std::ranges::sort(moves, [this, &current_position](const Move& lhs, const Move& rhs) {
+    return CompareMoves(lhs, rhs, current_position);
   });
 
   for (const auto& move : moves) {
