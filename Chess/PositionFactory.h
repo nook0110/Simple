@@ -5,10 +5,8 @@
 #include "Position.h"
 #include "StreamUtility.h"
 
-namespace SimpleChessEngine
-{
-struct PositionFactory
-{
+namespace SimpleChessEngine {
+struct PositionFactory {
   Position operator()(
       const std::string& fen =
           "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") const;
@@ -16,8 +14,7 @@ struct PositionFactory
   Position operator()(std::stringstream stream) const;
 };
 
-inline Position PositionFactory::operator()(const std::string& fen) const
-{
+inline Position PositionFactory::operator()(const std::string& fen) const {
   std::stringstream fen_stream;
 
   fen_stream << fen;
@@ -35,13 +32,10 @@ inline Position PositionFactory::operator()(const std::string& fen) const
   std::array<BitIndex, kColors> kings{};
   std::array<std::array<BitIndex, 2>, kColors> rooks{};
 
-  for (int row = kBoardSize - 1; row >= 0; --row)
-  {
+  for (int row = kBoardSize - 1; row >= 0; --row) {
     size_t column = 0;
-    while (column < kBoardSize)
-    {
-      if (std::isdigit(*current))
-      {
+    while (column < kBoardSize) {
+      if (std::isdigit(*current)) {
         // convert char to number
         column += *current - '0';
 
@@ -55,13 +49,11 @@ inline Position PositionFactory::operator()(const std::string& fen) const
 
       const auto us = static_cast<size_t>(color);
 
-      if (piece == Piece::kKing)
-      {
+      if (piece == Piece::kKing) {
         kings[us] = square;
       }
 
-      if (piece == Piece::kRook)
-      {
+      if (piece == Piece::kRook) {
         rooks[us][!kings[us]] = square;
       }
 
@@ -89,10 +81,8 @@ inline Position PositionFactory::operator()(const std::string& fen) const
 
   std::array<std::bitset<2>, 2> castling_rights;
 
-  for (auto castling_right : castling_rights_string)
-  {
-    switch (castling_right)
-    {
+  for (auto castling_right : castling_rights_string) {
+    switch (castling_right) {
       case 'K':
         castling_rights[static_cast<size_t>(Player::kWhite)] |=
             static_cast<size_t>(CastlingRights::k00);
@@ -133,8 +123,7 @@ inline Position PositionFactory::operator()(const std::string& fen) const
   return position;
 }
 
-inline Position PositionFactory::operator()(std::stringstream stream) const
-{
+inline Position PositionFactory::operator()(std::stringstream stream) const {
   return Position{};
 }
 }  // namespace SimpleChessEngine

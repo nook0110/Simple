@@ -2,9 +2,7 @@
 
 #include "Evaluation.h"
 
-namespace SimpleChessEngine
-{
-
+namespace SimpleChessEngine {
 // clang-format off
   inline std::array<std::array<std::array<TaperedEval, kBoardArea>, kPieceTypes>,
     kColors>
@@ -85,13 +83,10 @@ namespace SimpleChessEngine
 } };
 // clang-format on
 
-inline void InitPSQT()
-{
+inline void InitPSQT() {
   for (auto piece : {Piece::kPawn, Piece::kKnight, Piece::kBishop, Piece::kRook,
-                     Piece::kQueen, Piece::kKing})
-  {
-    for (BitIndex square = 0; square < kBoardArea; ++square)
-    {
+                     Piece::kQueen, Piece::kKing}) {
+    for (BitIndex square = 0; square < kBoardArea; ++square) {
       const auto [file, rank] = GetCoordinates(square);
       const BitIndex new_square = GetSquare(file, 7 - rank);
       kPSQT[static_cast<size_t>(Player::kBlack)][static_cast<size_t>(piece)]

@@ -1,12 +1,10 @@
 #pragma once
 
-namespace SimpleChessEngine
-{
+namespace SimpleChessEngine {
 /**
  * \brief Enum class that represents a piece.
  */
-enum class Piece
-{
+enum class Piece {
   kNone,    //!< No piece.
   kPawn,    //!< Pawn.
   kKnight,  //!< Knight.
@@ -16,8 +14,7 @@ enum class Piece
   kKing     //!< King.
 };
 
-[[nodiscard]] constexpr bool operator!(const Piece piece)
-{
+[[nodiscard]] constexpr bool operator!(const Piece piece) {
   return piece == Piece::kNone;
 }
 }  // namespace SimpleChessEngine

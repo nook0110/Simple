@@ -3,10 +3,8 @@
 
 #include "BitBoard.h"
 #include "Piece.h"
-namespace SimpleChessEngine
-{
-struct DefaultMove
-{
+namespace SimpleChessEngine {
+struct DefaultMove {
   bool operator==(const DefaultMove&) const = default;
 
   BitIndex from{};
@@ -14,47 +12,37 @@ struct DefaultMove
   Piece captured_piece{};
 };
 
-struct PawnPush
-{
+struct PawnPush {
   bool operator==(const PawnPush&) const = default;
 
   BitIndex from{};
   BitIndex to{};
 };
 
-struct DoublePush
-{
+struct DoublePush {
   bool operator==(const DoublePush&) const = default;
 
   BitIndex from{};
   BitIndex to{};
 };
 
-struct EnCroissant
-{
+struct EnCroissant {
   BitIndex from{};
   BitIndex to{};
 
   bool operator==(const EnCroissant&) const = default;
 };
 
-struct Promotion : DefaultMove
-{
-  bool operator==(const Promotion& other) const
-  {
+struct Promotion : DefaultMove {
+  bool operator==(const Promotion& other) const {
     return DefaultMove::operator==(other) && promoted_to == other.promoted_to;
   }
 
   Piece promoted_to{};
 };
 
-struct Castling
-{
-  enum class CastlingSide
-  {
-    k00,
-    k000
-  };
+struct Castling {
+  enum class CastlingSide { k00, k000 };
 
   CastlingSide side;
 
@@ -99,5 +87,4 @@ inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const Move& move)
   return std::visit([](const auto& unwrapped_move) { return GetMoveData(unwrapped_move); },
              move);
 }
-
 }  // namespace SimpleChessEngine
