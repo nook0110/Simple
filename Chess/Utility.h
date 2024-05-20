@@ -90,7 +90,7 @@ enum class CastlingRights : uint8_t {
 constexpr std::array kCastlingRightsForSide = {CastlingRights::k00,
                                                CastlingRights::k000};
 
-enum class Compass : uint8_t {
+enum class Compass : int8_t {
   kNorth = kLineSize,
   kWest = -1,
   kSouth = -kLineSize,
