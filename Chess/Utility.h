@@ -3,6 +3,7 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -102,7 +103,7 @@ enum class Compass : int8_t {
 };
 
 constexpr Compass Invert(const Compass direction) {
-  return Compass{-static_cast<int>(direction)};
+  return static_cast<Compass>(-static_cast<int8_t>(direction));
 }
 
 [[nodiscard]] inline Bitboard Shift(const Bitboard bb,

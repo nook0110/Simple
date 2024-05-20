@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "BitBoard.h"
+#include "Piece.h"
 #include "Utility.h"
 
 namespace SimpleChessEngine {
@@ -39,7 +40,8 @@ class AttackTable {
   std::array<Bitboard, table_size> table_ = {};
   std::array<size_t, kBoardArea> base_ = {};
   std::array<Magic, kBoardArea> magic_ = {};
-  static inline const auto self_ = std::make_unique<AttackTable>();
+  static inline const std::unique_ptr<AttackTable> self_ =
+      std::make_unique<AttackTable>();
 };
 
 template <Piece piece, size_t table_size>
