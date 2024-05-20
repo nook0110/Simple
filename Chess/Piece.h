@@ -4,7 +4,7 @@ namespace SimpleChessEngine {
 /**
  * \brief Enum class that represents a piece.
  */
-enum class Piece {
+enum class Piece : uint8_t {
   kNone,    //!< No piece.
   kPawn,    //!< Pawn.
   kKnight,  //!< Knight.

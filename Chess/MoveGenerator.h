@@ -14,7 +14,7 @@ namespace SimpleChessEngine {
  */
 class MoveGenerator {
  public:
-  enum class Type { kDefault, kQuiescence };
+  enum class Type : uint8_t { kDefault, kQuiescence };
 
   MoveGenerator() { moves_.reserve(256); }
 

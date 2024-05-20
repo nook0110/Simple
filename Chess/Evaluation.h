@@ -7,7 +7,7 @@
 namespace SimpleChessEngine {
 using Eval = int;
 
-enum class GamePhase { kMiddleGame, kEndGame };
+enum class GamePhase : uint8_t { kMiddleGame, kEndGame };
 
 constexpr size_t kGamePhases = 2;
 
