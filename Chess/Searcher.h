@@ -81,7 +81,7 @@ class Searcher {
    *
    * \return Evaluation of subtree.
    */
-  template <bool is_pv>
+  template <bool is_principal_variation>
   [[nodiscard]] Eval Search(size_t max_depth, size_t remaining_depth,
                             Eval alpha, Eval beta);
 
@@ -98,7 +98,8 @@ class Searcher {
  private:
   std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
   OrderMoves(MoveGenerator::Moves::iterator first,
-             MoveGenerator::Moves::iterator last, const size_t ply, const size_t color_idx) const {
+             MoveGenerator::Moves::iterator last, const size_t ply,
+             const size_t color_idx) const {
     MoveGenerator::Moves::iterator quiet_begin;
     quiet_begin = std::partition(first, last, [this](const Move& move) {
       if (std::holds_alternative<Promotion>(move) ||
@@ -137,12 +138,14 @@ class Searcher {
         ++quiet_begin;
       }
     }
-    std::sort(quiet_begin, quiet_end, [this, color_idx](const Move& lhs, const Move& rhs) {
-      const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
-      const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
-      return history_[color_idx][from_lhs][to_lhs] >
-             history_[color_idx][from_rhs][to_rhs];
-    });
+    std::sort(
+        quiet_begin, quiet_end,
+        [this, color_idx](const Move& lhs, const Move& rhs) {
+          const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
+          const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
+          return history_[color_idx][from_lhs][to_lhs] >
+                 history_[color_idx][from_rhs][to_rhs];
+        });
     return {quiet_begin, quiet_end};
   }
 
@@ -155,12 +158,18 @@ class Searcher {
 
   PVTable principle_variation_;  //!< PV table to store principal variation from
                                  //!< the previous iteration of ID
-
-  TranspositionTable<1 << 25>
+#ifdef _DEBUG
+  constexpr static size_t kTTsize = 1 << 10;
+#else
+  constexpr static size_t kTTsize = 1 << 25;
+#endif
+  TranspositionTable<kTTsize>
       best_moves_;  //!< Transposition-table to store the best moves.
 
-  std::array<std::array<std::array<uint64_t, kBoardArea + 1>, kBoardArea + 1>, kColors> history_;
-  
+  std::array<std::array<std::array<uint64_t, kBoardArea + 1>, kBoardArea + 1>,
+             kColors>
+      history_;
+
   KillerTable<2> killers_;
 
   DebugInfo debug_info_;
@@ -178,11 +187,11 @@ inline const Position& Searcher::GetPosition() const {
 
 inline const Move& Searcher::GetCurrentBestMove() const { return best_move_; }
 
-template <bool is_pv>
+template <bool is_principal_variation>
 Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
                       Eval alpha, const Eval beta) {
-  if constexpr (is_pv) {
-    if (remaining_depth == 1) {
+  if constexpr (is_principal_variation) {
+    if (remaining_depth <= 1) {
       return Search<false>(max_depth, remaining_depth, alpha, beta);
     }
   }
@@ -221,9 +230,40 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
       best_move_ = move;
     }
 
-    principle_variation_.SetPV(move, remaining_depth, remaining_depth);
-    principle_variation_.FetchNextLayer(remaining_depth);
+    principle_variation_.SetPV(move, max_depth - remaining_depth);
+    principle_variation_.FetchNextLayer(max_depth - remaining_depth,
+                                        remaining_depth);
   };
+
+  const Move* best_move{};
+
+  Eval best_eval = -kMateValue;
+
+  const auto irreversible_data = current_position_.GetIrreversibleData();
+
+  if constexpr (is_principal_variation) {
+    best_move = &principle_variation_.GetPV(max_depth - remaining_depth);
+
+    debug_info_.pv_hits++;
+
+    const auto& first_move = *best_move;
+    // make the move and search the tree
+    current_position_.DoMove(first_move);
+    best_eval = -Search<true>(max_depth, remaining_depth - 1, -beta, -alpha);
+    // undo the move
+    current_position_.UndoMove(first_move, irreversible_data);
+
+    if (best_eval > alpha) {
+      if (best_eval >= beta) {
+        return best_eval;
+      }
+
+      alpha = best_eval;
+    }
+
+    // set best move
+    set_best_move(first_move);
+  }
 
   // get all the possible moves
   auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kDefault>(
@@ -237,22 +277,17 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
     return Eval{};
   }
 
-  const Move* best_move{};
-
-  if constexpr (is_pv) {
-    best_move = &principle_variation_.GetPV(max_depth, remaining_depth);
-  } else {
+  if constexpr (!is_principal_variation) {
     // check if we have already searched this position
     if (best_moves_.Contains(current_position_)) {
       best_move = &best_moves_[current_position_].move;
     }
   }
+
   if (best_move) {
     // find the best move in moves
     if (const auto pv = std::ranges::find(moves, *best_move);
         pv != moves.end()) {
-      debug_info_.pv_hits++;
-
       std::iter_swap(pv, moves.begin());
     }
   }
@@ -261,25 +296,25 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
       OrderMoves(moves.begin() + static_cast<bool>(best_move), moves.end(),
                  max_depth - remaining_depth, color_idx);
 
-  const auto& first_move = moves.front();
-  const auto irreversible_data = current_position_.GetIrreversibleData();
-  // make the move and search the tree
-  current_position_.DoMove(first_move);
-  auto best_eval =
-      -Search<is_pv>(max_depth, remaining_depth - 1, -beta, -alpha);
-  // undo the move
-  current_position_.UndoMove(first_move, irreversible_data);
+  if constexpr (!is_principal_variation) {
+    const auto& first_move = moves.front();
+    // make the move and search the tree
+    current_position_.DoMove(first_move);
+    best_eval = -Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
+    // undo the move
+    current_position_.UndoMove(first_move, irreversible_data);
 
-  if (best_eval > alpha) {
-    if (best_eval >= beta) {
-      return best_eval;
+    if (best_eval > alpha) {
+      if (best_eval >= beta) {
+        return beta;
+      }
+
+      alpha = best_eval;
     }
 
-    alpha = best_eval;
+    // set best move
+    set_best_move(moves.front());
   }
-
-  // set best move
-  set_best_move(moves.front());
 
   bool is_quiet = false;
 
@@ -297,7 +332,7 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
         -Search<false>(max_depth, remaining_depth - 1, -alpha - 1, -alpha);
 
     // make a research (ZWS failed)
-    if (temp_eval > alpha && temp_eval < beta) {
+    if (temp_eval > alpha) {
       temp_eval = -Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
 
       if (temp_eval > alpha) {
@@ -318,7 +353,7 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
           history_[color_idx][from][to] += remaining_depth * remaining_depth;
           killers_.TryAdd(max_depth - remaining_depth, move);
         }
-        return temp_eval;
+        return beta;
       }
 
       best_eval = temp_eval;
@@ -326,6 +361,6 @@ Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
   }
 
   // return the best evaluation
-  return best_eval;
+  return alpha;
 }
 }  // namespace SimpleChessEngine

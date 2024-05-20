@@ -9,7 +9,7 @@
 #pragma intrinsic(_BitScanForward)
 #endif
 
-using BitIndex = unsigned long;
+using BitIndex = char;
 
 inline BitIndex BitScan(const size_t mask) {
   assert(mask);

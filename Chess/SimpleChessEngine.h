@@ -100,8 +100,8 @@ class ChessEngine {
 
 namespace SimpleChessEngine {
 inline void ChessEngine::ComputeBestMove(const size_t depth) {
-  auto alpha = std::numeric_limits<Eval>::min() / 2;
-  auto beta = std::numeric_limits<Eval>::max() / 2;
+  constexpr auto min_inf = std::numeric_limits<Eval>::min() / 2;
+  constexpr auto plus_inf = std::numeric_limits<Eval>::max() / 2;
 
   constexpr auto reset_window = [](auto& down, auto& up) {
     static constexpr auto window_size = 20;
@@ -123,34 +123,10 @@ inline void ChessEngine::ComputeBestMove(const size_t depth) {
     PrintInfo(DepthInfo{current_depth});
 
     const auto eval =
-        searcher_.Search<true>(current_depth, current_depth, alpha, beta);
+        searcher_.Search<true>(current_depth, current_depth, min_inf, plus_inf);
     info += searcher_.GetInfo();
 
     PrintInfo(ScoreInfo{eval});
-
-    // check if true eval is out of window
-    if (eval <= alpha) {
-      // search again with a wider window
-      alpha = alpha - down_window_size;
-      down_window_size *= window_resize_coefficient;
-
-      continue;
-    }
-
-    // check if true eval is out of window
-    if (eval >= beta) {
-      // search again with a wider window
-      beta = beta + up_window_size;
-      up_window_size *= window_resize_coefficient;
-
-      continue;
-    }
-
-    reset_window(down_window_size, up_window_size);
-
-    // set the window
-    alpha = eval - down_window_size;
-    beta = eval + up_window_size;
 
     // check if best move changed
     if (previous_best_move == searcher_.GetCurrentBestMove()) {
@@ -164,7 +140,7 @@ inline void ChessEngine::ComputeBestMove(const size_t depth) {
     previous_best_move = GetCurrentBestMove();
     PrincipalVariationInfo pv;
     for (size_t depth = current_depth; depth > 1; --depth) {
-      pv.best_moves.push_back(searcher_.GetPV().GetPV(current_depth, depth));
+      pv.best_moves.push_back(searcher_.GetPV().GetPV(depth));
     }
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
@@ -185,22 +161,10 @@ inline void ChessEngine::ComputeBestMove(
   constexpr size_t kAverageGameLength = 50;
 
   const auto time_for_move = left_time / kAverageGameLength + inc_time;
-  constexpr auto kTimeRatio = 5;
-  static constexpr size_t max_last_best_move_change = 10;
-
-  auto alpha = std::numeric_limits<Eval>::min() / 2;
-  auto beta = std::numeric_limits<Eval>::max() / 2;
-
-  constexpr auto reset_window = [](auto& down, auto& up) {
-    static constexpr auto window_size = 20;
-    down = window_size;
-    up = window_size;
-  };
-
-  Eval down_window_size = 0;
-  Eval up_window_size = 0;
-
-  reset_window(down_window_size, up_window_size);
+  constexpr auto kTimeRatio = 2;
+  static constexpr size_t max_last_best_move_change = 6;
+  constexpr auto min_inf = std::numeric_limits<Eval>::min() / 2;
+  constexpr auto plus_inf = std::numeric_limits<Eval>::max() / 2;
 
   Searcher::DebugInfo info{};
 
@@ -214,38 +178,13 @@ inline void ChessEngine::ComputeBestMove(
        last_best_move_change < max_last_best_move_change  // check if best move
                                                           // changed recently
        ;) {
-    static constexpr auto window_resize_coefficient = 2;
     PrintInfo(DepthInfo{current_depth});
 
     const auto eval =
-        searcher_.Search<true>(current_depth, current_depth, alpha, beta);
+        searcher_.Search<true>(current_depth, current_depth, min_inf, plus_inf);
     info += searcher_.GetInfo();
 
     PrintInfo(ScoreInfo{eval});
-
-    // check if true eval is out of window
-    if (eval <= alpha) {
-      // search again with a wider window
-      alpha = alpha - down_window_size;
-      down_window_size *= window_resize_coefficient;
-
-      continue;
-    }
-
-    // check if true eval is out of window
-    if (eval >= beta) {
-      // search again with a wider window
-      beta = beta + up_window_size;
-      up_window_size *= window_resize_coefficient;
-
-      continue;
-    }
-
-    reset_window(down_window_size, up_window_size);
-
-    // set the window
-    alpha = eval - down_window_size;
-    beta = eval + up_window_size;
 
     // check if best move changed
     if (previous_best_move == searcher_.GetCurrentBestMove()) {
@@ -258,14 +197,14 @@ inline void ChessEngine::ComputeBestMove(
 
     previous_best_move = GetCurrentBestMove();
     PrincipalVariationInfo pv;
-    for (size_t depth = current_depth; depth > 1; --depth) {
-      pv.best_moves.push_back(searcher_.GetPV().GetPV(current_depth, depth));
+    for (size_t ply = 0; ply < current_depth; ++ply) {
+      pv.best_moves.push_back(searcher_.GetPV().GetPV(ply));
     }
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
     PrintInfo(NodesInfo{info.quiescence_nodes});
     PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
-        info.searched_nodes /
+        (info.searched_nodes + info.quiescence_nodes) /
         (std::chrono::duration<double>{
              std::chrono::high_resolution_clock::now() - start_time})
             .count())});

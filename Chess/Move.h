@@ -1,4 +1,5 @@
 #pragma once
+#include <tuple>
 #include <variant>
 
 #include "BitBoard.h"
@@ -78,13 +79,14 @@ inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const Castling& move) {
   return {move.king_from, 64, Piece::kNone};
 }
 
-inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const Promotion& move) {
+inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(
+    const Promotion& move) {
   return {move.from, move.to, move.captured_piece};
 }
 
-inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const Move& move) 
-{
-  return std::visit([](const auto& unwrapped_move) { return GetMoveData(unwrapped_move); },
-             move);
+inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const Move& move) {
+  return std::visit(
+      [](const auto& unwrapped_move) { return GetMoveData(unwrapped_move); },
+      move);
 }
 }  // namespace SimpleChessEngine
