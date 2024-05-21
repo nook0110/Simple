@@ -9,28 +9,28 @@ namespace SimpleChessEngine {
 struct DefaultMove {
   bool operator==(const DefaultMove&) const = default;
 
-  BitIndex from{};
-  BitIndex to{};
-  Piece captured_piece{};
+  BitIndex from : 6 {};
+  BitIndex to : 6 {};
+  Piece captured_piece : 3 {};
 };
 
 struct PawnPush {
   bool operator==(const PawnPush&) const = default;
 
-  BitIndex from{};
-  BitIndex to{};
+  BitIndex from : 6 {};
+  BitIndex to : 6 {};
 };
 
 struct DoublePush {
   bool operator==(const DoublePush&) const = default;
 
-  BitIndex from{};
-  BitIndex to{};
+  BitIndex from : 6 {};
+  BitIndex to : 6 {};
 };
 
 struct EnCroissant {
-  BitIndex from{};
-  BitIndex to{};
+  BitIndex from : 6 {};
+  BitIndex to : 6 {};
 
   bool operator==(const EnCroissant&) const = default;
 };
@@ -40,16 +40,15 @@ struct Promotion : DefaultMove {
     return DefaultMove::operator==(other) && promoted_to == other.promoted_to;
   }
 
-  Piece promoted_to{};
+  Piece promoted_to : 3 {};
 };
 
 struct Castling {
   enum class CastlingSide : uint8_t { k00, k000 };
 
-  CastlingSide side;
-
-  BitIndex king_from{};
-  BitIndex rook_from{};
+  BitIndex king_from : 6 {};
+  BitIndex rook_from : 6 {};
+  CastlingSide side : 1;
 
   bool operator==(const Castling&) const = default;
 };
