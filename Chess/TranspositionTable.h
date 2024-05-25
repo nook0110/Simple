@@ -4,35 +4,31 @@
 #include "Hasher.h"
 #include "Move.h"
 #include "Position.h"
-namespace SimpleChessEngine
-{
-class TranspositionTable
-{
+namespace SimpleChessEngine {
+template <size_t TableSize>
+class TranspositionTable {
+  static_assert(!(TableSize & (TableSize - 1)));
+
  public:
-  struct Node
-  {
+  struct Node {
     Move move;
     Hash true_hash{};
     // sth else...
   };
 
-  [[nodiscard]] bool Contains(const Position& position) const
-  {
+  [[nodiscard]] bool Contains(const Position& position) const {
     return position.GetHash() == operator[](position).true_hash;
   }
 
-  Node& operator[](const Position& position)
-  {
-    return table_[position.GetHash() % kSize];
+  Node& operator[](const Position& position) {
+    return table_[position.GetHash() % TableSize];
   }
 
-  const Node& operator[](const Position& position) const
-  {
-    return table_[position.GetHash() % kSize];
+  const Node& operator[](const Position& position) const {
+    return table_[position.GetHash() % TableSize];
   }
 
  private:
-  static constexpr size_t kSize = 1 << 25;  //!< Size of the table.
-  std::array<Node, kSize> table_;           //!< The table.
+  std::array<Node, TableSize> table_;  //!< The table.
 };
 }  // namespace SimpleChessEngine

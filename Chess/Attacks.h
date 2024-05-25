@@ -3,35 +3,31 @@
 #include <memory>
 
 #include "BitBoard.h"
+#include "Piece.h"
 #include "Utility.h"
 
-namespace SimpleChessEngine
-{
+namespace SimpleChessEngine {
 /**
  * \brief
  *
  */
-struct Magic
-{
+struct Magic {
   Bitboard mask;
   Bitboard magic;
   unsigned shift;
-  [[nodiscard]] size_t GetIndex(const Bitboard occupancy) const
-  {
+  [[nodiscard]] size_t GetIndex(const Bitboard occupancy) const {
     return static_cast<size_t>((mask & occupancy) * magic >> shift);
   }
 };
 
-constexpr size_t GetTableSize(const Piece sliding_piece)
-{
+constexpr size_t GetTableSize(const Piece sliding_piece) {
   if (sliding_piece == Piece::kBishop) return 0x1480;
   if (sliding_piece == Piece::kRook) return 0x19000;
   return 0;
 }
 
 template <Piece sliding_piece, size_t table_size = GetTableSize(sliding_piece)>
-class AttackTable
-{
+class AttackTable {
  public:
   static Bitboard GetAttackMap(BitIndex square, Bitboard occupied);
 
@@ -44,21 +40,20 @@ class AttackTable
   std::array<Bitboard, table_size> table_ = {};
   std::array<size_t, kBoardArea> base_ = {};
   std::array<Magic, kBoardArea> magic_ = {};
-  static inline const auto self_ = std::make_unique<AttackTable>();
+  static inline const std::unique_ptr<AttackTable> self_ =
+      std::make_unique<AttackTable>();
 };
 
 template <Piece piece, size_t table_size>
 size_t AttackTable<piece, table_size>::GetAttackTableAddress(
-    const BitIndex square, Bitboard occupied)
-{
+    const BitIndex square, Bitboard occupied) {
   assert(IsWeakSlidingPiece(piece));
   return self_->base_[square] + self_->magic_[square].GetIndex(occupied);
 }
 
 template <Piece piece, size_t table_size>
 Bitboard AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
-                                                      Bitboard occupied)
-{
+                                                      const Bitboard occupied) {
   static constexpr std::array king_attacks = {770ull,
                                               1797ull,
                                               3594ull,
@@ -187,21 +182,17 @@ Bitboard AttackTable<piece, table_size>::GetAttackMap(const BitIndex square,
                                                 38368557762871296ull,
                                                 4679521487814656ull,
                                                 9077567998918656ull};
-  if constexpr (piece == Piece::kKnight)
-  {
+  if constexpr (piece == Piece::kKnight) {
     return Bitboard{knight_attacks[static_cast<size_t>(square)]};
   }
-  if constexpr (piece == Piece::kKing)
-  {
+  if constexpr (piece == Piece::kKing) {
     return Bitboard{king_attacks[static_cast<size_t>(square)]};
   }
-  if constexpr (piece == Piece::kQueen)
-  {
+  if constexpr (piece == Piece::kQueen) {
     return AttackTable<Piece::kBishop>::GetAttackMap(square, occupied) |
            AttackTable<Piece::kRook>::GetAttackMap(square, occupied);
   }
-  if constexpr (IsWeakSlidingPiece(piece))
-  {
+  if constexpr (IsWeakSlidingPiece(piece)) {
     return self_->table_[GetAttackTableAddress(square, occupied)];
   }
   assert(false);
