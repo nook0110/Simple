@@ -16,9 +16,6 @@ class TranspositionTable
   {
     Move move;
     Hash true_hash{};
-#ifdef _DEBUG
-    Position position;
-#endif
     // sth else...
   };
 
@@ -30,10 +27,6 @@ class TranspositionTable
   void SetMove(const Position& position, const Move& move)
   {
     Node inserting_node = {move, position.GetHash()};
-#ifdef _DEBUG
-    inserting_node.position = position;
-#endif
-
     GetNode(position) = std::move(inserting_node);
   }
 

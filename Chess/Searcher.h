@@ -308,11 +308,6 @@ class Searcher
             std::iter_swap(begin_of_ordering, best_move_pos);
             ++begin_of_ordering;
           }
-          else
-          {
-            auto p = best_moves.GetNode(current_position).position;
-            std::cerr << "Warning!\n";
-          }
         }
       }
 
