@@ -5,13 +5,16 @@
 
 using namespace SimpleChessEngine;
 
-void Position::DoMove(const Move& move) {
+void Position::DoMove(const Move& move)
+{
   if (const auto& ep_square = irreversible_data_.en_croissant_square;
-      ep_square.has_value()) {
+      ep_square.has_value())
+  {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
     irreversible_data_.en_croissant_square.reset();
   }
-  for (const auto color : {Player::kWhite, Player::kBlack}) {
+  for (const auto color : {Player::kWhite, Player::kBlack})
+  {
     hash_ ^= hasher_.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
                     .to_ulong()];
@@ -19,7 +22,8 @@ void Position::DoMove(const Move& move) {
   std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
              move);
 
-  for (const auto color : {Player::kWhite, Player::kBlack}) {
+  for (const auto color : {Player::kWhite, Player::kBlack})
+  {
     hash_ ^= hasher_.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
                     .to_ulong()];
@@ -28,7 +32,8 @@ void Position::DoMove(const Move& move) {
   hash_ ^= hasher_.stm_hash;
 }
 
-void Position::DoMove(const DefaultMove& move) {
+void Position::DoMove(const DefaultMove& move)
+{
   const auto [from, to, captured_piece] = move;
 
   const auto us = side_to_move_;
@@ -39,23 +44,27 @@ void Position::DoMove(const DefaultMove& move) {
   if (!!captured_piece) RemovePiece(to, them);
   MovePiece(from, to, us);
 
-  if (piece_to_move == Piece::kKing) {
+  if (piece_to_move == Piece::kKing)
+  {
     king_position_[static_cast<size_t>(us)] = to;
     irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
   }
 
   for (auto castling_side :
-       {Castling::CastlingSide::k00, Castling::CastlingSide::k000}) {
+       {Castling::CastlingSide::k00, Castling::CastlingSide::k000})
+  {
     const auto our_rook = rook_positions_[static_cast<size_t>(us)]
                                          [static_cast<size_t>(castling_side)];
     const auto their_rook = rook_positions_[static_cast<size_t>(them)]
                                            [static_cast<size_t>(castling_side)];
-    if (from == our_rook) {
+    if (from == our_rook)
+    {
       irreversible_data_.castling_rights[static_cast<size_t>(us)] &=
           ~static_cast<char>(
               kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
     }
-    if (to == their_rook) {
+    if (to == their_rook)
+    {
       irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
           ~static_cast<char>(
               kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
@@ -63,7 +72,8 @@ void Position::DoMove(const DefaultMove& move) {
   }
 }
 
-void Position::DoMove(const PawnPush& move) {
+void Position::DoMove(const PawnPush& move)
+{
   const auto [from, to] = move;
 
   const auto us = side_to_move_;
@@ -71,7 +81,8 @@ void Position::DoMove(const PawnPush& move) {
   MovePiece(from, to, us);
 }
 
-void Position::DoMove(const DoublePush& move) {
+void Position::DoMove(const DoublePush& move)
+{
   const auto [from, to] = move;
   const auto file = GetCoordinates(from).first;
 
@@ -83,7 +94,8 @@ void Position::DoMove(const DoublePush& move) {
   MovePiece(from, to, us);
 }
 
-void Position::DoMove(const EnCroissant& move) {
+void Position::DoMove(const EnCroissant& move)
+{
   const auto [from, to] = move;
 
   const auto us = side_to_move_;
@@ -96,7 +108,8 @@ void Position::DoMove(const EnCroissant& move) {
   MovePiece(from, to, us);
 }
 
-void Position::DoMove(const Promotion& move) {
+void Position::DoMove(const Promotion& move)
+{
   const auto [from, to, captured_piece] = static_cast<DefaultMove>(move);
   const auto promoted_to = move.promoted_to;
 
@@ -108,10 +121,12 @@ void Position::DoMove(const Promotion& move) {
   PlacePiece(to, promoted_to, us);
 
   for (const auto castling_side :
-       {Castling::CastlingSide::k00, Castling::CastlingSide::k000}) {
+       {Castling::CastlingSide::k00, Castling::CastlingSide::k000})
+  {
     const auto their_rook = rook_positions_[static_cast<size_t>(them)]
                                            [static_cast<size_t>(castling_side)];
-    if (to == their_rook) {
+    if (to == their_rook)
+    {
       irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
           ~static_cast<char>(
               kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
@@ -119,7 +134,8 @@ void Position::DoMove(const Promotion& move) {
   }
 }
 
-void Position::DoMove(const Castling& move) {
+void Position::DoMove(const Castling& move)
+{
   const auto [side, king_from, rook_from] = move;
 
   const auto us = side_to_move_;
@@ -137,23 +153,28 @@ void Position::DoMove(const Castling& move) {
   irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
 }
 
-void Position::UndoMove(const Move& move, const IrreversibleData& data) {
+void Position::UndoMove(const Move& move, const IrreversibleData& data)
+{
   const auto& ep_square = irreversible_data_.en_croissant_square;
-  for (const auto color : {Player::kWhite, Player::kBlack}) {
+  for (const auto color : {Player::kWhite, Player::kBlack})
+  {
     hash_ ^= hasher_.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
                     .to_ulong()];
   }
-  if (ep_square.has_value()) {
+  if (ep_square.has_value())
+  {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
   }
   irreversible_data_ = data;
-  for (const auto color : {Player::kWhite, Player::kBlack}) {
+  for (const auto color : {Player::kWhite, Player::kBlack})
+  {
     hash_ ^= hasher_.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
                     .to_ulong()];
   }
-  if (ep_square.has_value()) {
+  if (ep_square.has_value())
+  {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
   }
   hash_ ^= hasher_.stm_hash;
@@ -162,7 +183,8 @@ void Position::UndoMove(const Move& move, const IrreversibleData& data) {
              move);
 }
 
-void Position::UndoMove(const DefaultMove& move) {
+void Position::UndoMove(const DefaultMove& move)
+{
   const auto [from, to, captured_piece] = move;
 
   const Player us = side_to_move_;
@@ -177,7 +199,8 @@ void Position::UndoMove(const DefaultMove& move) {
     king_position_[static_cast<size_t>(us)] = from;
 }
 
-void Position::UndoMove(const PawnPush& move) {
+void Position::UndoMove(const PawnPush& move)
+{
   const auto [from, to] = move;
 
   const auto us = side_to_move_;
@@ -185,7 +208,8 @@ void Position::UndoMove(const PawnPush& move) {
   MovePiece(to, from, us);
 }
 
-void Position::UndoMove(const DoublePush& move) {
+void Position::UndoMove(const DoublePush& move)
+{
   const auto from = move.from;
 
   const auto us = side_to_move_;
@@ -195,7 +219,8 @@ void Position::UndoMove(const DoublePush& move) {
   MovePiece(to, from, us);
 }
 
-void Position::UndoMove(const EnCroissant& move) {
+void Position::UndoMove(const EnCroissant& move)
+{
   const auto [from, to] = move;
 
   const auto us = side_to_move_;
@@ -208,7 +233,8 @@ void Position::UndoMove(const EnCroissant& move) {
   PlacePiece(capture_square, Piece::kPawn, them);
 }
 
-void Position::UndoMove(const Promotion& move) {
+void Position::UndoMove(const Promotion& move)
+{
   const auto [from, to, captured_piece] = static_cast<DefaultMove>(move);
 
   const auto us = side_to_move_;
@@ -219,7 +245,8 @@ void Position::UndoMove(const Promotion& move) {
   PlacePiece(from, Piece::kPawn, us);
 }
 
-void Position::UndoMove(const Castling& move) {
+void Position::UndoMove(const Castling& move)
+{
   const auto [side, king_from, rook_from] = move;
 
   const auto us = side_to_move_;

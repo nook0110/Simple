@@ -5,18 +5,23 @@
 #include "Move.h"
 #include "Utility.h"
 
-namespace SimpleChessEngine {
-class PVTable {
+namespace SimpleChessEngine
+{
+class PVTable
+{
  public:
-  [[nodiscard]] const Move& GetPV(const size_t ply) const {
+  [[nodiscard]] const Move& GetPV(const size_t ply) const
+  {
     return table_[ply];
   }
 
-  void SetPV(const Move& move, const size_t ply) {
+  void SetPV(const Move& move, const size_t ply)
+  {
     table_[ply * kMaxSearchPly] = move;
   }
 
-  void FetchNextLayer(const size_t ply, const size_t remaining_depth) {
+  void FetchNextLayer(const size_t ply, const size_t remaining_depth)
+  {
     std::copy(
         table_.begin() + (ply + 1) * kMaxSearchPly,
         table_.begin() + ((ply + 1) * kMaxSearchPly | (remaining_depth - 1)),

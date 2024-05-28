@@ -4,25 +4,30 @@
 
 #include "Utility.h"
 
-namespace SimpleChessEngine {
+namespace SimpleChessEngine
+{
 class Position;
 
 using Hash = unsigned long long;
 
-struct Hasher {
+struct Hasher
+{
   template <class RNG>
   explicit Hasher(RNG generator)
 
   {
-    for (auto& board : psqt_hash) {
-      std::generate(board.begin(), board.end(), generator);
+    auto generator_reference = std::reference_wrapper(generator);
+    for (auto& board : psqt_hash)
+    {
+      std::generate(board.begin(), board.end(), generator_reference);
     }
     std::generate(en_croissant_hash.begin(), en_croissant_hash.end(),
-                  generator);
-    for (auto& color : cr_hash) {
-      std::generate(color.begin(), color.end(), generator);
+                  generator_reference);
+    for (auto& color : cr_hash)
+    {
+      std::generate(color.begin(), color.end(), generator_reference);
     }
-    stm_hash = generator();
+    stm_hash = generator_reference();
   }
 
   bool operator==(const Hasher&) const = default;
