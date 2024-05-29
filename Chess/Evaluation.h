@@ -40,11 +40,11 @@ struct TaperedEval
 };
 
 constexpr std::array<TaperedEval, kPieceTypes> kPieceValues = {{{0, 0},
-                                                                {100, 140},
-                                                                {330, 330},
-                                                                {330, 360},
-                                                                {600, 650},
-                                                                {1000, 1150},
+                                                                {82,  94},
+                                                                {337, 281},
+                                                                {365, 297},
+                                                                {477, 512},
+                                                                {1025, 936},
                                                                 {0, 0}}};
 
 constexpr Eval kFullNonPawnMaterial =
