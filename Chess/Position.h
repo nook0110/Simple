@@ -73,7 +73,7 @@ class Position
     evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][square];
     if (piece != Piece::kPawn)
       evaluation_data_.non_pawn_material += kPieceValues[piece_idx].eval[0];
-    hash_ ^= hasher_.psqt_hash[piece_idx][square];
+    hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][square];
   }
 
   /**
@@ -95,7 +95,7 @@ class Position
     evaluation_data_.psqt[color_idx] -= kPSQT[color_idx][piece_idx][square];
     if (piece != Piece::kPawn)
       evaluation_data_.non_pawn_material -= kPieceValues[piece_idx].eval[0];
-    hash_ ^= hasher_.psqt_hash[piece_idx][square];
+    hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][square];
   }
 
   void MovePiece(const BitIndex from, const BitIndex to, const Player color)
@@ -111,8 +111,8 @@ class Position
     board_[to] = piece;
     evaluation_data_.psqt[color_idx] -= kPSQT[color_idx][piece_idx][from];
     evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][to];
-    hash_ ^= hasher_.psqt_hash[piece_idx][from];
-    hash_ ^= hasher_.psqt_hash[piece_idx][to];
+    hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][from];
+    hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][to];
   }
 
   /**
