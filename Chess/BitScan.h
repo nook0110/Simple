@@ -11,7 +11,8 @@
 
 using BitIndex = char;
 
-inline BitIndex BitScan(const size_t mask) {
+inline BitIndex BitScan(const size_t mask)
+{
   assert(mask);
 #ifdef USE_GCC_BUILTINS
   return __builtin_ctzll(mask);

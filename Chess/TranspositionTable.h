@@ -4,31 +4,51 @@
 #include "Hasher.h"
 #include "Move.h"
 #include "Position.h"
-namespace SimpleChessEngine {
+namespace SimpleChessEngine
+{
 template <size_t TableSize>
-class TranspositionTable {
+class TranspositionTable
+{
   static_assert(!(TableSize & (TableSize - 1)));
 
  public:
-  struct Node {
+  struct Node
+  {
     Move move;
     Hash true_hash{};
     // sth else...
   };
 
-  [[nodiscard]] bool Contains(const Position& position) const {
-    return position.GetHash() == operator[](position).true_hash;
+  [[nodiscard]] bool Contains(const Position& position) const
+  {
+    return position.GetHash() == GetNode(position).true_hash;
   }
 
-  Node& operator[](const Position& position) {
-    return table_[position.GetHash() % TableSize];
+  void SetMove(const Position& position, const Move& move)
+  {
+    Node inserting_node = {move, position.GetHash()};
+    GetNode(position) = std::move(inserting_node);
   }
 
-  const Node& operator[](const Position& position) const {
-    return table_[position.GetHash() % TableSize];
+  const Move& GetMove(const Position& position) const
+  {
+    assert(Contains(position));
+    return GetNode(position).move;
   }
-
+#ifndef _DEBUG
  private:
+#endif
+
+  Node& GetNode(const Position& position)
+  {
+    return table_[position.GetHash() % TableSize];
+  }
+
+  const Node& GetNode(const Position& position) const
+  {
+    return table_[position.GetHash() % TableSize];
+  }
+
   std::array<Node, TableSize> table_;  //!< The table.
 };
 }  // namespace SimpleChessEngine
