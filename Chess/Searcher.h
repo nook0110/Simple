@@ -100,8 +100,9 @@ class Searcher {
 
   [[nodiscard]] const PVTable &GetPV() const { return principle_variation_; }
 
- private:
   void InitStartOfSearch();
+
+ private:
 
   template <bool is_principal_variation>
   struct SearchImplementation {
@@ -143,10 +144,6 @@ class Searcher {
         if (remaining_depth <= 1) {
           return Search<false>(max_depth, remaining_depth, alpha, beta);
         }
-      }
-
-      if (max_depth == remaining_depth) {
-        searcher_.InitStartOfSearch();
       }
 
       // return the evaluation of the current position if we have reached
@@ -372,7 +369,7 @@ class Searcher {
           // check if we have found a better move
           if (temp_eval >= beta) {
             if (is_quiet) {
-              UpdateQuiteMove(move);
+              UpdateQuietMove(move);
             }
             return beta;
           }
@@ -385,7 +382,7 @@ class Searcher {
       return alpha;
     }
 
-    void UpdateQuiteMove(const Move &move) {
+    void UpdateQuietMove(const Move &move) {
       const auto [from, to, captured_piece] = GetMoveData(move);
       searcher_.history_[side_to_move_idx][from][to] +=
           remaining_depth * remaining_depth;

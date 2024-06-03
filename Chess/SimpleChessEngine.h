@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 #include <chrono>
 #include <variant>
 
@@ -100,65 +101,7 @@ class ChessEngine {
 
 namespace SimpleChessEngine {
 inline void ChessEngine::ComputeBestMove(const size_t depth) {
-  constexpr auto min_inf = std::numeric_limits<Eval>::min() / 2;
-  constexpr auto plus_inf = std::numeric_limits<Eval>::max() / 2;
-
-  constexpr auto reset_window = [](auto& down, auto& up) {
-    static constexpr auto window_size = 20;
-    down = window_size;
-    up = window_size;
-  };
-
-  Eval down_window_size = 0;
-  Eval up_window_size = 0;
-
-  reset_window(down_window_size, up_window_size);
-
-  Searcher::DebugInfo info{};
-
-  Move previous_best_move{};
-  size_t last_best_move_change{};
-  for (size_t current_depth = 1; current_depth < depth;) {
-    static constexpr auto window_resize_coefficient = 2;
-    PrintInfo(DepthInfo{current_depth});
-
-    const auto eval_optional =
-        searcher_.Search<true>(Searcher::TimePoint::max(), current_depth,
-                               current_depth, min_inf, plus_inf);
-    if (!eval_optional) {
-      PrintBestMove(previous_best_move);
-      return;
-    }
-    const auto& eval = *eval_optional;
-    info += searcher_.GetInfo();
-
-    PrintInfo(ScoreInfo{eval});
-
-    // check if best move changed
-    if (previous_best_move == searcher_.GetCurrentBestMove()) {
-      // increase last change
-      ++last_best_move_change;
-    } else {
-      // reset last change
-      last_best_move_change = 0;
-    }
-
-    previous_best_move = GetCurrentBestMove();
-    PrincipalVariationInfo pv;
-    for (size_t depth = current_depth; depth > 1; --depth) {
-      if (!searcher_.GetPV().CheckPV(depth)) break;
-      pv.best_moves.push_back(searcher_.GetPV().GetPV(depth));
-    }
-    PrintInfo(pv);
-    PrintInfo(NodesInfo{info.searched_nodes});
-    PrintInfo(PrincipalVariationHitsInfo{info.pv_hits});
-    info = Searcher::DebugInfo{};
-
-    // increase the depth
-    current_depth++;
-  }
-
-  PrintBestMove(previous_best_move);
+  assert(false);
 }
 
 inline void ChessEngine::ComputeBestMove(
@@ -174,6 +117,8 @@ inline void ChessEngine::ComputeBestMove(
   constexpr auto plus_inf = std::numeric_limits<Eval>::max() / 2;
 
   Searcher::DebugInfo info{};
+
+  searcher_.InitStartOfSearch();
 
   Move previous_best_move{};
   size_t last_best_move_change{};
