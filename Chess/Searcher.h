@@ -10,8 +10,7 @@
 #include "StreamUtility.h"
 #include "TranspositionTable.h"
 
-namespace SimpleChessEngine
-{
+namespace SimpleChessEngine {
 /**
  * \brief A simple implementation of the alpha-beta search algorithm.
  *
@@ -27,17 +26,16 @@ namespace SimpleChessEngine
  *
  *  \author nook0110
  */
-class Searcher
-{
+class Searcher {
  public:
-  struct DebugInfo
-  {
+  using SearchResult = std::optional<Eval>;
+
+  struct DebugInfo {
     std::size_t searched_nodes{};
     std::size_t quiescence_nodes{};
     std::size_t pv_hits{};
 
-    DebugInfo &operator+=(const DebugInfo &other)
-    {
+    DebugInfo &operator+=(const DebugInfo &other) {
       searched_nodes += other.searched_nodes;
       quiescence_nodes += other.quiescence_nodes;
       pv_hits += other.pv_hits;
@@ -53,8 +51,7 @@ class Searcher
   explicit Searcher(const Position position = PositionFactory{}())
       : current_position_(position),
         move_generator_(MoveGenerator()),
-        quiescence_searcher_()
-  {}
+        quiescence_searcher_() {}
 
   /**
    * \brief Sets the current position.
@@ -87,14 +84,15 @@ class Searcher
    *
    * \return Evaluation of subtree.
    */
+  using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
   template <bool is_principal_variation>
-  [[nodiscard]] Eval Search(size_t max_depth, size_t remaining_depth,
-                            Eval alpha, Eval beta);
+  [[nodiscard]] SearchResult Search(const TimePoint &end_time, size_t max_depth,
+                                    size_t remaining_depth, Eval alpha,
+                                    Eval beta);
 
   [[nodiscard]] const DebugInfo &GetInfo() const { return debug_info_; }
 
-  [[nodiscard]] std::size_t GetSearchedNodes() const
-  {
+  [[nodiscard]] std::size_t GetSearchedNodes() const {
     return debug_info_.searched_nodes;
   }
 
@@ -106,58 +104,73 @@ class Searcher
   void InitStartOfSearch();
 
   template <bool is_principal_variation>
-  struct SearchImplementation
-  {
+  struct SearchImplementation {
    public:
+    constexpr static size_t kEnoughNodesToCheckTime = 1 << 12;
+
     SearchImplementation(Searcher &searcher, const size_t max_depth,
                          const size_t remaining_depth, const Eval alpha,
-                         const Eval beta)
+                         const Eval beta, const TimePoint &end_time)
         : max_depth(max_depth),
           remaining_depth(remaining_depth),
           alpha(alpha),
           beta(beta),
+          end_time(end_time),
           irreversible_data(searcher.current_position_.GetIrreversibleData()),
           side_to_move_idx(
               static_cast<size_t>(searcher.current_position_.GetSideToMove())),
-          searcher_(searcher)
-    {}
+          searcher_(searcher) {}
 
     template <bool is_principal_variation_search>
-    Eval Search(const size_t max_depth, const size_t remaining_depth,
-                Eval alpha, const Eval beta)
-    {
+    SearchResult Search(const size_t max_depth, const size_t remaining_depth,
+                        Eval alpha, const Eval beta) {
       return SearchImplementation<is_principal_variation_search>{
-          searcher_, max_depth, remaining_depth, alpha, beta}();
+          searcher_, max_depth, remaining_depth, alpha, beta, end_time}();
     }
 
-    Eval operator()()
-    {
-      if constexpr (is_principal_variation)
-      {
-        if (remaining_depth <= 1)
-        {
+    bool IsTimeToExit() {
+      return searcher_.debug_info_.searched_nodes % kEnoughNodesToCheckTime ==
+                 0 &&
+             std::chrono::high_resolution_clock::now() > end_time;
+    }
+
+    SearchResult operator()() {
+      if (IsTimeToExit()) {
+        return std::nullopt;
+      }
+
+      if constexpr (is_principal_variation) {
+        if (remaining_depth <= 1) {
           return Search<false>(max_depth, remaining_depth, alpha, beta);
         }
       }
 
-      if (max_depth == remaining_depth)
-      {
+      if (max_depth == remaining_depth) {
         searcher_.InitStartOfSearch();
       }
 
       // return the evaluation of the current position if we have reached
       // the end of the search tree
-      if (remaining_depth <= 0)
-      {
+      if (remaining_depth <= 0) {
         return QuiescenceSearch();
       }
 
       searcher_.debug_info_.searched_nodes++;
 
-      if constexpr (is_principal_variation)
-      {
-        if (auto possible_eval = CheckPrincipalVariationMove())
-          return *possible_eval;
+      if constexpr (is_principal_variation) {
+        const auto &eval_optional = CheckPrincipalVariationMove();
+
+        if (!eval_optional) return std::nullopt;
+
+        best_eval = *eval_optional;
+
+        if (best_eval > alpha) {
+          if (best_eval >= beta) {
+            return beta;
+          }
+
+          alpha = best_eval;
+        }
       }
 
       auto &move_generator = searcher_.move_generator_;
@@ -167,23 +180,28 @@ class Searcher
           current_position);
 
       // check if there are no possible moves
-      if (moves.empty())
-      {
-        if (current_position.IsUnderCheck())
-        {
-          return kMateValue + static_cast<Eval>(max_depth - remaining_depth);
-        }
-        return Eval{};
+      if (moves.empty()) {
+        searcher_.principle_variation_.EndPV(max_depth - remaining_depth);
+        return GetEndGameScore();
       }
 
       const auto ordering_result = OrderMoves(moves.begin(), moves.end());
 
-      if constexpr (!is_principal_variation)
-      {
-        if (auto possible_eval = CheckMove<false>(moves.front()))
-        {
-          return *possible_eval;
+      if constexpr (!is_principal_variation) {
+        const auto eval_optional = CheckMove<false>(moves.front());
+
+        if (!eval_optional) return std::nullopt;
+
+        best_eval = *eval_optional;
+
+        if (best_eval > alpha) {
+          if (best_eval >= beta) {
+            return beta;
+          }
+
+          alpha = best_eval;
         }
+        SetBestMove(moves.front());
       }
 
       return PVSearch(std::next(moves.begin()), moves.end(), ordering_result);
@@ -194,6 +212,7 @@ class Searcher
     const size_t remaining_depth;
     Eval alpha;
     const Eval beta;
+    const TimePoint &end_time;
 
     /* Local variables for search */
     Eval best_eval;
@@ -201,8 +220,7 @@ class Searcher
     const size_t side_to_move_idx;
 
    private:
-    Eval QuiescenceSearch()
-    {
+    Eval QuiescenceSearch() {
       auto &current_position = searcher_.current_position_;
       auto &quiescence_searcher = searcher_.quiescence_searcher_;
 
@@ -213,8 +231,14 @@ class Searcher
       return eval;
     }
 
-    void SetBestMove(const Move &move)
-    {
+    Eval GetEndGameScore() const {
+      if (searcher_.current_position_.IsUnderCheck()) {
+        return kMateValue + static_cast<Eval>(max_depth - remaining_depth);
+      }
+      return Eval{};
+    }
+
+    void SetBestMove(const Move &move) {
       auto &current_position = searcher_.current_position_;
 
       searcher_.best_moves_.SetMove(searcher_.current_position_, move);
@@ -225,86 +249,74 @@ class Searcher
       principle_variation.FetchNextLayer(max_depth - remaining_depth,
                                          remaining_depth);
 
-      if (remaining_depth == max_depth)
-      {
+      if (remaining_depth == max_depth) {
         searcher_.best_move_ = move;
       }
     }
 
-    std::optional<Eval> CheckPrincipalVariationMove()
+    SearchResult CheckPrincipalVariationMove()
       requires(is_principal_variation)
     {
       auto &current_position = searcher_.current_position_;
       auto &principle_variation = searcher_.principle_variation_;
       auto &debug_info = searcher_.debug_info_;
 
+      if (!principle_variation.CheckPV(max_depth - remaining_depth))
+        return GetEndGameScore();
+
       debug_info.pv_hits++;
 
       const auto &pv_move =
           principle_variation.GetPV(max_depth - remaining_depth);
 
-      return CheckMove<true>(pv_move);
+      auto eval = CheckMove<true>(pv_move);
+      SetBestMove(pv_move);
+      return eval;
     }
 
     template <bool is_pv_move>
-    std::optional<Eval> CheckMove(const Move &move)
-    {
+    SearchResult CheckMove(const Move &move) {
       auto &current_position = searcher_.current_position_;
 
       // make the move and search the tree
       current_position.DoMove(move);
-      best_eval =
-          -Search<is_pv_move>(max_depth, remaining_depth - 1, -beta, -alpha);
+      const auto eval_optional =
+          Search<is_pv_move>(max_depth, remaining_depth - 1, -beta, -alpha);
+      if (!eval_optional) return std::nullopt;
+
+      const auto &eval = -*eval_optional;
+
       // undo the move
       current_position.UndoMove(move, irreversible_data);
 
-      if (best_eval > alpha)
-      {
-        if (best_eval >= beta)
-        {
-          return beta;
-        }
-
-        alpha = best_eval;
-      }
-
-      // set best move
-      SetBestMove(move);
-      return {};
+      return eval;
     }
 
-    struct OrderingResult
-    {
+    struct OrderingResult {
       MoveGenerator::Moves::iterator quiet_begin;
       MoveGenerator::Moves::iterator quiet_end;
     };
 
     OrderingResult OrderMoves(const MoveGenerator::Moves::iterator first,
-                              const MoveGenerator::Moves::iterator last)
-    {
+                              const MoveGenerator::Moves::iterator last) {
       auto &current_position = searcher_.current_position_;
       auto &best_moves = searcher_.best_moves_;
       auto &principal_variation = searcher_.principle_variation_;
 
       auto begin_of_ordering = first;
 
-      if constexpr (is_principal_variation)
-      {
+      if constexpr (is_principal_variation) {
         const auto pv_move_pos =
             std::find(first, last,
                       principal_variation.GetPV(max_depth - remaining_depth));
         std::iter_swap(begin_of_ordering, pv_move_pos);
         ++begin_of_ordering;
-      }
-      else
-      {
-        if (best_moves.Contains(current_position))
-        {
+      } else {
+        if (best_moves.Contains(current_position)) {
           const auto &best_move = best_moves.GetMove(current_position);
           const auto best_move_pos =
               std::find(begin_of_ordering, last, best_move);
-          if (best_move_pos < last)
-          {
+          if (best_move_pos < last) {
             std::iter_swap(begin_of_ordering, best_move_pos);
             ++begin_of_ordering;
           }
@@ -317,15 +329,13 @@ class Searcher
       return OrderingResult{quiet_begin, quiet_end};
     }
 
-    Eval PVSearch(const MoveGenerator::Moves::iterator first,
-                  const MoveGenerator::Moves::iterator last,
-                  const OrderingResult &ordeing_result)
-    {
+    SearchResult PVSearch(const MoveGenerator::Moves::iterator first,
+                          const MoveGenerator::Moves::iterator last,
+                          const OrderingResult &ordeing_result) {
       auto &current_position = searcher_.current_position_;
 
       bool is_quiet = false;
-      for (auto it = first; it != last; ++it)
-      {
+      for (auto it = first; it != last; ++it) {
         const auto &move = *it;
 
         if (it == ordeing_result.quiet_begin) is_quiet = true;
@@ -333,16 +343,22 @@ class Searcher
 
         current_position.DoMove(move);  // make the move and search the tree
 
-        auto temp_eval = -Search<false>(max_depth, remaining_depth - 1,
-                                        -alpha - 1, -alpha);  // ZWS
+        auto temp_eval_optional = Search<false>(max_depth, remaining_depth - 1,
+                                                -alpha - 1, -alpha);  // ZWS
+
+        if (!temp_eval_optional) return std::nullopt;
+
+        auto temp_eval = -*temp_eval_optional;
 
         if (temp_eval > alpha) /* make a research (ZWS failed) */
         {
-          temp_eval =
-              -Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
+          temp_eval_optional =
+              Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
+          if (!temp_eval_optional) return std::nullopt;
 
-          if (temp_eval > alpha)
-          {
+          temp_eval = -*temp_eval_optional;
+
+          if (temp_eval > alpha) {
             alpha = temp_eval;
           }
         }
@@ -350,15 +366,12 @@ class Searcher
         // undo the move
         current_position.UndoMove(move, irreversible_data);
 
-        if (temp_eval > best_eval)
-        {
+        if (temp_eval > best_eval) {
           SetBestMove(move);
 
           // check if we have found a better move
-          if (temp_eval >= beta)
-          {
-            if (is_quiet)
-            {
+          if (temp_eval >= beta) {
+            if (is_quiet) {
               UpdateQuiteMove(move);
             }
             return beta;
@@ -372,8 +385,7 @@ class Searcher
       return alpha;
     }
 
-    void UpdateQuiteMove(const Move &move)
-    {
+    void UpdateQuiteMove(const Move &move) {
       const auto [from, to, captured_piece] = GetMoveData(move);
       searcher_.history_[side_to_move_idx][from][to] +=
           remaining_depth * remaining_depth;
@@ -415,30 +427,23 @@ class Searcher
 };
 }  // namespace SimpleChessEngine
 
-namespace SimpleChessEngine
-{
-inline void Searcher::SetPosition(const Position &position)
-{
+namespace SimpleChessEngine {
+inline void Searcher::SetPosition(const Position &position) {
   current_position_ = position;
 }
 
-inline const Position &Searcher::GetPosition() const
-{
+inline const Position &Searcher::GetPosition() const {
   return current_position_;
 }
 
 inline const Move &Searcher::GetCurrentBestMove() const { return best_move_; }
 
-void Searcher::InitStartOfSearch()
-{
+void Searcher::InitStartOfSearch() {
   debug_info_ = DebugInfo{};
   killers_.Clear();
-  for (unsigned color = 0; color < kColors; ++color)
-  {
-    for (BitIndex from = 0; from <= kBoardArea; ++from)
-    {
-      for (BitIndex to = 0; to <= kBoardArea; ++to)
-      {
+  for (unsigned color = 0; color < kColors; ++color) {
+    for (BitIndex from = 0; from <= kBoardArea; ++from) {
+      for (BitIndex to = 0; to <= kBoardArea; ++to) {
         history_[color][from][to] = 0ull;
       }
     }
@@ -446,44 +451,36 @@ void Searcher::InitStartOfSearch()
 }
 
 template <bool is_principal_variation>
-Eval Searcher::Search(const size_t max_depth, const size_t remaining_depth,
-                      Eval alpha, const Eval beta)
-{
+Searcher::SearchResult Searcher::Search(const TimePoint &end_time,
+                                        const size_t max_depth,
+                                        const size_t remaining_depth,
+                                        Eval alpha, const Eval beta) {
   return SearchImplementation<is_principal_variation>{
-      *this, max_depth, remaining_depth, alpha, beta}();
+      *this, max_depth, remaining_depth, alpha, beta, end_time}();
 }
 
 std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
 Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
                      const MoveGenerator::Moves::iterator last,
-                     const size_t ply, const Player color) const
-{
+                     const size_t ply, const Player color) const {
   auto color_idx = static_cast<size_t>(color);
   MoveGenerator::Moves::iterator quiet_begin;
-  quiet_begin = std::partition(
-      first, last,
-      [this](const Move &move)
-      {
-        if (std::holds_alternative<Promotion>(move) ||
-            std::holds_alternative<EnCroissant>(move))
-          return true;
-        if (!std::holds_alternative<DefaultMove>(move)) return false;
-        const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
-        return static_cast<size_t>(captured_piece) >=
-               static_cast<size_t>(current_position_.GetPiece(from));
-      });
+  quiet_begin = std::partition(first, last, [this](const Move &move) {
+    if (std::holds_alternative<Promotion>(move) ||
+        std::holds_alternative<EnCroissant>(move))
+      return true;
+    if (!std::holds_alternative<DefaultMove>(move)) return false;
+    const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
+    return static_cast<size_t>(captured_piece) >=
+           static_cast<size_t>(current_position_.GetPiece(from));
+  });
   MoveGenerator::Moves::iterator quiet_end;
-  quiet_end = std::partition(quiet_begin, last,
-                             [](const Move &move)
-                             {
-                               if (!std::holds_alternative<DefaultMove>(move))
-                                 return true;
-                               const auto [from, to, captured_piece] =
-                                   std::get<DefaultMove>(move);
-                               return !captured_piece;
-                             });
-  const auto CompareCaptures = [this](const Move &lhs, const Move &rhs)
-  {
+  quiet_end = std::partition(quiet_begin, last, [](const Move &move) {
+    if (!std::holds_alternative<DefaultMove>(move)) return true;
+    const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
+    return !captured_piece;
+  });
+  const auto CompareCaptures = [this](const Move &lhs, const Move &rhs) {
     const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
     const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
     const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
@@ -497,19 +494,16 @@ Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
   };
   std::sort(first, quiet_begin, CompareCaptures);
   std::sort(quiet_end, last, CompareCaptures);
-  for (size_t i = 0; i < killers_.AvailableKillerCount(ply); ++i)
-  {
+  for (size_t i = 0; i < killers_.AvailableKillerCount(ply); ++i) {
     const auto killer = killers_.Get(ply, i);
-    if (auto it = std::find(quiet_begin, quiet_end, killer); it != quiet_end)
-    {
+    if (auto it = std::find(quiet_begin, quiet_end, killer); it != quiet_end) {
       std::iter_swap(quiet_begin, it);
       ++quiet_begin;
     }
   }
   std::sort(
       quiet_begin, quiet_end,
-      [this, color_idx](const Move &lhs, const Move &rhs)
-      {
+      [this, color_idx](const Move &lhs, const Move &rhs) {
         const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
         const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
         return history_[color_idx][from_lhs][to_lhs] >
