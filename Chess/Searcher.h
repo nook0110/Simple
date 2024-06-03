@@ -385,7 +385,7 @@ class Searcher {
     void UpdateQuietMove(const Move &move) {
       const auto [from, to, captured_piece] = GetMoveData(move);
       searcher_.history_[side_to_move_idx][from][to] +=
-          remaining_depth * remaining_depth;
+          1ull << remaining_depth;
       searcher_.killers_.TryAdd(max_depth - remaining_depth, move);
     }
 
@@ -491,21 +491,25 @@ Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
   };
   std::sort(first, quiet_begin, CompareCaptures);
   std::sort(quiet_end, last, CompareCaptures);
+  int increment = 0;
   for (size_t i = 0; i < killers_.AvailableKillerCount(ply); ++i) {
     const auto killer = killers_.Get(ply, i);
     if (auto it = std::find(quiet_begin, quiet_end, killer); it != quiet_end) {
       std::iter_swap(quiet_begin, it);
       ++quiet_begin;
+      ++increment;
     }
   }
-  std::sort(
-      quiet_begin, quiet_end,
-      [this, color_idx](const Move &lhs, const Move &rhs) {
-        const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
-        const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
-        return history_[color_idx][from_lhs][to_lhs] >
-               history_[color_idx][from_rhs][to_rhs];
-      });
+  const auto CompareQuiet = [this, color_idx](const Move &lhs,
+                                              const Move &rhs) {
+    const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
+    const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
+    return history_[color_idx][from_lhs][to_lhs] >
+           history_[color_idx][from_rhs][to_rhs];
+  };
+  std::sort(quiet_begin - increment, quiet_begin, CompareQuiet);
+  std::sort(quiet_begin, quiet_end, CompareQuiet);
+  std::advance(quiet_begin, -increment);
   return {quiet_begin, quiet_end};
 }
 }  // namespace SimpleChessEngine
