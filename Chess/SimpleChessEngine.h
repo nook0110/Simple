@@ -6,6 +6,7 @@
 #include "Evaluation.h"
 #include "Move.h"
 #include "Searcher.h"
+#include "numeric"
 
 namespace SimpleChessEngine {
 struct DepthInfo {
@@ -36,6 +37,11 @@ struct PrincipalVariationHitsInfo {
   std::size_t pv_hits{};
 };
 
+struct EBFInfo {
+  float last_ebf;
+  float avg_ebf;
+};
+
 class InfoPrinter {
  public:
   virtual ~InfoPrinter() = default;
@@ -48,6 +54,7 @@ class InfoPrinter {
   virtual void operator()(
       const PrincipalVariationHitsInfo& pv_hits_info) const {}
   virtual void operator()(const BestMoveInfo& best_move) const {}
+  virtual void operator()(const EBFInfo& ebf) const {}
 };
 
 /**
@@ -108,11 +115,10 @@ inline void ChessEngine::ComputeBestMove(
     const std::chrono::milliseconds left_time,
     const std::chrono::milliseconds inc_time = {}) {
   const auto start_time = std::chrono::high_resolution_clock::now();
-  constexpr size_t kAverageGameLength = 50;
+  constexpr size_t kAverageGameLength = 40;
 
   const auto time_for_move = left_time / kAverageGameLength + inc_time;
-  constexpr auto kTimeRatio = 1.1;
-  static constexpr size_t max_last_best_move_change = 10;
+  auto kTimeRatio = 5.f;
   constexpr auto min_inf = std::numeric_limits<Eval>::min() / 2;
   constexpr auto plus_inf = std::numeric_limits<Eval>::max() / 2;
 
@@ -120,15 +126,17 @@ inline void ChessEngine::ComputeBestMove(
 
   searcher_.InitStartOfSearch();
 
+  std::vector<float> ebfs;
+  ebfs.reserve(kMaxSearchPly);
+  size_t previous_nodes = 0;
+
   Move previous_best_move{};
   size_t last_best_move_change{};
   for (size_t current_depth = 1;
        time_for_move >
-           (std::chrono::high_resolution_clock::now() - start_time) *
-               kTimeRatio  // check if we have time for another iteration
-       &&
-       last_best_move_change < max_last_best_move_change  // check if best move
-                                                          // changed recently
+       (std::chrono::high_resolution_clock::now() - start_time) * kTimeRatio /
+           5  // check if we have time for another iteration
+
        ;) {
     PrintInfo(DepthInfo{current_depth});
 
@@ -164,6 +172,14 @@ inline void ChessEngine::ComputeBestMove(
     }
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
+
+    if (previous_nodes != 0) {
+      ebfs.push_back(static_cast<float>(info.searched_nodes) / previous_nodes);
+      kTimeRatio = std::reduce(ebfs.begin(), ebfs.end()) / ebfs.size();
+      PrintInfo(EBFInfo{ebfs.back(), kTimeRatio});
+    }
+    previous_nodes = info.searched_nodes;
+
     PrintInfo(NodesInfo{info.quiescence_nodes});
     PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
         (info.searched_nodes + info.quiescence_nodes) /
