@@ -172,10 +172,10 @@ inline void ChessEngine::ComputeBestMove(
     const std::chrono::milliseconds left_time,
     const std::chrono::milliseconds inc_time = {}) {
   const auto start_time = std::chrono::high_resolution_clock::now();
-  constexpr size_t kAverageGameLength = 50;
+  constexpr size_t kAverageGameLength = 40;
 
   const auto time_for_move = left_time / kAverageGameLength + inc_time;
-  constexpr auto kTimeRatio = 1.1;
+  auto kTimeRatio = 5.f;
   constexpr auto min_inf = std::numeric_limits<Eval>::min() / 2;
   constexpr auto plus_inf = std::numeric_limits<Eval>::max() / 2;
 
@@ -189,8 +189,8 @@ inline void ChessEngine::ComputeBestMove(
   size_t last_best_move_change{};
   for (size_t current_depth = 1;
        time_for_move >
-       (std::chrono::high_resolution_clock::now() - start_time) *
-           kTimeRatio  // check if we have time for another iteration
+       (std::chrono::high_resolution_clock::now() - start_time) * kTimeRatio /
+           5  // check if we have time for another iteration
 
        ;) {
     PrintInfo(DepthInfo{current_depth});
@@ -230,8 +230,8 @@ inline void ChessEngine::ComputeBestMove(
 
     if (previous_nodes != 0) {
       ebfs.push_back(static_cast<float>(info.searched_nodes) / previous_nodes);
-      PrintInfo(EBFInfo{ebfs.back(),
-                        std::reduce(ebfs.begin(), ebfs.end()) / ebfs.size()});
+      kTimeRatio = std::reduce(ebfs.begin(), ebfs.end()) / ebfs.size();
+      PrintInfo(EBFInfo{ebfs.back(), kTimeRatio});
     }
     previous_nodes = info.searched_nodes;
 
