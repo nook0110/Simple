@@ -201,7 +201,8 @@ inline void UciChessEngine::ParseCommand(std::stringstream command) {
   Send("No such command!");
 }
 
-inline void UciChessEngine::ParseUci(std::stringstream command) {
+inline void UciChessEngine::ParseUci(
+    [[maybe_unused]] std::stringstream command) {
   const std::string name = "SimpleChessEngine";
   const std::string author = "nook0110";
 
@@ -212,12 +213,14 @@ inline void UciChessEngine::ParseUci(std::stringstream command) {
   Send("uciok");
 }
 
-inline void UciChessEngine::ParseIsReady(std::stringstream command) const {
+inline void UciChessEngine::ParseIsReady(
+    [[maybe_unused]] std::stringstream command) const {
   // ReSharper disable once StringLiteralTypo
   Send("readyok");
 }
 
-inline void UciChessEngine::ParseUciNewGame(std::stringstream command) {}
+inline void UciChessEngine::ParseUciNewGame(
+    [[maybe_unused]] std::stringstream command) {}
 
 inline void UciChessEngine::ParseFen(const std::string& fen) {
   info_.position = PositionFactory{}(fen);
@@ -345,11 +348,13 @@ inline void UciChessEngine::ParsePlayersTime(std::stringstream command) {
   }
 }
 
-inline void UciChessEngine::ParseStop(std::stringstream command) {
+inline void UciChessEngine::ParseStop(
+    [[maybe_unused]] std::stringstream command) {
   StopSearch();
 }
 
-inline void UciChessEngine::ParseQuit(std::stringstream command) {
+inline void UciChessEngine::ParseQuit(
+    [[maybe_unused]] std::stringstream command) {
   quit_ = true;
   StopSearch();
 }

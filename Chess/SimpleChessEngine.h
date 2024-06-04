@@ -46,16 +46,16 @@ struct EBFInfo {
 class InfoPrinter {
  public:
   virtual ~InfoPrinter() = default;
-  virtual void operator()(const DepthInfo& depth_info) const {}
-  virtual void operator()(const ScoreInfo& score_info) const {}
-  virtual void operator()(const NodesInfo& nodes_info) const {}
-  virtual void operator()(const NodePerSecondInfo& nps_info) const {}
+  virtual void operator()(const DepthInfo& depth_info) const = 0;
+  virtual void operator()(const ScoreInfo& score_info) const = 0;
+  virtual void operator()(const NodesInfo& nodes_info) const = 0;
+  virtual void operator()(const NodePerSecondInfo& nps_info) const = 0;
   virtual void operator()(
-      const PrincipalVariationInfo& principal_variation) const {}
+      const PrincipalVariationInfo& principal_variation) const = 0;
   virtual void operator()(
-      const PrincipalVariationHitsInfo& pv_hits_info) const {}
-  virtual void operator()(const BestMoveInfo& best_move) const {}
-  virtual void operator()(const EBFInfo& ebf) const {}
+      const PrincipalVariationHitsInfo& pv_hits_info) const = 0;
+  virtual void operator()(const BestMoveInfo& best_move) const = 0;
+  virtual void operator()(const EBFInfo& ebf) const = 0;
 };
 
 /**
@@ -71,9 +71,8 @@ class ChessEngine {
     std::array<size_t, 2> player_inc;
   };
 
-  explicit ChessEngine(
-      const Position position = PositionFactory{}(),
-      std::unique_ptr<InfoPrinter> printer = std::make_unique<InfoPrinter>())
+  explicit ChessEngine(const Position position = PositionFactory{}(),
+                       std::unique_ptr<InfoPrinter> printer = {})
       : printer_(std::move(printer)), searcher_(position) {}
 
   void SetInfoPrinter(std::unique_ptr<InfoPrinter> printer) {
@@ -108,7 +107,9 @@ class ChessEngine {
 }  // namespace SimpleChessEngine
 
 namespace SimpleChessEngine {
-inline void ChessEngine::ComputeBestMove(const size_t depth) { assert(false); }
+inline void ChessEngine::ComputeBestMove([[maybe_unused]] const size_t depth) {
+  assert(false);
+}
 
 inline void ChessEngine::ComputeBestMove(
     const std::chrono::milliseconds left_time,
