@@ -12,12 +12,22 @@ class TranspositionTable
   static_assert(!(TableSize & (TableSize - 1)));
 
  public:
+   enum class Bound : uint8_t
+   {
+     kLower = 1,
+     kUpper = 2,
+     kExact = kLower | kUpper
+   };
+
+#pragma pack(push, 1)
   struct Node
   {
     Move move;
     Hash true_hash{};
-    // sth else...
+    uint8_t depth : 6;
+    Bound bound : 2;
   };
+#pragma pack(pop)
 
   [[nodiscard]] bool Contains(const Position& position) const
   {
@@ -30,14 +40,11 @@ class TranspositionTable
     GetNode(position) = std::move(inserting_node);
   }
 
-  const Move& GetMove(const Position& position) const
+  const Move& GetMove(const Position& position) const 
   {
     assert(Contains(position));
     return GetNode(position).move;
   }
-#ifndef _DEBUG
- private:
-#endif
 
   Node& GetNode(const Position& position)
   {

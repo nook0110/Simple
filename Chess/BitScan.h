@@ -9,7 +9,7 @@
 #pragma intrinsic(_BitScanForward)
 #endif
 
-using BitIndex = char;
+using BitIndex = int8_t;
 
 inline BitIndex BitScan(const uint64_t mask)
 {

@@ -193,6 +193,10 @@ class Searcher {
 
         if (best_eval > alpha) {
           if (best_eval >= beta) {
+            if (ordering_result.quiet_begin == moves.begin()) 
+            {
+              UpdateQuietMove(moves.front());
+            }
             return beta;
           }
 
@@ -289,12 +293,12 @@ class Searcher {
       return eval;
     }
 
-    struct OrderingResult {
+    struct QuietRange {
       MoveGenerator::Moves::iterator quiet_begin;
       MoveGenerator::Moves::iterator quiet_end;
     };
 
-    OrderingResult OrderMoves(const MoveGenerator::Moves::iterator first,
+    QuietRange OrderMoves(const MoveGenerator::Moves::iterator first,
                               const MoveGenerator::Moves::iterator last) {
       auto &current_position = searcher_.current_position_;
       auto &best_moves = searcher_.best_moves_;
@@ -323,20 +327,20 @@ class Searcher {
       auto [quiet_begin, quiet_end] = searcher_.OrderMoves(
           begin_of_ordering, last, max_depth - remaining_depth,
           current_position.GetSideToMove());
-      return OrderingResult{quiet_begin, quiet_end};
+      return QuietRange{quiet_begin, quiet_end};
     }
 
     SearchResult PVSearch(const MoveGenerator::Moves::iterator first,
                           const MoveGenerator::Moves::iterator last,
-                          const OrderingResult &ordeing_result) {
+                          const QuietRange &ordeing_result) {
       auto &current_position = searcher_.current_position_;
 
       bool is_quiet = false;
       for (auto it = first; it != last; ++it) {
         const auto &move = *it;
 
-        if (it == ordeing_result.quiet_begin) is_quiet = true;
-        if (it == ordeing_result.quiet_end) is_quiet = false;
+        if (it >= ordeing_result.quiet_begin) is_quiet = true;
+        if (it >= ordeing_result.quiet_end) is_quiet = false;
 
         current_position.DoMove(move);  // make the move and search the tree
 
