@@ -11,14 +11,14 @@
 
 using BitIndex = char;
 
-inline BitIndex BitScan(const size_t mask) {
+inline BitIndex BitScan(const uint64_t mask) {
   assert(mask);
 #ifdef USE_GCC_BUILTINS
-  return __builtin_ctzll(mask);
+  return static_cast<BitIndex>(__builtin_ctzll(mask));
 #elif defined(USE_MSVC_INTRINSICS)
   unsigned long index;
   _BitScanForward64(&index, mask);
-  return index;
+  return static_cast<BitIndex>(index);
 #endif
 }
 
