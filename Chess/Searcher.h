@@ -236,9 +236,10 @@ class Searcher {
 
     void SetBestMove(const Move &move) {
       auto &current_position = searcher_.current_position_;
-      auto &principle_variation = searcher_.principle_variation_;
 
-      searcher_.best_moves_.SetMove(current_position, move);
+      searcher_.best_moves_.SetMove(searcher_.current_position_, move);
+
+      auto &principle_variation = searcher_.principle_variation_;
 
       principle_variation.SetPV(move, max_depth - remaining_depth);
       principle_variation.FetchNextLayer(max_depth - remaining_depth,
@@ -252,6 +253,7 @@ class Searcher {
     SearchResult CheckPrincipalVariationMove()
       requires(is_principal_variation)
     {
+      auto &current_position = searcher_.current_position_;
       auto &principle_variation = searcher_.principle_variation_;
       auto &debug_info = searcher_.debug_info_;
 

@@ -5,12 +5,15 @@
 #include "StreamUtility.h"
 #include "Utility.h"
 
-namespace SimpleChessEngine {
-struct MoveFactory {
+namespace SimpleChessEngine
+{
+struct MoveFactory
+{
   Move operator()(const Position& position, const std::string& move) const;
 
  private:
-  struct ParsedMove {
+  struct ParsedMove
+  {
     BitIndex from;
     BitIndex to;
   };
@@ -19,12 +22,15 @@ struct MoveFactory {
 };
 
 inline Move MoveFactory::operator()(const Position& position,
-                                    const std::string& move) const {
-  if (move == "O-O") {
+                                    const std::string& move) const
+{
+  if (move == "O-O")
+  {
     return Castling{Castling::CastlingSide::k00,
                     position.GetKingSquare(position.GetSideToMove())};
   }
-  if (move == "O-O-O") {
+  if (move == "O-O-O")
+  {
     return Castling{Castling::CastlingSide::k000,
                     position.GetKingSquare(position.GetSideToMove())};
   }
@@ -33,8 +39,10 @@ inline Move MoveFactory::operator()(const Position& position,
 
   const auto piece_to_move = position.GetPiece(from);
 
-  if (piece_to_move == Piece::kKing) {
-    if (!IsAdjacent(from, to)) {
+  if (piece_to_move == Piece::kKing)
+  {
+    if (!IsAdjacent(from, to))
+    {
       static std::unordered_map<File, Castling::CastlingSide> castling_file = {
           {2, Castling::CastlingSide::k000}, {6, Castling::CastlingSide::k00}};
       static std::unordered_map<File, File> rook_from_file = {{1, 0}, {6, 7}};
@@ -45,20 +53,24 @@ inline Move MoveFactory::operator()(const Position& position,
                       GetSquare(rook_from_file[king_file], king_rank)};
     }
   }
-  if (constexpr size_t kPromotionSize = 5; move.size() == kPromotionSize) {
+  if (constexpr size_t kPromotionSize = 5; move.size() == kPromotionSize)
+  {
     return Promotion{{from, to, position.GetPiece(to)},
                      kPieces[move.back()].first};
   }
 
-  if (piece_to_move != Piece::kPawn) {
+  if (piece_to_move != Piece::kPawn)
+  {
     return DefaultMove{from, to, position.GetPiece(to)};
   }
 
-  if (!IsAdjacent(from, to)) {
+  if (!IsAdjacent(from, to))
+  {
     return DoublePush{from, to};
   }
 
-  if (to == position.GetEnCroissantSquare()) {
+  if (to == position.GetEnCroissantSquare())
+  {
     return EnCroissant{from, to};
   }
 
@@ -66,7 +78,8 @@ inline Move MoveFactory::operator()(const Position& position,
 }
 
 inline MoveFactory::ParsedMove MoveFactory::ParseDefaultMove(
-    const std::string& move) {
+    const std::string& move)
+{
   constexpr size_t first_file = 0, first_rank = 1, second_file = 2,
                    second_rank = 3;
 
