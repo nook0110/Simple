@@ -123,6 +123,7 @@ inline size_t Bitboard::Count() const
 #elif defined(USE_MSVC_INTRINSICS)
   return _mm_popcnt_u64(value_);
 #endif
+  assert(false);
 }
 
 inline BitIndex Bitboard::GetFirstBit() const
