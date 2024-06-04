@@ -107,4 +107,8 @@ inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const Move& move)
                     { return GetMoveData(unwrapped_move); },
                     move);
 }
+
+inline bool IsQuiet(const Move& move) {
+  return !std::get<Piece>(GetMoveData(move));
+}
 }  // namespace SimpleChessEngine

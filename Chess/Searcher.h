@@ -155,19 +155,38 @@ class Searcher {
       searcher_.debug_info_.searched_nodes++;
 
       if constexpr (is_principal_variation) {
-        const auto &eval_optional = CheckPrincipalVariationMove();
-
-        if (!eval_optional) return std::nullopt;
-
-        best_eval = *eval_optional;
-
-        if (best_eval > alpha) {
-          if (best_eval >= beta) {
-            return beta;
-          }
-
-          alpha = best_eval;
+        if (!CheckPrincipalVariationMove()) {
+          return std::nullopt;
         }
+        has_stored_move = true;
+      } else if (auto [hash, hash_move, entry_score, entry_depth, entry_bound] =
+                     searcher_.best_moves_.GetNode(searcher_.current_position_);
+                 hash == searcher_.current_position_.GetHash()) { // check if current position was previously searched at higher depth
+        if (entry_depth >= remaining_depth) {
+          if (entry_bound & Bound::kUpper && entry_score <= alpha) {
+            return alpha;
+          }
+          if (entry_bound & Bound::kLower && entry_score > alpha) {
+            if (entry_score >= beta) {
+              if (IsQuiet(hash_move)) {
+                UpdateQuietMove(hash_move);
+              }
+              return beta;
+            }
+            alpha = entry_score;
+          }
+          if (entry_bound == Bound::kExact) {
+            return entry_score;
+          }
+        }
+        auto has_cutoff_opt = CheckMove<false>(hash_move);
+        if (!has_cutoff_opt) {
+          return std::nullopt;
+        }
+        if (*has_cutoff_opt) {
+          return beta;
+        }
+        has_stored_move = true;
       }
 
       auto &move_generator = searcher_.move_generator_;
@@ -184,25 +203,14 @@ class Searcher {
 
       const auto ordering_result = OrderMoves(moves.begin(), moves.end());
 
-      if constexpr (!is_principal_variation) {
-        const auto eval_optional = CheckMove<false>(moves.front());
-
-        if (!eval_optional) return std::nullopt;
-
-        best_eval = *eval_optional;
-
-        if (best_eval > alpha) {
-          if (best_eval >= beta) {
-            if (ordering_result.quiet_begin == moves.begin()) 
-            {
-              UpdateQuietMove(moves.front());
-            }
-            return beta;
-          }
-
-          alpha = best_eval;
+      if (!has_stored_move) {
+        auto has_cutoff_opt = CheckMove<false>(moves.front());
+        if (!has_cutoff_opt) {
+          return std::nullopt;
         }
-        SetBestMove(moves.front());
+        if (*has_cutoff_opt) {
+          return beta;
+        }
       }
 
       return PVSearch(std::next(moves.begin()), moves.end(), ordering_result);
@@ -216,6 +224,8 @@ class Searcher {
     const TimePoint &end_time;
 
     /* Local variables for search */
+    bool has_stored_move = false;
+    Move best_move;
     Eval best_eval;
     const Position::IrreversibleData irreversible_data;
     const size_t side_to_move_idx;
@@ -241,18 +251,21 @@ class Searcher {
 
     void SetBestMove(const Move &move) {
       auto &current_position = searcher_.current_position_;
-
-      searcher_.best_moves_.SetMove(searcher_.current_position_, move);
-
       auto &principle_variation = searcher_.principle_variation_;
 
       principle_variation.SetPV(move, max_depth - remaining_depth);
       principle_variation.FetchNextLayer(max_depth - remaining_depth,
                                          remaining_depth);
 
+      best_move = move;
+
       if (remaining_depth == max_depth) {
         searcher_.best_move_ = move;
       }
+    }
+
+    void SetTTEntry(const Bound bound) {
+      searcher_.best_moves_.SetEntry(searcher_.current_position_, best_move, best_eval, remaining_depth, bound);
     }
 
     SearchResult CheckPrincipalVariationMove()
@@ -271,12 +284,12 @@ class Searcher {
           principle_variation.GetPV(max_depth - remaining_depth);
 
       auto eval = CheckMove<true>(pv_move);
-      SetBestMove(pv_move);
+      SetTTEntry(Bound::kExact);
       return eval;
     }
 
     template <bool is_pv_move>
-    SearchResult CheckMove(const Move &move) {
+    std::optional<bool> CheckMove(const Move &move) {
       auto &current_position = searcher_.current_position_;
 
       // make the move and search the tree
@@ -290,7 +303,20 @@ class Searcher {
       // undo the move
       current_position.UndoMove(move, irreversible_data);
 
-      return eval;
+      SetBestMove(move);
+      best_eval = eval;
+
+      if (best_eval > alpha) {
+        if (best_eval >= beta) {
+          if (IsQuiet(best_move)) {
+            UpdateQuietMove(best_move);
+          }
+          return true;
+        }
+        alpha = best_eval;
+      }
+
+      return false;
     }
 
     struct QuietRange {
@@ -306,22 +332,9 @@ class Searcher {
 
       auto begin_of_ordering = first;
 
-      if constexpr (is_principal_variation) {
-        const auto pv_move_pos =
-            std::find(first, last,
-                      principal_variation.GetPV(max_depth - remaining_depth));
-        std::iter_swap(begin_of_ordering, pv_move_pos);
-        ++begin_of_ordering;
-      } else {
-        if (best_moves.Contains(current_position)) {
-          const auto &best_move = best_moves.GetMove(current_position);
-          const auto best_move_pos =
-              std::find(begin_of_ordering, last, best_move);
-          if (best_move_pos < last) {
-            std::iter_swap(begin_of_ordering, best_move_pos);
-            ++begin_of_ordering;
-          }
-        }
+      if (has_stored_move) {
+        std::iter_swap(
+            std::find(first, last, best_move), begin_of_ordering++);
       }
 
       auto [quiet_begin, quiet_end] = searcher_.OrderMoves(
@@ -372,6 +385,8 @@ class Searcher {
 
           // check if we have found a better move
           if (temp_eval >= beta) {
+            // beta-cutoff occurs, node is cut-type, returned score is lower-bound
+            SetTTEntry(Bound::kLower);
             if (is_quiet) {
               UpdateQuietMove(move);
             }
@@ -382,7 +397,8 @@ class Searcher {
         }
       }
 
-      // return the best evaluation
+      // no cutoff, node is all-type, returned score is upper-bound
+      SetTTEntry(Bound::kUpper);
       return alpha;
     }
 

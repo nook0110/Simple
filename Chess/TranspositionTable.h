@@ -6,24 +6,24 @@
 #include "Position.h"
 namespace SimpleChessEngine
 {
+enum class Bound : uint8_t { kLower = 1, kUpper = 2, kExact = kLower | kUpper };
+
+uint8_t operator&(const Bound lhs, const Bound rhs) {
+  return static_cast<uint8_t>(lhs) & static_cast<uint8_t>(rhs);
+}
+
 template <size_t TableSize>
 class TranspositionTable
 {
   static_assert(!(TableSize & (TableSize - 1)));
 
  public:
-   enum class Bound : uint8_t
-   {
-     kLower = 1,
-     kUpper = 2,
-     kExact = kLower | kUpper
-   };
-
 #pragma pack(push, 1)
   struct Node
   {
-    Move move;
     Hash true_hash{};
+    Move move;
+    Eval score;
     uint8_t depth : 6;
     Bound bound : 2;
   };
@@ -34,9 +34,9 @@ class TranspositionTable
     return position.GetHash() == GetNode(position).true_hash;
   }
 
-  void SetMove(const Position& position, const Move& move)
+  void SetEntry(const Position& position, const Move& move, const Eval score, const size_t depth, const Bound bound)
   {
-    Node inserting_node = {move, position.GetHash()};
+    Node inserting_node = {position.GetHash(), move, score, depth, bound};
     GetNode(position) = std::move(inserting_node);
   }
 
