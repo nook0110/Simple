@@ -5,7 +5,7 @@
 #include <random>
 
 #include "Attacks.h"
-#include "BitBoard.h"
+#include "Bitboard.h"
 #include "Evaluation.h"
 #include "Hasher.h"
 #include "Move.h"

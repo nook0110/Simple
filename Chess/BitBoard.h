@@ -1,7 +1,6 @@
 #pragma once
 
 #include "BitScan.h"
-#include <cstdint>
 
 #ifdef __GNUC__
 #define USE_GCC_BUILTINS
@@ -106,7 +105,7 @@ class Bitboard {
   }
 
  private:
-  uint64_t value_{};
+  unsigned long long value_{};
 };
 
 inline size_t Bitboard::Count() const {

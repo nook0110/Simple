@@ -10,7 +10,7 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(TEST_NAME ${PROJECT_NAME}Tests)
 add_executable(${TEST_NAME} test.cpp)
 target_link_libraries(${TEST_NAME} gtest_main)
