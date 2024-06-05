@@ -4,7 +4,6 @@
 #include "Evaluation.h"
 #include "KillerTable.h"
 #include "MoveGenerator.h"
-#include "PVTable.h"
 #include "PositionFactory.h"
 #include "Quiescence.h"
 #include "StreamUtility.h"
@@ -98,12 +97,9 @@ class Searcher {
 
   [[nodiscard]] std::size_t GetPVHits() const { return debug_info_.pv_hits; }
 
-  [[nodiscard]] const PVTable &GetPV() const { return principle_variation_; }
-
   void InitStartOfSearch();
 
  private:
-
   template <bool is_principal_variation>
   struct SearchImplementation {
    public:
@@ -154,14 +150,11 @@ class Searcher {
 
       searcher_.debug_info_.searched_nodes++;
 
-      if constexpr (is_principal_variation) {
-        if (!CheckPrincipalVariationMove()) {
-          return std::nullopt;
-        }
-        has_stored_move = true;
-      } else if (auto [hash, hash_move, entry_score, entry_depth, entry_bound] =
-                     searcher_.best_moves_.GetNode(searcher_.current_position_);
-                 hash == searcher_.current_position_.GetHash()) { // check if current position was previously searched at higher depth
+      if (auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+              searcher_.best_moves_.GetNode(searcher_.current_position_);
+          hash == searcher_.current_position_
+                      .GetHash()) {  // check if current position was previously
+                                     // searched at higher depth
         if (entry_depth >= remaining_depth) {
           if (entry_bound & Bound::kUpper && entry_score <= alpha) {
             return alpha;
@@ -189,6 +182,10 @@ class Searcher {
         has_stored_move = true;
       }
 
+      if constexpr (is_principal_variation) {
+        assert(has_stored_move);
+      }
+
       auto &move_generator = searcher_.move_generator_;
       auto &current_position = searcher_.current_position_;
 
@@ -197,7 +194,6 @@ class Searcher {
 
       // check if there are no possible moves
       if (moves.empty()) {
-        searcher_.principle_variation_.EndPV(max_depth - remaining_depth);
         return GetEndGameScore();
       }
 
@@ -251,11 +247,6 @@ class Searcher {
 
     void SetBestMove(const Move &move) {
       auto &current_position = searcher_.current_position_;
-      auto &principle_variation = searcher_.principle_variation_;
-
-      principle_variation.SetPV(move, max_depth - remaining_depth);
-      principle_variation.FetchNextLayer(max_depth - remaining_depth,
-                                         remaining_depth);
 
       best_move = move;
 
@@ -265,27 +256,9 @@ class Searcher {
     }
 
     void SetTTEntry(const Bound bound) {
-      searcher_.best_moves_.SetEntry(searcher_.current_position_, best_move, best_eval, remaining_depth, bound);
-    }
-
-    SearchResult CheckPrincipalVariationMove()
-      requires(is_principal_variation)
-    {
-      auto &current_position = searcher_.current_position_;
-      auto &principle_variation = searcher_.principle_variation_;
-      auto &debug_info = searcher_.debug_info_;
-
-      if (!principle_variation.CheckPV(max_depth - remaining_depth))
-        return GetEndGameScore();
-
-      debug_info.pv_hits++;
-
-      const auto &pv_move =
-          principle_variation.GetPV(max_depth - remaining_depth);
-
-      auto eval = CheckMove<true>(pv_move);
-      SetTTEntry(Bound::kExact);
-      return eval;
+      searcher_.best_moves_.SetEntry(searcher_.current_position_, best_move,
+                                     best_eval, remaining_depth, bound,
+                                     max_depth);
     }
 
     template <bool is_pv_move>
@@ -325,16 +298,14 @@ class Searcher {
     };
 
     QuietRange OrderMoves(const MoveGenerator::Moves::iterator first,
-                              const MoveGenerator::Moves::iterator last) {
+                          const MoveGenerator::Moves::iterator last) {
       auto &current_position = searcher_.current_position_;
       auto &best_moves = searcher_.best_moves_;
-      auto &principal_variation = searcher_.principle_variation_;
 
       auto begin_of_ordering = first;
 
       if (has_stored_move) {
-        std::iter_swap(
-            std::find(first, last, best_move), begin_of_ordering++);
+        std::iter_swap(std::find(first, last, best_move), begin_of_ordering++);
       }
 
       auto [quiet_begin, quiet_end] = searcher_.OrderMoves(
@@ -349,6 +320,7 @@ class Searcher {
       auto &current_position = searcher_.current_position_;
 
       bool is_quiet = false;
+      bool has_raised_alpha = false;
       for (auto it = first; it != last; ++it) {
         const auto &move = *it;
 
@@ -373,6 +345,7 @@ class Searcher {
           temp_eval = -*temp_eval_optional;
 
           if (temp_eval > alpha) {
+            has_raised_alpha = true;
             alpha = temp_eval;
           }
         }
@@ -385,7 +358,8 @@ class Searcher {
 
           // check if we have found a better move
           if (temp_eval >= beta) {
-            // beta-cutoff occurs, node is cut-type, returned score is lower-bound
+            // beta-cutoff occurs, node is cut-type, returned score is
+            // lower-bound
             SetTTEntry(Bound::kLower);
             if (is_quiet) {
               UpdateQuietMove(move);
@@ -397,15 +371,13 @@ class Searcher {
         }
       }
 
-      // no cutoff, node is all-type, returned score is upper-bound
-      SetTTEntry(Bound::kUpper);
+      SetTTEntry(has_raised_alpha ? Bound::kExact : Bound::kUpper);
       return alpha;
     }
 
     void UpdateQuietMove(const Move &move) {
       const auto [from, to, captured_piece] = GetMoveData(move);
-      searcher_.history_[side_to_move_idx][from][to] +=
-          1ull << remaining_depth;
+      searcher_.history_[side_to_move_idx][from][to] += 1ull << remaining_depth;
       searcher_.killers_.TryAdd(max_depth - remaining_depth, move);
     }
 
@@ -422,9 +394,6 @@ class Searcher {
 
   MoveGenerator move_generator_;  //!< Move generator.
   Quiescence quiescence_searcher_;
-
-  PVTable principle_variation_;  //!< PV table to store principal variation from
-                                 //!< the previous iteration of ID
 
 #ifdef _DEBUG
   constexpr static size_t kTTsize = 1 << 10;

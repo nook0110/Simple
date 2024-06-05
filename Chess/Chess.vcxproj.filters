@@ -57,9 +57,6 @@
     <ClCompile Include="Perft.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="PVTable.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Move.h">
@@ -124,9 +121,6 @@
     </ClInclude>
     <ClInclude Include="PSQT.h">
       <Filter>Файлы заголовков\Engine\Evaluation</Filter>
-    </ClInclude>
-    <ClInclude Include="PVTable.h">
-      <Filter>Файлы заголовков\Engine\Searcher</Filter>
     </ClInclude>
     <ClInclude Include="KillerTable.h">
       <Filter>Файлы заголовков</Filter>
