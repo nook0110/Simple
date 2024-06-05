@@ -166,6 +166,7 @@ class Searcher {
               }
               return beta;
             }
+            has_raised_alpha = true;
             alpha = entry_score;
           }
           if (entry_bound == Bound::kExact) {
@@ -221,6 +222,7 @@ class Searcher {
 
     /* Local variables for search */
     bool has_stored_move = false;
+    bool has_raised_alpha = false;
     Move best_move;
     Eval best_eval;
     const Position::IrreversibleData irreversible_data;
@@ -286,6 +288,7 @@ class Searcher {
           }
           return true;
         }
+        has_raised_alpha = true;
         alpha = best_eval;
       }
 
@@ -320,7 +323,6 @@ class Searcher {
       auto &current_position = searcher_.current_position_;
 
       bool is_quiet = false;
-      bool has_raised_alpha = false;
       for (auto it = first; it != last; ++it) {
         const auto &move = *it;
 
