@@ -132,8 +132,8 @@ inline void ChessEngine::ComputeBestMove(
   size_t last_best_move_change{};
   for (size_t current_depth = 1;
        time_for_move >
-       (std::chrono::high_resolution_clock::now() - start_time) * kTimeRatio /
-           5  // check if we have time for another iteration
+       (std::chrono::high_resolution_clock::now() - start_time) *
+           1.1f  // check if we have time for another iteration
 
        ;) {
     PrintInfo(DepthInfo{current_depth});

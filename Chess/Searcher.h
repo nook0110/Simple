@@ -155,11 +155,18 @@ class Searcher {
           hash == searcher_.current_position_
                       .GetHash()) {  // check if current position was previously
                                      // searched at higher depth
+
+        if (remaining_depth == max_depth) {
+          searcher_.best_move_ = hash_move;
+        }
+
         if (entry_depth >= remaining_depth) {
-          if (entry_bound & Bound::kUpper && entry_score <= alpha) {
+          if (static_cast<Bound>(entry_bound) & Bound::kUpper &&
+              entry_score <= alpha) {
             return alpha;
           }
-          if (entry_bound & Bound::kLower && entry_score > alpha) {
+          if (static_cast<Bound>(entry_bound) & Bound::kLower &&
+              entry_score > alpha) {
             if (entry_score >= beta) {
               if (IsQuiet(hash_move)) {
                 UpdateQuietMove(hash_move);
@@ -169,7 +176,7 @@ class Searcher {
             has_raised_alpha = true;
             alpha = entry_score;
           }
-          if (entry_bound == Bound::kExact) {
+          if (static_cast<Bound>(entry_bound) == Bound::kExact) {
             return entry_score;
           }
         }
