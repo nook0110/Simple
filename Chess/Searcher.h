@@ -436,7 +436,6 @@ inline const Position &Searcher::GetPosition() const {
 inline const Move &Searcher::GetCurrentBestMove() const { return best_move_; }
 
 void Searcher::InitStartOfSearch() {
-  debug_info_ = DebugInfo{};
   killers_.Clear();
   for (unsigned color = 0; color < kColors; ++color) {
     for (BitIndex from = 0; from <= kBoardArea; ++from) {
@@ -452,6 +451,8 @@ Searcher::SearchResult Searcher::Search(const TimePoint &end_time,
                                         const size_t max_depth,
                                         const size_t remaining_depth,
                                         Eval alpha, const Eval beta) {
+  debug_info_ = DebugInfo{};
+
   return SearchImplementation<is_principal_variation>{
       *this, max_depth, remaining_depth, alpha, beta, end_time}();
 }

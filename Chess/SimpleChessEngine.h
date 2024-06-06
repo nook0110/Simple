@@ -39,6 +39,7 @@ struct PrincipalVariationHitsInfo {
 
 struct EBFInfo {
   float last_ebf;
+  float avg_odd_even_ebf;
   float avg_ebf;
 };
 
@@ -116,7 +117,7 @@ inline void ChessEngine::ComputeBestMove(
   constexpr size_t kAverageGameLength = 40;
 
   const auto time_for_move = left_time / kAverageGameLength + inc_time;
-  auto kTimeRatio = 5.f;
+  auto kTimeRatio = 4.f;
   constexpr auto min_inf = std::numeric_limits<Eval>::min() / 2;
   constexpr auto plus_inf = std::numeric_limits<Eval>::max() / 2;
 
@@ -133,7 +134,8 @@ inline void ChessEngine::ComputeBestMove(
   for (size_t current_depth = 1;
        time_for_move >
        (std::chrono::high_resolution_clock::now() - start_time) *
-           1.1f  // check if we have time for another iteration
+           std::clamp(kTimeRatio / 2, 1.0f,
+                      4.f)  // check if we have time for another iteration
 
        ;) {
     PrintInfo(DepthInfo{current_depth});
@@ -169,8 +171,19 @@ inline void ChessEngine::ComputeBestMove(
 
     if (previous_nodes != 0) {
       ebfs.push_back(static_cast<float>(info.searched_nodes) / previous_nodes);
-      kTimeRatio = std::reduce(ebfs.begin(), ebfs.end()) / ebfs.size();
-      PrintInfo(EBFInfo{ebfs.back(), kTimeRatio});
+
+      if (ebfs.size() > 1) {
+        kTimeRatio = 0;
+        auto it = std::next(ebfs.rbegin());
+        while (it < ebfs.rend()) {
+          kTimeRatio += *it;
+          if (ebfs.rend() - it < 2) break;
+          it += 2;
+        }
+        kTimeRatio /= ebfs.size() / 2;
+      }
+      PrintInfo(EBFInfo{ebfs.back(), kTimeRatio,
+                        std::reduce(ebfs.begin(), ebfs.end()) / ebfs.size()});
     }
     previous_nodes = info.searched_nodes;
 
