@@ -160,6 +160,8 @@ class Searcher {
           searcher_.best_move_ = hash_move;
         }
 
+        entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
+
         if (entry_depth >= remaining_depth) {
           if (static_cast<Bound>(entry_bound) & Bound::kUpper &&
               entry_score <= alpha) {

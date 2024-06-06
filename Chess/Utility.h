@@ -244,6 +244,16 @@ inline void InitPawnAttacks()
   return pawn_attacks[static_cast<size_t>(side)][square];
 }
 
+
+// returns zero if the score is not mate value
+// otherwise returns 1 if it is winning (positive), -1 if losing (negative)
+inline int IsMateScore(const Eval score) {
+  if (-std::abs(score) > kMateValue + kMaxSearchPly) {
+    return 0;
+  }
+  return (score > 0) - (score < 0);
+}
+
 [[nodiscard]] inline std::string DrawBitboard(const Bitboard b)
 {
   std::string s = "+---+---+---+---+---+---+---+---+\n";
