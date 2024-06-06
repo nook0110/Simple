@@ -79,4 +79,13 @@ constexpr PhaseValue kLimitsDifference =
 constexpr Eval kTempoBonus = 20;
 
 constexpr Eval kMateValue = -1e5;
+
+// returns zero if the score is not mate value
+// otherwise returns 1 if it is winning (positive), -1 if losing (negative)
+inline int IsMateScore(const int score) {
+  if (-std::abs(score) > kMateValue + kMaxSearchPly) {
+    return 0;
+  }
+  return (score > 0) - (score < 0);
+}
 }  // namespace SimpleChessEngine
