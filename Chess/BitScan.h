@@ -9,9 +9,9 @@
 #pragma intrinsic(_BitScanForward)
 #endif
 
-using BitIndex = char;
+using BitIndex = int8_t;
 
-inline BitIndex BitScan(const size_t mask)
+inline BitIndex BitScan(const uint64_t mask)
 {
   assert(mask);
 #ifdef USE_GCC_BUILTINS
@@ -21,6 +21,7 @@ inline BitIndex BitScan(const size_t mask)
   _BitScanForward64(&index, mask);
   return index;
 #endif
+  assert(false);
 }
 
 #undef USE_GCC_BUILTINS

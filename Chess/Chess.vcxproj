@@ -25,14 +25,12 @@
     <ClCompile Include="MoveGenerator.cpp" />
     <ClCompile Include="Perft.cpp" />
     <ClCompile Include="Position.cpp" />
-    <ClCompile Include="PVTable.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="KillerTable.h" />
     <ClInclude Include="MoveFactory.h" />
     <ClInclude Include="Perft.h" />
     <ClInclude Include="PSQT.h" />
-    <ClInclude Include="PVTable.h" />
     <ClInclude Include="Quiescence.h" />
     <ClInclude Include="StreamUtility.h" />
     <ClInclude Include="Piece.h" />

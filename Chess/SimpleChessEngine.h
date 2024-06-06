@@ -165,11 +165,7 @@ inline void ChessEngine::ComputeBestMove(
     }
 
     previous_best_move = GetCurrentBestMove();
-    PrincipalVariationInfo pv;
-    for (size_t ply = 0; ply < current_depth; ++ply) {
-      if (!searcher_.GetPV().CheckPV(ply)) break;
-      pv.best_moves.push_back(searcher_.GetPV().GetPV(ply));
-    }
+    PrincipalVariationInfo pv{{previous_best_move}};
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
 
