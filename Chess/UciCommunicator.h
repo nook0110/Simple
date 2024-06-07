@@ -34,7 +34,7 @@ class UciDebugPrinter final : public InfoPrinter {
     }
 
     o_stream_ << "info score mate "
-              << IsMateScore(eval) * (-kMateValue - std::abs(eval)) / 2
+              << IsMateScore(eval) * (-kMateValue - std::abs(eval) + 1) / 2
               << std::endl;
   }
 
