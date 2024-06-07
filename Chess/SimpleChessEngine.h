@@ -26,6 +26,7 @@ struct NodePerSecondInfo {
 };
 
 struct PrincipalVariationInfo {
+  size_t current_depth = 0;
   std::vector<Move> best_moves;
 };
 
@@ -134,8 +135,7 @@ inline void ChessEngine::ComputeBestMove(
   for (size_t current_depth = 1;
        time_for_move >
        (std::chrono::high_resolution_clock::now() - start_time) *
-           std::clamp(kTimeRatio / 2, 1.0f,
-                      4.f)  // check if we have time for another iteration
+           1.1f  // check if we have time for another iteration
 
        ;) {
     PrintInfo(DepthInfo{current_depth});
@@ -165,7 +165,7 @@ inline void ChessEngine::ComputeBestMove(
     }
 
     previous_best_move = GetCurrentBestMove();
-    PrincipalVariationInfo pv{{previous_best_move}};
+    PrincipalVariationInfo pv{current_depth, {previous_best_move}};
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
 

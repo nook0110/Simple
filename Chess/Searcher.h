@@ -268,10 +268,10 @@ class Searcher {
     }
 
     void SetTTEntry(const Bound bound) {
-      searcher_.best_moves_.SetEntry(searcher_.current_position_, best_move,
+      searcher_.best_moves_.SetEntry(
+          searcher_.current_position_, best_move,
           best_eval + IsMateScore(best_eval) * (max_depth - remaining_depth),
-          remaining_depth, bound,
-                                     max_depth);
+          remaining_depth, bound, max_depth);
     }
 
     template <bool is_pv_move>
@@ -411,7 +411,7 @@ class Searcher {
 #ifdef _DEBUG
   constexpr static size_t kTTsize = 1 << 10;
 #else
-  constexpr static size_t kTTsize = 1 << 25;
+  constexpr static size_t kTTsize = 1 << 26;
 #endif
   TranspositionTable<kTTsize>
       best_moves_;  //!< Transposition-table to store the best moves.

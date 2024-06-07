@@ -27,7 +27,15 @@ class UciDebugPrinter final : public InfoPrinter {
   }
 
   void operator()(const ScoreInfo& score_info) const override {
-    o_stream_ << "info score cp " << score_info.current_eval << std::endl;
+    const auto& eval = score_info.current_eval;
+    if (!IsMateScore(eval)) {
+      o_stream_ << "info score cp " << eval << std::endl;
+      return;
+    }
+
+    o_stream_ << "info score mate "
+              << IsMateScore(eval) * (-kMateValue - std::abs(eval))
+              << std::endl;
   }
 
   void operator()(const NodesInfo& nodes_info) const override {
@@ -40,8 +48,7 @@ class UciDebugPrinter final : public InfoPrinter {
 
   void operator()(
       const PrincipalVariationInfo& principal_variation) const override {
-    o_stream_ << "info depth " << principal_variation.best_moves.size()
-              << " pv";
+    o_stream_ << "info depth " << principal_variation.current_depth << " pv";
     for (const auto move : principal_variation.best_moves) {
       o_stream_ << " ";
       std::visit(
