@@ -4,7 +4,7 @@
 
 namespace SimpleChessEngine
 {
-[[nodiscard]] bool MoveGenerator::IsMoveValid(Position& position,
+[[nodiscard]] bool MoveGenerator::IsMoveLegal(Position& position,
                                               const Move& move)
 {
   const auto us = position.GetSideToMove();

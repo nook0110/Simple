@@ -215,6 +215,7 @@ class Searcher {
           return std::nullopt;
         }
         if (*has_cutoff_opt) {
+          SetTTEntry(Bound::kLower);
           return beta;
         }
       }
@@ -268,7 +269,8 @@ class Searcher {
 
     void SetTTEntry(const Bound bound) {
       searcher_.best_moves_.SetEntry(searcher_.current_position_, best_move,
-                                     best_eval, remaining_depth, bound,
+          best_eval + IsMateScore(best_eval) * (max_depth - remaining_depth),
+          remaining_depth, bound,
                                      max_depth);
     }
 

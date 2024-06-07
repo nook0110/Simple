@@ -38,7 +38,7 @@ class MoveGenerator
   [[nodiscard]] Moves GenerateMoves(Position& position) const;
 
  private:
-  [[nodiscard]] static bool IsMoveValid(Position& position, const Move& move);
+  [[nodiscard]] static bool IsMoveLegal(Position& position, const Move& move);
 
   /**
    * \brief Generates all possible moves for a given square.
@@ -122,7 +122,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const
   GenerateMovesForPiece<Piece::kPawn>(moves_, position, pawn_target);
 
   std::erase_if(moves_, [&position](const Move& move)
-                { return !IsMoveValid(position, move); });
+                { return !IsMoveLegal(position, move); });
 
   // generate moves for piece
   GenerateMovesForPiece<Piece::kKing>(moves_, position, king_target);

@@ -40,6 +40,7 @@ void Position::DoMove(const DefaultMove& move)
   const auto them = Flip(us);
 
   const auto piece_to_move = board_[from];
+  assert(!!piece_to_move);
 
   if (!!captured_piece) RemovePiece(to, them);
   MovePiece(from, to, us);
@@ -60,13 +61,13 @@ void Position::DoMove(const DefaultMove& move)
     if (from == our_rook)
     {
       irreversible_data_.castling_rights[static_cast<size_t>(us)] &=
-          ~static_cast<char>(
+          ~static_cast<int8_t>(
               kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
     }
     if (to == their_rook)
     {
       irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
-          ~static_cast<char>(
+          ~static_cast<int8_t>(
               kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
     }
   }
