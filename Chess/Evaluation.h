@@ -5,34 +5,27 @@
 
 #include "Utility.h"
 
-namespace SimpleChessEngine
-{
+namespace SimpleChessEngine {
 using Eval = int;
+using SearchResult = std::optional<Eval>;
 
-enum class GamePhase : uint8_t
-{
-  kMiddleGame,
-  kEndGame
-};
+enum class GamePhase : uint8_t { kMiddleGame, kEndGame };
 
 constexpr size_t kGamePhases = 2;
 
 using PhaseValue = int;
 
-struct TaperedEval
-{
+struct TaperedEval {
   std::array<Eval, kGamePhases> eval{};
   [[nodiscard]] Eval operator()(PhaseValue pv) const;
   [[nodiscard]] bool operator==(const TaperedEval& other) const = default;
 
-  [[maybe_unused]] TaperedEval& operator+=(const TaperedEval& other)
-  {
+  [[maybe_unused]] TaperedEval& operator+=(const TaperedEval& other) {
     eval[0] += other.eval[0];
     eval[1] += other.eval[1];
     return *this;
   }
-  [[maybe_unused]] TaperedEval& operator-=(const TaperedEval& other)
-  {
+  [[maybe_unused]] TaperedEval& operator-=(const TaperedEval& other) {
     eval[0] -= other.eval[0];
     eval[1] -= other.eval[1];
     return *this;
@@ -40,7 +33,7 @@ struct TaperedEval
 };
 
 constexpr std::array<TaperedEval, kPieceTypes> kPieceValues = {{{0, 0},
-                                                                {82,  94},
+                                                                {82, 94},
                                                                 {337, 281},
                                                                 {365, 297},
                                                                 {477, 512},

@@ -27,8 +27,6 @@ namespace SimpleChessEngine {
  */
 class Searcher {
  public:
-  using SearchResult = std::optional<Eval>;
-
   struct DebugInfo {
     std::size_t searched_nodes{};
     std::size_t quiescence_nodes{};
@@ -48,9 +46,7 @@ class Searcher {
    * \param position The initial position.
    */
   explicit Searcher(const Position position = PositionFactory{}())
-      : current_position_(position),
-        move_generator_(MoveGenerator()),
-        quiescence_searcher_() {}
+      : current_position_(position), move_generator_(MoveGenerator()) {}
 
   /**
    * \brief Sets the current position.
@@ -83,7 +79,6 @@ class Searcher {
    *
    * \return Evaluation of subtree.
    */
-  using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
   template <bool is_principal_variation>
   [[nodiscard]] SearchResult Search(const TimePoint &end_time, size_t max_depth,
                                     size_t remaining_depth, Eval alpha,
@@ -239,9 +234,9 @@ class Searcher {
     const size_t side_to_move_idx;
 
    private:
-    Eval QuiescenceSearch() {
+    SearchResult QuiescenceSearch() {
       auto &current_position = searcher_.current_position_;
-      auto &quiescence_searcher = searcher_.quiescence_searcher_;
+      auto quiescence_searcher = Quiescence{end_time};
 
       const auto eval =
           quiescence_searcher.Search<true>(current_position, alpha, beta);
@@ -406,7 +401,6 @@ class Searcher {
   Position current_position_;  //!< Current position.
 
   MoveGenerator move_generator_;  //!< Move generator.
-  Quiescence quiescence_searcher_;
 
 #ifdef _DEBUG
   constexpr static size_t kTTsize = 1 << 10;
@@ -449,10 +443,9 @@ void Searcher::InitStartOfSearch() {
 }
 
 template <bool is_principal_variation>
-Searcher::SearchResult Searcher::Search(const TimePoint &end_time,
-                                        const size_t max_depth,
-                                        const size_t remaining_depth,
-                                        Eval alpha, const Eval beta) {
+SearchResult Searcher::Search(const TimePoint &end_time, const size_t max_depth,
+                              const size_t remaining_depth, Eval alpha,
+                              const Eval beta) {
   debug_info_ = DebugInfo{};
 
   return SearchImplementation<is_principal_variation>{

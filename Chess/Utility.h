@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -12,6 +13,8 @@
 #include "Player.h"
 
 namespace SimpleChessEngine {
+using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
 constexpr size_t kBoardArea = 64;
 constexpr Bitboard kEmptyBoard = Bitboard{};
 constexpr int8_t kLineSize = 8;
