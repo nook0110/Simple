@@ -182,6 +182,7 @@ class Searcher {
           return std::nullopt;
         }
         if (*has_cutoff_opt) {
+          SetTTEntry(Bound::kLower);
           return beta;
         }
         has_stored_move = true;
@@ -266,7 +267,7 @@ class Searcher {
       searcher_.best_moves_.SetEntry(
           searcher_.current_position_, best_move,
           best_eval + IsMateScore(best_eval) * (max_depth - remaining_depth),
-          remaining_depth, bound, max_depth);
+          remaining_depth, bound, searcher_.age_);
     }
 
     template <bool is_pv_move>
@@ -396,6 +397,8 @@ class Searcher {
   OrderMoves(const MoveGenerator::Moves::iterator first,
              const MoveGenerator::Moves::iterator last, const size_t ply,
              const Player color) const;
+  Age age_;
+
   Move best_move_;
 
   Position current_position_;  //!< Current position.
@@ -447,6 +450,8 @@ SearchResult Searcher::Search(const TimePoint &end_time, const size_t max_depth,
                               const size_t remaining_depth, Eval alpha,
                               const Eval beta) {
   debug_info_ = DebugInfo{};
+
+  ++age_;
 
   return SearchImplementation<is_principal_variation>{
       *this, max_depth, remaining_depth, alpha, beta, end_time}();

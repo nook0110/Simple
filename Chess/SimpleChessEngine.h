@@ -136,7 +136,7 @@ inline void ChessEngine::ComputeBestMove(
        time_for_move >
        (std::chrono::high_resolution_clock::now() -
         start_time)  // check if we have time for another iteration
-
+       && current_depth < kMaxSearchPly
        ;) {
     PrintInfo(DepthInfo{current_depth});
 
