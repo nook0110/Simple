@@ -386,7 +386,8 @@ class Searcher {
 
     void UpdateQuietMove(const Move &move) {
       const auto [from, to, captured_piece] = GetMoveData(move);
-      searcher_.history_[side_to_move_idx][from][to] += 1ull << remaining_depth;
+      searcher_.history_[side_to_move_idx][from][to] +=
+          remaining_depth * remaining_depth;
       searcher_.killers_.TryAdd(max_depth - remaining_depth, move);
     }
 
