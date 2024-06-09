@@ -123,7 +123,7 @@ class Searcher {
     bool IsTimeToExit() {
       return searcher_.debug_info_.searched_nodes % kEnoughNodesToCheckTime ==
                  0 &&
-             std::chrono::high_resolution_clock::now() > end_time;
+             std::chrono::system_clock::now() > end_time;
     }
 
     SearchResult operator()() {

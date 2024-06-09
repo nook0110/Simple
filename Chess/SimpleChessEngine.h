@@ -114,10 +114,13 @@ inline void ChessEngine::ComputeBestMove(const size_t depth) { assert(false); }
 inline void ChessEngine::ComputeBestMove(
     const std::chrono::milliseconds left_time,
     const std::chrono::milliseconds inc_time = {}) {
-  const auto start_time = std::chrono::high_resolution_clock::now();
+  const TimePoint start_time = std::chrono::system_clock::now();
   constexpr size_t kAverageGameLength = 40;
 
-  const auto time_for_move = left_time / kAverageGameLength + inc_time;
+  std::chrono::milliseconds time_for_move =
+      left_time / kAverageGameLength + inc_time;
+  time_for_move =
+      std::min(left_time - std::chrono::milliseconds{100}, time_for_move);
   auto kTimeRatio = 4.f;
   constexpr auto min_inf = std::numeric_limits<Eval>::min() / 2;
   constexpr auto plus_inf = std::numeric_limits<Eval>::max() / 2;
@@ -134,10 +137,9 @@ inline void ChessEngine::ComputeBestMove(
   size_t last_best_move_change{};
   for (size_t current_depth = 1;
        time_for_move >
-       (std::chrono::high_resolution_clock::now() -
-        start_time)  // check if we have time for another iteration
-       && current_depth < kMaxSearchPly
-       ;) {
+           (std::chrono::system_clock::now() -
+            start_time)  // check if we have time for another iteration
+       && current_depth < kMaxSearchPly;) {
     PrintInfo(DepthInfo{current_depth});
 
     const auto eval_optional =
@@ -190,8 +192,8 @@ inline void ChessEngine::ComputeBestMove(
     PrintInfo(NodesInfo{info.quiescence_nodes});
     PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
         (info.searched_nodes + info.quiescence_nodes) /
-        (std::chrono::duration<double>{
-             std::chrono::high_resolution_clock::now() - start_time})
+        (std::chrono::duration<double>{std::chrono::system_clock::now() -
+                                       start_time})
             .count())});
     PrintInfo(PrincipalVariationHitsInfo{info.pv_hits});
     info = Searcher::DebugInfo{};

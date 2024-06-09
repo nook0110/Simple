@@ -48,7 +48,7 @@ class Quiescence {
 
   bool IsTimeToExit() {
     return searched_nodes_ % kEnoughNodesToCheckTime == 0 &&
-           std::chrono::high_resolution_clock::now() > end_time_;
+           std::chrono::system_clock::now() > end_time_;
   }
 
   static constexpr Eval kSmallDelta =
