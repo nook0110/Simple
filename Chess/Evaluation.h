@@ -54,17 +54,7 @@ constexpr Eval kFullNonPawnMaterial =
             .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
         2;
 
-constexpr std::array kPhaseValueLimits = {
-    kFullNonPawnMaterial -
-        kPieceValues[static_cast<size_t>(Piece::kKnight)]
-                .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
-            2,
-    kPieceValues[static_cast<size_t>(Piece::kRook)]
-                .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
-            2 +
-        kPieceValues[static_cast<size_t>(Piece::kBishop)]
-                .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
-            2};
+constexpr std::array kPhaseValueLimits = {kFullNonPawnMaterial, 0};
 
 constexpr PhaseValue kLimitsDifference =
     kPhaseValueLimits[0] - kPhaseValueLimits[1];
