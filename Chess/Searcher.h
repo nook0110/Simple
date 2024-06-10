@@ -99,14 +99,15 @@ class Searcher {
 
   [[nodiscard]] std::size_t GetPVHits() const { return debug_info_.pv_hits; }
 
-  [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation() const {
-    return GetPrincipalVariation(current_position_);
+  [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
+      std::size_t max_depth) const {
+    return GetPrincipalVariation(max_depth, current_position_);
   }
 
   [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
-      Position position) const {
+      std::size_t max_depth, Position position) const {
     MoveGenerator::Moves answer;
-    while (true) {
+    for (std::size_t i = 0; i < max_depth; ++i) {
       const auto &hashed_node = best_moves_.GetNode(position);
       if (hashed_node.true_hash != position.GetHash()) break;
       position.DoMove(hashed_node.move);
@@ -393,7 +394,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
   }
 
   if constexpr (is_principal_variation) {
-    if (!has_stored_move) std::terminate();
+    assert(has_stored_move);
   }
 
   auto &move_generator = searcher_.move_generator_;
