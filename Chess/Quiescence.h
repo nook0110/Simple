@@ -51,11 +51,6 @@ class Quiescence {
            std::chrono::system_clock::now() > end_time_;
   }
 
-  static constexpr Eval kSmallDelta =
-      2 * kPieceValues[static_cast<size_t>(Piece::kPawn)].eval[1];
-  static constexpr Eval kBigDelta =
-      kPieceValues[static_cast<size_t>(Piece::kQueen)].eval[1];
-
   MoveGenerator move_generator_;  //!< Move generator.
 
   const TimePoint& end_time_;
@@ -74,11 +69,7 @@ SearchResult Quiescence::Search(Position& current_position, Eval alpha,
   const auto stand_pat = current_position.Evaluate();
 
   if (stand_pat >= beta) {
-    return stand_pat;
-  }
-
-  if (stand_pat + kBigDelta < alpha) {
-    return alpha;
+    return beta;
   }
 
   if (alpha < stand_pat) {
@@ -95,15 +86,6 @@ SearchResult Quiescence::Search(Position& current_position, Eval alpha,
       });
 
   for (const auto& move : moves) {
-    if (std::holds_alternative<DefaultMove>(move) &&
-        stand_pat +
-                kPieceValues[static_cast<size_t>(std::get_if<DefaultMove>(&move)
-                                                     ->captured_piece)]
-                    .eval[1] +
-                kSmallDelta <
-            alpha)
-      continue;
-
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree
@@ -120,7 +102,7 @@ SearchResult Quiescence::Search(Position& current_position, Eval alpha,
 
     if (temp_eval > alpha) {
       if (temp_eval >= beta) {
-        return temp_eval;
+        return beta;
       }
 
       alpha = temp_eval;
