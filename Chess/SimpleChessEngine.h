@@ -119,8 +119,7 @@ inline void ChessEngine::ComputeBestMove(
 
   std::chrono::milliseconds time_for_move =
       left_time / kAverageGameLength + inc_time;
-  time_for_move =
-      std::min(left_time - std::chrono::milliseconds{100}, time_for_move);
+  time_for_move = std::min(left_time / 2, time_for_move);
   auto kTimeRatio = 4.f;
   constexpr auto min_inf = std::numeric_limits<Eval>::min() / 2;
   constexpr auto plus_inf = std::numeric_limits<Eval>::max() / 2;
