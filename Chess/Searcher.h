@@ -27,6 +27,13 @@ namespace SimpleChessEngine {
  */
 class Searcher {
  public:
+#ifdef _DEBUG
+  constexpr static size_t kTTsize = 1 << 10;
+#else
+  constexpr static size_t kTTsize = 1 << 26;
+#endif
+  using TranspositionTable = TranspositionTable<kTTsize>;
+
   struct DebugInfo {
     std::size_t searched_nodes{};
     std::size_t quiescence_nodes{};
@@ -91,6 +98,22 @@ class Searcher {
   }
 
   [[nodiscard]] std::size_t GetPVHits() const { return debug_info_.pv_hits; }
+
+  [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation() const {
+    return GetPrincipalVariation(current_position_);
+  }
+
+  [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
+      Position position) const {
+    MoveGenerator::Moves answer;
+    while (true) {
+      const auto &hashed_node = best_moves_.GetNode(position);
+      if (hashed_node.true_hash != position.GetHash()) break;
+      position.DoMove(hashed_node.move);
+      answer.push_back(hashed_node.move);
+    }
+    return answer;
+  }
 
   void InitStartOfSearch();
 
@@ -168,12 +191,7 @@ class Searcher {
 
   MoveGenerator move_generator_;  //!< Move generator.
 
-#ifdef _DEBUG
-  constexpr static size_t kTTsize = 1 << 10;
-#else
-  constexpr static size_t kTTsize = 1 << 26;
-#endif
-  TranspositionTable<kTTsize>
+  TranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
 
   std::array<std::array<std::array<uint64_t, kBoardArea + 1>, kBoardArea + 1>,

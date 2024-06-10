@@ -27,7 +27,7 @@ struct NodePerSecondInfo {
 
 struct PrincipalVariationInfo {
   size_t current_depth = 0;
-  std::vector<Move> best_moves;
+  MoveGenerator::Moves moves;
 };
 
 struct BestMoveInfo {
@@ -167,7 +167,7 @@ inline void ChessEngine::ComputeBestMove(
     }
 
     previous_best_move = GetCurrentBestMove();
-    PrincipalVariationInfo pv{current_depth, {previous_best_move}};
+    PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation()};
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
 
