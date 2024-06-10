@@ -366,7 +366,7 @@ class Position {
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
 
   Hash hash_{};
-  Hasher hasher_{std::mt19937_64(80085)};
+  Hasher hasher_{std::mt19937_64(0xb00b1e5)};
 };
 
 inline Bitboard Position::GetAllPieces() const {

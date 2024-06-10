@@ -35,7 +35,8 @@ class TranspositionTable {
                 const Depth depth, const Bound bound, const Age age) {
     Node inserting_node = {position.GetHash(), move, score, depth, bound, age};
     auto& entry_node = GetNode(position);
-    if (!(entry_node.bound == Bound::kExact && entry_node.age == age)) {
+    if (bound == Bound::kExact ||
+        !(entry_node.bound == Bound::kExact && entry_node.age == age)) {
       entry_node = inserting_node;
     }
   }

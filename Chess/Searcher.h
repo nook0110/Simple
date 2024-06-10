@@ -363,7 +363,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
         return entry_score;
       }
     }
-    auto has_cutoff_opt = CheckMove<false>(hash_move);
+    auto has_cutoff_opt = CheckMove<is_principal_variation>(hash_move);
     if (!has_cutoff_opt) {
       return std::nullopt;
     }
@@ -375,7 +375,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
   }
 
   if constexpr (is_principal_variation) {
-    assert(has_stored_move);
+    if (!has_stored_move) std::terminate();
   }
 
   auto &move_generator = searcher_.move_generator_;
