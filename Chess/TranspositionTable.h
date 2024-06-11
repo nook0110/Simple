@@ -21,9 +21,9 @@ class TranspositionTable {
     Hash true_hash{};
     Move move;
     Eval score;
-    uint8_t depth : 6;
+    Depth depth : 6;
     Bound bound : 2;
-    int8_t age;
+    Age age;
   };
 #pragma pack(pop)
 
@@ -32,10 +32,11 @@ class TranspositionTable {
   }
 
   void SetEntry(const Position& position, const Move& move, const Eval score,
-                const size_t depth, const Bound bound, const int8_t age) {
+                const Depth depth, const Bound bound, const Age age) {
     Node inserting_node = {position.GetHash(), move, score, depth, bound, age};
     auto& entry_node = GetNode(position);
-    if (!(entry_node.bound == Bound::kExact && entry_node.age == age)) {
+    if (bound == Bound::kExact ||
+        !(entry_node.bound == Bound::kExact && entry_node.age == age)) {
       entry_node = inserting_node;
     }
   }

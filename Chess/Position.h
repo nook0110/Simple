@@ -14,19 +14,16 @@
 #include "Player.h"
 #include "Utility.h"
 
-namespace SimpleChessEngine
-{
+namespace SimpleChessEngine {
 /**
  * \brief Class that represents a chess position.
  *
  * \author nook0110
  * \author alfoos
  */
-class Position
-{
+class Position {
  public:
-  struct EvaluationData
-  {
+  struct EvaluationData {
     bool operator==(const EvaluationData&) const = default;
 
     Eval non_pawn_material{};
@@ -36,8 +33,7 @@ class Position
 
   [[nodiscard]] Eval Evaluate() const;
 
-  struct IrreversibleData
-  {
+  struct IrreversibleData {
     std::optional<BitIndex> en_croissant_square{};
 
     std::array<std::bitset<2>, kColors> castling_rights{};
@@ -45,8 +41,7 @@ class Position
     std::array<Bitboard, kColors> pinners{};
     std::array<Bitboard, kColors> blockers{};
 
-    bool operator==(const IrreversibleData& other) const
-    {
+    bool operator==(const IrreversibleData& other) const {
       return std::tie(en_croissant_square, castling_rights) ==
              std::tie(other.en_croissant_square, other.castling_rights);
     }
@@ -60,8 +55,9 @@ class Position
    * \param color Color of the piece.
    *
    */
-  void PlacePiece(const BitIndex square, const Piece piece, const Player color)
-  {
+  void PlacePiece(const BitIndex square, const Piece piece,
+                  const Player color) {
+    assert(IsOk(square));
     assert(!board_[square]);
     assert(piece);
     const auto piece_idx = static_cast<size_t>(piece);
@@ -83,9 +79,10 @@ class Position
    * \param color Color of the piece.
    *
    */
-  void RemovePiece(const BitIndex square, const Player color)
-  {
+  void RemovePiece(const BitIndex square, const Player color) {
+    assert(IsOk(square));
     const auto piece = board_[square];
+    assert(!!piece);
     const auto piece_idx = static_cast<size_t>(piece);
     const auto color_idx = static_cast<size_t>(color);
     pieces_by_type_[piece_idx].Reset(square);
@@ -98,9 +95,12 @@ class Position
     hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][square];
   }
 
-  void MovePiece(const BitIndex from, const BitIndex to, const Player color)
-  {
+  void MovePiece(const BitIndex from, const BitIndex to, const Player color) {
+    assert(IsOk(from));
+    assert(IsOk(to));
     const auto piece = board_[from];
+    assert(!!piece);
+    assert(!board_[to]);
     const auto piece_idx = static_cast<size_t>(piece);
     const auto color_idx = static_cast<size_t>(color);
     pieces_by_type_[piece_idx].Reset(from);
@@ -194,8 +194,8 @@ class Position
    */
   void UndoMove(const Castling& move);
 
-  [[nodiscard]] bool CanCastle(const Castling::CastlingSide castling_side) const
-  {
+  [[nodiscard]] bool CanCastle(
+      const Castling::CastlingSide castling_side) const {
     const auto us = side_to_move_;
     const auto us_idx = static_cast<size_t>(us);
     const auto cs_idx = static_cast<size_t>(castling_side);
@@ -215,8 +215,7 @@ class Position
             .Any())
       return false;
 
-    while (king_path.Any())
-    {
+    while (king_path.Any()) {
       if (const auto square = king_path.PopFirstBit();
           IsUnderAttack(square, us))
         return false;
@@ -225,26 +224,22 @@ class Position
     return true;
   }
 
-  void SetCastlingRights(const std::array<std::bitset<2>, 2>& castling_rights)
-  {
+  void SetCastlingRights(const std::array<std::bitset<2>, 2>& castling_rights) {
     irreversible_data_.castling_rights = castling_rights;
   }
 
-  void SetKingPositions(const std::array<BitIndex, 2>& king_position)
-  {
+  void SetKingPositions(const std::array<BitIndex, 2>& king_position) {
     king_position_ = king_position;
   }
 
   void SetRookPositions(
-      const std::array<std::array<BitIndex, 2>, kColors>& rook_positions)
-  {
+      const std::array<std::array<BitIndex, 2>, kColors>& rook_positions) {
     rook_positions_ = rook_positions;
   }
 
   void SetCastlingSquares(
       const std::array<std::array<Bitboard, 2>, kColors>& cs_king,
-      const std::array<std::array<Bitboard, 2>, kColors>& cs_rook)
-  {
+      const std::array<std::array<Bitboard, 2>, kColors>& cs_rook) {
     castling_squares_for_king_ = cs_king;
     castling_squares_for_rook_ = cs_rook;
   }
@@ -343,8 +338,7 @@ class Position
    *
    * \return True if positions are the same, false otherwise.
    */
-  bool operator==(const Position& other) const
-  {
+  bool operator==(const Position& other) const {
     return std::tie(hash_, side_to_move_, pieces_by_type_, pieces_by_color_,
                     irreversible_data_) ==
            std::tie(other.hash_, other.side_to_move_, other.pieces_by_type_,
@@ -372,38 +366,32 @@ class Position
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
 
   Hash hash_{};
-  Hasher hasher_{std::mt19937_64(80085)};
+  Hasher hasher_{std::mt19937_64(0xb00b1e5)};
 };
 
-inline Bitboard Position::GetAllPieces() const
-{
+inline Bitboard Position::GetAllPieces() const {
   return pieces_by_color_[static_cast<size_t>(Player::kWhite)] |
          pieces_by_color_[static_cast<size_t>(Player::kBlack)];
 }
 
-inline const Bitboard& Position::GetPieces(const Player player) const
-{
+inline const Bitboard& Position::GetPieces(const Player player) const {
   return pieces_by_color_[static_cast<size_t>(player)];
 }
 
 template <Piece piece>
-Bitboard Position::GetPiecesByType(const Player player) const
-{
+Bitboard Position::GetPiecesByType(const Player player) const {
   return pieces_by_color_[static_cast<size_t>(player)] &
          pieces_by_type_[static_cast<size_t>(piece)];
 }
 
 template <Piece piece>
-Bitboard Position::GetCastlingSquares(Castling::CastlingSide side) const
-{
+Bitboard Position::GetCastlingSquares(Castling::CastlingSide side) const {
   static_assert(piece == Piece::kRook || piece == Piece::kKing);
-  if constexpr (piece == Piece::kKing)
-  {
+  if constexpr (piece == Piece::kKing) {
     return castling_squares_for_king_[static_cast<size_t>(side_to_move_)]
                                      [static_cast<size_t>(side)];
   }
-  if constexpr (piece == Piece::kRook)
-  {
+  if constexpr (piece == Piece::kRook) {
     return castling_squares_for_rook_[static_cast<size_t>(side_to_move_)]
                                      [static_cast<size_t>(side)];
   }
@@ -411,63 +399,56 @@ Bitboard Position::GetCastlingSquares(Castling::CastlingSide side) const
   return {};
 }
 
-inline Bitboard Position::GetAllPawnAttacks(const Player player) const
-{
+inline Bitboard Position::GetAllPawnAttacks(const Player player) const {
   const auto us = static_cast<size_t>(player);
   const auto pawns = GetPiecesByType<Piece::kPawn>(player);
   return Shift(pawns, kPawnAttackDirections[us][0]) |
          Shift(pawns, kPawnAttackDirections[us][1]);
 }
 
-inline Piece Position::GetPiece(const BitIndex index) const
-{
+inline Piece Position::GetPiece(const BitIndex index) const {
+  assert(IsOk(index));
   return board_[index];
 }
 
-inline BitIndex Position::GetKingSquare(const Player player) const
-{
+inline BitIndex Position::GetKingSquare(const Player player) const {
   return king_position_[static_cast<size_t>(player)];
 }
 
 inline BitIndex Position::GetCastlingRookSquare(
-    Player player, Castling::CastlingSide side) const
-{
+    Player player, Castling::CastlingSide side) const {
   return rook_positions_[static_cast<size_t>(player)]
                         [static_cast<size_t>(side)];
 }
 
 inline bool Position::IsUnderAttack(const BitIndex square, const Player us,
-                                    const Bitboard transparent) const
-{
+                                    const Bitboard transparent) const {
+  assert(IsOk(square));
   return (Attackers(square, transparent) &
           pieces_by_color_[static_cast<size_t>(Flip(us))])
       .Any();
 }
 
-inline bool Position::IsUnderCheck() const
-{
+inline bool Position::IsUnderCheck() const {
   return IsUnderCheck(side_to_move_);
 }
 
-inline bool Position::IsUnderCheck(const Player player) const
-{
+inline bool Position::IsUnderCheck(const Player player) const {
   return IsUnderAttack(GetKingSquare(player), player);
 }
 
-inline const std::optional<BitIndex>& Position::GetEnCroissantSquare() const
-{
+inline const std::optional<BitIndex>& Position::GetEnCroissantSquare() const {
   return irreversible_data_.en_croissant_square;
 }
 
 inline const std::array<std::bitset<2>, kColors>& Position::GetCastlingRights()
-    const
-{
+    const {
   return irreversible_data_.castling_rights;
 }
 
 inline Bitboard Position::Attackers(const BitIndex square,
-                                    const Bitboard transparent) const
-{
+                                    const Bitboard transparent) const {
+  assert(IsOk(square));
   const Bitboard occupancy = GetAllPieces() & ~transparent;
   return GetPawnAttacks(square, Player::kWhite) &
              GetPiecesByType<Piece::kPawn>(Player::kBlack) |
@@ -485,8 +466,7 @@ inline Bitboard Position::Attackers(const BitIndex square,
              pieces_by_type_[static_cast<size_t>(Piece::kKing)];
 }
 
-inline void Position::ComputePins(const Player us)
-{
+inline void Position::ComputePins(const Player us) {
   const Player them = Flip(us);
 
   const auto us_idx = static_cast<size_t>(us);
@@ -520,8 +500,7 @@ inline void Position::ComputePins(const Player us)
   irreversible_data_.pinners[us_idx] = diagonal_pinners | horizontal_pinners;
 
   Bitboard& blockers = irreversible_data_.blockers[us_idx];
-  while (diagonal_pinners.Any())
-  {
+  while (diagonal_pinners.Any()) {
     const BitIndex square = diagonal_pinners.PopFirstBit();
 
     const auto blockers_between =
@@ -529,8 +508,7 @@ inline void Position::ComputePins(const Player us)
     assert(blockers_between.Any() && !blockers_between.MoreThanOne());
     blockers |= blockers_between;
   }
-  while (horizontal_pinners.Any())
-  {
+  while (horizontal_pinners.Any()) {
     const BitIndex square = horizontal_pinners.PopFirstBit();
 
     const auto blockers_between =
@@ -540,8 +518,7 @@ inline void Position::ComputePins(const Player us)
   }
 }
 
-inline Position::IrreversibleData Position::GetIrreversibleData() const
-{
+inline Position::IrreversibleData Position::GetIrreversibleData() const {
   return irreversible_data_;
 }
 }  // namespace SimpleChessEngine
