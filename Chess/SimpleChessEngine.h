@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 #include <chrono>
+#include <expected>
 #include <variant>
 
 #include "Evaluation.h"
@@ -34,8 +35,8 @@ struct BestMoveInfo {
   const Move& move;
 };
 
-struct PrincipalVariationHitsInfo {
-  std::size_t pv_hits{};
+struct TranspositionTableInfo {
+  std::size_t tt_hits{};
 };
 
 struct EBFInfo {
@@ -44,20 +45,18 @@ struct EBFInfo {
   float avg_ebf;
 };
 
-class InfoPrinter {
- public:
-  virtual ~InfoPrinter() = default;
-  virtual void operator()(const DepthInfo& depth_info) const {}
-  virtual void operator()(const ScoreInfo& score_info) const {}
-  virtual void operator()(const NodesInfo& nodes_info) const {}
-  virtual void operator()(const NodePerSecondInfo& nps_info) const {}
-  virtual void operator()(
-      const PrincipalVariationInfo& principal_variation) const {}
-  virtual void operator()(
-      const PrincipalVariationHitsInfo& pv_hits_info) const {}
-  virtual void operator()(const BestMoveInfo& best_move) const {}
-  virtual void operator()(const EBFInfo& ebf) const {}
-};
+std::ostream& operator<<(std::ostream& out, const DepthInfo& depth_info);
+std::ostream& operator<<(std::ostream& out, const ScoreInfo& score_info);
+
+std::ostream& operator<<(std::ostream& out, const NodesInfo& nodes_info);
+
+std::ostream& operator<<(std::ostream& out, const NodePerSecondInfo& nps_info);
+std::ostream& operator<<(std::ostream& out,
+                         const PrincipalVariationInfo& principal_variation);
+std::ostream& operator<<(std::ostream& out,
+                         const TranspositionTableInfo& tt_info);
+std::ostream& operator<<(std::ostream& out, const BestMoveInfo& bm_info);
+std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info);
 
 /**
  * \brief Class that represents a chess engine.
@@ -66,20 +65,9 @@ class InfoPrinter {
  */
 class ChessEngine {
  public:
-  struct SearchTimeInfo {
-    std::array<size_t, 2> player_time;
-
-    std::array<size_t, 2> player_inc;
-  };
-
-  explicit ChessEngine(
-      const Position position = PositionFactory{}(),
-      std::unique_ptr<InfoPrinter> printer = std::make_unique<InfoPrinter>())
-      : printer_(std::move(printer)), searcher_(position) {}
-
-  void SetInfoPrinter(std::unique_ptr<InfoPrinter> printer) {
-    printer_ = std::move(printer);
-  }
+  explicit ChessEngine(const Position position = PositionFactory{}(),
+                       std::ostream& o_stream = std::cout)
+      : searcher_(position), o_stream_(o_stream) {}
 
   void SetPosition(const Position position) { searcher_.SetPosition(position); }
 
@@ -90,19 +78,18 @@ class ChessEngine {
 
   [[nodiscard]] const Move& GetCurrentBestMove() const;
 
-  void PrintBestMove() const {
-    printer_->operator()(BestMoveInfo{GetCurrentBestMove()});
-  }
+  void PrintBestMove() { o_stream_ << BestMoveInfo{GetCurrentBestMove()}; }
 
-  void PrintBestMove(const Move& move) const {
-    printer_->operator()(BestMoveInfo{move});
-  }
+  void PrintBestMove(const Move& move) { o_stream_ << BestMoveInfo{move}; }
 
  private:
   template <class Info>
   void PrintInfo(const Info& info);
 
-  std::unique_ptr<InfoPrinter> printer_;
+  std::optional<Eval> MakeIteration(std::size_t depth,
+                                    const Searcher::TimePoint& end);
+
+  std::ostream& o_stream_;
 
   Searcher searcher_;
 };
@@ -121,8 +108,6 @@ inline void ChessEngine::ComputeBestMove(
       left_time / kAverageGameLength + inc_time;
   time_for_move = std::min(left_time / 2, time_for_move);
   auto kTimeRatio = 4.f;
-  constexpr auto min_inf = std::numeric_limits<Eval>::min() / 2;
-  constexpr auto plus_inf = std::numeric_limits<Eval>::max() / 2;
 
   Searcher::DebugInfo info{};
 
@@ -136,25 +121,21 @@ inline void ChessEngine::ComputeBestMove(
   size_t last_best_move_change{};
   for (size_t current_depth = 1;
        time_for_move >
-           (std::chrono::system_clock::now() -
-            start_time)  // check if we have time for another iteration
-       && current_depth < kMaxSearchPly;) {
+       (std::chrono::high_resolution_clock::now() - start_time) *
+           std::clamp(kTimeRatio / 2, 1.0f,
+                      4.f)  // check if we have time for another iteration
+
+       ;) {
     PrintInfo(DepthInfo{current_depth});
-
     const auto eval_optional =
-        searcher_.Search<true>(time_for_move + start_time, current_depth,
-                               current_depth, min_inf, plus_inf);
-
+        MakeIteration(current_depth, time_for_move + start_time);
     if (!eval_optional) {
       PrintBestMove(previous_best_move);
       return;
     }
-
-    const auto& eval = *eval_optional;
-
     info += searcher_.GetInfo();
 
-    PrintInfo(ScoreInfo{eval});
+    PrintInfo(ScoreInfo{*eval_optional});
 
     // check if best move changed
     if (previous_best_move == searcher_.GetCurrentBestMove()) {
@@ -198,9 +179,6 @@ inline void ChessEngine::ComputeBestMove(
             .count())});
     PrintInfo(PrincipalVariationHitsInfo{info.pv_hits});
     info = Searcher::DebugInfo{};
-
-    // increase the depth
-    current_depth++;
   }
 
   PrintBestMove(previous_best_move);
@@ -210,8 +188,63 @@ inline const Move& ChessEngine::GetCurrentBestMove() const {
   return searcher_.GetCurrentBestMove();
 }
 
+inline std::optional<Eval> ChessEngine::MakeIteration(
+    const std::size_t current_depth, const Searcher::TimePoint& end) {
+  constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
+  constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
+
+  return searcher_.Search<true>(end, current_depth, current_depth, neg_inf,
+                                pos_inf);
+}
+
 template <class Info>
 void ChessEngine::PrintInfo(const Info& info) {
-  (*printer_)(info);
+  o_stream_ << info;
+}
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const DepthInfo& depth_info) {
+  return out << "info depth " << depth_info.current_depth << std::endl;
+}
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const ScoreInfo& score_info) {
+  return out << "info score cp " << score_info.current_eval << std::endl;
+}
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const NodesInfo& nodes_info) {
+  return out << "info nodes " << nodes_info.nodes << std::endl;
+}
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const NodePerSecondInfo& nps_info) {
+  return out << "info nps " << nps_info.nodes_per_second << std::endl;
+}
+
+inline std::ostream& operator<<(
+    std::ostream& out, const PrincipalVariationInfo& principal_variation) {
+  out << "info depth " << principal_variation.best_moves.size() << " pv";
+  for (const auto move : principal_variation.best_moves) {
+    out << " " << move;
+  }
+  return out << std::endl;
+}
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const TranspositionTableInfo& tt_info) {
+  return out << "info tt_hits " << tt_info.tt_hits << std::endl;
+}
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const BestMoveInfo& bm_info) {
+  return out << "info score cp " << bm_info.move << std::endl;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info) {
+  out << "info last ebf " << ebf_info.last_ebf << std::endl;
+  out << "info avg odd-even-ebf " << ebf_info.avg_odd_even_ebf << std::endl;
+  out << "info avg ebf " << ebf_info.avg_ebf << std::endl;
+  return out;
 }
 }  // namespace SimpleChessEngine

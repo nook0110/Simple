@@ -216,7 +216,7 @@ inline const Position &Searcher::GetPosition() const {
 
 inline const Move &Searcher::GetCurrentBestMove() const { return best_move_; }
 
-void Searcher::InitStartOfSearch() {
+inline void Searcher::InitStartOfSearch() {
   killers_.Clear();
   for (unsigned color = 0; color < kColors; ++color) {
     for (BitIndex from = 0; from <= kBoardArea; ++from) {
@@ -239,7 +239,7 @@ SearchResult Searcher::Search(const TimePoint &end_time, const size_t max_depth,
       *this, max_depth, remaining_depth, alpha, beta, end_time}();
 }
 
-std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
+inline std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
 Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
                      const MoveGenerator::Moves::iterator last,
                      const size_t ply, const Player color) const {

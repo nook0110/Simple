@@ -1,4 +1,5 @@
 #pragma once
+
 #include <future>
 #include <iostream>
 #include <sstream>
@@ -13,105 +14,35 @@
 #include "StreamUtility.h"
 
 namespace SimpleChessEngine {
-struct Info {
-  Position position;
-  ChessEngine::SearchTimeInfo info;
+struct TournamentTime {
+  std::array<std::chrono::milliseconds, 2> player_time;
+
+  std::array<std::chrono::milliseconds, 2> player_inc;
 };
 
-class UciDebugPrinter final : public InfoPrinter {
- public:
-  explicit UciDebugPrinter(std::ostream& o_stream) : o_stream_(o_stream) {}
+struct TimePerMove {
+  std::chrono::milliseconds movetime;
+};
 
-  void operator()(const DepthInfo& depth_info) const override {
-    o_stream_ << "info depth " << depth_info.current_depth << std::endl;
-  }
+using TimeControl = std::variant<TournamentTime, TimePerMove>;
 
-  void operator()(const ScoreInfo& score_info) const override {
-    const auto& eval = score_info.current_eval;
-    if (!IsMateScore(eval)) {
-      o_stream_ << "info score cp " << eval << std::endl;
-      return;
-    }
-
-    o_stream_ << "info score mate "
-              << IsMateScore(eval) * (-kMateValue - std::abs(eval) + 1) / 2
-              << std::endl;
-  }
-
-  void operator()(const NodesInfo& nodes_info) const override {
-    o_stream_ << "info nodes " << nodes_info.nodes << std::endl;
-  }
-
-  void operator()(const NodePerSecondInfo& nps_info) const override {
-    o_stream_ << "info nps " << nps_info.nodes_per_second << std::endl;
-  }
-
-  void operator()(
-      const PrincipalVariationInfo& principal_variation) const override {
-    o_stream_ << "info depth " << principal_variation.current_depth << " pv ";
-    for (const auto& move : principal_variation.moves) {
-      o_stream_ << move << " ";
-    }
-    o_stream_ << std::endl;
-  }
-
-  void operator()(
-      const PrincipalVariationHitsInfo& pv_hits_info) const override {
-    o_stream_ << "info hits " << pv_hits_info.pv_hits << std::endl;
-  }
-
-  void operator()(const BestMoveInfo& best_move) const override {
-    o_stream_ << "bestmove ";
-    std::visit([this](const auto& move) { o_stream_ << move; }, best_move.move);
-    o_stream_ << std::endl;
-  }
-
-  void operator()(const EBFInfo& ebf) const override {
-    o_stream_ << "info last ebf " << ebf.last_ebf << std::endl;
-    o_stream_ << "info avg odd-even-ebf " << ebf.avg_odd_even_ebf << std::endl;
-    o_stream_ << "info avg ebf " << ebf.avg_ebf << std::endl;
-  }
-
- private:
-  std::ostream& o_stream_;
+struct Info {
+  Position position;
+  TimeControl time_control;
 };
 
 class SearchThread {
  public:
-  explicit SearchThread(const Position position, std::ostream& o_stream)
-      : engine_(position, std::make_unique<UciDebugPrinter>(o_stream)) {}
+  explicit SearchThread(Position position, std::ostream& o_stream);
+  explicit SearchThread(std::ostream& o_stream);
 
-  explicit SearchThread(std::ostream& o_stream)
-      : engine_(PositionFactory{}(),
-                std::make_unique<UciDebugPrinter>(o_stream)) {}
-
-  void Start(const Info& info) {
-    StopThread();
-    engine_.SetPosition(info.position);
-
-    thread_ = std::thread([this, &info] {
-      engine_.ComputeBestMove(
-          std::chrono::milliseconds(info.info.player_time[static_cast<size_t>(
-              info.position.GetSideToMove())]),
-          std::chrono::milliseconds(info.info.player_inc[static_cast<size_t>(
-              info.position.GetSideToMove())]));
-    });
-  }
-
-  void Stop() {
-    engine_.PrintBestMove();
-    StopThread();
-  }
+  void Start(const Info& info);
+  void Stop();
 
  private:
-  void StopThread() {
-    if (thread_ && thread_.value().joinable()) {
-      thread_.value().join();
-    }
-  }
+  void StopThread();
 
   ChessEngine engine_;
-
   std::optional<std::thread> thread_;
 };
 
@@ -275,8 +206,7 @@ inline void UciChessEngine::ParsePerft(std::stringstream command) {
                         std::chrono::high_resolution_clock::now() - start_time)
                         .count();
   o_stream_ << "Time: " << time << " seconds" << std::endl;
-  UciDebugPrinter{o_stream_}(
-      NodePerSecondInfo{static_cast<size_t>(nodes / time)});
+  o_stream_ << NodePerSecondInfo{static_cast<size_t>(nodes / time)};
 }
 
 inline void UciChessEngine::ParseEvaluate() const {
@@ -310,43 +240,36 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
 inline void UciChessEngine::ParseMoveTime(std::stringstream command) {
   std::string token;
   command >> token;
-  const auto time = std::stoi(token);
-
-  info_.info.player_time[static_cast<size_t>(info_.position.GetSideToMove())] =
-      time;
+  info_.time_control =
+      TimePerMove{std::chrono::milliseconds{std::stoull(token)}};
 }
 
 inline void UciChessEngine::ParsePlayersTime(std::stringstream command) {
-  auto cur_player = Player::kWhite;
-
   std::string token;
 
-  std::array<size_t, 2>* cur_change = &info_.info.player_time;
+  TournamentTime tournament_time;
+
   while (command >> token) {
+    const auto time = std::stoull(token);
     if (token == "wtime") {
-      cur_change = &info_.info.player_time;
-      cur_player = Player::kWhite;
-      continue;
+      tournament_time.player_time[static_cast<size_t>(Player::kWhite)] =
+          std::chrono::milliseconds{time};
     }
     if (token == "btime") {
-      cur_change = &info_.info.player_time;
-      cur_player = Player::kBlack;
-      continue;
+      tournament_time.player_time[static_cast<size_t>(Player::kBlack)] =
+          std::chrono::milliseconds{time};
     }
     if (token == "winc") {
-      cur_change = &info_.info.player_inc;
-      cur_player = Player::kWhite;
-      continue;
+      tournament_time.player_inc[static_cast<size_t>(Player::kWhite)] =
+          std::chrono::milliseconds{time};
     }
     if (token == "binc") {
-      cur_change = &info_.info.player_inc;
-      cur_player = Player::kBlack;
-      continue;
+      tournament_time.player_time[static_cast<size_t>(Player::kWhite)] =
+          std::chrono::milliseconds{time};
     }
-
-    const auto time = std::stoi(token);
-    (*cur_change)[static_cast<size_t>(cur_player)] = time;
   }
+
+  info_.time_control = tournament_time;
 }
 
 inline void UciChessEngine::ParseStop(std::stringstream command) {
@@ -356,5 +279,39 @@ inline void UciChessEngine::ParseStop(std::stringstream command) {
 inline void UciChessEngine::ParseQuit(std::stringstream command) {
   quit_ = true;
   StopSearch();
+}
+
+SearchThread::SearchThread(Position position, std::ostream& o_stream)
+    : engine_(std::move(position), o_stream) {}
+
+SearchThread::SearchThread(std::ostream& o_stream)
+    : engine_(PositionFactory{}(), o_stream) {}
+
+void SearchThread::Start(const Info& info) {
+  StopThread();
+  engine_.SetPosition(info.position);
+
+  thread_ = std::thread([this, &info] {
+    if (const auto tournament =
+            std::get_if<TournamentTime>(&info.time_control)) {
+      engine_.ComputeBestMove(
+          std::chrono::milliseconds(tournament->player_time[static_cast<size_t>(
+              info.position.GetSideToMove())]),
+          std::chrono::milliseconds(tournament->player_inc[static_cast<size_t>(
+              info.position.GetSideToMove())]));
+    }
+  });
+}
+
+void SearchThread::Stop() {
+  engine_.PrintBestMove();
+  StopThread();
+}
+
+void SearchThread::StopThread() {
+  if (thread_) {
+    thread_->join();
+    thread_ = std::nullopt;
+  }
 }
 }  // namespace SimpleChessEngine

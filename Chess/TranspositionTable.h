@@ -7,7 +7,7 @@
 namespace SimpleChessEngine {
 enum class Bound : uint8_t { kLower = 1, kUpper = 2, kExact = kLower | kUpper };
 
-uint8_t operator&(const Bound lhs, const Bound rhs) {
+inline uint8_t operator&(const Bound lhs, const Bound rhs) {
   return static_cast<uint8_t>(lhs) & static_cast<uint8_t>(rhs);
 }
 
