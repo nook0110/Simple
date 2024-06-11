@@ -86,8 +86,7 @@ class ChessEngine {
   template <class Info>
   void PrintInfo(const Info& info);
 
-  std::optional<Eval> MakeIteration(std::size_t depth,
-                                    const Searcher::TimePoint& end);
+  std::optional<Eval> MakeIteration(std::size_t depth, const TimePoint& end);
 
   std::ostream& o_stream_;
 
@@ -107,7 +106,6 @@ inline void ChessEngine::ComputeBestMove(
   std::chrono::milliseconds time_for_move =
       left_time / kAverageGameLength + inc_time;
   time_for_move = std::min(left_time / 2, time_for_move);
-  auto kTimeRatio = 4.f;
 
   Searcher::DebugInfo info{};
 
@@ -120,12 +118,8 @@ inline void ChessEngine::ComputeBestMove(
   Move previous_best_move{};
   size_t last_best_move_change{};
   for (size_t current_depth = 1;
-       time_for_move >
-       (std::chrono::high_resolution_clock::now() - start_time) *
-           std::clamp(kTimeRatio / 2, 1.0f,
-                      4.f)  // check if we have time for another iteration
-
-       ;) {
+       time_for_move > (std::chrono::system_clock::now() - start_time);
+       ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
     const auto eval_optional =
         MakeIteration(current_depth, time_for_move + start_time);
@@ -156,17 +150,17 @@ inline void ChessEngine::ComputeBestMove(
     if (previous_nodes != 0) {
       ebfs.push_back(static_cast<float>(info.searched_nodes) / previous_nodes);
 
+      float odd_even_average = 0;
       if (ebfs.size() > 1) {
-        kTimeRatio = 0;
-        auto it = std::next(ebfs.rbegin());
+        auto it = ebfs.rbegin();
         while (it < ebfs.rend()) {
-          kTimeRatio += *it;
+          odd_even_average += *it;
           if (ebfs.rend() - it < 2) break;
           it += 2;
         }
-        kTimeRatio /= ebfs.size() / 2;
+        odd_even_average /= ebfs.size() / 2;
       }
-      PrintInfo(EBFInfo{ebfs.back(), kTimeRatio,
+      PrintInfo(EBFInfo{ebfs.back(), odd_even_average,
                         std::reduce(ebfs.begin(), ebfs.end()) / ebfs.size()});
     }
     previous_nodes = info.searched_nodes;
@@ -177,7 +171,6 @@ inline void ChessEngine::ComputeBestMove(
         (std::chrono::duration<double>{std::chrono::system_clock::now() -
                                        start_time})
             .count())});
-    PrintInfo(PrincipalVariationHitsInfo{info.pv_hits});
     info = Searcher::DebugInfo{};
   }
 
@@ -189,7 +182,7 @@ inline const Move& ChessEngine::GetCurrentBestMove() const {
 }
 
 inline std::optional<Eval> ChessEngine::MakeIteration(
-    const std::size_t current_depth, const Searcher::TimePoint& end) {
+    const std::size_t current_depth, const TimePoint& end) {
   constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
   constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
 
@@ -209,7 +202,14 @@ inline std::ostream& operator<<(std::ostream& out,
 
 inline std::ostream& operator<<(std::ostream& out,
                                 const ScoreInfo& score_info) {
-  return out << "info score cp " << score_info.current_eval << std::endl;
+  const auto& eval = score_info.current_eval;
+  if (!IsMateScore(eval)) {
+    return out << "info score cp " << eval << std::endl;
+  }
+
+  return out << "info score mate "
+             << IsMateScore(eval) * (-kMateValue - std::abs(eval) + 1) / 2
+             << std::endl;
 }
 
 inline std::ostream& operator<<(std::ostream& out,
@@ -224,8 +224,8 @@ inline std::ostream& operator<<(std::ostream& out,
 
 inline std::ostream& operator<<(
     std::ostream& out, const PrincipalVariationInfo& principal_variation) {
-  out << "info depth " << principal_variation.best_moves.size() << " pv";
-  for (const auto move : principal_variation.best_moves) {
+  out << "info depth " << principal_variation.moves.size() << " pv";
+  for (const auto move : principal_variation.moves) {
     out << " " << move;
   }
   return out << std::endl;
@@ -238,7 +238,7 @@ inline std::ostream& operator<<(std::ostream& out,
 
 inline std::ostream& operator<<(std::ostream& out,
                                 const BestMoveInfo& bm_info) {
-  return out << "info score cp " << bm_info.move << std::endl;
+  return out << "bestmove " << bm_info.move << std::endl;
 }
 
 inline std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info) {

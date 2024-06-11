@@ -15,9 +15,11 @@
 
 namespace SimpleChessEngine {
 struct TournamentTime {
-  std::array<std::chrono::milliseconds, 2> player_time;
+  std::array<std::chrono::milliseconds, 2> player_time = {
+      std::chrono::milliseconds{0}, std::chrono::milliseconds{0}};
 
-  std::array<std::chrono::milliseconds, 2> player_inc;
+  std::array<std::chrono::milliseconds, 2> player_inc = {
+      std::chrono::milliseconds{0}, std::chrono::milliseconds{0}};
 };
 
 struct TimePerMove {
@@ -215,6 +217,7 @@ inline void UciChessEngine::ParseEvaluate() const {
 
 inline void UciChessEngine::ParseGo(std::stringstream command) {
   std::string token;
+  auto startpos = command.tellg();
   command >> token;
 
   if (token == "perft") {
@@ -227,7 +230,9 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
     return;
   }
 
-  if (token == "wtime") {
+  if (token == "wtime" || token == "btime" || token == "winc" ||
+      token == "binc") {
+    command.seekg(startpos);
     ParsePlayersTime(std::move(command));
   }
   if (token == "movetime") {
@@ -250,7 +255,8 @@ inline void UciChessEngine::ParsePlayersTime(std::stringstream command) {
   TournamentTime tournament_time;
 
   while (command >> token) {
-    const auto time = std::stoull(token);
+    std::size_t time;
+    command >> time;
     if (token == "wtime") {
       tournament_time.player_time[static_cast<size_t>(Player::kWhite)] =
           std::chrono::milliseconds{time};
@@ -264,7 +270,7 @@ inline void UciChessEngine::ParsePlayersTime(std::stringstream command) {
           std::chrono::milliseconds{time};
     }
     if (token == "binc") {
-      tournament_time.player_time[static_cast<size_t>(Player::kWhite)] =
+      tournament_time.player_inc[static_cast<size_t>(Player::kBlack)] =
           std::chrono::milliseconds{time};
     }
   }

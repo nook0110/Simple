@@ -6,15 +6,12 @@
 using namespace SimpleChessEngine;
 
 template <Piece sliding_piece>
-constexpr std::array<Compass, 4> GetStepDelta()
-{
-  if constexpr (sliding_piece == Piece::kBishop)
-  {
+constexpr std::array<Compass, 4> GetStepDelta() {
+  if constexpr (sliding_piece == Piece::kBishop) {
     return {Compass::kNorthWest, Compass::kSouthWest, Compass::kSouthEast,
             Compass::kNorthEast};
   }
-  if constexpr (sliding_piece == Piece::kRook)
-  {
+  if constexpr (sliding_piece == Piece::kRook) {
     return {Compass::kNorth, Compass::kWest, Compass::kSouth, Compass::kEast};
   }
 
@@ -24,19 +21,16 @@ constexpr std::array<Compass, 4> GetStepDelta()
 
 template <Piece sliding_piece>
 [[nodiscard]] Bitboard GenerateAttackMask(
-    const BitIndex square, const Bitboard occupancy = kEmptyBoard)
-{
+    const BitIndex square, const Bitboard occupancy = kEmptyBoard) {
   assert(IsWeakSlidingPiece(sliding_piece));
   assert(IsOk(square));
 
   Bitboard result = kEmptyBoard;
 
-  for (auto direction : GetStepDelta<sliding_piece>())
-  {
+  for (auto direction : GetStepDelta<sliding_piece>()) {
     Bitboard step;
     for (BitIndex temp = square;
-         (occupancy & GetBitboardOfSquare(temp)).None();)
-    {
+         (occupancy & GetBitboardOfSquare(temp)).None();) {
       step = DoShiftIfValid(temp, direction).value_or(Bitboard{});
       result |= step;
       if (step.None()) break;
@@ -46,17 +40,13 @@ template <Piece sliding_piece>
 }
 
 template <Piece sliding_piece>
-void SimpleChessEngine::InitBetween()
-{
+void SimpleChessEngine::InitBetween() {
   assert(IsWeakSlidingPiece(sliding_piece));
-  for (BitIndex sq = 0; sq < kBoardArea; ++sq)
-  {
-    for (auto direction : GetStepDelta<sliding_piece>())
-    {
+  for (BitIndex sq = 0; sq < kBoardArea; ++sq) {
+    for (auto direction : GetStepDelta<sliding_piece>()) {
       Bitboard result{};
       BitIndex temp = sq;
-      for (Bitboard step{~kEmptyBoard}; step.Any(); result |= step)
-      {
+      for (Bitboard step{~kEmptyBoard}; step.Any(); result |= step) {
         if constexpr (sliding_piece == Piece::kBishop)
           bishop_between[sq][temp] = result;
         else
@@ -64,8 +54,7 @@ void SimpleChessEngine::InitBetween()
         step = DoShiftIfValid(temp, direction).value_or(Bitboard{});
       }
       temp = sq;
-      while (DoShiftIfValid(temp, direction))
-      {
+      while (DoShiftIfValid(temp, direction)) {
         if constexpr (sliding_piece == Piece::kBishop)
           bishop_ray[sq][temp] = result;
         else
@@ -79,8 +68,12 @@ template void SimpleChessEngine::InitBetween<Piece::kBishop>();
 template void SimpleChessEngine::InitBetween<Piece::kRook>();
 
 template <Piece sliding_piece, size_t table_size>
-AttackTable<sliding_piece, table_size>::AttackTable()
-{
+const std::unique_ptr<AttackTable<sliding_piece, table_size>>
+    AttackTable<sliding_piece, table_size>::self_ =
+        std::make_unique<AttackTable>();
+
+template <Piece sliding_piece, size_t table_size>
+AttackTable<sliding_piece, table_size>::AttackTable() {
   if constexpr (!IsWeakSlidingPiece(sliding_piece)) return;
 
   std::vector<Bitboard> occupancy(1 << 16), reference(1 << 16);
@@ -92,8 +85,7 @@ AttackTable<sliding_piece, table_size>::AttackTable()
   const Bitboard rank_edges = kRankBB.front() | kRankBB.back();
   const Bitboard file_edges = kFileBB.front() | kFileBB.back();
 
-  for (BitIndex sq = 0; sq < kBoardArea; ++sq)
-  {
+  for (BitIndex sq = 0; sq < kBoardArea; ++sq) {
     auto [file, rank] = GetCoordinates(sq);
     Bitboard edges = rank_edges & ~kRankBB[rank] | file_edges & ~kFileBB[file];
     magic_[sq].mask = GenerateAttackMask<sliding_piece>(sq) & ~edges;
@@ -101,35 +93,29 @@ AttackTable<sliding_piece, table_size>::AttackTable()
     base_[sq] = sq ? base_[sq - 1] + offset : 0;
     offset = 0;
     Bitboard b(kEmptyBoard);
-    do
-    {
+    do {
       occupancy[offset] = b;
       reference[offset] = GenerateAttackMask<sliding_piece>(sq, b);
       ++offset;
       b -= magic_[sq].mask;
       b &= magic_[sq].mask;
-    }
-    while (b.Any());
+    } while (b.Any());
     std::mt19937_64 gen(
         std::chrono::steady_clock::now().time_since_epoch().count());
-    for (size_t i = 0; i < offset;)
-    {
+    for (size_t i = 0; i < offset;) {
       for (magic_[sq].magic = kEmptyBoard;
            (magic_[sq].magic * magic_[sq].mask >> 56).Count() < 6;)
         magic_[sq].magic =
             Bitboard{gen() & gen() &  // NOLINT(misc-redundant-expression)
                      gen()};          // sparse random
       ++attempt_count;
-      for (i = 0; i < offset; ++i)
-      {
+      for (i = 0; i < offset; ++i) {
         const auto idx = magic_[sq].GetIndex(occupancy[i]);
 
-        if (epoch[idx] < attempt_count)
-        {
+        if (epoch[idx] < attempt_count) {
           epoch[idx] = attempt_count;
           table_[base_[sq] + idx] = reference[i];
-        }
-        else if (table_[base_[sq] + idx] != reference[i])
+        } else if (table_[base_[sq] + idx] != reference[i])
           break;
       }
     }
