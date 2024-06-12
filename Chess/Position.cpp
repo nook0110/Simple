@@ -19,6 +19,7 @@ void Position::DoMove(const Move& move)
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
                     .to_ulong()];
   }
+
   std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
              move);
 
@@ -30,6 +31,8 @@ void Position::DoMove(const Move& move)
   }
   side_to_move_ = Flip(side_to_move_);
   hash_ ^= hasher_.stm_hash;
+
+  history_stack_.Push(hash_, DoesReset(move));
 }
 
 void Position::DoMove(const DefaultMove& move)
@@ -182,6 +185,8 @@ void Position::UndoMove(const Move& move, const IrreversibleData& data)
   side_to_move_ = Flip(side_to_move_);
   std::visit([this](const auto& unwrapped_move) { UndoMove(unwrapped_move); },
              move);
+
+  history_stack_.Pop();
 }
 
 void Position::UndoMove(const DefaultMove& move)

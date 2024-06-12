@@ -62,6 +62,7 @@ constexpr PhaseValue kLimitsDifference =
 constexpr Eval kTempoBonus = 20;
 
 constexpr Eval kMateValue = -1e5;
+constexpr Eval kDrawValue = 0;
 
 // returns zero if the score is not mate value
 // otherwise returns 1 if it is winning (positive), -1 if losing (negative)

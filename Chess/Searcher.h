@@ -48,13 +48,6 @@ class Searcher {
     }
   };
 
-  struct GameHistory
-  {
-    static constexpr size_t kHistorySize = 1024;
-    std::array<Hash, kHistorySize> history{};
-    size_t pointer_to_reset = 0;
-  };
-
   /**
    * \brief Constructor.
    *
@@ -169,7 +162,10 @@ class Searcher {
     void SetTTEntry(const Bound bound);
 
     template <bool is_pv_move>
-    std::optional<bool> CheckMove(const Move &move);
+    SearchResult ProbeMove(const Move &move);
+
+    template <bool is_pv_move>
+    std::optional<bool> CheckFirstMove(const Move &move);
 
     struct QuietRange {
       MoveGenerator::Moves::iterator quiet_begin;
@@ -210,8 +206,6 @@ class Searcher {
   KillerTable<2> killers_;
 
   DebugInfo debug_info_;
-
-  GameHistory history_stack_;
 };
 }  // namespace SimpleChessEngine
 
@@ -392,7 +386,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
         return entry_score;
       }
     }
-    auto has_cutoff_opt = CheckMove<is_principal_variation>(hash_move);
+    auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(hash_move);
     if (!has_cutoff_opt) {
       return std::nullopt;
     }
@@ -404,7 +398,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
   }
 
   if constexpr (is_principal_variation) {
-    assert(has_stored_move);
+    //assert(has_stored_move);
   }
 
   auto &move_generator = searcher_.move_generator_;
@@ -421,7 +415,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
   const auto ordering_result = OrderMoves(moves.begin(), moves.end());
 
   if (!has_stored_move) {
-    auto has_cutoff_opt = CheckMove<false>(moves.front());
+    auto has_cutoff_opt = CheckFirstMove<false>(moves.front());
     if (!has_cutoff_opt) {
       return std::nullopt;
     }
@@ -452,7 +446,7 @@ inline Eval SimpleChessEngine::Searcher::SearchImplementation<
   if (searcher_.current_position_.IsUnderCheck()) {
     return kMateValue + static_cast<Eval>(max_depth - remaining_depth);
   }
-  return Eval{};
+  return kDrawValue;
 }
 
 template <bool is_principal_variation>
@@ -477,20 +471,34 @@ inline void SimpleChessEngine::Searcher::SearchImplementation<
 }
 template <bool is_principal_variation>
 template <bool is_pv_move>
-inline std::optional<bool> SimpleChessEngine::Searcher::SearchImplementation<
-    is_principal_variation>::CheckMove(const Move &move) {
+inline SearchResult
+Searcher::SearchImplementation<is_principal_variation>::ProbeMove(
+    const Move &move) {
   auto &current_position = searcher_.current_position_;
+  const Hash hash = current_position.GetHash();
 
   // make the move and search the tree
   current_position.DoMove(move);
-  const auto eval_optional =
-      Search<is_pv_move>(max_depth, remaining_depth - 1, -beta, -alpha);
-  if (!eval_optional) return std::nullopt;
 
-  const auto &eval = -*eval_optional;
+  // if no 3 fold repetition detected, continue search, otherwise return draw value
+  const auto eval_optional = current_position.DetectRepetition()
+      ? kDrawValue : Search<is_pv_move>(max_depth, remaining_depth - 1, -beta, -alpha);
 
   // undo the move
   current_position.UndoMove(move, irreversible_data);
+
+  return eval_optional;
+}
+
+template <bool is_principal_variation>
+template <bool is_pv_move>
+inline std::optional<bool> SimpleChessEngine::Searcher::SearchImplementation<
+    is_principal_variation>::CheckFirstMove(const Move &move) {
+  const auto eval_optional = ProbeMove<is_pv_move>(move);
+  if (!eval_optional) {
+    return std::nullopt;
+  }
+  const auto &eval = -*eval_optional;
 
   SetBestMove(move);
   best_eval = eval;
@@ -544,20 +552,31 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     current_position.DoMove(move);  // make the move and search the tree
 
-    auto temp_eval_optional = Search<false>(max_depth, remaining_depth - 1,
+    auto temp_eval_optional = current_position.DetectRepetition()
+        ? kDrawValue : Search<false>(max_depth, remaining_depth - 1,
                                             -alpha - 1, -alpha);  // ZWS
 
     if (!temp_eval_optional) return std::nullopt;
 
     auto temp_eval = -*temp_eval_optional;
 
+    if (temp_eval == kDrawValue) {
+      int x = 10;
+    }
+
     if (temp_eval > alpha) /* make a research (ZWS failed) */
     {
       temp_eval_optional =
-          Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
+          current_position.DetectRepetition()
+              ? kDrawValue
+              : Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
       if (!temp_eval_optional) return std::nullopt;
 
       temp_eval = -*temp_eval_optional;
+
+      if (temp_eval == kDrawValue) {
+        int x = 10;
+      }
 
       if (temp_eval > alpha) {
         has_raised_alpha = true;

@@ -47,6 +47,33 @@ class Position {
     }
   };
 
+  struct GameHistory {
+    static constexpr size_t kHistorySize = 1024;
+    std::vector<Hash> history{};
+    std::vector<size_t> last_reset{};
+
+    GameHistory() {
+      history.reserve(kHistorySize);
+      last_reset.reserve(kHistorySize + 1);
+      last_reset.push_back(0);
+    }
+
+    size_t Count(const Hash hash) const {
+      return std::count(history.begin() + last_reset[history.size()],
+                        history.end(), hash);
+    }
+
+    void Push(const Hash hash, const bool reset) {
+      last_reset.push_back(reset ? history.size() : last_reset.back());
+      history.push_back(hash);
+    }
+
+    void Pop() {
+      history.pop_back();
+      last_reset.pop_back();
+    }
+  };
+
   /**
    * \brief Places a piece with a color on a chosen square.
    *
@@ -322,6 +349,14 @@ class Position {
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const;
 
+  [[nodiscard]] bool DetectRepetition() const
+  {
+    if (history_stack_.history.size() >= 9 && history_stack_.last_reset.back() == 0) {
+      int x = 10;
+    }
+    return history_stack_.Count(hash_) >= 3;
+  }
+
   [[nodiscard]] const std::optional<BitIndex>& GetEnCroissantSquare() const;
 
   [[nodiscard]] const std::array<std::bitset<2>, kColors>& GetCastlingRights()
@@ -348,6 +383,7 @@ class Position {
  private:
   EvaluationData evaluation_data_;
   IrreversibleData irreversible_data_;
+  GameHistory history_stack_ = {};
 
   Player side_to_move_{};  //!< Whose side to move.
 
