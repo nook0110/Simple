@@ -340,6 +340,10 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     return std::nullopt;
   }
 
+  if (searcher_.current_position_.DetectRepetition()) {
+    return kDrawValue;
+  }
+
   if constexpr (is_principal_variation) {
     if (remaining_depth <= 1) {
       return Search<false>(max_depth, remaining_depth, alpha, beta);
@@ -480,9 +484,7 @@ Searcher::SearchImplementation<is_principal_variation>::ProbeMove(
   // make the move and search the tree
   current_position.DoMove(move);
 
-  // if no 3 fold repetition detected, continue search, otherwise return draw value
-  const auto eval_optional = current_position.DetectRepetition()
-      ? kDrawValue : Search<is_pv_move>(max_depth, remaining_depth - 1, -beta, -alpha);
+  const auto eval_optional = Search<is_pv_move>(max_depth, remaining_depth - 1, -beta, -alpha);
 
   // undo the move
   current_position.UndoMove(move, irreversible_data);
@@ -552,31 +554,19 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     current_position.DoMove(move);  // make the move and search the tree
 
-    auto temp_eval_optional = current_position.DetectRepetition()
-        ? kDrawValue : Search<false>(max_depth, remaining_depth - 1,
+    auto temp_eval_optional = Search<false>(max_depth, remaining_depth - 1,
                                             -alpha - 1, -alpha);  // ZWS
 
     if (!temp_eval_optional) return std::nullopt;
 
     auto temp_eval = -*temp_eval_optional;
 
-    if (temp_eval == kDrawValue) {
-      int x = 10;
-    }
-
     if (temp_eval > alpha) /* make a research (ZWS failed) */
     {
-      temp_eval_optional =
-          current_position.DetectRepetition()
-              ? kDrawValue
-              : Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
+      temp_eval_optional = Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
       if (!temp_eval_optional) return std::nullopt;
 
       temp_eval = -*temp_eval_optional;
-
-      if (temp_eval == kDrawValue) {
-        int x = 10;
-      }
 
       if (temp_eval > alpha) {
         has_raised_alpha = true;
