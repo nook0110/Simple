@@ -131,11 +131,8 @@ class ChessEngine {
 
         float odd_even_average_ = 0;
         if (ebfs_.size() > 1) {
-          auto it = ebfs_.rbegin();
-          while (it < ebfs_.rend()) {
+          for (auto it = ebfs_.rbegin(); ebfs_.rend() - it > 1; it += 2) {
             odd_even_average_ += *it;
-            if (ebfs_.rend() - it < 2) break;
-            it += 2;
           }
           odd_even_average_ /= ebfs_.size() / 2;
         }
