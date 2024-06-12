@@ -92,10 +92,11 @@ struct TimeCondition {
 static_assert(IsSearchCondition<TimeCondition>);
 
 struct DepthCondition {
+  DepthCondition(size_t max_depth) : max_depth_(max_depth) {}
   bool ShouldContinueIteration() const { return cur_depth < max_depth_; }
 
   TimePoint GetEndSearchTime() const {
-    return std::numeric_limits<TimePoint>::max();
+    return TimePoint::max();
   }
 
   void Update(const IterationInfo& info) { cur_depth = info.depth; }
