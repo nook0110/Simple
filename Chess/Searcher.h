@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <array>
 
 #include "Evaluation.h"
 #include "KillerTable.h"
@@ -45,6 +46,13 @@ class Searcher {
       pv_hits += other.pv_hits;
       return *this;
     }
+  };
+
+  struct GameHistory
+  {
+    static constexpr size_t kHistorySize = 1024;
+    std::array<Hash, kHistorySize> history{};
+    size_t pointer_to_reset = 0;
   };
 
   /**
@@ -202,6 +210,8 @@ class Searcher {
   KillerTable<2> killers_;
 
   DebugInfo debug_info_;
+
+  GameHistory history_stack_;
 };
 }  // namespace SimpleChessEngine
 
