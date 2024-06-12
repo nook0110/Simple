@@ -59,8 +59,14 @@ class Position {
     }
 
     size_t Count(const Hash hash) const {
-      return std::count(history.begin() + last_reset[history.size()],
-                        history.end(), hash);
+      size_t result = 0;
+      size_t parity_shift = (history.size() ^ last_reset[history.size()] ^ 1) % 2;
+      for (size_t i = last_reset[history.size()] + parity_shift; i < history.size(); i += 2) {
+        if (history[i] == hash) {
+          ++result;
+        }
+      }
+      return result;
     }
 
     void Push(const Hash hash, const bool reset) {
@@ -349,10 +355,9 @@ class Position {
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const;
 
-  [[nodiscard]] bool DetectRepetition() const
-  {
-    if (history_stack_.history.size() >= 9 && history_stack_.last_reset.back() == 0) {
-      int x = 10;
+  [[nodiscard]] bool DetectRepetition() const {
+    if (history_stack_.history.size() < 3) {
+      return false;
     }
     return history_stack_.Count(hash_) >= 3;
   }

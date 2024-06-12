@@ -370,7 +370,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
 
-    if (entry_depth >= remaining_depth) {
+    if (!is_principal_variation && entry_depth >= remaining_depth) {
       if (static_cast<Bound>(entry_bound) & Bound::kUpper &&
           entry_score <= alpha) {
         return alpha;
@@ -399,10 +399,6 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
       return beta;
     }
     has_stored_move = true;
-  }
-
-  if constexpr (is_principal_variation) {
-    //assert(has_stored_move);
   }
 
   auto &move_generator = searcher_.move_generator_;
