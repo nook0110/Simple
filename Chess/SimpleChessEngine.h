@@ -57,6 +57,50 @@ std::ostream& operator<<(std::ostream& out,
 std::ostream& operator<<(std::ostream& out, const BestMoveInfo& bm_info);
 std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info);
 
+struct IterationInfo {
+  const Searcher& searcher;
+  Eval iteration_result;
+  size_t depth;
+};
+
+template <class SearchCondition>
+concept IsSearchCondition =
+    requires(SearchCondition condition, IterationInfo info) {
+      { condition.ShouldContinueIteration() } -> std::convertible_to<bool>;
+      { condition.GetEndSearchTime() } -> std::convertible_to<TimePoint>;
+      { condition.Update(info) };
+    };
+
+struct TimeCondition {
+  TimeCondition(std::chrono::milliseconds time_for_move)
+      : time_for_move_(std::move(time_for_move)) {}
+
+  bool ShouldContinueIteration() const {
+    return time_for_move_ > (std::chrono::system_clock::now() - start_time_);
+  }
+
+  TimePoint GetEndSearchTime() const { return time_for_move_ + start_time_; }
+
+  void Update(const IterationInfo&) {}
+
+  const std::chrono::milliseconds time_for_move_;
+  const TimePoint start_time_ = std::chrono::system_clock::now();
+};
+static_assert(IsSearchCondition<TimeCondition>);
+
+struct DepthCondition {
+  DepthCondition(size_t max_depth) : max_depth_(max_depth) {}
+  bool ShouldContinueIteration() const { return cur_depth < max_depth_; }
+
+  TimePoint GetEndSearchTime() const { return TimePoint::max(); }
+
+  void Update(const IterationInfo& info) { cur_depth = info.depth; }
+
+  size_t cur_depth = 0;
+  const size_t max_depth_;
+};
+static_assert(IsSearchCondition<DepthCondition>);
+
 /**
  * \brief Class that represents a chess engine.
  *
@@ -70,10 +114,7 @@ class ChessEngine {
 
   void SetPosition(const Position position) { searcher_.SetPosition(position); }
 
-  void ComputeBestMove(size_t depth);
-
-  void ComputeBestMove(const std::chrono::milliseconds left_time,
-                       const std::chrono::milliseconds inc_time);
+  void ComputeBestMove(const IsSearchCondition auto conditions);
 
   [[nodiscard]] const Move& GetCurrentBestMove() const;
 
@@ -82,6 +123,45 @@ class ChessEngine {
   void PrintBestMove(const Move& move) { o_stream_ << BestMoveInfo{move}; }
 
  private:
+  class EBFsInfo {
+    void Update(std::size_t searched_nodes) {
+      if (previous_nodes_ != 0) {
+        ebfs_.push_back(static_cast<float>(searched_nodes) / previous_nodes_);
+
+        float odd_even_average_ = 0;
+        if (ebfs_.size() > 1) {
+          for (auto it = ebfs_.rbegin(); ebfs_.rend() - it > 1; it += 2) {
+            odd_even_average_ += *it;
+          }
+          odd_even_average_ /= ebfs_.size() / 2;
+        }
+      }
+      odd_even_average_ = searched_nodes;
+    }
+
+    EBFInfo GetInfo() const {
+      return EBFInfo{ebfs_.back(), odd_even_average_,
+                     std::reduce(ebfs_.begin(), ebfs_.end()) / ebfs_.size()};
+    }
+
+    float odd_even_average_;
+    std::vector<float> ebfs_;
+    size_t previous_nodes_ = 0;
+  };
+
+  void PrintInfo(const Searcher::DebugInfo& info, Eval eval,
+                 size_t current_depth,
+                 std::chrono::duration<double> search_time) {
+    PrintInfo(ScoreInfo{eval});
+    PrincipalVariationInfo pv{current_depth,
+                              searcher_.GetPrincipalVariation(current_depth)};
+    PrintInfo(pv);
+    PrintInfo(NodesInfo{info.searched_nodes});
+    PrintInfo(NodesInfo{info.quiescence_nodes});
+    PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
+        (info.searched_nodes + info.quiescence_nodes) / search_time.count())});
+  }
+
   template <class Info>
   void PrintInfo(const Info& info);
 
@@ -94,86 +174,34 @@ class ChessEngine {
 }  // namespace SimpleChessEngine
 
 namespace SimpleChessEngine {
-inline void ChessEngine::ComputeBestMove(const size_t depth) { assert(false); }
-
-inline void ChessEngine::ComputeBestMove(
-    const std::chrono::milliseconds left_time,
-    const std::chrono::milliseconds inc_time = {}) {
+inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
+    IsSearchCondition auto condition) {
   const TimePoint start_time = std::chrono::system_clock::now();
-  constexpr size_t kAverageGameLength = 40;
-
-  std::chrono::milliseconds time_for_move =
-      left_time / kAverageGameLength + inc_time;
-  time_for_move = std::min(left_time / 2, time_for_move);
-
-  Searcher::DebugInfo info{};
-
   searcher_.InitStartOfSearch();
 
-  std::vector<float> ebfs;
-  ebfs.reserve(kMaxSearchPly);
-  size_t previous_nodes = 0;
+  EBFInfo ebfs;
+  Searcher::DebugInfo info;
 
-  Move previous_best_move{};
-  size_t last_best_move_change{};
-  for (size_t current_depth = 1;
-       time_for_move > (std::chrono::system_clock::now() - start_time);
+  Move best_move{};
+  for (size_t current_depth = 1; condition.ShouldContinueIteration();
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
     const auto eval_optional =
-        MakeIteration(current_depth, time_for_move + start_time);
+        MakeIteration(current_depth, condition.GetEndSearchTime());
     if (!eval_optional) {
-      PrintBestMove(previous_best_move);
-      return;
+      break;
     }
+    best_move = GetCurrentBestMove();
+
+    condition.Update(IterationInfo{searcher_, *eval_optional, current_depth});
+
     info += searcher_.GetInfo();
-
-    PrintInfo(ScoreInfo{*eval_optional});
-
-    // check if best move changed
-    if (previous_best_move == searcher_.GetCurrentBestMove()) {
-      // increase last change
-      ++last_best_move_change;
-    } else {
-      // reset last change
-      last_best_move_change = 0;
-    }
-
-    previous_best_move = GetCurrentBestMove();
-
-    PrincipalVariationInfo pv{current_depth,
-                              searcher_.GetPrincipalVariation(current_depth)};
-    PrintInfo(pv);
-    PrintInfo(NodesInfo{info.searched_nodes});
-
-    if (previous_nodes != 0) {
-      ebfs.push_back(static_cast<float>(info.searched_nodes) / previous_nodes);
-
-      float odd_even_average = 0;
-      if (ebfs.size() > 1) {
-        auto it = ebfs.rbegin();
-        while (it < ebfs.rend()) {
-          odd_even_average += *it;
-          if (ebfs.rend() - it < 2) break;
-          it += 2;
-        }
-        odd_even_average /= ebfs.size() / 2;
-      }
-      PrintInfo(EBFInfo{ebfs.back(), odd_even_average,
-                        std::reduce(ebfs.begin(), ebfs.end()) / ebfs.size()});
-    }
-    previous_nodes = info.searched_nodes;
-
-    PrintInfo(NodesInfo{info.quiescence_nodes});
-    PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
-        (info.searched_nodes + info.quiescence_nodes) /
-        (std::chrono::duration<double>{std::chrono::system_clock::now() -
-                                       start_time})
-            .count())});
-    info = Searcher::DebugInfo{};
+    PrintInfo(info, *eval_optional, current_depth,
+              std::chrono::duration<double>{std::chrono::system_clock::now() -
+                                            start_time});
   }
 
-  PrintBestMove(previous_best_move);
+  PrintBestMove(best_move);
 }
 
 inline const Move& ChessEngine::GetCurrentBestMove() const {

@@ -26,7 +26,11 @@ struct TimePerMove {
   std::chrono::milliseconds movetime;
 };
 
-using TimeControl = std::variant<TournamentTime, TimePerMove>;
+struct MaxDepth {
+  size_t depth;
+};
+
+using TimeControl = std::variant<TournamentTime, TimePerMove, MaxDepth>;
 
 struct Info {
   Position position;
@@ -79,6 +83,7 @@ class UciChessEngine {
   void ParseGo(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
   void ParsePlayersTime(std::stringstream command);
+  void ParseDepth(std::stringstream command);
   void ParseStop(std::stringstream command);
   void ParseQuit(std::stringstream command);
 
@@ -238,6 +243,9 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
   if (token == "movetime") {
     ParseMoveTime(std::move(command));
   }
+  if (token == "depth") {
+    ParseDepth(std::move(command));
+  }
 
   StartSearch();
 }
@@ -278,6 +286,13 @@ inline void UciChessEngine::ParsePlayersTime(std::stringstream command) {
   info_.time_control = tournament_time;
 }
 
+inline void SimpleChessEngine::UciChessEngine::ParseDepth(
+    std::stringstream command) {
+  std::string token;
+  command >> token;
+  info_.time_control = MaxDepth{std::stoull(token)};
+}
+
 inline void UciChessEngine::ParseStop(std::stringstream command) {
   StopSearch();
 }
@@ -300,11 +315,26 @@ void SearchThread::Start(const Info& info) {
   thread_ = std::thread([this, &info] {
     if (const auto tournament =
             std::get_if<TournamentTime>(&info.time_control)) {
-      engine_.ComputeBestMove(
-          std::chrono::milliseconds(tournament->player_time[static_cast<size_t>(
-              info.position.GetSideToMove())]),
-          std::chrono::milliseconds(tournament->player_inc[static_cast<size_t>(
-              info.position.GetSideToMove())]));
+      constexpr size_t kAverageGameLength = 40;
+      auto left_time =
+          tournament
+              ->player_time[static_cast<size_t>(info.position.GetSideToMove())];
+
+      auto inc_time =
+          tournament
+              ->player_inc[static_cast<size_t>(info.position.GetSideToMove())];
+      std::chrono::milliseconds time_for_move =
+          left_time / kAverageGameLength + inc_time;
+      time_for_move = std::min(left_time / 2, time_for_move);
+
+      engine_.ComputeBestMove(TimeCondition{time_for_move});
+    }
+    if (const auto time_per_move =
+            std::get_if<TimePerMove>(&info.time_control)) {
+      engine_.ComputeBestMove(TimeCondition{time_per_move->movetime});
+    }
+    if (const auto max_depth = std::get_if<MaxDepth>(&info.time_control)) {
+      engine_.ComputeBestMove(DepthCondition{max_depth->depth});
     }
   });
 }
