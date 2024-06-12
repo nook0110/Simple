@@ -111,4 +111,11 @@ inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const Move& move)
 inline bool IsQuiet(const Move& move) {
   return !std::get<Piece>(GetMoveData(move));
 }
+
+inline bool DoesReset(const Move& move) {
+  if (std::holds_alternative<DefaultMove>(move)) {
+    return !!std::get<DefaultMove>(move).captured_piece;
+  }
+  return !std::holds_alternative<Castling>(move);
+}
 }  // namespace SimpleChessEngine

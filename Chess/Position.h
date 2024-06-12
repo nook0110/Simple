@@ -47,6 +47,39 @@ class Position {
     }
   };
 
+  struct GameHistory {
+    static constexpr size_t kHistorySize = 1024;
+    std::vector<Hash> history{};
+    std::vector<size_t> last_reset{};
+
+    GameHistory() {
+      history.reserve(kHistorySize);
+      last_reset.reserve(kHistorySize + 1);
+      last_reset.push_back(0);
+    }
+
+    size_t Count(const Hash hash) const {
+      size_t result = 0;
+      size_t parity_shift = (history.size() ^ last_reset[history.size()] ^ 1) % 2;
+      for (size_t i = last_reset[history.size()] + parity_shift; i < history.size(); i += 2) {
+        if (history[i] == hash) {
+          ++result;
+        }
+      }
+      return result;
+    }
+
+    void Push(const Hash hash, const bool reset) {
+      last_reset.push_back(reset ? history.size() : last_reset.back());
+      history.push_back(hash);
+    }
+
+    void Pop() {
+      history.pop_back();
+      last_reset.pop_back();
+    }
+  };
+
   /**
    * \brief Places a piece with a color on a chosen square.
    *
@@ -322,6 +355,13 @@ class Position {
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const;
 
+  [[nodiscard]] bool DetectRepetition() const {
+    if (history_stack_.history.size() < 3) {
+      return false;
+    }
+    return history_stack_.Count(hash_) >= 3;
+  }
+
   [[nodiscard]] const std::optional<BitIndex>& GetEnCroissantSquare() const;
 
   [[nodiscard]] const std::array<std::bitset<2>, kColors>& GetCastlingRights()
@@ -348,6 +388,7 @@ class Position {
  private:
   EvaluationData evaluation_data_;
   IrreversibleData irreversible_data_;
+  GameHistory history_stack_ = {};
 
   Player side_to_move_{};  //!< Whose side to move.
 

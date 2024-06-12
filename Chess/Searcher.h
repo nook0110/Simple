@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <array>
 
 #include "Evaluation.h"
 #include "KillerTable.h"
@@ -161,7 +162,10 @@ class Searcher {
     void SetTTEntry(const Bound bound);
 
     template <bool is_pv_move>
-    std::optional<bool> CheckMove(const Move &move);
+    SearchResult ProbeMove(const Move &move);
+
+    template <bool is_pv_move>
+    std::optional<bool> CheckFirstMove(const Move &move);
 
     struct QuietRange {
       MoveGenerator::Moves::iterator quiet_begin;
@@ -336,6 +340,10 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     return std::nullopt;
   }
 
+  if (searcher_.current_position_.DetectRepetition()) {
+    return kDrawValue;
+  }
+
   if constexpr (is_principal_variation) {
     if (remaining_depth <= 1) {
       return Search<false>(max_depth, remaining_depth, alpha, beta);
@@ -362,7 +370,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
 
-    if (entry_depth >= remaining_depth) {
+    if (!is_principal_variation && entry_depth >= remaining_depth) {
       if (static_cast<Bound>(entry_bound) & Bound::kUpper &&
           entry_score <= alpha) {
         return alpha;
@@ -382,7 +390,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
         return entry_score;
       }
     }
-    auto has_cutoff_opt = CheckMove<is_principal_variation>(hash_move);
+    auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(hash_move);
     if (!has_cutoff_opt) {
       return std::nullopt;
     }
@@ -391,10 +399,6 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
       return beta;
     }
     has_stored_move = true;
-  }
-
-  if constexpr (is_principal_variation) {
-    assert(has_stored_move);
   }
 
   auto &move_generator = searcher_.move_generator_;
@@ -411,7 +415,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
   const auto ordering_result = OrderMoves(moves.begin(), moves.end());
 
   if (!has_stored_move) {
-    auto has_cutoff_opt = CheckMove<false>(moves.front());
+    auto has_cutoff_opt = CheckFirstMove<false>(moves.front());
     if (!has_cutoff_opt) {
       return std::nullopt;
     }
@@ -442,7 +446,7 @@ inline Eval SimpleChessEngine::Searcher::SearchImplementation<
   if (searcher_.current_position_.IsUnderCheck()) {
     return kMateValue + static_cast<Eval>(max_depth - remaining_depth);
   }
-  return Eval{};
+  return kDrawValue;
 }
 
 template <bool is_principal_variation>
@@ -467,20 +471,32 @@ inline void SimpleChessEngine::Searcher::SearchImplementation<
 }
 template <bool is_principal_variation>
 template <bool is_pv_move>
-inline std::optional<bool> SimpleChessEngine::Searcher::SearchImplementation<
-    is_principal_variation>::CheckMove(const Move &move) {
+inline SearchResult
+Searcher::SearchImplementation<is_principal_variation>::ProbeMove(
+    const Move &move) {
   auto &current_position = searcher_.current_position_;
+  const Hash hash = current_position.GetHash();
 
   // make the move and search the tree
   current_position.DoMove(move);
-  const auto eval_optional =
-      Search<is_pv_move>(max_depth, remaining_depth - 1, -beta, -alpha);
-  if (!eval_optional) return std::nullopt;
 
-  const auto &eval = -*eval_optional;
+  const auto eval_optional = Search<is_pv_move>(max_depth, remaining_depth - 1, -beta, -alpha);
 
   // undo the move
   current_position.UndoMove(move, irreversible_data);
+
+  return eval_optional;
+}
+
+template <bool is_principal_variation>
+template <bool is_pv_move>
+inline std::optional<bool> SimpleChessEngine::Searcher::SearchImplementation<
+    is_principal_variation>::CheckFirstMove(const Move &move) {
+  const auto eval_optional = ProbeMove<is_pv_move>(move);
+  if (!eval_optional) {
+    return std::nullopt;
+  }
+  const auto &eval = -*eval_optional;
 
   SetBestMove(move);
   best_eval = eval;
@@ -543,8 +559,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     if (temp_eval > alpha) /* make a research (ZWS failed) */
     {
-      temp_eval_optional =
-          Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
+      temp_eval_optional = Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
       if (!temp_eval_optional) return std::nullopt;
 
       temp_eval = -*temp_eval_optional;
