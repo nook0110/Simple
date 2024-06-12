@@ -72,8 +72,6 @@ concept IsSearchCondition =
       { condition.Update(info) };
     };
 
-static_assert(std::is_trivial<std::chrono::milliseconds>::value);
-
 struct TimeCondition {
   TimeCondition(std::chrono::milliseconds time_for_move)
       : time_for_move_(std::move(time_for_move)) {}
@@ -95,9 +93,7 @@ struct DepthCondition {
   DepthCondition(size_t max_depth) : max_depth_(max_depth) {}
   bool ShouldContinueIteration() const { return cur_depth < max_depth_; }
 
-  TimePoint GetEndSearchTime() const {
-    return TimePoint::max();
-  }
+  TimePoint GetEndSearchTime() const { return TimePoint::max(); }
 
   void Update(const IterationInfo& info) { cur_depth = info.depth; }
 
