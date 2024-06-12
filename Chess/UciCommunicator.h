@@ -300,11 +300,19 @@ void SearchThread::Start(const Info& info) {
   thread_ = std::thread([this, &info] {
     if (const auto tournament =
             std::get_if<TournamentTime>(&info.time_control)) {
-      engine_.ComputeBestMove(
-          std::chrono::milliseconds(tournament->player_time[static_cast<size_t>(
-              info.position.GetSideToMove())]),
-          std::chrono::milliseconds(tournament->player_inc[static_cast<size_t>(
-              info.position.GetSideToMove())]));
+      constexpr size_t kAverageGameLength = 40;
+      auto left_time =
+          tournament
+              ->player_time[static_cast<size_t>(info.position.GetSideToMove())];
+
+      auto inc_time =
+          tournament
+              ->player_inc[static_cast<size_t>(info.position.GetSideToMove())];
+      std::chrono::milliseconds time_for_move =
+          left_time / kAverageGameLength + inc_time;
+      time_for_move = std::min(left_time / 2, time_for_move);
+
+      engine_.ComputeBestMove(TimeCondition{time_for_move});
     }
   });
 }
