@@ -29,7 +29,7 @@ class Bitboard
    * \brief Constructs a bitboard from its value.
    */
 
-  constexpr explicit Bitboard(const unsigned long long value) : value_(value) {}
+  constexpr explicit Bitboard(const uint64_t value) : value_(value) {}
 
   constexpr Bitboard() = default;
 
@@ -107,7 +107,7 @@ class Bitboard
   constexpr Bitboard operator>>(size_t pos) const;
   Bitboard& operator>>=(size_t pos);
 
-  [[nodiscard]] explicit constexpr operator unsigned long long() const noexcept
+  [[nodiscard]] explicit constexpr operator uint64_t() const noexcept
   {
     return value_;
   }
