@@ -140,7 +140,7 @@ class Searcher {
     /* Search args */
     const size_t max_depth;
     const size_t remaining_depth;
-    Eval alpha;
+    Eval alpha = {};
     const Eval beta;
     const TimePoint &end_time;
 
@@ -201,7 +201,7 @@ class Searcher {
 
   std::array<std::array<std::array<uint64_t, kBoardArea + 1>, kBoardArea + 1>,
              kColors>
-      history_;
+      history_ = {};
 
   KillerTable<2> killers_;
 
