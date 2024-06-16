@@ -239,11 +239,9 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
       token == "binc") {
     command.seekg(startpos);
     ParsePlayersTime(std::move(command));
-  }
-  if (token == "movetime") {
+  } else if (token == "movetime") {
     ParseMoveTime(std::move(command));
-  }
-  if (token == "depth") {
+  } else if (token == "depth") {
     ParseDepth(std::move(command));
   }
 
