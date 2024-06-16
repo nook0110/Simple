@@ -63,13 +63,12 @@ struct IterationInfo {
   size_t depth;
 };
 
-template <class SearchCondition>
-concept IsSearchCondition =
-    requires(SearchCondition condition, IterationInfo info) {
-      { condition.ShouldContinueIteration() } -> std::convertible_to<bool>;
-      { condition.GetEndSearchTime() } -> std::convertible_to<TimePoint>;
-      { condition.Update(info) };
-    };
+template <class T>
+concept SearchCondition = requires(T condition, IterationInfo info) {
+  { condition.ShouldContinueIteration() } -> std::convertible_to<bool>;
+  { condition.GetEndSearchTime() } -> std::convertible_to<TimePoint>;
+  { condition.Update(info) };
+};
 
 struct TimeCondition {
   TimeCondition(std::chrono::milliseconds time_for_move)
@@ -86,7 +85,7 @@ struct TimeCondition {
   const std::chrono::milliseconds time_for_move_;
   const TimePoint start_time_ = std::chrono::system_clock::now();
 };
-static_assert(IsSearchCondition<TimeCondition>);
+static_assert(SearchCondition<TimeCondition>);
 
 struct DepthCondition {
   DepthCondition(size_t max_depth) : max_depth_(max_depth) {}
@@ -99,7 +98,7 @@ struct DepthCondition {
   size_t cur_depth = 0;
   const size_t max_depth_;
 };
-static_assert(IsSearchCondition<DepthCondition>);
+static_assert(SearchCondition<DepthCondition>);
 
 /**
  * \brief Class that represents a chess engine.
@@ -114,7 +113,7 @@ class ChessEngine {
 
   void SetPosition(const Position position) { searcher_.SetPosition(position); }
 
-  void ComputeBestMove(const IsSearchCondition auto conditions);
+  void ComputeBestMove(const SearchCondition auto conditions);
 
   [[nodiscard]] const Move& GetCurrentBestMove() const;
 
@@ -175,7 +174,7 @@ class ChessEngine {
 
 namespace SimpleChessEngine {
 inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
-    IsSearchCondition auto condition) {
+    SearchCondition auto condition) {
   const TimePoint start_time = std::chrono::system_clock::now();
   searcher_.InitStartOfSearch();
 

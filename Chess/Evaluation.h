@@ -61,7 +61,7 @@ constexpr PhaseValue kLimitsDifference =
 
 constexpr Eval kTempoBonus = 20;
 
-constexpr Eval kMateValue = -1e5;
+constexpr Eval kMateValue = -100'000;
 constexpr Eval kDrawValue = 0;
 
 // returns zero if the score is not mate value
