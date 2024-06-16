@@ -2,23 +2,26 @@
 #include "pch.h"
 
 // WARNING! pch.h must be first header!
+#include <sstream>
 
 #include "../Chess/Attacks.cpp"
 #include "../Chess/Attacks.h"
 #include "../Chess/BitBoard.h"
+#include "../Chess/Evaluation.cpp"
+#include "../Chess/Evaluation.h"
 #include "../Chess/MoveFactory.h"
 #include "../Chess/MoveGenerator.cpp"
 #include "../Chess/MoveGenerator.h"
+#include "../Chess/Perft.cpp"
 #include "../Chess/Position.cpp"
 #include "../Chess/PositionFactory.h"
+#include "../Chess/Quiescence.h"
 #include "../Chess/SimpleChessEngine.h"
 
 using namespace SimpleChessEngine;
 
-namespace BitBoardTests
-{
-TEST(GetFirstBit, NoBits)
-{
+namespace BitBoardTests {
+TEST(GetFirstBit, NoBits) {
   // all bits are 0
   constexpr Bitboard bitboard;
 
@@ -26,8 +29,7 @@ TEST(GetFirstBit, NoBits)
   ASSERT_FALSE(bitboard.Any());
 }
 
-TEST(GetFirstBit, AllBits)
-{
+TEST(GetFirstBit, AllBits) {
   Bitboard bitboard;
   // all bits are 1
   bitboard.Set();
@@ -39,10 +41,8 @@ TEST(GetFirstBit, AllBits)
   ASSERT_EQ(bitboard.GetFirstBit(), 0);
 }
 
-TEST(GetFirstBit, EachBit)
-{
-  for (size_t i = 0; i < kBoardArea; ++i)
-  {
+TEST(GetFirstBit, EachBit) {
+  for (size_t i = 0; i < kBoardArea; ++i) {
     Bitboard bitboard;
     // all bits are 0, except i
     bitboard.Set(i);
@@ -55,21 +55,17 @@ TEST(GetFirstBit, EachBit)
 }
 }  // namespace BitBoardTests
 
-namespace AttackMapTests
-{
-struct TestCase
-{
+namespace AttackMapTests {
+struct TestCase {
   Bitboard occupancy;
   BitIndex square;
   Bitboard answer;
 };
 
 template <Piece sliding_piece>
-class TestAttackMaskGeneration : public testing::TestWithParam<TestCase>
-{
+class TestAttackMaskGeneration : public testing::TestWithParam<TestCase> {
  protected:
-  [[nodiscard]] Bitboard GetMask() const
-  {
+  [[nodiscard]] Bitboard GetMask() const {
     const auto [occupancy, square, answer] = GetParam();
     return GenerateAttackMask<sliding_piece>(square, occupancy);
   }
@@ -79,13 +75,11 @@ class TestAttackMaskGeneration : public testing::TestWithParam<TestCase>
 using BishopMaskTest = TestAttackMaskGeneration<Piece::kBishop>;
 using RookMaskTest = TestAttackMaskGeneration<Piece::kRook>;
 
-TEST_P(BishopMaskTest, AttackMaskGeneration)
-{
+TEST_P(BishopMaskTest, AttackMaskGeneration) {
   ASSERT_EQ(GetMask(), GetAnswer());
 }
 
-TEST_P(RookMaskTest, AttackMaskGeneration)
-{
+TEST_P(RookMaskTest, AttackMaskGeneration) {
   ASSERT_EQ(GetMask(), GetAnswer());
 }
 
@@ -160,24 +154,21 @@ INSTANTIATE_TEST_CASE_P(
         TestCase{Bitboard{0x6600e00418318140}, 43,
                  Bitboard{0x808370808000000}}));
 
-struct TestCaseWithoutAnswer
-{
+struct TestCaseWithoutAnswer {
   Bitboard occupancy;
   BitIndex square;
 };
 
 template <Piece sliding_piece>
-class TestAttackMapTable : public testing::TestWithParam<TestCaseWithoutAnswer>
-{
+class TestAttackMapTable
+    : public testing::TestWithParam<TestCaseWithoutAnswer> {
  protected:
-  [[nodiscard]] Bitboard GetMask() const
-  {
+  [[nodiscard]] Bitboard GetMask() const {
     auto test_case = GetParam();
     return AttackTable<sliding_piece>::GetAttackMap(test_case.square,
                                                     test_case.occupancy);
   }
-  [[nodiscard]] Bitboard GetAnswer() const
-  {
+  [[nodiscard]] Bitboard GetAnswer() const {
     const auto test_case = GetParam();
     return GenerateAttackMask<sliding_piece>(test_case.square,
                                              test_case.occupancy);
@@ -248,17 +239,14 @@ INSTANTIATE_TEST_CASE_P(
                     TestCaseWithoutAnswer{Bitboard{0x6600e00418318140}, 43}));
 }  // namespace AttackMapTests
 
-namespace PositionTest
-{
-TEST(DoMove, DoAndUndoEqualZero)
-{
+namespace PositionTest {
+TEST(DoMove, DoAndUndoEqualZero) {
   const auto start_pos = PositionFactory{}();
   Position pos = start_pos;
 
   for (const auto moves =
            MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kDefault>(pos);
-       const auto& move : moves)
-  {
+       const auto& move : moves) {
     const auto irreversible_data = pos.GetIrreversibleData();
     pos.DoMove(move);
     pos.UndoMove(move, irreversible_data);
@@ -267,24 +255,20 @@ TEST(DoMove, DoAndUndoEqualZero)
   }
 }
 
-TEST(SomeMoves, DifferentHash)
-{
+TEST(SomeMoves, DifferentHash) {
   auto pos = PositionFactory{}();
 
   std::vector<std::string> moves = {"b1c3", "d7d5", "a1b1"};
   std::set<Hash> hashes = {pos.GetHash()};
-  for (const auto& move_str : moves)
-  {
+  for (const auto& move_str : moves) {
     auto move = MoveFactory{}(pos, move_str);
     pos.DoMove(move);
     ASSERT_TRUE(hashes.insert(pos.GetHash()).second);
   }
 }
 
-Position DoMoves(Position pos, const std::vector<std::string>& moves)
-{
-  for (const auto& move_str : moves)
-  {
+Position DoMoves(Position pos, const std::vector<std::string>& moves) {
+  for (const auto& move_str : moves) {
     auto move = MoveFactory{}(pos, move_str);
 
     pos.DoMove(move);
@@ -292,8 +276,7 @@ Position DoMoves(Position pos, const std::vector<std::string>& moves)
   return pos;
 }
 
-TEST(TwoSimiliarPositions, DifferentHash)
-{
+TEST(TwoSimiliarPositions, DifferentHash) {
   const auto start_pos = PositionFactory{}();
 
   std::vector<std::string> first_moves_str = {"e2e4", "e7e5", "d2d4", "c7c5",
@@ -308,10 +291,8 @@ TEST(TwoSimiliarPositions, DifferentHash)
 }
 }  // namespace PositionTest
 
-namespace MoveGeneratorTests
-{
-struct GameInfo
-{
+namespace MoveGeneratorTests {
+struct GameInfo {
   std::optional<size_t> possible_games{};
 
   std::optional<size_t> en_croissants{};
@@ -319,8 +300,7 @@ struct GameInfo
 
   std::optional<size_t> ends_of_game{};
 
-  GameInfo& operator+=(const GameInfo& other)
-  {
+  GameInfo& operator+=(const GameInfo& other) {
     possible_games.value() += other.possible_games.value();
     en_croissants.value() += other.en_croissants.value();
     castlings.value() += other.castlings.value();
@@ -330,8 +310,7 @@ struct GameInfo
 };
 
 [[nodiscard]] GameInfo CountPossibleGames(Position& position,
-                                          const size_t depth)
-{
+                                          const size_t depth) {
   if (depth == 0) return {1, 0, 0, 0};
 
   GameInfo answer{0, 0, 0, 0};
@@ -341,16 +320,12 @@ struct GameInfo
   const auto moves =
       move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(position);
 
-  if (depth == 1)
-  {
-    for (const auto& move : moves)
-    {
-      if (std::get_if<EnCroissant>(&move))
-      {
+  if (depth == 1) {
+    for (const auto& move : moves) {
+      if (std::get_if<EnCroissant>(&move)) {
         answer.en_croissants.value()++;
       }
-      if (std::get_if<Castling>(&move))
-      {
+      if (std::get_if<Castling>(&move)) {
         answer.castlings.value()++;
       }
     }
@@ -361,8 +336,7 @@ struct GameInfo
     return answer;
   }
 
-  for (const auto& move : moves)
-  {
+  for (const auto& move : moves) {
     const auto irreversible_data = position.GetIrreversibleData();
     position.DoMove(move);
     answer += CountPossibleGames(position, depth - 1);
@@ -372,18 +346,15 @@ struct GameInfo
   return answer;
 }
 
-struct GenTestCase
-{
+struct GenTestCase {
   std::string fen;
 
   std::vector<GameInfo> infos;
 };
 
-class GenerateMovesTest : public testing::TestWithParam<GenTestCase>
-{
+class GenerateMovesTest : public testing::TestWithParam<GenTestCase> {
  protected:
-  void SetUp() override
-  {
+  void SetUp() override {
     const auto& [fen, infos] = GetParam();
 
     GeneratePosition();
@@ -393,8 +364,7 @@ class GenerateMovesTest : public testing::TestWithParam<GenTestCase>
 
   [[nodiscard]] const Position& GetPosition() const { return position_; }
 
-  [[nodiscard]] const GameInfo& GetInfo(const size_t depth) const
-  {
+  [[nodiscard]] const GameInfo& GetInfo(const size_t depth) const {
     return infos_[depth];
   }
 
@@ -407,12 +377,10 @@ class GenerateMovesTest : public testing::TestWithParam<GenTestCase>
   Position position_;
 };
 
-TEST_P(GenerateMovesTest, Perft)
-{
+TEST_P(GenerateMovesTest, Perft) {
   auto position = GetPosition();
 
-  for (size_t depth = 0; depth < GetMaxDepth(); ++depth)
-  {
+  for (size_t depth = 0; depth < GetMaxDepth(); ++depth) {
     auto [possible_games, en_croissants, castlings, ends_of_game] =
         CountPossibleGames(position, depth);
 
@@ -490,8 +458,7 @@ INSTANTIATE_TEST_CASE_P(
                 {2103487}  // depth 4
             }}));
 
-TEST(GenerateMoves, ShannonNumberCheck)
-{
+TEST(GenerateMoves, ShannonNumberCheck) {
   auto start_position = PositionFactory{}();
 
   constexpr size_t max_plies = 6;
@@ -505,8 +472,7 @@ TEST(GenerateMoves, ShannonNumberCheck)
   static constexpr std::array<size_t, max_plies + 1> ends_of_game_answer = {
       0, 0, 0, 0, 0, 8, 347};
 
-  for (size_t depth = 0; depth <= max_plies; ++depth)
-  {
+  for (size_t depth = 0; depth <= max_plies; ++depth) {
     auto [possible_games, en_croissants, castlings, ends_of_game] =
         CountPossibleGames(start_position, depth);
 
@@ -520,8 +486,46 @@ TEST(GenerateMoves, ShannonNumberCheck)
 }
 }  // namespace MoveGeneratorTests
 
-int main(int argc, char** argv)
-{
+namespace ChessEngineTests {
+struct BestMoveTestCase {
+  BestMoveTestCase(std::string fen, std::string best_move)
+      : fen(std::move(fen)), best_move(std::move(best_move)) {}
+
+  std::string fen;
+
+  std::string best_move;
+};
+
+class BestMoveTest : public testing::TestWithParam<BestMoveTestCase> {
+ protected:
+  [[nodiscard]] Move GetMove() const {
+    return MoveFactory{}(GetPosition(), GetParam().best_move);
+  }
+
+  [[nodiscard]] Position GetPosition() const {
+    return PositionFactory{}(GetParam().fen);
+  }
+};
+
+TEST_P(BestMoveTest, FindBestMove) {
+  auto position = GetPosition();
+
+  TimeCondition time_for_move = {std::chrono::milliseconds{3}};
+
+  std::stringstream ss;
+  ChessEngine engine{position};
+  // engine.ComputeBestMove(time_for_move);
+  // ASSERT_EQ(engine.GetCurrentBestMove(), GetMove());
+}
+
+INSTANTIATE_TEST_CASE_P(
+    EPD, BestMoveTest,
+    ::testing::Values(
+        BestMoveTestCase{R"(1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - -)",
+                         R"(d6d1)"},
+        BestMoveTestCase{R"(8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -)", R"(a1b1)"}));
+}  // namespace ChessEngineTests
+int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
 
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kBishop>();
