@@ -19,11 +19,11 @@ class TranspositionTable {
 #pragma pack(push, 1)
   struct Node {
     Hash true_hash{};
-    Move move;
-    Eval score;
-    Depth depth : 6;
-    Bound bound : 2;
-    Age age;
+    Move move{};
+    Eval score{};
+    Depth depth : 6 {};
+    Bound bound : 2 {};
+    Age age{};
   };
 #pragma pack(pop)
 

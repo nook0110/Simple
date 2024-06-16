@@ -148,7 +148,7 @@ class Searcher {
     bool has_stored_move = false;
     bool has_raised_alpha = false;
     Move best_move;
-    Eval best_eval;
+    Eval best_eval = {};
     const Position::IrreversibleData irreversible_data;
     const size_t side_to_move_idx;
 
@@ -188,9 +188,9 @@ class Searcher {
   OrderMoves(const MoveGenerator::Moves::iterator first,
              const MoveGenerator::Moves::iterator last, const size_t ply,
              const Player color) const;
-  Age age_;
+  Age age_{};
 
-  Move best_move_;
+  Move best_move_{};
 
   Position current_position_;  //!< Current position.
 
@@ -480,7 +480,8 @@ Searcher::SearchImplementation<is_principal_variation>::ProbeMove(
   // make the move and search the tree
   current_position.DoMove(move);
 
-  const auto eval_optional = Search<is_pv_move>(max_depth, remaining_depth - 1, -beta, -alpha);
+  const auto eval_optional =
+      Search<is_pv_move>(max_depth, remaining_depth - 1, -beta, -alpha);
 
   // undo the move
   current_position.UndoMove(move, irreversible_data);
@@ -559,7 +560,8 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     if (temp_eval > alpha) /* make a research (ZWS failed) */
     {
-      temp_eval_optional = Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
+      temp_eval_optional =
+          Search<false>(max_depth, remaining_depth - 1, -beta, -alpha);
       if (!temp_eval_optional) return std::nullopt;
 
       temp_eval = -*temp_eval_optional;
