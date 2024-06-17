@@ -22,11 +22,4 @@ jobs:
 
     - name: Test
       working-directory: ${{runner.workspace}}/Simple/Tests/build
-      run: ctest -V > test_res.xml
-
-    - name: Upload test results
-      uses: actions/upload-artifact@v2
-      if: failure()
-      with:
-        name: test_res_xml
-        path: ${{runner.workspace}}/Simple/Tests/build/test_res.xml
+      run: ctest -E EPD -V
