@@ -7,6 +7,7 @@ namespace SimpleChessEngine {
 class Quiescence {
  public:
   constexpr static size_t kEnoughNodesToCheckTime = 1 << 12;
+  constexpr static Eval kSEEMargin = 120;
 
   /**
    * \brief Constructor.
@@ -86,6 +87,10 @@ SearchResult Quiescence::Search(Position& current_position, Eval alpha,
       });
 
   for (const auto& move : moves) {
+    if (!current_position.StaticExchangeEvaluation(move, std::max(1, alpha - stand_pat - kSEEMargin))) {
+      continue;
+    }
+
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree
