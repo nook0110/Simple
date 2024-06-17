@@ -32,15 +32,15 @@ struct TaperedEval {
   }
 };
 
-inline [[nodiscard]] TaperedEval operator+(const TaperedEval& lhs,
-  const TaperedEval& rhs) {
+[[nodiscard]] inline TaperedEval operator+(const TaperedEval& lhs,
+                                           const TaperedEval& rhs) {
   auto copy = lhs;
   copy += rhs;
   return copy;
 }
 
-inline [[nodiscard]] TaperedEval operator-(const TaperedEval& lhs,
-                                    const TaperedEval& rhs) {
+[[nodiscard]] inline TaperedEval operator-(const TaperedEval& lhs,
+                                           const TaperedEval& rhs) {
   auto copy = lhs;
   copy -= rhs;
   return copy;
