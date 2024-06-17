@@ -189,6 +189,15 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
   return IsSlidingPiece(piece) && piece != Piece::kQueen;
 }
 
+[[nodiscard]] constexpr bool IsDiagonalAttacker(const Piece piece) {
+  return piece == Piece::kPawn || piece == Piece::kBishop ||
+         piece == Piece::kQueen;
+}
+
+[[nodiscard]] constexpr bool IsStraightAttacker(const Piece piece) {
+  return piece == Piece::kRook || piece == Piece::kQueen;
+}
+
 constexpr std::array kCheckers = {Piece::kKnight, Piece::kBishop, Piece::kRook,
                                   Piece::kQueen};
 

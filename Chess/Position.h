@@ -60,8 +60,10 @@ class Position {
 
     size_t Count(const Hash hash) const {
       size_t result = 0;
-      size_t parity_shift = (history.size() ^ last_reset[history.size()] ^ 1) % 2;
-      for (size_t i = last_reset[history.size()] + parity_shift; i < history.size(); i += 2) {
+      size_t parity_shift =
+          (history.size() ^ last_reset[history.size()] ^ 1) % 2;
+      for (size_t i = last_reset[history.size()] + parity_shift;
+           i < history.size(); i += 2) {
         if (history[i] == hash) {
           ++result;
         }
@@ -355,6 +357,11 @@ class Position {
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const;
 
+  [[nodiscard]] Eval EstimatePiece(Piece piece) const;
+
+  [[nodiscard]] bool StaticExchangeEvaluation(const Move& move,
+                                              Eval threshold) const;
+
   [[nodiscard]] bool DetectRepetition() const {
     if (history_stack_.history.size() < 3) {
       return false;
@@ -478,6 +485,112 @@ inline bool Position::IsUnderCheck(const Player player) const {
   return IsUnderAttack(GetKingSquare(player), player);
 }
 
+inline Eval Position::EstimatePiece(const Piece piece) const {
+  const auto piece_type_idx = static_cast<size_t>(piece);
+  return kPieceValues[piece_type_idx](evaluation_data_.non_pawn_material);
+}
+
+inline bool Position::StaticExchangeEvaluation(const Move& move,
+                                               const Eval threshold) const {
+  const auto us = side_to_move_;
+  const auto them = Flip(us);
+
+  const auto [from, to, captured_piece] = GetMoveData(move);
+
+  const auto promotion_or = std::get_if<Promotion>(&move);
+
+  Piece next_victim =
+      !promotion_or ? GetPiece(from) : promotion_or->promoted_to;
+
+  Eval balance = EstimatePiece(captured_piece);
+
+  if (promotion_or) {
+    balance +=
+        EstimatePiece(promotion_or->promoted_to) - EstimatePiece(Piece::kPawn);
+  } else if (std::holds_alternative<EnCroissant>(move)) {
+    balance = EstimatePiece(Piece::kPawn);
+  }
+
+  balance -= threshold;
+
+  if (balance < 0) {
+    return false;
+  }
+
+  balance -= EstimatePiece(next_victim);
+
+  if (balance >= 0) {
+    return true;
+  }
+
+  Bitboard occupancy =
+      GetAllPieces() ^ GetBitboardOfSquare(from) ^ GetBitboardOfSquare(to);
+
+  [[unlikely]] if (std::holds_alternative<EnCroissant>(move)) {
+    occupancy ^= Shift(GetBitboardOfSquare(to),
+                       kPawnMoveDirection[static_cast<size_t>(them)]);
+  }
+
+  Bitboard attackers = Attackers(to, ~occupancy) & occupancy;
+
+  auto color = them;
+
+  auto diagonal_xray = pieces_by_type_[static_cast<size_t>(Piece::kBishop)] |
+                       pieces_by_type_[static_cast<size_t>(Piece::kQueen)];
+
+  auto straight_xray = pieces_by_type_[static_cast<size_t>(Piece::kRook)] |
+                         pieces_by_type_[static_cast<size_t>(Piece::kQueen)];
+
+  for (;;) {
+    Bitboard our_attackers = attackers & GetPieces(color);
+    if (our_attackers.None()) {
+      break;
+    }
+
+    Bitboard attacker_bitboard;
+
+    next_victim = Piece::kKing;
+
+    for (size_t attacker_idx = static_cast<size_t>(Piece::kPawn);
+         attacker_idx <= static_cast<size_t>(Piece::kQueen); ++attacker_idx) {
+      if (attacker_bitboard = our_attackers & pieces_by_type_[attacker_idx];
+          attacker_bitboard.Any()) {
+        next_victim = static_cast<Piece>(attacker_idx);
+        break;
+      }
+    }
+
+    attacker_bitboard &= -attacker_bitboard;
+
+    occupancy ^= attacker_bitboard;
+
+    if (IsDiagonalAttacker(next_victim)) {
+      attackers |= AttackTable<Piece::kBishop>::GetAttackMap(to, occupancy) &
+                   diagonal_xray;
+    }
+
+    if (IsStraightAttacker(next_victim)) {
+      attackers |= AttackTable<Piece::kRook>::GetAttackMap(to, occupancy) &
+                   straight_xray;
+    }
+
+    attackers &= occupancy;
+
+    color = Flip(color);
+
+    balance = -balance - 1 - EstimatePiece(next_victim);
+
+    if (balance >= 0) {
+      if (next_victim == Piece::kKing && (attackers & GetPieces(color)).Any()) {
+        color = Flip(color);
+      }
+      break;
+    }
+  }
+
+  return color != GetSideToMove();
+}
+
 inline const std::optional<BitIndex>& Position::GetEnCroissantSquare() const {
   return irreversible_data_.en_croissant_square;
 }
@@ -522,7 +635,7 @@ inline void Position::ComputePins(const Player us) {
   const Bitboard diagonal_blockers =
       AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces) &
       all_pieces;
-  const Bitboard horizontal_blockers =
+  const Bitboard straight_blockers =
       AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces) &
       all_pieces;
 
@@ -531,14 +644,14 @@ inline void Position::ComputePins(const Player us) {
                               (GetPiecesByType<Piece::kBishop>(them) |
                                GetPiecesByType<Piece::kQueen>(them)) &
                               ~diagonal_blockers;
-  Bitboard horizontal_pinners =
+  Bitboard straight_pinners =
       AttackTable<Piece::kRook>::GetAttackMap(
-          king_square, all_pieces ^ horizontal_blockers) &
+          king_square, all_pieces ^ straight_blockers) &
       (GetPiecesByType<Piece::kRook>(them) |
        GetPiecesByType<Piece::kQueen>(them)) &
-      ~horizontal_blockers;
+      ~straight_blockers;
 
-  irreversible_data_.pinners[us_idx] = diagonal_pinners | horizontal_pinners;
+  irreversible_data_.pinners[us_idx] = diagonal_pinners | straight_pinners;
 
   Bitboard& blockers = irreversible_data_.blockers[us_idx];
   while (diagonal_pinners.Any()) {
@@ -549,11 +662,11 @@ inline void Position::ComputePins(const Player us) {
     assert(blockers_between.Any() && !blockers_between.MoreThanOne());
     blockers |= blockers_between;
   }
-  while (horizontal_pinners.Any()) {
-    const BitIndex square = horizontal_pinners.PopFirstBit();
+  while (straight_pinners.Any()) {
+    const BitIndex square = straight_pinners.PopFirstBit();
 
     const auto blockers_between =
-        rook_between[square][king_square] & horizontal_blockers;
+        rook_between[square][king_square] & straight_blockers;
     assert(blockers_between.Any() && !blockers_between.MoreThanOne());
     blockers |= blockers_between;
   }

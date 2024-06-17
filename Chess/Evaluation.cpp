@@ -14,22 +14,6 @@ namespace SimpleChessEngine
          kLimitsDifference;
 }
 
-[[nodiscard]] TaperedEval operator+(const TaperedEval& first,
-                                    const TaperedEval& second)
-{
-  auto copy = first;
-  copy += second;
-  return copy;
-}
-
-[[nodiscard]] TaperedEval operator-(const TaperedEval& first,
-                                    const TaperedEval& second)
-{
-  auto copy = first;
-  copy -= second;
-  return copy;
-}
-
 [[nodiscard]] Eval Position::Evaluate() const
 {
   const auto us = side_to_move_;

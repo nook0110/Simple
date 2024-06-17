@@ -32,6 +32,20 @@ struct TaperedEval {
   }
 };
 
+inline [[nodiscard]] TaperedEval operator+(const TaperedEval& lhs,
+  const TaperedEval& rhs) {
+  auto copy = lhs;
+  copy += rhs;
+  return copy;
+}
+
+inline [[nodiscard]] TaperedEval operator-(const TaperedEval& lhs,
+                                    const TaperedEval& rhs) {
+  auto copy = lhs;
+  copy -= rhs;
+  return copy;
+}
+
 constexpr std::array<TaperedEval, kPieceTypes> kPieceValues = {{{0, 0},
                                                                 {82, 94},
                                                                 {337, 281},
