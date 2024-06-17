@@ -50,15 +50,15 @@ class AttackTable {
 };
 
 template <Piece piece>
-size_t AttackTable<piece>::GetAttackTableAddress(
-    const BitIndex square, const Bitboard occupied) {
+size_t AttackTable<piece>::GetAttackTableAddress(const BitIndex square,
+                                                 const Bitboard occupied) {
   assert(IsWeakSlidingPiece(piece));
-  return self_->magic_[square].GetAddress<piece>(occupied);
+  return self_->magic_[square].template GetAddress<piece>(occupied);
 }
 
 template <Piece piece>
 Bitboard AttackTable<piece>::GetAttackMap(const BitIndex square,
-                                                      const Bitboard occupied) {
+                                          const Bitboard occupied) {
   static constexpr std::array king_attacks = {770ull,
                                               1797ull,
                                               3594ull,
