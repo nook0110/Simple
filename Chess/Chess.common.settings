@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<CommonSettings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <PGO>
+    <ViewModel>
+      <RunPhase1>true</RunPhase1>
+      <AppCollection>
+        <AppDataViewModel>
+          <Application>$(TargetPath)</Application>
+          <Arguments>"position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -" "go movetime 120000" "quit"</Arguments>
+          <Directory>$(ProjectDir)</Directory>
+          <Environment />
+          <MergeEnvironment>true</MergeEnvironment>
+          <PostRunApps />
+        </AppDataViewModel>
+        <AppDataViewModel>
+          <Application>$(TargetPath)</Application>
+          <Arguments>"position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -" "go movetime 120000" "quit"</Arguments>
+          <Directory>$(ProjectDir)</Directory>
+          <Environment />
+          <MergeEnvironment>true</MergeEnvironment>
+          <PostRunApps />
+        </AppDataViewModel>
+      </AppCollection>
+      <RunPhase2>true</RunPhase2>
+      <RunPhase3>true</RunPhase3>
+    </ViewModel>
+    <InstrumentThreadSafe>false</InstrumentThreadSafe>
+    <InstrumentFuncOrder>false</InstrumentFuncOrder>
+    <InstrumentDataLayout>false</InstrumentDataLayout>
+    <SelectedInstrumentOption>InstrumentClang</SelectedInstrumentOption>
+  </PGO>
+  <HWPGO>
+    <ViewModel>
+      <RunPhase1>true</RunPhase1>
+      <AppCollection>
+        <AppDataViewModel>
+          <Application>$(ICInstallDir)..\..\vtune\latest\bin64\sep.exe</Application>
+          <Arguments>-start -out "$(SolutionDir)Chess\x64\Release\Chess.tb7" -app "$(TargetPath)" -lbr no_filter:usr -perf-script event,ip,brstack -ec BR_INST_RETIRED.NEAR_TAKEN:PRECISE=YES:SA=1000003:pdir:lbr:USR=YES</Arguments>
+          <Directory>$(ProjectDir)</Directory>
+          <Environment />
+          <MergeEnvironment>true</MergeEnvironment>
+          <PostRunApps>
+            <AppDataViewModel>
+              <Application>$(ICInstallDir)bin\compiler\llvm-profgen.exe</Application>
+              <Arguments>--output Chess.freq.prof --binary "$(TargetPath)" --perfscript Chess.perf.data.script --perf-event=BR_INST_RETIRED.NEAR_TAKEN:pdir</Arguments>
+              <Environment />
+              <MergeEnvironment>true</MergeEnvironment>
+              <PostRunApps />
+            </AppDataViewModel>
+          </PostRunApps>
+        </AppDataViewModel>
+      </AppCollection>
+      <RunPhase2>true</RunPhase2>
+      <RunPhase3>true</RunPhase3>
+    </ViewModel>
+    <InstrumentThreadSafe>false</InstrumentThreadSafe>
+    <SelectedInstrumentOption>HWPGODefault</SelectedInstrumentOption>
+    <SelectedHWProfileType>ExecutionFrequency</SelectedHWProfileType>
+  </HWPGO>
+</CommonSettings>

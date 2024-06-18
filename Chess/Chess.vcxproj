@@ -171,12 +171,16 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ExceptionHandling>false</ExceptionHandling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <BuildStlModules>true</BuildStlModules>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
-      <AdditionalOptions>/Ob3 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/arch:rocketlake /Qaxrocketlake /tune:rocketlake -fno-exceptions -march=rocketlake /QxHOST /Qopt-zmm-usage:high /Ob3 /Qopt-prefetch:5 /O3 %(AdditionalOptions)</AdditionalOptions>
+      <PGOUsePreTrainedModel>true</PGOUsePreTrainedModel>
+      <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
+      <UseProcessorExtensions>ROCKETLAKE</UseProcessorExtensions>
+      <CCppSupport>Cpp20Support</CCppSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
