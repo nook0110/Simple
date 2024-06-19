@@ -64,23 +64,23 @@ struct IterationInfo {
 };
 
 template <class T>
-concept SearchCondition = requires(T condition, IterationInfo info) {
-  { condition.ShouldContinueIteration() } -> std::convertible_to<bool>;
-  { condition.GetEndSearchTime() } -> std::convertible_to<TimePoint>;
-  { condition.Update(info) };
-};
+concept SearchCondition =
+    StopSearchCondition<T> && requires(T condition, IterationInfo info) {
+      { condition.ShouldContinueIteration() } -> std::convertible_to<bool>;
+      { condition.Update(info) };
+    };
 
 struct TimeCondition {
-  TimeCondition(std::chrono::milliseconds time_for_move)
+  explicit TimeCondition(std::chrono::milliseconds time_for_move)
       : time_for_move_(std::move(time_for_move)) {}
 
-  bool ShouldContinueIteration() const {
-    return time_for_move_ > (std::chrono::system_clock::now() - start_time_);
+  bool ShouldContinueIteration() const { return !IsTimeToExit(); }
+
+  bool IsTimeToExit() const {
+    return time_for_move_ < (std::chrono::system_clock::now() - start_time_);
   }
 
-  TimePoint GetEndSearchTime() const { return time_for_move_ + start_time_; }
-
-  void Update(const IterationInfo&) {}
+  void Update(const IterationInfo&) const {}
 
   const std::chrono::milliseconds time_for_move_;
   const TimePoint start_time_ = std::chrono::system_clock::now();
@@ -88,10 +88,10 @@ struct TimeCondition {
 static_assert(SearchCondition<TimeCondition>);
 
 struct DepthCondition {
-  DepthCondition(size_t max_depth) : max_depth_(max_depth) {}
+  explicit DepthCondition(size_t max_depth) : max_depth_(max_depth) {}
   bool ShouldContinueIteration() const { return cur_depth < max_depth_; }
 
-  TimePoint GetEndSearchTime() const { return TimePoint::max(); }
+  bool IsTimeToExit() const { return false; }
 
   void Update(const IterationInfo& info) { cur_depth = info.depth; }
 
@@ -99,6 +99,18 @@ struct DepthCondition {
   const size_t max_depth_;
 };
 static_assert(SearchCondition<DepthCondition>);
+
+struct Pondering {
+  bool pondermiss;
+
+  bool ShouldContinueIteration() const {
+    if (pondermiss) return false;
+  }
+
+  TimePoint GetEndSearchTime() const { return TimePoint::max(); }
+
+  // std::optional<TimeControl> control;
+};
 
 /**
  * \brief Class that represents a chess engine.
@@ -164,7 +176,8 @@ class ChessEngine {
   template <class Info>
   void PrintInfo(const Info& info);
 
-  std::optional<Eval> MakeIteration(std::size_t depth, const TimePoint& end);
+  std::optional<Eval> MakeIteration(std::size_t depth,
+                                    const StopSearchCondition auto& end);
 
   std::ostream& o_stream_;
 
@@ -186,8 +199,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
        condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
-    const auto eval_optional =
-        MakeIteration(current_depth, condition.GetEndSearchTime());
+    const auto eval_optional = MakeIteration(current_depth, condition);
     if (!eval_optional) {
       break;
     }
@@ -209,12 +221,13 @@ inline const Move& ChessEngine::GetCurrentBestMove() const {
 }
 
 inline std::optional<Eval> ChessEngine::MakeIteration(
-    const std::size_t current_depth, const TimePoint& end) {
+    const std::size_t current_depth,
+    const StopSearchCondition auto& condition) {
   constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
   constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
 
-  return searcher_.Search<true>(end, current_depth, current_depth, neg_inf,
-                                pos_inf);
+  return searcher_.Search<true>(condition, current_depth, current_depth,
+                                neg_inf, pos_inf);
 }
 
 template <class Info>
