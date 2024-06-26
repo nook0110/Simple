@@ -1,9 +1,12 @@
 #pragma once
+#include "Concepts.h"
 #include "Evaluation.h"
 #include "MoveGenerator.h"
 #include "Position.h"
 
 namespace SimpleChessEngine {
+template <class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
 class Quiescence {
  public:
   constexpr static size_t kEnoughNodesToCheckTime = 1 << 12;
@@ -13,7 +16,8 @@ class Quiescence {
    * \brief Constructor.
    *
    */
-  Quiescence(const TimePoint& end_time) : end_time_(end_time){};
+  Quiescence(const ExitCondition& exit_condition)
+      : exit_condition_(exit_condition){};
 
   /**
    * \brief Performs the alpha-beta search algorithm.
@@ -49,19 +53,21 @@ class Quiescence {
 
   bool IsTimeToExit() {
     return searched_nodes_ % kEnoughNodesToCheckTime == 0 &&
-           std::chrono::system_clock::now() > end_time_;
+           exit_condition_.IsTimeToExit();
   }
 
   MoveGenerator move_generator_;  //!< Move generator.
 
-  const TimePoint& end_time_;
+  const ExitCondition& exit_condition_;
 
   std::size_t searched_nodes_{};
 };
 
+template <class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
 template <bool start_of_search>
-SearchResult Quiescence::Search(Position& current_position, Eval alpha,
-                                const Eval beta) {
+SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
+                                               Eval alpha, const Eval beta) {
   if constexpr (start_of_search) {
     searched_nodes_ = 0;
   }
@@ -87,7 +93,8 @@ SearchResult Quiescence::Search(Position& current_position, Eval alpha,
       });
 
   for (const auto& move : moves) {
-    if (!current_position.StaticExchangeEvaluation(move, std::max(1, alpha - stand_pat - kSEEMargin))) {
+    if (!current_position.StaticExchangeEvaluation(
+            move, std::max(1, alpha - stand_pat - kSEEMargin))) {
       continue;
     }
 

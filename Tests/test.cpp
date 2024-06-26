@@ -510,7 +510,7 @@ class BestMoveTest : public testing::TestWithParam<BestMoveTestCase> {
 TEST_P(BestMoveTest, FindBestMove) {
   auto position = GetPosition();
 
-  TimeCondition time_for_move = {std::chrono::milliseconds{3000}};
+  auto time_for_move = TimeCondition{std::chrono::milliseconds{3000}};
 
   std::stringstream ss;
   ChessEngine engine(position, ss);
