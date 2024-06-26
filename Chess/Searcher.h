@@ -252,7 +252,7 @@ Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
                      const size_t ply, const Player color) const {
   auto color_idx = static_cast<size_t>(color);
   MoveGenerator::Moves::iterator quiet_begin;
-  quiet_begin = std::stable_partition(first, last, [this](const Move &move) {
+  quiet_begin = std::partition(first, last, [this](const Move &move) {
     if (std::holds_alternative<Promotion>(move) ||
         std::holds_alternative<EnCroissant>(move))
       return true;
@@ -262,7 +262,7 @@ Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
            static_cast<size_t>(current_position_.GetPiece(from));
   });
   MoveGenerator::Moves::iterator quiet_end;
-  quiet_end = std::stable_partition(quiet_begin, last, [](const Move &move) {
+  quiet_end = std::partition(quiet_begin, last, [](const Move &move) {
     if (!std::holds_alternative<DefaultMove>(move)) return true;
     const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
     return !captured_piece;
@@ -279,8 +279,8 @@ Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
     return std::tie(captured_idx_lhs, moving_idx_lhs) >
            std::tie(captured_idx_rhs, moving_idx_rhs);
   };
-  std::stable_sort(first, quiet_begin, CompareCaptures);
-  std::stable_sort(quiet_end, last, CompareCaptures);
+  std::sort(first, quiet_begin, CompareCaptures);
+  std::sort(quiet_end, last, CompareCaptures);
   int increment = 0;
   for (size_t i = 0; i < killers_.AvailableKillerCount(ply); ++i) {
     const auto killer = killers_.Get(ply, i);
@@ -297,8 +297,8 @@ Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
     return history_[color_idx][from_lhs][to_lhs] >
            history_[color_idx][from_rhs][to_rhs];
   };
-  std::stable_sort(quiet_begin - increment, quiet_begin, CompareQuiet);
-  std::stable_sort(quiet_begin, quiet_end, CompareQuiet);
+  std::sort(quiet_begin - increment, quiet_begin, CompareQuiet);
+  std::sort(quiet_begin, quiet_end, CompareQuiet);
   std::advance(quiet_begin, -increment);
   return {quiet_begin, quiet_end};
 }
