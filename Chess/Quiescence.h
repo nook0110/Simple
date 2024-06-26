@@ -87,7 +87,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
       current_position);
 
-  std::ranges::sort(
+  std::ranges::stable_sort(
       moves, [this, &current_position](const Move& lhs, const Move& rhs) {
         return CompareMoves(lhs, rhs, current_position);
       });
