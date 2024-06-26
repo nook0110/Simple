@@ -1,12 +1,12 @@
 #pragma once
 #include <cassert>
 #include <chrono>
+#include <numeric>
 #include <variant>
 
 #include "Evaluation.h"
 #include "Move.h"
 #include "Searcher.h"
-#include "numeric"
 
 namespace SimpleChessEngine {
 struct DepthInfo {
@@ -32,6 +32,7 @@ struct PrincipalVariationInfo {
 
 struct BestMoveInfo {
   const Move& move;
+  std::optional<Move> ponder;
 };
 
 struct TranspositionTableInfo {
@@ -82,8 +83,8 @@ struct TimeCondition {
 
   void Update(const IterationInfo&) const {}
 
-  const std::chrono::milliseconds time_for_move_;
-  const TimePoint start_time_ = std::chrono::system_clock::now();
+  std::chrono::milliseconds time_for_move_;
+  TimePoint start_time_ = std::chrono::system_clock::now();
 };
 static_assert(SearchCondition<TimeCondition>);
 
@@ -96,21 +97,38 @@ struct DepthCondition {
   void Update(const IterationInfo& info) { cur_depth = info.depth; }
 
   size_t cur_depth = 0;
-  const size_t max_depth_;
+  size_t max_depth_;
 };
 static_assert(SearchCondition<DepthCondition>);
 
-struct Pondering {
-  bool pondermiss;
+using Condition = std::variant<TimeCondition, DepthCondition>;
 
-  bool ShouldContinueIteration() const {
-    if (pondermiss) return false;
+struct Pondering {
+  bool ShouldContinueIteration() const { return !IsTimeToExit(); }
+
+  bool IsTimeToExit() const {
+    if (pondermiss) return true;
+    if (!condition) return false;
+    return std::visit(
+        [](const auto& unwrapped_control) -> bool {
+          return unwrapped_control.IsTimeToExit();
+        },
+        *condition);
+  }
+  void Update(const IterationInfo& info) {
+    if (!condition) return;
+    std::visit(
+        [&info](auto& unwrapped_condition) {
+          unwrapped_condition.Update(info);
+        },
+        *condition);
   }
 
-  TimePoint GetEndSearchTime() const { return TimePoint::max(); }
+  std::optional<Condition> condition;
 
-  // std::optional<TimeControl> control;
+  bool pondermiss = false;
 };
+static_assert(SearchCondition<Pondering>);
 
 /**
  * \brief Class that represents a chess engine.
@@ -119,35 +137,48 @@ struct Pondering {
  */
 class ChessEngine {
  public:
-  explicit ChessEngine(const Position position = PositionFactory{}(),
+  explicit ChessEngine(Position position = PositionFactory{}(),
                        std::ostream& o_stream = std::cout)
-      : searcher_(position), o_stream_(o_stream) {}
+      : o_stream_(o_stream) {
+    SetPosition(std::move(position));
+  }
 
-  void SetPosition(const Position position) { searcher_.SetPosition(position); }
+  void SetPosition(Position position) {
+    position_ = position;
+    searcher_.SetPosition(std::move(position));
+  }
 
-  void ComputeBestMove(const SearchCondition auto conditions);
+  void GoPonder(Pondering& conditions) {
+    position_.DoMove(best_move_);
+    position_.DoMove(*ponder_move_);
+    searcher_.SetPosition(position_);
+
+    ComputeBestMove(conditions);
+  }
+
+  void ComputeBestMove(SearchCondition auto& conditions);
 
   [[nodiscard]] const Move& GetCurrentBestMove() const;
 
   void PrintBestMove() { o_stream_ << BestMoveInfo{GetCurrentBestMove()}; }
 
-  void PrintBestMove(const Move& move) { o_stream_ << BestMoveInfo{move}; }
+  void PrintBestMove(const BestMoveInfo& bm_info) { o_stream_ << bm_info; }
 
  private:
   class EBFsInfo {
     void Update(std::size_t searched_nodes) {
       if (previous_nodes_ != 0) {
-        ebfs_.push_back(static_cast<float>(searched_nodes) / previous_nodes_);
+        ebfs_.push_back(static_cast<float>(searched_nodes) /
+                        static_cast<float>(previous_nodes_));
 
-        float odd_even_average_ = 0;
+        odd_even_average_ = 0;
         if (ebfs_.size() > 1) {
           for (auto it = ebfs_.rbegin(); ebfs_.rend() - it > 1; it += 2) {
             odd_even_average_ += *it;
           }
-          odd_even_average_ /= ebfs_.size() / 2;
+          odd_even_average_ /= static_cast<float>(ebfs_.size()) / 2.f;
         }
       }
-      odd_even_average_ = searched_nodes;
     }
 
     EBFInfo GetInfo() const {
@@ -164,8 +195,8 @@ class ChessEngine {
                  size_t current_depth,
                  std::chrono::duration<double> search_time) {
     PrintInfo(ScoreInfo{eval});
-    PrincipalVariationInfo pv{current_depth,
-                              searcher_.GetPrincipalVariation(current_depth)};
+    PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
+                                                 current_depth, position_)};
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
     PrintInfo(NodesInfo{info.quiescence_nodes});
@@ -182,19 +213,21 @@ class ChessEngine {
   std::ostream& o_stream_;
 
   Searcher searcher_;
+  Position position_;
+
+  Move best_move_;
+  std::optional<Move> ponder_move_;
 };
 }  // namespace SimpleChessEngine
 
 namespace SimpleChessEngine {
 inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
-    SearchCondition auto condition) {
+    SearchCondition auto& condition) {
   const TimePoint start_time = std::chrono::system_clock::now();
   searcher_.InitStartOfSearch();
 
-  EBFInfo ebfs;
   Searcher::DebugInfo info;
 
-  Move best_move{};
   for (size_t current_depth = 1;
        condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
        ++current_depth) {
@@ -203,17 +236,21 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     if (!eval_optional) {
       break;
     }
-    best_move = GetCurrentBestMove();
-
     condition.Update(IterationInfo{searcher_, *eval_optional, current_depth});
 
     info += searcher_.GetInfo();
     PrintInfo(info, *eval_optional, current_depth,
               std::chrono::duration<double>{std::chrono::system_clock::now() -
                                             start_time});
+
+    if (auto two_move_pv = searcher_.GetPrincipalVariation(2, position_);
+        two_move_pv.size() > 1) {
+      ponder_move_ = two_move_pv[1];
+    }
+    best_move_ = searcher_.GetCurrentBestMove();
   }
 
-  PrintBestMove(best_move);
+  PrintBestMove(BestMoveInfo{best_move_, ponder_move_});
 }
 
 inline const Move& ChessEngine::GetCurrentBestMove() const {
@@ -278,7 +315,11 @@ inline std::ostream& operator<<(std::ostream& out,
 
 inline std::ostream& operator<<(std::ostream& out,
                                 const BestMoveInfo& bm_info) {
-  return out << "bestmove " << bm_info.move << std::endl;
+  out << "bestmove " << bm_info.move;
+  if (bm_info.ponder) {
+    out << " ponder " << *bm_info.ponder;
+  }
+  return out << std::endl;
 }
 
 inline std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info) {

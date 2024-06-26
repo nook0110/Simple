@@ -54,15 +54,15 @@ class Searcher {
    *
    * \param position The initial position.
    */
-  explicit Searcher(const Position position = PositionFactory{}())
-      : current_position_(position), move_generator_(MoveGenerator()) {}
+  explicit Searcher(Position position = PositionFactory{}())
+      : current_position_(std::move(position)) {}
 
   /**
    * \brief Sets the current position.
    *
    * \param position New position.
    */
-  void SetPosition(const Position &position);
+  void SetPosition(Position position);
 
   /**
    * \brief Returns the current position.
@@ -139,6 +139,7 @@ class Searcher {
 
     SearchResult operator()();
 
+   private:
     /* Search args */
     const size_t max_depth;
     const size_t remaining_depth;
@@ -154,7 +155,6 @@ class Searcher {
     const Position::IrreversibleData irreversible_data;
     const size_t side_to_move_idx;
 
-   private:
     SearchResult QuiescenceSearch();
 
     Eval GetEndGameScore() const;
@@ -212,8 +212,8 @@ class Searcher {
 }  // namespace SimpleChessEngine
 
 namespace SimpleChessEngine {
-inline void Searcher::SetPosition(const Position &position) {
-  current_position_ = position;
+inline void Searcher::SetPosition(Position position) {
+  current_position_ = std::move(position);
 }
 
 inline const Position &Searcher::GetPosition() const {
@@ -378,12 +378,10 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
 
     if (!is_principal_variation && entry_depth >= remaining_depth) {
-      if (static_cast<Bound>(entry_bound) & Bound::kUpper &&
-          entry_score <= alpha) {
+      if (entry_bound & Bound::kUpper && entry_score <= alpha) {
         return alpha;
       }
-      if (static_cast<Bound>(entry_bound) & Bound::kLower &&
-          entry_score > alpha) {
+      if (entry_bound & Bound::kLower && entry_score > alpha) {
         if (entry_score >= beta) {
           if (IsQuiet(hash_move)) {
             UpdateQuietMove(hash_move);
@@ -393,7 +391,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
         has_raised_alpha = true;
         alpha = entry_score;
       }
-      if (static_cast<Bound>(entry_bound) == Bound::kExact) {
+      if (entry_bound == Bound::kExact) {
         return entry_score;
       }
     }
@@ -536,8 +534,7 @@ SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation,
     ExitCondition>::OrderMoves(const MoveGenerator::Moves::iterator first,
                                const MoveGenerator::Moves::iterator last) {
-  auto &current_position = searcher_.current_position_;
-  auto &best_moves = searcher_.best_moves_;
+  auto const &current_position = searcher_.current_position_;
 
   auto begin_of_ordering = first;
 
