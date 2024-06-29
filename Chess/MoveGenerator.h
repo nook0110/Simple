@@ -17,7 +17,8 @@ class MoveGenerator {
  public:
   enum class Type : uint8_t { kDefault, kQuiescence };
 
-  MoveGenerator() { moves_.reserve(256); }
+  inline static constexpr size_t kMaxMovesPerPosition = 218;
+  MoveGenerator() { moves_.reserve(kMaxMovesPerPosition); }
 
   using Moves = std::vector<Move>;
 
