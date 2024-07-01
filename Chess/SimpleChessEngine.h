@@ -12,7 +12,7 @@
 
 namespace SimpleChessEngine {
 struct DepthInfo {
-  size_t current_depth = 0;
+  Depth current_depth = 0;
 };
 
 struct ScoreInfo {
@@ -28,7 +28,7 @@ struct NodePerSecondInfo {
 };
 
 struct PrincipalVariationInfo {
-  size_t current_depth = 0;
+  Depth current_depth = 0;
   MoveGenerator::Moves moves;
 };
 
@@ -122,7 +122,7 @@ class ChessEngine {
   };
 
   void PrintInfo(const Searcher::DebugInfo& info, Eval eval,
-                 size_t current_depth,
+                 Depth current_depth,
                  std::chrono::duration<double> search_time) {
     PrintInfo(ScoreInfo{eval});
     PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
@@ -137,7 +137,7 @@ class ChessEngine {
   template <class Info>
   void PrintInfo(const Info& info);
 
-  std::optional<Eval> MakeIteration(std::size_t depth,
+  std::optional<Eval> MakeIteration(Depth depth,
                                     const StopSearchCondition auto& end);
 
   std::ostream& o_stream_;
@@ -188,8 +188,7 @@ inline const Move& ChessEngine::GetCurrentBestMove() const {
 }
 
 inline std::optional<Eval> ChessEngine::MakeIteration(
-    const std::size_t current_depth,
-    const StopSearchCondition auto& condition) {
+    const Depth current_depth, const StopSearchCondition auto& condition) {
   constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
   constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
 
