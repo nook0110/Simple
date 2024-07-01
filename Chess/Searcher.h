@@ -430,7 +430,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     current_position.UndoMove(Position::NullMove{}, irreversible_data);
 
-    const auto &null_eval = *eval_optional;
+    const auto null_eval = -*eval_optional;
     if (null_eval >= beta) {
       return beta;
     }
