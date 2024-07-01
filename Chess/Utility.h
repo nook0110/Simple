@@ -13,7 +13,7 @@
 #include "Player.h"
 
 namespace SimpleChessEngine {
-using Depth = uint8_t;
+using Depth = int8_t;
 using Age = uint16_t;
 using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
 
@@ -23,7 +23,7 @@ constexpr int8_t kLineSize = 8;
 constexpr size_t kColors = 2;
 constexpr size_t kPieceTypes =
     7;  // For Pawn, Knight, Bishop, Rook, Queen, King and Empty Square
-constexpr size_t kMaxSearchPly = 1 << 6;
+constexpr Depth kMaxSearchPly = 1 << 6;
 
 constexpr Bitboard kFileA{0x0101010101010101ULL};
 constexpr Bitboard kRank1{0xFF};
