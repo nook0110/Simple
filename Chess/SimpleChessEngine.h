@@ -158,7 +158,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
 
   Searcher::DebugInfo info;
 
-  for (size_t current_depth = 1;
+  for (Depth current_depth = 1;
        condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
