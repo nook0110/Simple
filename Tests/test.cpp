@@ -310,7 +310,7 @@ struct GameInfo {
 };
 
 [[nodiscard]] GameInfo CountPossibleGames(Position& position,
-                                          const size_t depth) {
+                                          const Depth depth) {
   if (depth == 0) return {1, 0, 0, 0};
 
   GameInfo answer{0, 0, 0, 0};
@@ -364,11 +364,11 @@ class GenerateMovesTest : public testing::TestWithParam<GenTestCase> {
 
   [[nodiscard]] const Position& GetPosition() const { return position_; }
 
-  [[nodiscard]] const GameInfo& GetInfo(const size_t depth) const {
+  [[nodiscard]] const GameInfo& GetInfo(const Depth depth) const {
     return infos_[depth];
   }
 
-  [[nodiscard]] size_t GetMaxDepth() const { return infos_.size(); }
+  [[nodiscard]] Depth GetMaxDepth() const { return infos_.size(); }
 
  private:
   void GeneratePosition() { position_ = PositionFactory{}(GetParam().fen); }
@@ -380,7 +380,7 @@ class GenerateMovesTest : public testing::TestWithParam<GenTestCase> {
 TEST_P(GenerateMovesTest, Perft) {
   auto position = GetPosition();
 
-  for (size_t depth = 0; depth < GetMaxDepth(); ++depth) {
+  for (Depth depth = 0; depth < GetMaxDepth(); ++depth) {
     auto [possible_games, en_croissants, castlings, ends_of_game] =
         CountPossibleGames(position, depth);
 
@@ -461,7 +461,7 @@ INSTANTIATE_TEST_CASE_P(
 TEST(GenerateMoves, ShannonNumberCheck) {
   auto start_position = PositionFactory{}();
 
-  constexpr size_t max_plies = 6;
+  constexpr Depth max_plies = 6;
 
   static constexpr std::array<size_t, max_plies + 1> shannon_number = {
       1, 20, 400, 8902, 197281, 4865609, 119060324};
@@ -472,7 +472,7 @@ TEST(GenerateMoves, ShannonNumberCheck) {
   static constexpr std::array<size_t, max_plies + 1> ends_of_game_answer = {
       0, 0, 0, 0, 0, 8, 347};
 
-  for (size_t depth = 0; depth <= max_plies; ++depth) {
+  for (Depth depth = 0; depth <= max_plies; ++depth) {
     auto [possible_games, en_croissants, castlings, ends_of_game] =
         CountPossibleGames(start_position, depth);
 
