@@ -4,13 +4,15 @@
 #include <numeric>
 #include <variant>
 
+#include "Conditions.h"
 #include "Evaluation.h"
+#include "IterationInfo.h"
 #include "Move.h"
 #include "Searcher.h"
 
 namespace SimpleChessEngine {
 struct DepthInfo {
-  size_t current_depth = 0;
+  Depth current_depth = 0;
 };
 
 struct ScoreInfo {
@@ -26,7 +28,7 @@ struct NodePerSecondInfo {
 };
 
 struct PrincipalVariationInfo {
-  size_t current_depth = 0;
+  Depth current_depth = 0;
   MoveGenerator::Moves moves;
 };
 
@@ -57,78 +59,6 @@ std::ostream& operator<<(std::ostream& out,
                          const TranspositionTableInfo& tt_info);
 std::ostream& operator<<(std::ostream& out, const BestMoveInfo& bm_info);
 std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info);
-
-struct IterationInfo {
-  const Searcher& searcher;
-  Eval iteration_result;
-  size_t depth;
-};
-
-template <class T>
-concept SearchCondition =
-    StopSearchCondition<T> && requires(T condition, IterationInfo info) {
-      { condition.ShouldContinueIteration() } -> std::convertible_to<bool>;
-      { condition.Update(info) };
-    };
-
-struct TimeCondition {
-  explicit TimeCondition(std::chrono::milliseconds time_for_move)
-      : time_for_move_(std::move(time_for_move)) {}
-
-  bool ShouldContinueIteration() const { return !IsTimeToExit(); }
-
-  bool IsTimeToExit() const {
-    return time_for_move_ < (std::chrono::system_clock::now() - start_time_);
-  }
-
-  void Update(const IterationInfo&) const {}
-
-  std::chrono::milliseconds time_for_move_;
-  TimePoint start_time_ = std::chrono::system_clock::now();
-};
-static_assert(SearchCondition<TimeCondition>);
-
-struct DepthCondition {
-  explicit DepthCondition(size_t max_depth) : max_depth_(max_depth) {}
-  bool ShouldContinueIteration() const { return cur_depth < max_depth_; }
-
-  bool IsTimeToExit() const { return false; }
-
-  void Update(const IterationInfo& info) { cur_depth = info.depth; }
-
-  size_t cur_depth = 0;
-  size_t max_depth_;
-};
-static_assert(SearchCondition<DepthCondition>);
-
-using Condition = std::variant<TimeCondition, DepthCondition>;
-
-struct Pondering {
-  bool ShouldContinueIteration() const { return !IsTimeToExit(); }
-
-  bool IsTimeToExit() const {
-    if (pondermiss) return true;
-    if (!condition) return false;
-    return std::visit(
-        [](const auto& unwrapped_control) -> bool {
-          return unwrapped_control.IsTimeToExit();
-        },
-        *condition);
-  }
-  void Update(const IterationInfo& info) {
-    if (!condition) return;
-    std::visit(
-        [&info](auto& unwrapped_condition) {
-          unwrapped_condition.Update(info);
-        },
-        *condition);
-  }
-
-  std::optional<Condition> condition;
-
-  bool pondermiss = false;
-};
-static_assert(SearchCondition<Pondering>);
 
 /**
  * \brief Class that represents a chess engine.
@@ -192,7 +122,7 @@ class ChessEngine {
   };
 
   void PrintInfo(const Searcher::DebugInfo& info, Eval eval,
-                 size_t current_depth,
+                 Depth current_depth,
                  std::chrono::duration<double> search_time) {
     PrintInfo(ScoreInfo{eval});
     PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
@@ -207,7 +137,7 @@ class ChessEngine {
   template <class Info>
   void PrintInfo(const Info& info);
 
-  std::optional<Eval> MakeIteration(std::size_t depth,
+  std::optional<Eval> MakeIteration(Depth depth,
                                     const StopSearchCondition auto& end);
 
   std::ostream& o_stream_;
@@ -228,7 +158,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
 
   Searcher::DebugInfo info;
 
-  for (size_t current_depth = 1;
+  for (Depth current_depth = 1;
        condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
@@ -258,13 +188,12 @@ inline const Move& ChessEngine::GetCurrentBestMove() const {
 }
 
 inline std::optional<Eval> ChessEngine::MakeIteration(
-    const std::size_t current_depth,
-    const StopSearchCondition auto& condition) {
+    const Depth current_depth, const StopSearchCondition auto& condition) {
   constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
   constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
 
-  return searcher_.Search<true>(condition, current_depth, current_depth,
-                                neg_inf, pos_inf);
+  return searcher_.Search(condition, current_depth, current_depth, neg_inf,
+                          pos_inf);
 }
 
 template <class Info>

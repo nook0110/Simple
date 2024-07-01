@@ -157,6 +157,9 @@ class Position {
    */
   void DoMove(const Move& move);
 
+  struct NullMove {};
+  void DoMove(NullMove);
+
   /**
    * \brief Does given move.
    *
@@ -196,6 +199,8 @@ class Position {
    * \param move Move to undo.
    */
   void UndoMove(const Move& move, const IrreversibleData& data);
+
+  void UndoMove(NullMove, const IrreversibleData& data);
 
   /**
    * \brief Does given move.
@@ -539,7 +544,7 @@ inline bool Position::StaticExchangeEvaluation(const Move& move,
                        pieces_by_type_[static_cast<size_t>(Piece::kQueen)];
 
   auto straight_xray = pieces_by_type_[static_cast<size_t>(Piece::kRook)] |
-                         pieces_by_type_[static_cast<size_t>(Piece::kQueen)];
+                       pieces_by_type_[static_cast<size_t>(Piece::kQueen)];
 
   for (;;) {
     Bitboard our_attackers = attackers & GetPieces(color);
@@ -644,12 +649,11 @@ inline void Position::ComputePins(const Player us) {
                               (GetPiecesByType<Piece::kBishop>(them) |
                                GetPiecesByType<Piece::kQueen>(them)) &
                               ~diagonal_blockers;
-  Bitboard straight_pinners =
-      AttackTable<Piece::kRook>::GetAttackMap(
-          king_square, all_pieces ^ straight_blockers) &
-      (GetPiecesByType<Piece::kRook>(them) |
-       GetPiecesByType<Piece::kQueen>(them)) &
-      ~straight_blockers;
+  Bitboard straight_pinners = AttackTable<Piece::kRook>::GetAttackMap(
+                                  king_square, all_pieces ^ straight_blockers) &
+                              (GetPiecesByType<Piece::kRook>(them) |
+                               GetPiecesByType<Piece::kQueen>(them)) &
+                              ~straight_blockers;
 
   irreversible_data_.pinners[us_idx] = diagonal_pinners | straight_pinners;
 
