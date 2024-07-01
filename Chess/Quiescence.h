@@ -139,6 +139,10 @@ inline SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
       move_generator_.GenerateMoves<MoveGenerator::Type::kDefault>(
           current_position);
 
+  if (moves.empty()) {
+    return kMateValue + kMaxSearchPly;
+  }
+
   std::ranges::sort(
       moves, [this, &current_position](const Move& lhs, const Move& rhs) {
         return CompareMoves(lhs, rhs, current_position);
