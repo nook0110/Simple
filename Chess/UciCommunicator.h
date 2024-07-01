@@ -142,7 +142,7 @@ struct EngineOptions {
       if (option->GetName() == option_name) {
         std::string value;
         if (!(command >> value)) /* do sth for button */
-          return;
+          return false;
 
         if (value != "value") {
           return false;

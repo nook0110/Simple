@@ -32,6 +32,9 @@ class Quiescence {
   [[nodiscard]] SearchResult Search(Position& current_position, Eval alpha,
                                     Eval beta);
 
+  [[nodiscard]] SearchResult SearchUnderCheck(Position& current_position,
+                                              Eval alpha, Eval beta);
+
   [[nodiscard]] std::size_t GetSearchedNodes() const { return searched_nodes_; }
 
  private:
@@ -73,6 +76,10 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   }
   searched_nodes_++;
 
+  if (current_position.IsUnderCheck()) {
+    return SearchUnderCheck(current_position, alpha, beta);
+  }
+
   const auto stand_pat = current_position.Evaluate();
 
   if (stand_pat >= beta) {
@@ -98,6 +105,50 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
       continue;
     }
 
+    const auto irreversible_data = current_position.GetIrreversibleData();
+
+    // make the move and search the tree
+    current_position.DoMove(move);
+    const auto temp_eval_optional =
+        Search<false>(current_position, -beta, -alpha);
+
+    if (!temp_eval_optional) return std::nullopt;
+
+    const auto temp_eval = -*temp_eval_optional;
+
+    // undo the move
+    current_position.UndoMove(move, irreversible_data);
+
+    if (temp_eval > alpha) {
+      if (temp_eval >= beta) {
+        return beta;
+      }
+
+      alpha = temp_eval;
+    }
+  }
+
+  return alpha;
+}
+
+template <class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+inline SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
+    Position& current_position, Eval alpha, Eval beta) {
+  MoveGenerator::Moves moves =
+      move_generator_.GenerateMoves<MoveGenerator::Type::kDefault>(
+          current_position);
+
+  if (moves.empty()) {
+    return kMateValue + kMaxSearchPly;
+  }
+
+  std::ranges::sort(
+      moves, [this, &current_position](const Move& lhs, const Move& rhs) {
+        return CompareMoves(lhs, rhs, current_position);
+      });
+
+  for (const auto& move : moves) {
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree
