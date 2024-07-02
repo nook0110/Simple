@@ -112,8 +112,8 @@ constexpr Compass Invert(const Compass direction) {
   return static_cast<Compass>(-static_cast<int8_t>(direction));
 }
 
-[[nodiscard]] inline Bitboard Shift(const Bitboard bb,
-                                    const Compass direction) {
+[[nodiscard]] constexpr Bitboard Shift(const Bitboard bb,
+                                       const Compass direction) {
   switch (direction) {
     case Compass::kNorth:
       return bb << kLineSize;
@@ -151,7 +151,7 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
 }
 
 [[nodiscard]] inline Bitboard GetBitboardOfSquare(const BitIndex square) {
-  return Bitboard{1ull << square};
+  return Bitboard{1uLL << square};
 }
 
 [[nodiscard]] inline bool IsAdjacent(const BitIndex sq_first,
