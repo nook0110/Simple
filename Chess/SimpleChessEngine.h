@@ -78,13 +78,7 @@ class ChessEngine {
     searcher_.SetPosition(std::move(position));
   }
 
-  void GoPonder(Pondering& conditions) {
-    position_.DoMove(best_move_);
-    position_.DoMove(*ponder_move_);
-    searcher_.SetPosition(position_);
-
-    ComputeBestMove(conditions);
-  }
+  void GoPonder(Pondering& conditions) { ComputeBestMove(conditions); }
 
   void ComputeBestMove(SearchCondition auto& conditions);
 
@@ -121,17 +115,36 @@ class ChessEngine {
     size_t previous_nodes_ = 0;
   };
 
-  void PrintInfo(const Searcher::DebugInfo& info, Eval eval,
-                 Depth current_depth,
-                 std::chrono::duration<double> search_time) {
-    PrintInfo(ScoreInfo{eval});
-    PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
-                                                 current_depth, position_)};
+  struct Info {
+    ScoreInfo score;
+    PrincipalVariationInfo pv;
+    NodesInfo searched_nodes;
+    NodesInfo quiescence_nodes;
+    NodePerSecondInfo nps;
+    Searcher::DebugInfo searcher_info;
+
+    void Update(const Searcher& searcher, Eval eval, Depth current_depth,
+                const std::chrono::duration<double>& search_time) {
+      searcher_info += searcher.GetInfo();
+      score = {eval};
+      pv = {current_depth, searcher.GetPrincipalVariation(
+                               current_depth, searcher.GetPosition())};
+      searched_nodes = {searcher_info.searched_nodes};
+      quiescence_nodes = {searcher_info.quiescence_nodes};
+      nps = {static_cast<std::size_t>(
+          static_cast<double>(searcher_info.searched_nodes +
+                              searcher_info.quiescence_nodes) /
+          search_time.count())};
+    }
+  };
+
+  void PrintInfo(const Info& info) {
+    const auto& [score, pv, searched_nodes, quiescence_nodes, nps, _] = info;
+    PrintInfo(score);
     PrintInfo(pv);
-    PrintInfo(NodesInfo{info.searched_nodes});
-    PrintInfo(NodesInfo{info.quiescence_nodes});
-    PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
-        (info.searched_nodes + info.quiescence_nodes) / search_time.count())});
+    PrintInfo(searched_nodes);
+    PrintInfo(quiescence_nodes);
+    PrintInfo(nps);
   }
 
   template <class Info>
@@ -156,22 +169,22 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   const TimePoint start_time = std::chrono::system_clock::now();
   searcher_.InitStartOfSearch();
 
-  Searcher::DebugInfo info;
+  Info info;
 
   for (Depth current_depth = 1;
        condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
        ++current_depth) {
-    PrintInfo(DepthInfo{current_depth});
     const auto eval_optional = MakeIteration(current_depth, condition);
     if (!eval_optional) {
+      PrintInfo(info);
       break;
     }
-    condition.Update(IterationInfo{searcher_, *eval_optional, current_depth});
+    info.Update(searcher_, *eval_optional, current_depth,
+                std::chrono::duration<double>{std::chrono::system_clock::now() -
+                                              start_time});
+    PrintInfo(info);
 
-    info += searcher_.GetInfo();
-    PrintInfo(info, *eval_optional, current_depth,
-              std::chrono::duration<double>{std::chrono::system_clock::now() -
-                                            start_time});
+    condition.Update(IterationInfo{searcher_, *eval_optional, current_depth});
 
     if (auto two_move_pv = searcher_.GetPrincipalVariation(2, position_);
         two_move_pv.size() > 1) {
@@ -179,7 +192,6 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     }
     best_move_ = searcher_.GetCurrentBestMove();
   }
-
   PrintBestMove(BestMoveInfo{best_move_, ponder_move_});
 }
 

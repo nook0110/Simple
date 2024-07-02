@@ -48,8 +48,9 @@ class SearchThread {
     assert(pondering_);
     pondering_->condition = GetCondition(info);
   }
-  void GoPonder() {
+  void GoPonder(const Info& info) {
     StopThread();
+    engine_.SetPosition(info.position);
     pondering_ = Pondering{};
     thread_ = std::thread([this] { engine_.GoPonder(*pondering_); });
   }
@@ -215,7 +216,7 @@ inline UciChessEngine::~UciChessEngine() { StopSearch(); }
 
 inline void UciChessEngine::StartSearch(bool ponder) {
   if (ponder) {
-    return search_thread_.GoPonder();
+    return search_thread_.GoPonder(info_);
   }
   search_thread_.Start(info_);
 }
