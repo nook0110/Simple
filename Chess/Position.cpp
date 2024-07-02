@@ -93,8 +93,24 @@ void Position::DoMove(const DoublePush& move) {
 
   const auto us = side_to_move_;
 
-  hash_ ^= hasher_.en_croissant_hash[file];
-  irreversible_data_.en_croissant_square = std::midpoint(from, to);
+  const auto enemy_pawns = GetPiecesByType<Piece::kPawn>(Flip(us));
+  const auto attacks =
+      (Flip(us) == Player::kWhite)
+          ? std::array{Compass::kNorthWest, Compass::kNorthEast}
+          : std::array{Compass::kSouthWest, Compass::kSouthEast};
+  static constexpr std::array cant_attack_files = {kFileBB[0], kFileBB[7]};
+  const auto attacks_to =
+      Shift(enemy_pawns & ~cant_attack_files.front(), attacks.front()) |
+      Shift(enemy_pawns & ~cant_attack_files.back(), attacks.back());
+
+  if (const auto possible_en_croissant_square = std::midpoint(from, to);
+      (attacks_to & GetBitboardOfSquare(possible_en_croissant_square)).Any()) {
+    irreversible_data_.en_croissant_square = possible_en_croissant_square;
+  }
+
+  if (irreversible_data_.en_croissant_square) {
+    hash_ ^= hasher_.en_croissant_hash[file];
+  }
 
   MovePiece(from, to, us);
 }

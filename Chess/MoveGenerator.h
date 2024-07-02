@@ -239,18 +239,15 @@ inline void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
       Shift(promoting_pawns, direction) & valid_squares & target;
 
   while (promotion_push.Any()) {
+    using enum SimpleChessEngine::Piece;
     const auto to = promotion_push.PopFirstBit();
 
     const auto from = Shift(to, opposite_direction);
 
-    moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kQueen});
-    moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kKnight});
-    moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kRook});
-    moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kBishop});
+    moves.emplace_back(Promotion{{from, to, position.GetPiece(to)}, kQueen});
+    moves.emplace_back(Promotion{{from, to, position.GetPiece(to)}, kKnight});
+    moves.emplace_back(Promotion{{from, to, position.GetPiece(to)}, kRook});
+    moves.emplace_back(Promotion{{from, to, position.GetPiece(to)}, kBishop});
   }
 
   for (size_t attack_direction = 0; attack_direction < attacks.size();

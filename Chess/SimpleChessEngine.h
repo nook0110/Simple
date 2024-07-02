@@ -208,8 +208,8 @@ inline std::optional<Eval> ChessEngine::MakeIteration(
                           pos_inf);
 }
 
-template <class Info>
-void ChessEngine::PrintInfo(const Info& info) {
+template <class InfoType>
+void ChessEngine::PrintInfo(const InfoType& info) {
   o_stream_ << info;
 }
 
