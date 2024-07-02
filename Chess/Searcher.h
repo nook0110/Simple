@@ -531,7 +531,8 @@ inline SearchResult Searcher::SearchImplementation<
   current_position.DoMove(move);
 
   const auto eval_optional = Search<is_pv_move>(
-      SearchArgs{max_depth, remaining_depth - 1, -beta, -alpha});
+      SearchArgs{max_depth, static_cast<Depth>(remaining_depth - Depth{1}),
+                 -beta, -alpha});
 
   if (!eval_optional) return std::nullopt;
 
