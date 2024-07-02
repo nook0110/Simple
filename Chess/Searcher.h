@@ -421,10 +421,15 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
   if (CanNullMove()) {
     current_position.DoMove(Position::NullMove{});
+    Depth next_depth = 0;
 
-    const auto eval_optional = Search<false>(
-        SearchArgs{max_depth, Depth{remaining_depth - Depth{1} - Depth{3}},
-                   -beta, -beta + 1, NullMoveInfo{true}});
+    constexpr Depth Reduction = 3;
+    if (remaining_depth > Reduction + 1) {
+      next_depth = remaining_depth - Reduction - 1;
+    }
+
+    const auto eval_optional = Search<false>(SearchArgs{
+        max_depth, next_depth, -beta, -beta + 1, NullMoveInfo{true}});
 
     if (!eval_optional) return std::nullopt;
 
@@ -526,7 +531,8 @@ inline SearchResult Searcher::SearchImplementation<
   current_position.DoMove(move);
 
   const auto eval_optional = Search<is_pv_move>(
-      SearchArgs{max_depth, remaining_depth - 1, -beta, -alpha});
+      SearchArgs{max_depth, static_cast<Depth>(remaining_depth - Depth{1}),
+                 -beta, -alpha});
 
   if (!eval_optional) return std::nullopt;
 
@@ -611,9 +617,9 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     current_position.DoMove(move);  // make the move and search the tree
 
-    auto temp_eval_optional =
-        Search<false>(SearchArgs{max_depth, Depth{remaining_depth - Depth{1}},
-                                 -alpha - 1, -alpha});  // ZWS
+    auto temp_eval_optional = Search<false>(
+        SearchArgs{max_depth, static_cast<Depth>(remaining_depth - Depth{1}),
+                   -alpha - 1, -alpha});  // ZWS
 
     if (!temp_eval_optional) return std::nullopt;
 
@@ -621,8 +627,9 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     if (temp_eval > alpha) /* make a research (ZWS failed) */
     {
-      temp_eval_optional = Search<false>(SearchArgs{
-          max_depth, Depth{remaining_depth - Depth{1}}, -beta, -alpha});
+      temp_eval_optional = Search<false>(
+          SearchArgs{max_depth, static_cast<Depth>(remaining_depth - Depth{1}),
+                     -beta, -alpha});
       if (!temp_eval_optional) return std::nullopt;
 
       temp_eval = -*temp_eval_optional;
