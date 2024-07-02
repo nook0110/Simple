@@ -616,9 +616,9 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     current_position.DoMove(move);  // make the move and search the tree
 
-    auto temp_eval_optional =
-        Search<false>(SearchArgs{max_depth, Depth{remaining_depth - Depth{1}},
-                                 -alpha - 1, -alpha});  // ZWS
+    auto temp_eval_optional = Search<false>(
+        SearchArgs{max_depth, static_cast<Depth>(remaining_depth - Depth{1}),
+                   -alpha - 1, -alpha});  // ZWS
 
     if (!temp_eval_optional) return std::nullopt;
 
@@ -626,8 +626,9 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     if (temp_eval > alpha) /* make a research (ZWS failed) */
     {
-      temp_eval_optional = Search<false>(SearchArgs{
-          max_depth, Depth{remaining_depth - Depth{1}}, -beta, -alpha});
+      temp_eval_optional = Search<false>(
+          SearchArgs{max_depth, static_cast<Depth>(remaining_depth - Depth{1}),
+                     -beta, -alpha});
       if (!temp_eval_optional) return std::nullopt;
 
       temp_eval = -*temp_eval_optional;
