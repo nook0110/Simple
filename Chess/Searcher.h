@@ -421,10 +421,15 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
   if (CanNullMove()) {
     current_position.DoMove(Position::NullMove{});
+    Depth next_depth = 0;
 
-    const auto eval_optional = Search<false>(
-        SearchArgs{max_depth, Depth{remaining_depth - Depth{1} - Depth{3}},
-                   -beta, -beta + 1, NullMoveInfo{true}});
+    constexpr Depth Reduction = 3;
+    if (remaining_depth > Reduction + 1) {
+      next_depth = remaining_depth - Reduction - 1;
+    }
+
+    const auto eval_optional = Search<false>(SearchArgs{
+        max_depth, next_depth, -beta, -beta + 1, NullMoveInfo{true}});
 
     if (!eval_optional) return std::nullopt;
 

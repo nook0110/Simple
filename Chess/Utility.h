@@ -13,7 +13,7 @@
 #include "Player.h"
 
 namespace SimpleChessEngine {
-using Depth = int8_t;
+using Depth = uint8_t;
 using Age = uint16_t;
 using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
 
