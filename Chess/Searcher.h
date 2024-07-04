@@ -126,6 +126,8 @@ class Searcher {
     Depth remaining_depth;
     Eval alpha = {};
     Eval beta;
+
+    bool was_previous_move_a_null = false;
   };
 
   template <bool is_principal_variation, class ExitCondition>
@@ -350,7 +352,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     return kDrawValue;
   }
 
-  auto &[max_depth, remaining_depth, alpha, beta] = status_;
+  auto &[max_depth, remaining_depth, alpha, beta, _] = status_;
 
   if constexpr (is_principal_variation) {
     if (remaining_depth <= 1) {
@@ -491,7 +493,7 @@ inline SearchResult Searcher::SearchImplementation<
   // make the move and search the tree
   current_position.DoMove(move);
 
-  auto &[max_depth, remaining_depth, alpha, beta] = status_;
+  auto &[max_depth, remaining_depth, alpha, beta, _] = status_;
 
   const auto eval_optional = Search<is_pv_move>(
       {max_depth, Depth{remaining_depth - 1}, -beta, -alpha});
@@ -518,7 +520,7 @@ inline std::optional<bool> SimpleChessEngine::Searcher::SearchImplementation<
   SetBestMove(move);
   best_eval = eval;
 
-  auto &[max_depth, remaining_depth, alpha, beta] = status_;
+  auto &[max_depth, remaining_depth, alpha, beta, _] = status_;
 
   if (best_eval > alpha) {
     if (best_eval >= beta) {
@@ -572,7 +574,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     current_position.DoMove(move);  // make the move and search the tree
 
-    auto &[max_depth, remaining_depth, alpha, beta] = status_;
+    auto &[max_depth, remaining_depth, alpha, beta, _] = status_;
 
     auto temp_eval_optional = Search<false>(
         {max_depth, Depth{remaining_depth - 1}, -alpha - 1, -alpha});  // ZWS
