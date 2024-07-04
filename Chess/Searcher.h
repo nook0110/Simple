@@ -188,6 +188,8 @@ class Searcher {
 
     void UpdateQuietMove(const Move &move);
 
+    [[nodiscard]] bool CanNullMove() const;
+
     Searcher &searcher_;
   };
 
@@ -409,9 +411,25 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     has_stored_move = true;
   }
 
-  auto &move_generator = searcher_.move_generator_;
   auto &current_position = searcher_.current_position_;
 
+  if (CanNullMove()) {
+    current_position.DoMove(NullMove{});
+    const auto eval_optional =
+        Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1 - 3),
+                       -beta, -beta + 1, true});
+
+    if (!eval_optional) return std::nullopt;
+
+    current_position.UndoMove(NullMove{}, irreversible_data);
+
+    const auto &null_eval = -*eval_optional;
+    if (null_eval >= beta) {
+      return beta;
+    }
+  }
+
+  auto &move_generator = searcher_.move_generator_;
   auto moves = move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(
       current_position);
 
@@ -496,7 +514,7 @@ inline SearchResult Searcher::SearchImplementation<
   auto &[max_depth, remaining_depth, alpha, beta, _] = status_;
 
   const auto eval_optional = Search<is_pv_move>(
-      {max_depth, Depth{remaining_depth - 1}, -beta, -alpha});
+      {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
 
   if (!eval_optional) return std::nullopt;
 
@@ -576,8 +594,9 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     auto &[max_depth, remaining_depth, alpha, beta, _] = status_;
 
-    auto temp_eval_optional = Search<false>(
-        {max_depth, Depth{remaining_depth - 1}, -alpha - 1, -alpha});  // ZWS
+    auto temp_eval_optional =
+        Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
+                       -alpha - 1, -alpha});  // ZWS
 
     if (!temp_eval_optional) return std::nullopt;
 
@@ -585,8 +604,8 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     if (temp_eval > alpha) /* make a research (ZWS failed) */
     {
-      temp_eval_optional =
-          Search<false>({max_depth, Depth{remaining_depth - 1}, -beta, -alpha});
+      temp_eval_optional = Search<false>(
+          {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
       if (!temp_eval_optional) return std::nullopt;
 
       temp_eval = -*temp_eval_optional;
@@ -630,5 +649,28 @@ inline void SimpleChessEngine::Searcher::SearchImplementation<
   searcher_.history_[side_to_move_idx][from][to] +=
       status_.remaining_depth * status_.remaining_depth;
   searcher_.killers_.TryAdd(status_.max_depth - status_.remaining_depth, move);
+}
+template <bool is_principal_variation, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+inline bool Searcher::SearchImplementation<is_principal_variation,
+                                           ExitCondition>::CanNullMove() const {
+  const auto &max_depth = status_.max_depth;
+  const auto &remaining_depth = status_.remaining_depth;
+
+  if constexpr (is_principal_variation) return false;
+
+  if (remaining_depth < 4) return false;
+
+  if (status_.was_previous_move_a_null) return false;
+
+  if (searcher_.current_position_.IsUnderCheck()) return false;
+
+  const auto &current_position = searcher_.GetPosition();
+  const auto side_to_move = current_position.GetSideToMove();
+  const auto king_and_pawns =
+      current_position.GetPiecesByType<Piece::kKing>(side_to_move) |
+      current_position.GetPiecesByType<Piece::kPawn>(side_to_move);
+
+  return current_position.GetPieces(side_to_move) != king_and_pawns;
 }
 }  // namespace SimpleChessEngine
