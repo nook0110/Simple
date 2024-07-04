@@ -10,7 +10,7 @@
 
 namespace SimpleChessEngine {
 struct DepthInfo {
-  size_t current_depth = 0;
+  Depth current_depth = 0;
 };
 
 struct ScoreInfo {
@@ -89,15 +89,15 @@ struct TimeCondition {
 static_assert(SearchCondition<TimeCondition>);
 
 struct DepthCondition {
-  explicit DepthCondition(size_t max_depth) : max_depth_(max_depth) {}
+  explicit DepthCondition(Depth max_depth) : max_depth_(max_depth) {}
   bool ShouldContinueIteration() const { return cur_depth < max_depth_; }
 
   bool IsTimeToExit() const { return false; }
 
   void Update(const IterationInfo& info) { cur_depth = info.depth; }
 
-  size_t cur_depth = 0;
-  size_t max_depth_;
+  Depth cur_depth = 0;
+  Depth max_depth_;
 };
 static_assert(SearchCondition<DepthCondition>);
 
@@ -192,7 +192,7 @@ class ChessEngine {
   };
 
   void PrintInfo(const Searcher::DebugInfo& info, Eval eval,
-                 size_t current_depth,
+                 Depth current_depth,
                  std::chrono::duration<double> search_time) {
     PrintInfo(ScoreInfo{eval});
     PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
@@ -207,7 +207,7 @@ class ChessEngine {
   template <class Info>
   void PrintInfo(const Info& info);
 
-  std::optional<Eval> MakeIteration(std::size_t depth,
+  std::optional<Eval> MakeIteration(Depth depth,
                                     const StopSearchCondition auto& end);
 
   std::ostream& o_stream_;
@@ -228,7 +228,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
 
   Searcher::DebugInfo info;
 
-  for (size_t current_depth = 1;
+  for (Depth current_depth = 1;
        condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
@@ -258,8 +258,7 @@ inline const Move& ChessEngine::GetCurrentBestMove() const {
 }
 
 inline std::optional<Eval> ChessEngine::MakeIteration(
-    const std::size_t current_depth,
-    const StopSearchCondition auto& condition) {
+    const Depth current_depth, const StopSearchCondition auto& condition) {
   constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
   constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
 

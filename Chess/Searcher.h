@@ -90,8 +90,8 @@ class Searcher {
    */
   template <bool is_principal_variation>
   [[nodiscard]] SearchResult Search(
-      const StopSearchCondition auto &stop_search_condition, size_t max_depth,
-      size_t remaining_depth, Eval alpha, Eval beta);
+      const StopSearchCondition auto &stop_search_condition, Depth max_depth,
+      Depth remaining_depth, Eval alpha, Eval beta);
 
   [[nodiscard]] const DebugInfo &GetInfo() const { return debug_info_; }
 
@@ -102,14 +102,14 @@ class Searcher {
   [[nodiscard]] std::size_t GetPVHits() const { return debug_info_.pv_hits; }
 
   [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
-      std::size_t max_depth) const {
+      Depth max_depth) const {
     return GetPrincipalVariation(max_depth, current_position_);
   }
 
   [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
-      std::size_t max_depth, Position position) const {
+      Depth max_depth, Position position) const {
     MoveGenerator::Moves answer;
-    for (std::size_t i = 0; i < max_depth; ++i) {
+    for (Depth i = 0; i < max_depth; ++i) {
       const auto &hashed_node = best_moves_.GetNode(position);
       if (hashed_node.true_hash != position.GetHash()) break;
       position.DoMove(hashed_node.move);
@@ -127,12 +127,12 @@ class Searcher {
    public:
     constexpr static size_t kEnoughNodesToCheckTime = 1 << 12;
 
-    SearchImplementation(Searcher &searcher, const size_t max_depth,
-                         const size_t remaining_depth, const Eval alpha,
+    SearchImplementation(Searcher &searcher, const Depth max_depth,
+                         const Depth remaining_depth, const Eval alpha,
                          const Eval beta, const ExitCondition &exit_condition);
 
     template <bool is_principal_variation_search>
-    SearchResult Search(const size_t max_depth, const size_t remaining_depth,
+    SearchResult Search(const Depth max_depth, const Depth remaining_depth,
                         Eval alpha, const Eval beta);
 
     bool IsTimeToExit() const;
@@ -141,8 +141,8 @@ class Searcher {
 
    private:
     /* Search args */
-    const size_t max_depth;
-    const size_t remaining_depth;
+    const Depth max_depth;
+    const Depth remaining_depth;
     Eval alpha = {};
     const Eval beta;
     const ExitCondition &exit_condition;
@@ -188,7 +188,7 @@ class Searcher {
 
   std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
   OrderMoves(const MoveGenerator::Moves::iterator first,
-             const MoveGenerator::Moves::iterator last, const size_t ply,
+             const MoveGenerator::Moves::iterator last, const Depth ply,
              const Player color) const;
   Age age_{};
 
@@ -235,8 +235,8 @@ inline void Searcher::InitStartOfSearch() {
 
 template <bool is_principal_variation>
 inline SearchResult SimpleChessEngine::Searcher::Search(
-    const StopSearchCondition auto &stop_search_condition, size_t max_depth,
-    size_t remaining_depth, Eval alpha, Eval beta) {
+    const StopSearchCondition auto &stop_search_condition, Depth max_depth,
+    Depth remaining_depth, Eval alpha, Eval beta) {
   debug_info_ = DebugInfo{};
 
   ++age_;
@@ -248,8 +248,8 @@ inline SearchResult SimpleChessEngine::Searcher::Search(
 
 inline std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
 Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
-                     const MoveGenerator::Moves::iterator last,
-                     const size_t ply, const Player color) const {
+                     const MoveGenerator::Moves::iterator last, const Depth ply,
+                     const Player color) const {
   auto color_idx = static_cast<size_t>(color);
   MoveGenerator::Moves::iterator quiet_begin;
   quiet_begin = std::partition(first, last, [this](const Move &move) {
@@ -307,8 +307,8 @@ template <bool is_principal_variation, class ExitCondition>
 inline SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation,
     ExitCondition>::SearchImplementation(Searcher &searcher,
-                                         const size_t max_depth,
-                                         const size_t remaining_depth,
+                                         const Depth max_depth,
+                                         const Depth remaining_depth,
                                          const Eval alpha, const Eval beta,
                                          const ExitCondition &exit_condition)
     : max_depth(max_depth),
@@ -326,7 +326,7 @@ template <bool is_principal_variation, class ExitCondition>
 template <bool is_principal_variation_search>
 inline SearchResult
 Searcher::SearchImplementation<is_principal_variation, ExitCondition>::Search(
-    const size_t max_depth, const size_t remaining_depth, Eval alpha,
+    const Depth max_depth, const Depth remaining_depth, Eval alpha,
     const Eval beta) {
   return SearchImplementation<is_principal_variation_search, ExitCondition>{
       searcher_, max_depth, remaining_depth, alpha, beta, exit_condition}();

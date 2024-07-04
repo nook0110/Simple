@@ -28,7 +28,7 @@ struct TimePerMove {
 };
 
 struct MaxDepth {
-  size_t depth;
+  Depth depth;
 };
 
 using TimeControl = std::variant<TournamentTime, TimePerMove, MaxDepth>;
