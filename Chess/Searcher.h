@@ -190,6 +190,8 @@ class Searcher {
 
     [[nodiscard]] bool CanNullMove() const;
 
+    inline static constexpr Depth kNullMoveReduction = 2;
+
     Searcher &searcher_;
   };
 
@@ -415,9 +417,10 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
   if (CanNullMove()) {
     current_position.DoMove(NullMove{});
-    const auto eval_optional =
-        Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1 - 3),
-                       -beta, -beta + 1, true});
+    const auto eval_optional = Search<false>(
+        {max_depth,
+         static_cast<Depth>(remaining_depth - 1 - kNullMoveReduction), -beta,
+         -beta + 1, true});
 
     if (!eval_optional) return std::nullopt;
 
@@ -659,9 +662,11 @@ inline bool Searcher::SearchImplementation<is_principal_variation,
 
   if constexpr (is_principal_variation) return false;
 
-  if (remaining_depth < 4) return false;
+  if (remaining_depth <= kNullMoveReduction) return false;
 
   if (status_.was_previous_move_a_null) return false;
+
+  if (searcher_.GetPosition().Evaluate() < status_.beta) return false;
 
   if (searcher_.current_position_.IsUnderCheck()) return false;
 
