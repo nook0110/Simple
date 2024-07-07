@@ -126,6 +126,8 @@ class Searcher {
     Depth remaining_depth;
     Eval alpha = {};
     Eval beta;
+
+    bool was_previous_move_a_null = false;
   };
 
   template <bool is_principal_variation, class ExitCondition>
@@ -190,9 +192,14 @@ class Searcher {
 
     [[nodiscard]] bool CanRFP() const;
 
+    [[nodiscard]] bool CanNullMove() const;
+
     Searcher &searcher_;
 
     struct PruneParameters {
+      struct nmp {
+        static constexpr Depth kNullMoveReduction = 2;
+      };
       struct rfp {
         static constexpr Depth depth_limit = 5;
         static constexpr Eval threshold = 95;
@@ -363,7 +370,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     return kDrawValue;
   }
 
-  auto &[max_depth, remaining_depth, alpha, beta] = status_;
+  auto &[max_depth, remaining_depth, alpha, beta, _] = status_;
 
   if constexpr (is_principal_variation) {
     if (remaining_depth <= 1) {
@@ -424,9 +431,27 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     return static_eval;
   }
 
-  auto const &move_generator = searcher_.move_generator_;
   auto &current_position = searcher_.current_position_;
 
+  if (CanNullMove()) {
+    current_position.DoMove(NullMove{});
+    const auto eval_optional = Search<false>(
+        {max_depth,
+         static_cast<Depth>(remaining_depth - 1 -
+                            PruneParameters::nmp::kNullMoveReduction),
+         -beta, -beta + 1, true});
+
+    if (!eval_optional) return std::nullopt;
+
+    current_position.UndoMove(NullMove{}, irreversible_data);
+
+    const auto &null_eval = -*eval_optional;
+    if (null_eval >= beta) {
+      return beta;
+    }
+  }
+
+  auto &move_generator = searcher_.move_generator_;
   auto moves = move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(
       current_position);
 
@@ -508,7 +533,7 @@ inline SearchResult Searcher::SearchImplementation<
   // make the move and search the tree
   current_position.DoMove(move);
 
-  auto &[max_depth, remaining_depth, alpha, beta] = status_;
+  auto &[max_depth, remaining_depth, alpha, beta, _] = status_;
 
   const auto eval_optional = Search<is_pv_move>(
       {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
@@ -535,7 +560,7 @@ inline std::optional<bool> SimpleChessEngine::Searcher::SearchImplementation<
   SetBestMove(move);
   best_eval = eval;
 
-  auto &[max_depth, remaining_depth, alpha, beta] = status_;
+  auto &[max_depth, remaining_depth, alpha, beta, _] = status_;
 
   if (best_eval > alpha) {
     if (best_eval >= beta) {
@@ -589,7 +614,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     current_position.DoMove(move);  // make the move and search the tree
 
-    auto &[max_depth, remaining_depth, alpha, beta] = status_;
+    auto &[max_depth, remaining_depth, alpha, beta, _] = status_;
 
     auto temp_eval_optional =
         Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
@@ -646,6 +671,31 @@ inline void SimpleChessEngine::Searcher::SearchImplementation<
   searcher_.history_[side_to_move_idx][from][to] +=
       status_.remaining_depth * status_.remaining_depth;
   searcher_.killers_.TryAdd(status_.max_depth - status_.remaining_depth, move);
+}
+template <bool is_principal_variation, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+inline bool Searcher::SearchImplementation<is_principal_variation,
+                                           ExitCondition>::CanNullMove() const {
+  const auto &max_depth = status_.max_depth;
+  const auto &remaining_depth = status_.remaining_depth;
+
+  if constexpr (is_principal_variation) return false;
+
+  if (remaining_depth <= PruneParameters::nmp::kNullMoveReduction) return false;
+
+  if (status_.was_previous_move_a_null) return false;
+
+  if (searcher_.GetPosition().Evaluate() < status_.beta) return false;
+
+  if (is_under_check) return false;
+
+  const auto &current_position = searcher_.GetPosition();
+  const auto side_to_move = current_position.GetSideToMove();
+  const auto king_and_pawns =
+      current_position.GetPiecesByType<Piece::kKing>(side_to_move) |
+      current_position.GetPiecesByType<Piece::kPawn>(side_to_move);
+
+  return current_position.GetPieces(side_to_move) != king_and_pawns;
 }
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
