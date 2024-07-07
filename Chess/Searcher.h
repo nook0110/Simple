@@ -155,6 +155,8 @@ class Searcher {
     bool has_raised_alpha = false;
     Move best_move;
     Eval best_eval = {};
+    const Eval static_eval;
+    const bool is_under_check = false;
     const Position::IrreversibleData irreversible_data;
     const size_t side_to_move_idx;
 
@@ -186,7 +188,16 @@ class Searcher {
 
     void UpdateQuietMove(const Move &move);
 
+    [[nodiscard]] bool CanRFP() const;
+
     Searcher &searcher_;
+
+    struct PruneParameters {
+      struct rfp {
+        static constexpr Depth depth_limit = 5;
+        static constexpr Eval threshold = 95;
+      };
+    };
   };
 
   std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
@@ -316,9 +327,11 @@ inline SimpleChessEngine::Searcher::SearchImplementation<
                                          const ExitCondition &exit_condition)
     : status_(status),
       exit_condition_(exit_condition),
+      static_eval(searcher.current_position_.Evaluate()),
       irreversible_data(searcher.current_position_.GetIrreversibleData()),
       side_to_move_idx(
           static_cast<size_t>(searcher.current_position_.GetSideToMove())),
+      is_under_check(searcher.current_position_.IsUnderCheck()),
       searcher_(searcher) {}
 
 template <bool is_principal_variation, class ExitCondition>
@@ -407,7 +420,11 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     has_stored_move = true;
   }
 
-  auto &move_generator = searcher_.move_generator_;
+  if (CanRFP()) {
+    return static_eval;
+  }
+
+  auto const &move_generator = searcher_.move_generator_;
   auto &current_position = searcher_.current_position_;
 
   auto moves = move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(
@@ -451,7 +468,7 @@ template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline Eval SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation, ExitCondition>::GetEndGameScore() const {
-  if (searcher_.current_position_.IsUnderCheck()) {
+  if (is_under_check) {
     return kMateValue +
            static_cast<Eval>(status_.max_depth - status_.remaining_depth);
   }
@@ -494,7 +511,7 @@ inline SearchResult Searcher::SearchImplementation<
   auto &[max_depth, remaining_depth, alpha, beta] = status_;
 
   const auto eval_optional = Search<is_pv_move>(
-      {max_depth, Depth{remaining_depth - 1}, -beta, -alpha});
+      {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
 
   if (!eval_optional) return std::nullopt;
 
@@ -574,8 +591,9 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     auto &[max_depth, remaining_depth, alpha, beta] = status_;
 
-    auto temp_eval_optional = Search<false>(
-        {max_depth, Depth{remaining_depth - 1}, -alpha - 1, -alpha});  // ZWS
+    auto temp_eval_optional =
+        Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
+                       -alpha - 1, -alpha});  // ZWS
 
     if (!temp_eval_optional) return std::nullopt;
 
@@ -583,8 +601,8 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     if (temp_eval > alpha) /* make a research (ZWS failed) */
     {
-      temp_eval_optional =
-          Search<false>({max_depth, Depth{remaining_depth - 1}, -beta, -alpha});
+      temp_eval_optional = Search<false>(
+          {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
       if (!temp_eval_optional) return std::nullopt;
 
       temp_eval = -*temp_eval_optional;
@@ -628,5 +646,14 @@ inline void SimpleChessEngine::Searcher::SearchImplementation<
   searcher_.history_[side_to_move_idx][from][to] +=
       status_.remaining_depth * status_.remaining_depth;
   searcher_.killers_.TryAdd(status_.max_depth - status_.remaining_depth, move);
+}
+template <bool is_principal_variation, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+inline bool Searcher::SearchImplementation<is_principal_variation,
+                                           ExitCondition>::CanRFP() const {
+  if constexpr (is_principal_variation) return false;
+  return !is_under_check &&
+         status_.remaining_depth <= PruneParameters::rfp::depth_limit &&
+         static_eval > status_.beta + PruneParameters::rfp::threshold;
 }
 }  // namespace SimpleChessEngine
