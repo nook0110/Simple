@@ -184,7 +184,7 @@ class Searcher {
                           const MoveGenerator::Moves::iterator last,
                           const QuietRange &ordeing_result);
 
-    void UpdateQuietMove(const Move& move);
+    void UpdateQuietMove(const Move &move);
     void UpdateQuietMoveList(const QuietRange &quiet_moves_list);
 
     Searcher &searcher_;
@@ -624,34 +624,34 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline void Searcher::SearchImplementation<
-    is_principal_variation, ExitCondition>::UpdateQuietMove(const Move &move) 
-{
-    const auto [from, to, captured_piece] = GetMoveData(move);
-    searcher_.history_[side_to_move_idx][from][to] +=
-        static_cast<int64_t>(status_.remaining_depth) *
-                    static_cast<int64_t>(status_.remaining_depth) +
-                8 * (status_.remaining_depth - 1);
-    searcher_.killers_.TryAdd(status_.max_depth - status_.remaining_depth,
-                              move);
+    is_principal_variation, ExitCondition>::UpdateQuietMove(const Move &move) {
+  const auto [from, to, captured_piece] = GetMoveData(move);
+  searcher_.history_[side_to_move_idx][from][to] +=
+      static_cast<int64_t>(status_.remaining_depth) *
+          static_cast<int64_t>(status_.remaining_depth) +
+      8 * (status_.remaining_depth - 1);
+  searcher_.killers_.TryAdd(status_.max_depth - status_.remaining_depth, move);
 }
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline void SimpleChessEngine::Searcher::SearchImplementation<
-    is_principal_variation, ExitCondition>::UpdateQuietMoveList(const QuietRange& quiet_move_list) {
-    const auto [quiet_begin, quiet_end] = quiet_move_list;
-    const auto last = std::prev(quiet_end);
-    if (quiet_end - quiet_begin == 1 && status_.remaining_depth <= 3) {
-      return;
-    }
-    for (auto it = quiet_begin; it != quiet_end; ++it) {
-      const auto move = *it;
-      const int64_t sign = it == last ? 1 : -1;
-      const auto [from, to, captured_piece] = GetMoveData(move);
-      searcher_.history_[side_to_move_idx][from][to] +=
-          sign * (static_cast<int64_t>(status_.remaining_depth) *
-          static_cast<int64_t>(status_.remaining_depth) + 8 * (status_.remaining_depth - 1)); 
-    }
-    searcher_.killers_.TryAdd(status_.max_depth - status_.remaining_depth, *last);
+    is_principal_variation,
+    ExitCondition>::UpdateQuietMoveList(const QuietRange &quiet_move_list) {
+  const auto [quiet_begin, quiet_end] = quiet_move_list;
+  const auto last = std::prev(quiet_end);
+  if (quiet_end - quiet_begin == 1 && status_.remaining_depth <= 3) {
+    return;
+  }
+  for (auto it = quiet_begin; it != quiet_end; ++it) {
+    const auto &move = *it;
+    const int64_t sign = it == last ? 1 : -1;
+    const auto [from, to, captured_piece] = GetMoveData(move);
+    searcher_.history_[side_to_move_idx][from][to] +=
+        sign * (static_cast<int64_t>(status_.remaining_depth) *
+                    static_cast<int64_t>(status_.remaining_depth) +
+                8 * (status_.remaining_depth - 1));
+  }
+  searcher_.killers_.TryAdd(status_.max_depth - status_.remaining_depth, *last);
 }
 }  // namespace SimpleChessEngine
