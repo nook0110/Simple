@@ -194,8 +194,9 @@ class Searcher {
 
     struct PruneParameters {
       struct rfp {
+        static constexpr bool enabled = true;
         static constexpr Depth depth_limit = 5;
-        static constexpr Eval threshold = 95;
+        static constexpr Eval threshold = 75;
       };
     };
   };
@@ -420,8 +421,10 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     has_stored_move = true;
   }
 
-  if (CanRFP()) {
-    return static_eval;
+  if constexpr (PruneParameters::rfp::enabled) {
+    if (CanRFP()) {
+      return static_eval;
+    }
   }
 
   auto const &move_generator = searcher_.move_generator_;
@@ -654,6 +657,7 @@ inline bool Searcher::SearchImplementation<is_principal_variation,
   if constexpr (is_principal_variation) return false;
   return !is_under_check &&
          status_.remaining_depth <= PruneParameters::rfp::depth_limit &&
-         static_eval > status_.beta + PruneParameters::rfp::threshold;
+         static_eval > status_.beta + PruneParameters::rfp::threshold *
+                                          status_.remaining_depth;
 }
 }  // namespace SimpleChessEngine
