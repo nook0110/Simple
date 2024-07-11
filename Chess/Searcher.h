@@ -179,12 +179,8 @@ class Searcher {
       MoveGenerator::Moves::iterator quiet_end;
     };
 
-    QuietRange OrderMoves(const MoveGenerator::Moves::iterator first,
-                          const MoveGenerator::Moves::iterator last);
-
     SearchResult PVSearch(const MoveGenerator::Moves::iterator first,
-                          const MoveGenerator::Moves::iterator last,
-                          const QuietRange &ordeing_result);
+                          const MoveGenerator::Moves::iterator last);
 
     void UpdateQuietMove(const Move &move);
 
@@ -201,10 +197,6 @@ class Searcher {
     };
   };
 
-  std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
-  OrderMoves(const MoveGenerator::Moves::iterator first,
-             const MoveGenerator::Moves::iterator last, const Depth ply,
-             const Player color) const;
   Age age_{};
 
   Move best_move_{};
@@ -263,62 +255,6 @@ inline SearchResult SimpleChessEngine::Searcher::Search(
       stop_search_condition}();
 }
 
-inline std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
-Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
-                     const MoveGenerator::Moves::iterator last, const Depth ply,
-                     const Player color) const {
-  auto color_idx = static_cast<size_t>(color);
-  MoveGenerator::Moves::iterator quiet_begin;
-  quiet_begin = std::partition(first, last, [this](const Move &move) {
-    if (std::holds_alternative<Promotion>(move) ||
-        std::holds_alternative<EnCroissant>(move))
-      return true;
-    if (!std::holds_alternative<DefaultMove>(move)) return false;
-    const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
-    return static_cast<size_t>(captured_piece) >=
-           static_cast<size_t>(current_position_.GetPiece(from));
-  });
-  MoveGenerator::Moves::iterator quiet_end;
-  quiet_end = std::partition(quiet_begin, last, [](const Move &move) {
-    if (!std::holds_alternative<DefaultMove>(move)) return true;
-    const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
-    return !captured_piece;
-  });
-  const auto CompareCaptures = [this](const Move &lhs, const Move &rhs) {
-    const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
-    const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
-    const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
-    const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
-    const auto moving_idx_lhs =
-        -static_cast<int>(current_position_.GetPiece(from_lhs));
-    const auto moving_idx_rhs =
-        -static_cast<int>(current_position_.GetPiece(from_rhs));
-    return std::tie(captured_idx_lhs, moving_idx_lhs) >
-           std::tie(captured_idx_rhs, moving_idx_rhs);
-  };
-  std::sort(first, quiet_begin, CompareCaptures);
-  std::sort(quiet_end, last, CompareCaptures);
-  int increment = 0;
-  for (size_t i = 0; i < killers_.AvailableKillerCount(ply); ++i) {
-    const auto killer = killers_.Get(ply, i);
-    if (auto it = std::find(quiet_begin, quiet_end, killer); it != quiet_end) {
-      std::iter_swap(quiet_begin, it);
-      ++quiet_begin;
-      ++increment;
-    }
-  }
-  const auto CompareQuiet = [this, color_idx](const Move &lhs,
-                                              const Move &rhs) {
-    const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
-    const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
-    return history_[color_idx][from_lhs][to_lhs] >
-           history_[color_idx][from_rhs][to_rhs];
-  };
-  std::sort(quiet_begin - increment, quiet_begin, CompareQuiet);
-  std::sort(quiet_begin, quiet_end, CompareQuiet);
-  std::advance(quiet_begin, -increment);
-  return {quiet_begin, quiet_end};
-}
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline SimpleChessEngine::Searcher::SearchImplementation<
@@ -438,8 +374,6 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     return GetEndGameScore();
   }
 
-  const auto ordering_result = OrderMoves(moves.begin(), moves.end());
-
   if (!has_stored_move) {
     auto has_cutoff_opt = CheckFirstMove<false>(moves.front());
     if (!has_cutoff_opt) {
@@ -451,7 +385,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     }
   }
 
-  return PVSearch(std::next(moves.begin()), moves.end(), ordering_result);
+  return PVSearch(std::next(moves.begin()), moves.end());
 }
 
 template <bool is_principal_variation, class ExitCondition>
@@ -553,42 +487,18 @@ inline std::optional<bool> SimpleChessEngine::Searcher::SearchImplementation<
 
   return false;
 }
-template <bool is_principal_variation, class ExitCondition>
-  requires StopSearchCondition<ExitCondition>
-inline Searcher::SearchImplementation<is_principal_variation,
-                                      ExitCondition>::QuietRange
-SimpleChessEngine::Searcher::SearchImplementation<
-    is_principal_variation,
-    ExitCondition>::OrderMoves(const MoveGenerator::Moves::iterator first,
-                               const MoveGenerator::Moves::iterator last) {
-  auto const &current_position = searcher_.current_position_;
 
-  auto begin_of_ordering = first;
-
-  if (has_stored_move) {
-    std::iter_swap(std::find(first, last, best_move), begin_of_ordering++);
-  }
-
-  auto [quiet_begin, quiet_end] = searcher_.OrderMoves(
-      begin_of_ordering, last, status_.max_depth - status_.remaining_depth,
-      current_position.GetSideToMove());
-  return QuietRange{quiet_begin, quiet_end};
-}
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation,
     ExitCondition>::PVSearch(const MoveGenerator::Moves::iterator first,
-                             const MoveGenerator::Moves::iterator last,
-                             const QuietRange &ordeing_result) {
+                             const MoveGenerator::Moves::iterator last) {
   auto &current_position = searcher_.current_position_;
 
   bool is_quiet = false;
   for (auto it = first; it != last; ++it) {
     const auto &move = *it;
-
-    if (it >= ordeing_result.quiet_begin) is_quiet = true;
-    if (it >= ordeing_result.quiet_end) is_quiet = false;
 
     current_position.DoMove(move);  // make the move and search the tree
 
