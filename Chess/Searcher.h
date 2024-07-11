@@ -326,7 +326,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
           current_position)};
 
   // check if there are no possible moves
-  if (move_picker_.HasMoreMoves()) {
+  if (!move_picker_.HasMoreMoves()) {
     return GetEndGameScore();
   }
 
@@ -452,10 +452,13 @@ template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation, ExitCondition>::PVSearch() {
+  if (!move_picker_.HasMoreMoves()) {
+    return state_.alpha;
+  }
   auto &current_position = searcher_.current_position_;
 
   bool is_quiet = false;
-  for (auto it = move_picker_.GetNextMove(); it != move_picker_.end();
+  for (auto it = move_picker_.GetNextMove(); move_picker_.HasMoreMoves();
        it = move_picker_.GetNextMove()) {
     const auto &move = *it;
     is_quiet = move_picker_.GetMoveType(it) == MovePicker::MoveType::kQuiet;
@@ -570,7 +573,7 @@ inline std::optional<SearchResult> Searcher::SearchImplementation<
     }
     auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(hash_move);
     if (!has_cutoff_opt) {
-      return std::nullopt;
+      return SearchResult{};
     }
     if (*has_cutoff_opt) {
       SetTTEntry(Bound::kLower);

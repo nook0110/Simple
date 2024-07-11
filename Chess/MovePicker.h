@@ -7,7 +7,11 @@ class MovePicker {
   enum class MoveType { kCapture, kQuiet, kOther };
 
   MovePicker() = default;
+  MovePicker(MovePicker&&) = default;
   explicit MovePicker(MoveGenerator::Moves&& moves);
+  ~MovePicker() = default;
+
+  MovePicker& operator=(MovePicker&&) = default;
 
   MoveGenerator::Moves::iterator GetNextMove();
 
@@ -17,9 +21,6 @@ class MovePicker {
 
   [[nodiscard]] MoveType GetMoveType(MoveGenerator::Moves::iterator move) const;
 
-  [[nodiscard]] MoveGenerator::Moves::const_iterator end() const;
-
-  ~MovePicker() = default;
 
  private:
   MoveGenerator::Moves moves_;
@@ -42,9 +43,6 @@ inline bool MovePicker::HasMoreMoves() const {
 inline MovePicker::MoveType MovePicker::GetMoveType(
     MoveGenerator::Moves::iterator) const {
   /* TODO: implement */
-  assert(false);
-}
-inline MoveGenerator::Moves::const_iterator MovePicker::end() const {
-  return moves_.end();
+  return MoveType::kOther;
 }
 }  // namespace SimpleChessEngine
