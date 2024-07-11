@@ -6,6 +6,7 @@
 #include "Evaluation.h"
 #include "KillerTable.h"
 #include "MoveGenerator.h"
+#include "MovePicker.h"
 #include "PositionFactory.h"
 #include "Quiescence.h"
 #include "StreamUtility.h"
@@ -102,96 +103,41 @@ class Searcher {
   [[nodiscard]] std::size_t GetPVHits() const { return debug_info_.pv_hits; }
 
   [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
-      Depth max_depth) const {
-    return GetPrincipalVariation(max_depth, current_position_);
-  }
-
-  [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
-      Depth max_depth, Position position) const {
-    MoveGenerator::Moves answer;
-    for (Depth i = 0; i < max_depth; ++i) {
-      const auto &hashed_node = best_moves_.GetNode(position);
-      if (hashed_node.true_hash != position.GetHash()) break;
-      position.DoMove(hashed_node.move);
-      answer.push_back(hashed_node.move);
-    }
-    return answer;
-  }
+      Depth max_depth, Position position) const;
 
   void InitStartOfSearch();
 
  private:
-  struct SearchStatus {
+  struct SearchState {
     Depth max_depth;
     Depth remaining_depth;
     Eval alpha = {};
     Eval beta;
   };
 
-  template <bool is_principal_variation, class ExitCondition>
-    requires StopSearchCondition<ExitCondition>
-  struct SearchImplementation {
-   public:
-    constexpr static size_t kEnoughNodesToCheckTime = 1 << 12;
-
-    SearchImplementation(Searcher &searcher, SearchStatus status,
-                         const ExitCondition &exit_condition);
-
-    template <bool is_principal_variation_search>
-    SearchResult Search(SearchStatus status);
-
-    bool IsTimeToExit() const;
-
-    SearchResult operator()();
-
-   private:
-    /* Search args */
-    SearchStatus status_;
-
-    const ExitCondition &exit_condition_;
-
-    /* Local variables for search */
+  struct IterationStatus {
     bool has_stored_move = false;
     bool has_raised_alpha = false;
     Move best_move;
     Eval best_eval = {};
+  };
+
+  struct PositionInfo {
+    PositionInfo(const Position &position)
+        : static_eval(position.Evaluate()),
+          is_under_check(position.IsUnderCheck()),
+          irreversible_data(position.GetIrreversibleData()),
+          side_to_move_idx(static_cast<size_t>(position.GetSideToMove())) {}
     const Eval static_eval;
     const bool is_under_check = false;
     const Position::IrreversibleData irreversible_data;
     const size_t side_to_move_idx;
+  };
 
-    SearchResult QuiescenceSearch();
-
-    Eval GetEndGameScore() const;
-
-    void SetBestMove(const Move &move);
-
-    void SetTTEntry(const Bound bound);
-
-    template <bool is_pv_move>
-    SearchResult ProbeMove(const Move &move);
-
-    template <bool is_pv_move>
-    std::optional<bool> CheckFirstMove(const Move &move);
-
-    struct QuietRange {
-      MoveGenerator::Moves::iterator quiet_begin;
-      MoveGenerator::Moves::iterator quiet_end;
-    };
-
-    QuietRange OrderMoves(const MoveGenerator::Moves::iterator first,
-                          const MoveGenerator::Moves::iterator last);
-
-    SearchResult PVSearch(const MoveGenerator::Moves::iterator first,
-                          const MoveGenerator::Moves::iterator last,
-                          const QuietRange &ordeing_result);
-
-    void UpdateQuietMove(const Move &move);
-
-    [[nodiscard]] bool CanRFP() const;
-
-    Searcher &searcher_;
-
+  template <bool is_principal_variation, class ExitCondition>
+    requires StopSearchCondition<ExitCondition>
+  struct SearchImplementation {
+   public:
     struct PruneParameters {
       struct rfp {
         static constexpr bool enabled = true;
@@ -199,32 +145,68 @@ class Searcher {
         static constexpr Eval threshold = 75;
       };
     };
+    constexpr static size_t kEnoughNodesToCheckTime = 1 << 12;
+
+    SearchImplementation(Searcher &searcher, SearchState state,
+                         const ExitCondition &exit_condition);
+
+    template <bool is_principal_variation_search>
+    SearchResult Search(SearchState state);
+
+    bool IsTimeToExit() const;
+
+    SearchResult operator()();
+
+   private:
+    /* Search args */
+    SearchState state_;
+
+    const ExitCondition &exit_condition_;
+
+    /* Local variables for search */
+    IterationStatus iteration_status_;
+    PositionInfo position_info_;
+    MovePicker move_picker_;
+
+    SearchResult QuiescenceSearch();
+    Eval GetEndGameScore() const;
+
+    void SetBestMove(const Move &move);
+    void SetTTEntry(const Bound bound);
+    void UpdateQuietMove(const Move &move);
+
+    template <bool is_pv_move>
+    SearchResult ProbeMove(const Move &move);
+    template <bool is_pv_move>
+    std::optional<bool> CheckFirstMove(const Move &move);
+
+    [[nodiscard]] bool CanRFP() const;
+
+    std::optional<SearchResult> CheckTranspositionTable();
+
+    SearchResult PVSearch();
+
+    Searcher &searcher_;
   };
 
-  std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
-  OrderMoves(const MoveGenerator::Moves::iterator first,
-             const MoveGenerator::Moves::iterator last, const Depth ply,
-             const Player color) const;
   Age age_{};
-
   Move best_move_{};
-
-  Position current_position_;  //!< Current position.
-
+  Position current_position_;     //!< Current position.
   MoveGenerator move_generator_;  //!< Move generator.
-
   TranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
-
   std::array<std::array<std::array<uint64_t, kBoardArea + 1>, kBoardArea + 1>,
              kColors>
       history_ = {};
-
   KillerTable<2> killers_;
 
   DebugInfo debug_info_;
 };
 }  // namespace SimpleChessEngine
+
+///////////////////////////////////////////////////////////////////////////////
+// Implementation
+///////////////////////////////////////////////////////////////////////////////
 
 namespace SimpleChessEngine {
 inline void Searcher::SetPosition(Position position) {
@@ -237,13 +219,23 @@ inline const Position &Searcher::GetPosition() const {
 
 inline const Move &Searcher::GetCurrentBestMove() const { return best_move_; }
 
+inline MoveGenerator::Moves Searcher::GetPrincipalVariation(
+    Depth max_depth, Position position) const {
+  MoveGenerator::Moves answer;
+  for (Depth i = 0; i < max_depth; ++i) {
+    const auto &hashed_node = best_moves_.GetNode(position);
+    if (hashed_node.true_hash != position.GetHash()) break;
+    position.DoMove(hashed_node.move);
+    answer.push_back(hashed_node.move);
+  }
+  return answer;
+}
+
 inline void Searcher::InitStartOfSearch() {
   killers_.Clear();
-  for (unsigned color = 0; color < kColors; ++color) {
+  for (size_t color = 0; color < kColors; ++color) {
     for (BitIndex from = 0; from <= kBoardArea; ++from) {
-      for (BitIndex to = 0; to <= kBoardArea; ++to) {
-        history_[color][from][to] = 0ull;
-      }
+      history_[color][from].fill(0ull);
     }
   }
 }
@@ -253,7 +245,6 @@ inline SearchResult SimpleChessEngine::Searcher::Search(
     const StopSearchCondition auto &stop_search_condition, Depth max_depth,
     Depth remaining_depth, Eval alpha, Eval beta) {
   debug_info_ = DebugInfo{};
-
   ++age_;
 
   return SearchImplementation<is_principal_variation,
@@ -263,76 +254,15 @@ inline SearchResult SimpleChessEngine::Searcher::Search(
       stop_search_condition}();
 }
 
-inline std::pair<MoveGenerator::Moves::iterator, MoveGenerator::Moves::iterator>
-Searcher::OrderMoves(const MoveGenerator::Moves::iterator first,
-                     const MoveGenerator::Moves::iterator last, const Depth ply,
-                     const Player color) const {
-  auto color_idx = static_cast<size_t>(color);
-  MoveGenerator::Moves::iterator quiet_begin;
-  quiet_begin = std::partition(first, last, [this](const Move &move) {
-    if (std::holds_alternative<Promotion>(move) ||
-        std::holds_alternative<EnCroissant>(move))
-      return true;
-    if (!std::holds_alternative<DefaultMove>(move)) return false;
-    const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
-    return static_cast<size_t>(captured_piece) >=
-           static_cast<size_t>(current_position_.GetPiece(from));
-  });
-  MoveGenerator::Moves::iterator quiet_end;
-  quiet_end = std::partition(quiet_begin, last, [](const Move &move) {
-    if (!std::holds_alternative<DefaultMove>(move)) return true;
-    const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
-    return !captured_piece;
-  });
-  const auto CompareCaptures = [this](const Move &lhs, const Move &rhs) {
-    const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
-    const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
-    const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
-    const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
-    const auto moving_idx_lhs =
-        -static_cast<int>(current_position_.GetPiece(from_lhs));
-    const auto moving_idx_rhs =
-        -static_cast<int>(current_position_.GetPiece(from_rhs));
-    return std::tie(captured_idx_lhs, moving_idx_lhs) >
-           std::tie(captured_idx_rhs, moving_idx_rhs);
-  };
-  std::sort(first, quiet_begin, CompareCaptures);
-  std::sort(quiet_end, last, CompareCaptures);
-  int increment = 0;
-  for (size_t i = 0; i < killers_.AvailableKillerCount(ply); ++i) {
-    const auto killer = killers_.Get(ply, i);
-    if (auto it = std::find(quiet_begin, quiet_end, killer); it != quiet_end) {
-      std::iter_swap(quiet_begin, it);
-      ++quiet_begin;
-      ++increment;
-    }
-  }
-  const auto CompareQuiet = [this, color_idx](const Move &lhs,
-                                              const Move &rhs) {
-    const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
-    const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
-    return history_[color_idx][from_lhs][to_lhs] >
-           history_[color_idx][from_rhs][to_rhs];
-  };
-  std::sort(quiet_begin - increment, quiet_begin, CompareQuiet);
-  std::sort(quiet_begin, quiet_end, CompareQuiet);
-  std::advance(quiet_begin, -increment);
-  return {quiet_begin, quiet_end};
-}
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation,
-    ExitCondition>::SearchImplementation(Searcher &searcher,
-                                         SearchStatus status,
+    ExitCondition>::SearchImplementation(Searcher &searcher, SearchState state,
                                          const ExitCondition &exit_condition)
-    : status_(status),
+    : state_(state),
       exit_condition_(exit_condition),
-      static_eval(searcher.current_position_.Evaluate()),
-      irreversible_data(searcher.current_position_.GetIrreversibleData()),
-      side_to_move_idx(
-          static_cast<size_t>(searcher.current_position_.GetSideToMove())),
-      is_under_check(searcher.current_position_.IsUnderCheck()),
+      position_info_(searcher.GetPosition()),
       searcher_(searcher) {}
 
 template <bool is_principal_variation, class ExitCondition>
@@ -340,9 +270,9 @@ template <bool is_principal_variation, class ExitCondition>
 template <bool is_principal_variation_search>
 inline SearchResult
 Searcher::SearchImplementation<is_principal_variation, ExitCondition>::Search(
-    SearchStatus status) {
+    SearchState state) {
   return SearchImplementation<is_principal_variation_search, ExitCondition>{
-      searcher_, status, exit_condition_}();
+      searcher_, state, exit_condition_}();
 }
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
@@ -364,7 +294,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     return kDrawValue;
   }
 
-  auto &[max_depth, remaining_depth, alpha, beta] = status_;
+  auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
   if constexpr (is_principal_variation) {
     if (remaining_depth <= 1) {
@@ -380,68 +310,28 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
   searcher_.debug_info_.searched_nodes++;
 
-  if (auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
-          searcher_.best_moves_.GetNode(searcher_.current_position_);
-      hash == searcher_.current_position_
-                  .GetHash()) {  // check if current position was previously
-                                 // searched at higher depth
-
-    if (remaining_depth == max_depth) {
-      searcher_.best_move_ = hash_move;
-    }
-
-    entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
-
-    if (!is_principal_variation && entry_depth >= remaining_depth) {
-      if (entry_bound & Bound::kUpper && entry_score <= alpha) {
-        return alpha;
-      }
-      if (entry_bound & Bound::kLower && entry_score > alpha) {
-        if (entry_score >= beta) {
-          if (IsQuiet(hash_move)) {
-            UpdateQuietMove(hash_move);
-          }
-          return beta;
-        }
-        has_raised_alpha = true;
-        alpha = entry_score;
-      }
-      if (entry_bound == Bound::kExact) {
-        return entry_score;
-      }
-    }
-    auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(hash_move);
-    if (!has_cutoff_opt) {
-      return std::nullopt;
-    }
-    if (*has_cutoff_opt) {
-      SetTTEntry(Bound::kLower);
-      return beta;
-    }
-    has_stored_move = true;
+  if (auto result = CheckTranspositionTable()) {
+    return *result;
   }
 
-  if constexpr (PruneParameters::rfp::enabled) {
-    if (CanRFP()) {
-      return static_eval;
-    }
+  if (CanRFP()) {
+    return position_info_.static_eval;
   }
 
   auto const &move_generator = searcher_.move_generator_;
   auto &current_position = searcher_.current_position_;
 
-  auto moves = move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(
-      current_position);
+  move_picker_ =
+      MovePicker{move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(
+          current_position)};
 
   // check if there are no possible moves
-  if (moves.empty()) {
+  if (move_picker_.HasMoreMoves()) {
     return GetEndGameScore();
   }
 
-  const auto ordering_result = OrderMoves(moves.begin(), moves.end());
-
-  if (!has_stored_move) {
-    auto has_cutoff_opt = CheckFirstMove<false>(moves.front());
+  if (!iteration_status_.has_stored_move) {
+    auto has_cutoff_opt = CheckFirstMove<false>(*move_picker_.GetNextMove());
     if (!has_cutoff_opt) {
       return std::nullopt;
     }
@@ -449,9 +339,12 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
       SetTTEntry(Bound::kLower);
       return beta;
     }
+  } else {
+    // skip the first move
+    move_picker_.RemoveMove(iteration_status_.best_move);
   }
 
-  return PVSearch(std::next(moves.begin()), moves.end(), ordering_result);
+  return PVSearch();
 }
 
 template <bool is_principal_variation, class ExitCondition>
@@ -462,7 +355,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
   auto quiescence_searcher = Quiescence{exit_condition_};
 
   const auto eval = quiescence_searcher.template Search<true>(
-      current_position, status_.alpha, status_.beta);
+      current_position, state_.alpha, state_.beta);
   searcher_.debug_info_.quiescence_nodes +=
       quiescence_searcher.GetSearchedNodes();
   return eval;
@@ -471,9 +364,9 @@ template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline Eval SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation, ExitCondition>::GetEndGameScore() const {
-  if (is_under_check) {
+  if (position_info_.is_under_check) {
     return kMateValue +
-           static_cast<Eval>(status_.max_depth - status_.remaining_depth);
+           static_cast<Eval>(state_.max_depth - state_.remaining_depth);
   }
   return kDrawValue;
 }
@@ -484,9 +377,9 @@ inline void SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation, ExitCondition>::SetBestMove(const Move &move) {
   auto &current_position = searcher_.current_position_;
 
-  best_move = move;
+  iteration_status_.best_move = move;
 
-  if (status_.remaining_depth == status_.max_depth) {
+  if (state_.remaining_depth == state_.max_depth) {
     searcher_.best_move_ = move;
   }
 }
@@ -496,10 +389,11 @@ template <bool is_principal_variation, class ExitCondition>
 inline void SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation, ExitCondition>::SetTTEntry(const Bound bound) {
   searcher_.best_moves_.SetEntry(
-      searcher_.current_position_, best_move,
-      best_eval + IsMateScore(best_eval) *
-                      (status_.max_depth - status_.remaining_depth),
-      status_.remaining_depth, bound, searcher_.age_);
+      searcher_.current_position_, iteration_status_.best_move,
+      iteration_status_.best_eval +
+          IsMateScore(iteration_status_.best_eval) *
+              (state_.max_depth - state_.remaining_depth),
+      state_.remaining_depth, bound, searcher_.age_);
 }
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
@@ -511,7 +405,7 @@ inline SearchResult Searcher::SearchImplementation<
   // make the move and search the tree
   current_position.DoMove(move);
 
-  auto &[max_depth, remaining_depth, alpha, beta] = status_;
+  auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
   const auto eval_optional = Search<is_pv_move>(
       {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
@@ -519,7 +413,7 @@ inline SearchResult Searcher::SearchImplementation<
   if (!eval_optional) return std::nullopt;
 
   // undo the move
-  current_position.UndoMove(move, irreversible_data);
+  current_position.UndoMove(move, position_info_.irreversible_data);
 
   return eval_optional;
 }
@@ -536,63 +430,39 @@ inline std::optional<bool> SimpleChessEngine::Searcher::SearchImplementation<
   const auto &eval = -*eval_optional;
 
   SetBestMove(move);
-  best_eval = eval;
+  iteration_status_.best_eval = eval;
 
-  auto &[max_depth, remaining_depth, alpha, beta] = status_;
+  auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
-  if (best_eval > alpha) {
-    if (best_eval >= beta) {
-      if (IsQuiet(best_move)) {
-        UpdateQuietMove(best_move);
+  if (iteration_status_.best_eval > alpha) {
+    if (iteration_status_.best_eval >= beta) {
+      if (IsQuiet(iteration_status_.best_move)) {
+        UpdateQuietMove(iteration_status_.best_move);
       }
       return true;
     }
-    has_raised_alpha = true;
-    alpha = best_eval;
+    iteration_status_.has_raised_alpha = true;
+    alpha = iteration_status_.best_eval;
   }
 
   return false;
 }
-template <bool is_principal_variation, class ExitCondition>
-  requires StopSearchCondition<ExitCondition>
-inline Searcher::SearchImplementation<is_principal_variation,
-                                      ExitCondition>::QuietRange
-SimpleChessEngine::Searcher::SearchImplementation<
-    is_principal_variation,
-    ExitCondition>::OrderMoves(const MoveGenerator::Moves::iterator first,
-                               const MoveGenerator::Moves::iterator last) {
-  auto const &current_position = searcher_.current_position_;
 
-  auto begin_of_ordering = first;
-
-  if (has_stored_move) {
-    std::iter_swap(std::find(first, last, best_move), begin_of_ordering++);
-  }
-
-  auto [quiet_begin, quiet_end] = searcher_.OrderMoves(
-      begin_of_ordering, last, status_.max_depth - status_.remaining_depth,
-      current_position.GetSideToMove());
-  return QuietRange{quiet_begin, quiet_end};
-}
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
-    is_principal_variation,
-    ExitCondition>::PVSearch(const MoveGenerator::Moves::iterator first,
-                             const MoveGenerator::Moves::iterator last,
-                             const QuietRange &ordeing_result) {
+    is_principal_variation, ExitCondition>::PVSearch() {
   auto &current_position = searcher_.current_position_;
 
   bool is_quiet = false;
-  for (auto it = first; it != last; ++it) {
+  for (auto it = move_picker_.GetNextMove(); it != move_picker_.end();
+       it = move_picker_.GetNextMove()) {
     const auto &move = *it;
-
-    if (it >= ordeing_result.quiet_begin) is_quiet = true;
-    if (it >= ordeing_result.quiet_end) is_quiet = false;
+    is_quiet = move_picker_.GetMoveType(it) == MovePicker::MoveType::kQuiet;
 
     current_position.DoMove(move);  // make the move and search the tree
 
-    auto &[max_depth, remaining_depth, alpha, beta] = status_;
+    auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
     auto temp_eval_optional =
         Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
@@ -611,15 +481,15 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
       temp_eval = -*temp_eval_optional;
 
       if (temp_eval > alpha) {
-        has_raised_alpha = true;
+        iteration_status_.has_raised_alpha = true;
         alpha = temp_eval;
       }
     }
 
     // undo the move
-    current_position.UndoMove(move, irreversible_data);
+    current_position.UndoMove(move, position_info_.irreversible_data);
 
-    if (temp_eval > best_eval) {
+    if (temp_eval > iteration_status_.best_eval) {
       SetBestMove(move);
 
       // check if we have found a better move
@@ -633,12 +503,13 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
         return beta;
       }
 
-      best_eval = temp_eval;
+      iteration_status_.best_eval = temp_eval;
     }
   }
 
-  SetTTEntry(has_raised_alpha ? Bound::kExact : Bound::kUpper);
-  return status_.alpha;
+  SetTTEntry(iteration_status_.has_raised_alpha ? Bound::kExact
+                                                : Bound::kUpper);
+  return state_.alpha;
 }
 
 template <bool is_principal_variation, class ExitCondition>
@@ -646,18 +517,67 @@ template <bool is_principal_variation, class ExitCondition>
 inline void SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation, ExitCondition>::UpdateQuietMove(const Move &move) {
   const auto [from, to, captured_piece] = GetMoveData(move);
-  searcher_.history_[side_to_move_idx][from][to] +=
-      status_.remaining_depth * status_.remaining_depth;
-  searcher_.killers_.TryAdd(status_.max_depth - status_.remaining_depth, move);
+  searcher_.history_[position_info_.side_to_move_idx][from][to] +=
+      state_.remaining_depth * state_.remaining_depth;
+  searcher_.killers_.TryAdd(state_.max_depth - state_.remaining_depth, move);
 }
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline bool Searcher::SearchImplementation<is_principal_variation,
                                            ExitCondition>::CanRFP() const {
+  if constexpr (!PruneParameters::rfp::enabled) return false;
   if constexpr (is_principal_variation) return false;
-  return !is_under_check &&
-         status_.remaining_depth <= PruneParameters::rfp::depth_limit &&
-         static_eval > status_.beta + PruneParameters::rfp::threshold *
-                                          status_.remaining_depth;
+  return !position_info_.is_under_check &&
+         state_.remaining_depth <= PruneParameters::rfp::depth_limit &&
+         position_info_.static_eval >
+             state_.beta +
+                 PruneParameters::rfp::threshold * state_.remaining_depth;
+}
+template <bool is_principal_variation, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+inline std::optional<SearchResult> Searcher::SearchImplementation<
+    is_principal_variation, ExitCondition>::CheckTranspositionTable() {
+  if (auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+          searcher_.best_moves_.GetNode(searcher_.current_position_);
+      hash == searcher_.current_position_
+                  .GetHash()) {  // check if current position was previously
+                                 // searched at higher depth
+    auto &[max_depth, remaining_depth, alpha, beta] = state_;
+
+    if (remaining_depth == max_depth) {
+      searcher_.best_move_ = hash_move;
+    }
+
+    entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
+
+    if (!is_principal_variation && entry_depth >= remaining_depth) {
+      if (entry_bound & Bound::kUpper && entry_score <= alpha) {
+        return alpha;
+      }
+      if (entry_bound & Bound::kLower && entry_score > alpha) {
+        if (entry_score >= beta) {
+          if (IsQuiet(hash_move)) {
+            UpdateQuietMove(hash_move);
+          }
+          return beta;
+        }
+        iteration_status_.has_raised_alpha = true;
+        alpha = entry_score;
+      }
+      if (entry_bound == Bound::kExact) {
+        return entry_score;
+      }
+    }
+    auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(hash_move);
+    if (!has_cutoff_opt) {
+      return std::nullopt;
+    }
+    if (*has_cutoff_opt) {
+      SetTTEntry(Bound::kLower);
+      return beta;
+    }
+    iteration_status_.has_stored_move = true;
+  }
+  return std::nullopt;
 }
 }  // namespace SimpleChessEngine
