@@ -21,6 +21,10 @@ class MovePicker {
 
   [[nodiscard]] MoveType GetMoveType(MoveGenerator::Moves::iterator move) const;
 
+  [[nodiscard]] MoveGenerator::Moves::const_iterator end() const {
+    return moves_.end();
+  }
+
  private:
   MoveGenerator::Moves moves_;
   MoveGenerator::Moves::iterator current_move_;

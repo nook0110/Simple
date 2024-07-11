@@ -89,10 +89,11 @@ class Searcher {
    *
    * \return Evaluation of subtree.
    */
-  template <bool is_principal_variation>
-  [[nodiscard]] SearchResult Search(
-      const StopSearchCondition auto &stop_search_condition, Depth max_depth,
-      Depth remaining_depth, Eval alpha, Eval beta);
+  template <bool is_principal_variation, class ExitCondition>
+    requires StopSearchCondition<ExitCondition>
+  [[nodiscard]] SearchResult Search(const ExitCondition &stop_search_condition,
+                                    Depth max_depth, Depth remaining_depth,
+                                    Eval alpha, Eval beta);
 
   [[nodiscard]] const DebugInfo &GetInfo() const { return debug_info_; }
 
@@ -240,15 +241,15 @@ inline void Searcher::InitStartOfSearch() {
   }
 }
 
-template <bool is_principal_variation>
+template <bool is_principal_variation, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
 inline SearchResult SimpleChessEngine::Searcher::Search(
-    const StopSearchCondition auto &stop_search_condition, Depth max_depth,
+    const ExitCondition &stop_search_condition, Depth max_depth,
     Depth remaining_depth, Eval alpha, Eval beta) {
   debug_info_ = DebugInfo{};
   ++age_;
 
-  return SearchImplementation<is_principal_variation,
-                              decltype(stop_search_condition)>{
+  return SearchImplementation<is_principal_variation, ExitCondition>{
       *this,
       {max_depth, remaining_depth, alpha, beta},
       stop_search_condition}();
@@ -456,7 +457,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     auto &current_position = searcher_.current_position_;
 
     bool is_quiet = false;
-    for (auto it = move_picker_.GetNextMove(); move_picker_.HasMoreMoves();
+    for (auto it = move_picker_.GetNextMove(); it != move_picker_.end();
          it = move_picker_.GetNextMove()) {
       const auto &move = *it;
       is_quiet = move_picker_.GetMoveType(it) == MovePicker::MoveType::kQuiet;
