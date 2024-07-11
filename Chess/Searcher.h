@@ -453,61 +453,58 @@ template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation, ExitCondition>::PVSearch() {
-  if (move_picker_.HasMoreMoves()) {
-    auto &current_position = searcher_.current_position_;
+  auto &current_position = searcher_.current_position_;
 
-    bool is_quiet = false;
-    for (auto it = move_picker_.GetNextMove(); it != move_picker_.end();
-         it = move_picker_.GetNextMove()) {
-      const auto &move = *it;
-      is_quiet = move_picker_.GetMoveType(it) == MovePicker::MoveType::kQuiet;
+  bool is_quiet = false;
+  for (auto it = move_picker_.GetNextMove(); it != move_picker_.end();
+       it = move_picker_.GetNextMove()) {
+    const auto &move = *it;
+    is_quiet = move_picker_.GetMoveType(it) == MovePicker::MoveType::kQuiet;
 
-      current_position.DoMove(move);  // make the move and search the tree
+    current_position.DoMove(move);  // make the move and search the tree
 
-      auto &[max_depth, remaining_depth, alpha, beta] = state_;
+    auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
-      auto temp_eval_optional =
-          Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
-                         -alpha - 1, -alpha});  // ZWS
+    auto temp_eval_optional =
+        Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
+                       -alpha - 1, -alpha});  // ZWS
 
+    if (!temp_eval_optional) return std::nullopt;
+
+    auto temp_eval = -*temp_eval_optional;
+
+    if (temp_eval > alpha) /* make a research (ZWS failed) */
+    {
+      temp_eval_optional = Search<false>(
+          {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
       if (!temp_eval_optional) return std::nullopt;
 
-      auto temp_eval = -*temp_eval_optional;
+      temp_eval = -*temp_eval_optional;
 
-      if (temp_eval > alpha) /* make a research (ZWS failed) */
-      {
-        temp_eval_optional =
-            Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
-                           -beta, -alpha});
-        if (!temp_eval_optional) return std::nullopt;
+      if (temp_eval > alpha) {
+        iteration_status_.has_raised_alpha = true;
+        alpha = temp_eval;
+      }
+    }
 
-        temp_eval = -*temp_eval_optional;
+    // undo the move
+    current_position.UndoMove(move, position_info_.irreversible_data);
 
-        if (temp_eval > alpha) {
-          iteration_status_.has_raised_alpha = true;
-          alpha = temp_eval;
+    if (temp_eval > iteration_status_.best_eval) {
+      SetBestMove(move);
+
+      // check if we have found a better move
+      if (temp_eval >= beta) {
+        // beta-cutoff occurs, node is cut-type, returned score is
+        // lower-bound
+        SetTTEntry(Bound::kLower);
+        if (is_quiet) {
+          UpdateQuietMove(move);
         }
+        return beta;
       }
 
-      // undo the move
-      current_position.UndoMove(move, position_info_.irreversible_data);
-
-      if (temp_eval > iteration_status_.best_eval) {
-        SetBestMove(move);
-
-        // check if we have found a better move
-        if (temp_eval >= beta) {
-          // beta-cutoff occurs, node is cut-type, returned score is
-          // lower-bound
-          SetTTEntry(Bound::kLower);
-          if (is_quiet) {
-            UpdateQuietMove(move);
-          }
-          return beta;
-        }
-
-        iteration_status_.best_eval = temp_eval;
-      }
+      iteration_status_.best_eval = temp_eval;
     }
   }
 
