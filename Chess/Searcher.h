@@ -384,8 +384,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
       return beta;
     }
   } else {
-    std::iter_swap(moves.begin(),
-                   std::find(moves.begin(), moves.end(), best_move));
+    std::erase(moves, best_move);
   }
 
   return PVSearch(std::next(moves.begin()), moves.end());
