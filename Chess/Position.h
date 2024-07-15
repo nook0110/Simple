@@ -18,27 +18,50 @@ namespace SimpleChessEngine {
 /**
  * \brief Class that represents a chess position.
  *
+ * This class encapsulates all the data and functionality required to represent
+ * and manipulate a chess position. It includes methods for making and undoing
+ * moves, evaluating the position, checking game states such as check, and
+ * managing game history for threefold repetition detection.
+ *
  * \author nook0110
  * \author alfoos
  */
 class Position {
  public:
   friend class PositionFactory;
+  /**
+   * \brief Struct to hold evaluation data for the position.
+   *
+   * This struct contains various metrics used in the evaluation of a chess
+   * position, such as material count and piece-square table scores.
+   */
   struct EvaluationData {
     bool operator==(const EvaluationData&) const = default;
 
-    Eval non_pawn_material{};
-    std::array<TaperedEval, kColors> material{};
-    std::array<TaperedEval, kColors> psqt{};
+    Eval non_pawn_material{};  //!< Total material value excluding pawns.
+    std::array<TaperedEval, kColors>
+        material{};  //!< Material value for each color.
+    std::array<TaperedEval, kColors>
+        psqt{};  //!< Piece-square table scores for each color.
   };
 
+  /**
+   * \brief Struct to hold data that cannot be reversed after a move.
+   *
+   * This struct contains information that changes irreversibly after a move,
+   * such as en passant square, castling rights, and pinning information.
+   */
   struct IrreversibleData {
-    std::optional<BitIndex> en_croissant_square{};
+    std::optional<BitIndex>
+        en_croissant_square{};  //!< Optional square for en passant.
 
-    std::array<std::bitset<2>, kColors> castling_rights{};
+    std::array<std::bitset<2>, kColors>
+        castling_rights{};  //!< Castling rights for each color.
 
-    std::array<Bitboard, kColors> pinners{};
-    std::array<Bitboard, kColors> blockers{};
+    std::array<Bitboard, kColors>
+        pinners{};  //!< Pieces that are pinning opponent's pieces.
+    std::array<Bitboard, kColors>
+        blockers{};  //!< Pieces that are blocking attacks on the king.
 
     bool operator==(const IrreversibleData& other) const {
       return std::tie(en_croissant_square, castling_rights) ==
@@ -46,10 +69,15 @@ class Position {
     }
   };
 
+  /**
+   * \brief Struct to manage the game's move history.
+   *
+   * This struct is responsible for tracking the history of moves made during
+   * the game, which is used for detecting threefold repetitions.
+   */
   struct GameHistory {
-    static constexpr size_t kHistorySize = 1024;
-    std::vector<Hash> history{};
-    std::vector<size_t> last_reset{};
+    static constexpr size_t kHistorySize =
+        1024;  //!< Maximum size of the game history.
 
     GameHistory() {
       history.reserve(kHistorySize);
@@ -79,6 +107,11 @@ class Position {
       history.pop_back();
       last_reset.pop_back();
     }
+
+    std::vector<Hash>
+        history{};  //!< Vector of hashes representing the game history.
+    std::vector<size_t>
+        last_reset{};  //!< Indices where the history was last reset.
   };
 
   [[nodiscard]] Eval Evaluate() const;
@@ -279,8 +312,8 @@ class Position {
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_king_{};
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
 
-  Hash hash_{};
   const static Hasher hasher_;
+  Hash hash_{};
 };
 
 inline void Position::SetRookPositions(
