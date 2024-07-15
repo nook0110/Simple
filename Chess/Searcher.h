@@ -383,6 +383,9 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
       SetTTEntry(Bound::kLower);
       return beta;
     }
+  } else {
+    std::iter_swap(moves.begin(),
+                   std::find(moves.begin(), moves.end(), best_move));
   }
 
   return PVSearch(std::next(moves.begin()), moves.end());
