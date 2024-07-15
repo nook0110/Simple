@@ -387,7 +387,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     std::erase(moves, best_move);
   }
 
-  return PVSearch(std::next(moves.begin()), moves.end());
+  return PVSearch(moves.begin(), moves.end());
 }
 
 template <bool is_principal_variation, class ExitCondition>
