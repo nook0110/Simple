@@ -94,26 +94,19 @@ class Searcher {
   [[nodiscard]] SearchResult Search(const ExitCondition &stop_search_condition,
                                     Depth max_depth, Depth remaining_depth,
                                     Eval alpha, Eval beta);
+  void InitStartOfSearch();
 
   [[nodiscard]] const DebugInfo &GetInfo() const { return debug_info_; }
-
-  [[nodiscard]] std::size_t GetSearchedNodes() const {
-    return debug_info_.searched_nodes;
-  }
-
-  [[nodiscard]] std::size_t GetPVHits() const { return debug_info_.pv_hits; }
 
   [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
       Depth max_depth, Position position) const;
 
-  void InitStartOfSearch();
-
  private:
   struct SearchState {
-    Depth max_depth;
-    Depth remaining_depth;
+    const Depth max_depth;
+    const Depth remaining_depth;
     Eval alpha = {};
-    Eval beta;
+    const Eval beta;
   };
 
   struct IterationStatus {
@@ -402,15 +395,13 @@ template <bool is_pv_move>
 inline SearchResult Searcher::SearchImplementation<
     is_principal_variation, ExitCondition>::ProbeMove(const Move &move) {
   auto &current_position = searcher_.current_position_;
+  auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
   // make the move and search the tree
   current_position.DoMove(move);
 
-  auto &[max_depth, remaining_depth, alpha, beta] = state_;
-
   const auto eval_optional = Search<is_pv_move>(
       {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
-
   if (!eval_optional) return std::nullopt;
 
   // undo the move
@@ -428,10 +419,8 @@ inline std::optional<bool> SimpleChessEngine::Searcher::SearchImplementation<
   if (!eval_optional) {
     return std::nullopt;
   }
-  const auto &eval = -*eval_optional;
-
   SetBestMove(move);
-  iteration_status_.best_eval = eval;
+  iteration_status_.best_eval = -*eval_optional;
 
   auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
@@ -454,16 +443,16 @@ template <bool is_principal_variation, class ExitCondition>
 inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation, ExitCondition>::PVSearch() {
   auto &current_position = searcher_.current_position_;
+  auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
   bool is_quiet = false;
   for (auto it = move_picker_.GetNextMove(); it != move_picker_.end();
        it = move_picker_.GetNextMove()) {
     const auto &move = *it;
+
     is_quiet = move_picker_.GetMoveType(it) == MovePicker::MoveType::kQuiet;
 
     current_position.DoMove(move);  // make the move and search the tree
-
-    auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
     auto temp_eval_optional =
         Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
@@ -510,7 +499,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
   SetTTEntry(iteration_status_.has_raised_alpha ? Bound::kExact
                                                 : Bound::kUpper);
-  return state_.alpha;
+  return alpha;
 }
 
 template <bool is_principal_variation, class ExitCondition>
@@ -571,7 +560,7 @@ inline std::optional<SearchResult> Searcher::SearchImplementation<
     }
     auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(hash_move);
     if (!has_cutoff_opt) {
-      return SearchResult{};
+      return SearchResult{std::nullopt};
     }
     if (*has_cutoff_opt) {
       SetTTEntry(Bound::kLower);

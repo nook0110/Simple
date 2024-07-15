@@ -23,6 +23,7 @@ namespace SimpleChessEngine {
  */
 class Position {
  public:
+  friend class PositionFactory;
   struct EvaluationData {
     bool operator==(const EvaluationData&) const = default;
 
@@ -30,8 +31,6 @@ class Position {
     std::array<TaperedEval, kColors> material{};
     std::array<TaperedEval, kColors> psqt{};
   };
-
-  [[nodiscard]] Eval Evaluate() const;
 
   struct IrreversibleData {
     std::optional<BitIndex> en_croissant_square{};
@@ -82,73 +81,7 @@ class Position {
     }
   };
 
-  /**
-   * \brief Places a piece with a color on a chosen square.
-   *
-   * \param square Square to place piece.
-   * \param piece Piece to place.
-   * \param color Color of the piece.
-   *
-   */
-  void PlacePiece(const BitIndex square, const Piece piece,
-                  const Player color) {
-    assert(IsOk(square));
-    assert(!board_[square]);
-    assert(piece);
-    const auto piece_idx = static_cast<size_t>(piece);
-    const auto color_idx = static_cast<size_t>(color);
-    board_[square] = piece;
-    pieces_by_type_[piece_idx].Set(square);
-    pieces_by_color_[color_idx].Set(square);
-    evaluation_data_.material[color_idx] += kPieceValues[piece_idx];
-    evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][square];
-    if (piece != Piece::kPawn)
-      evaluation_data_.non_pawn_material += kPieceValues[piece_idx].eval[0];
-    hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][square];
-  }
-
-  /**
-   * \brief Removes a piece from a chosen square.
-   *
-   * \param square Square to remove piece from.
-   * \param color Color of the piece.
-   *
-   */
-  void RemovePiece(const BitIndex square, const Player color) {
-    assert(IsOk(square));
-    const auto piece = board_[square];
-    assert(!!piece);
-    const auto piece_idx = static_cast<size_t>(piece);
-    const auto color_idx = static_cast<size_t>(color);
-    pieces_by_type_[piece_idx].Reset(square);
-    pieces_by_color_[color_idx].Reset(square);
-    board_[square] = Piece::kNone;
-    evaluation_data_.material[color_idx] -= kPieceValues[piece_idx];
-    evaluation_data_.psqt[color_idx] -= kPSQT[color_idx][piece_idx][square];
-    if (piece != Piece::kPawn)
-      evaluation_data_.non_pawn_material -= kPieceValues[piece_idx].eval[0];
-    hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][square];
-  }
-
-  void MovePiece(const BitIndex from, const BitIndex to, const Player color) {
-    assert(IsOk(from));
-    assert(IsOk(to));
-    const auto piece = board_[from];
-    assert(!!piece);
-    assert(!board_[to]);
-    const auto piece_idx = static_cast<size_t>(piece);
-    const auto color_idx = static_cast<size_t>(color);
-    pieces_by_type_[piece_idx].Reset(from);
-    pieces_by_color_[color_idx].Reset(from);
-    pieces_by_type_[piece_idx].Set(to);
-    pieces_by_color_[color_idx].Set(to);
-    board_[from] = Piece::kNone;
-    board_[to] = piece;
-    evaluation_data_.psqt[color_idx] -= kPSQT[color_idx][piece_idx][from];
-    evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][to];
-    hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][from];
-    hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][to];
-  }
+  [[nodiscard]] Eval Evaluate() const;
 
   /**
    * \brief Does given move.
@@ -158,126 +91,14 @@ class Position {
   void DoMove(const Move& move);
 
   /**
-   * \brief Does given move.
-   *
-   * \param move Move to do.
-   */
-  void DoMove(const DefaultMove& move);
-
-  void DoMove(const PawnPush& move);
-
-  void DoMove(const DoublePush& move);
-
-  /**
-   * \brief Does given move.
-   *
-   * \param move Move to do.
-   */
-  void DoMove(const EnCroissant& move);
-
-  /**
-   * \brief Does given move.
-   *
-   * \param move Move to do.
-   */
-  void DoMove(const Promotion& move);
-
-  /**
-   * \brief Does given move.
-   *
-   * \param move Move to do.
-   */
-
-  void DoMove(const Castling& move);
-
-  /**
    * \brief Undoes given move.
    *
    * \param move Move to undo.
    */
   void UndoMove(const Move& move, const IrreversibleData& data);
 
-  /**
-   * \brief Does given move.
-   *
-   * \param move Move to do.
-   */
-  void UndoMove(const DefaultMove& move);
-
-  void UndoMove(const PawnPush& move);
-
-  void UndoMove(const DoublePush& move);
-
-  /**
-   * \brief Does given move.
-   *
-   * \param move Move to do.
-   */
-  void UndoMove(const EnCroissant& move);
-
-  /**
-   * \brief Does given move.
-   *
-   * \param move Move to do.
-   */
-  void UndoMove(const Promotion& move);
-
-  /**
-   * \brief Does given move.
-   *
-   * \param move Move to do.
-   */
-  void UndoMove(const Castling& move);
-
   [[nodiscard]] bool CanCastle(
-      const Castling::CastlingSide castling_side) const {
-    const auto us = side_to_move_;
-    const auto us_idx = static_cast<size_t>(us);
-    const auto cs_idx = static_cast<size_t>(castling_side);
-
-    if (!irreversible_data_.castling_rights[us_idx].test(cs_idx)) return false;
-
-    const auto king_position = king_position_[us_idx];
-    const auto rook_position = rook_positions_[us_idx][cs_idx];
-
-    const auto obstacles = GetAllPieces() &
-                           ~GetBitboardOfSquare(king_position) &
-                           ~GetBitboardOfSquare(rook_position);
-
-    auto king_path = castling_squares_for_king_[us_idx][cs_idx];
-
-    if (((king_path | castling_squares_for_rook_[us_idx][cs_idx]) & obstacles)
-            .Any())
-      return false;
-
-    while (king_path.Any()) {
-      if (const auto square = king_path.PopFirstBit();
-          IsUnderAttack(square, us))
-        return false;
-    }
-
-    return true;
-  }
-
-  void SetCastlingRights(const std::array<std::bitset<2>, 2>& castling_rights) {
-    irreversible_data_.castling_rights = castling_rights;
-  }
-
-  void SetKingPositions(const std::array<BitIndex, 2>& king_position) {
-    king_position_ = king_position;
-  }
-
-  void SetRookPositions(
-      const std::array<std::array<BitIndex, 2>, kColors>& rook_positions) {
-    rook_positions_ = rook_positions;
-  }
-
-  void SetCastlingSquares(
-      const std::array<std::array<Bitboard, 2>, kColors>& cs_king,
-      const std::array<std::array<Bitboard, 2>, kColors>& cs_rook) {
-    castling_squares_for_king_ = cs_king;
-    castling_squares_for_rook_ = cs_rook;
-  }
+      const Castling::CastlingSide castling_side) const;
 
   /**
    * \brief Gets hash of the position.
@@ -357,11 +178,6 @@ class Position {
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const;
 
-  [[nodiscard]] Eval EstimatePiece(Piece piece) const;
-
-  [[nodiscard]] bool StaticExchangeEvaluation(const Move& move,
-                                              Eval threshold) const;
-
   [[nodiscard]] bool DetectRepetition() const {
     if (history_stack_.history.size() < 3) {
       return false;
@@ -393,6 +209,56 @@ class Position {
   }
 
  private:
+  /**
+   * \brief Places a piece with a color on a chosen square.
+   *
+   * \param square Square to place piece.
+   * \param piece Piece to place.
+   * \param color Color of the piece.
+   *
+   */
+  void PlacePiece(const BitIndex square, const Piece piece, const Player color);
+
+  /**
+   * \brief Removes a piece from a chosen square.
+   *
+   * \param square Square to remove piece from.
+   * \param color Color of the piece.
+   *
+   */
+  void RemovePiece(const BitIndex square, const Player color);
+
+  void MovePiece(const BitIndex from, const BitIndex to, const Player color);
+
+  void DoMove(const DefaultMove& move);
+  void DoMove(const PawnPush& move);
+  void DoMove(const DoublePush& move);
+  void DoMove(const EnCroissant& move);
+  void DoMove(const Promotion& move);
+  void DoMove(const Castling& move);
+  void UndoMove(const DefaultMove& move);
+  void UndoMove(const PawnPush& move);
+  void UndoMove(const DoublePush& move);
+  void UndoMove(const EnCroissant& move);
+  void UndoMove(const Promotion& move);
+  void UndoMove(const Castling& move);
+
+  void SetCastlingRights(const std::array<std::bitset<2>, 2>& castling_rights);
+
+  void SetKingPositions(const std::array<BitIndex, 2>& king_position);
+
+  void SetRookPositions(
+      const std::array<std::array<BitIndex, 2>, kColors>& rook_positions);
+
+  void SetCastlingSquares(
+      const std::array<std::array<Bitboard, 2>, kColors>& cs_king,
+      const std::array<std::array<Bitboard, 2>, kColors>& cs_rook);
+
+  [[nodiscard]] Eval EstimatePiece(Piece piece) const;
+
+  [[nodiscard]] bool StaticExchangeEvaluation(const Move& move,
+                                              Eval threshold) const;
+
   EvaluationData evaluation_data_;
   IrreversibleData irreversible_data_;
   GameHistory history_stack_ = {};
@@ -414,8 +280,20 @@ class Position {
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
 
   Hash hash_{};
-  Hasher hasher_{std::mt19937_64(0xb00b1e5)};
+  const static Hasher hasher_;
 };
+
+inline void Position::SetRookPositions(
+    const std::array<std::array<BitIndex, 2>, kColors>& rook_positions) {
+  rook_positions_ = rook_positions;
+}
+
+inline void Position::SetCastlingSquares(
+    const std::array<std::array<Bitboard, 2>, kColors>& cs_king,
+    const std::array<std::array<Bitboard, 2>, kColors>& cs_rook) {
+  castling_squares_for_king_ = cs_king;
+  castling_squares_for_rook_ = cs_rook;
+}
 
 inline Bitboard Position::GetAllPieces() const {
   return pieces_by_color_[static_cast<size_t>(Player::kWhite)] |
@@ -539,7 +417,7 @@ inline bool Position::StaticExchangeEvaluation(const Move& move,
                        pieces_by_type_[static_cast<size_t>(Piece::kQueen)];
 
   auto straight_xray = pieces_by_type_[static_cast<size_t>(Piece::kRook)] |
-                         pieces_by_type_[static_cast<size_t>(Piece::kQueen)];
+                       pieces_by_type_[static_cast<size_t>(Piece::kQueen)];
 
   for (;;) {
     Bitboard our_attackers = attackers & GetPieces(color);
@@ -644,12 +522,11 @@ inline void Position::ComputePins(const Player us) {
                               (GetPiecesByType<Piece::kBishop>(them) |
                                GetPiecesByType<Piece::kQueen>(them)) &
                               ~diagonal_blockers;
-  Bitboard straight_pinners =
-      AttackTable<Piece::kRook>::GetAttackMap(
-          king_square, all_pieces ^ straight_blockers) &
-      (GetPiecesByType<Piece::kRook>(them) |
-       GetPiecesByType<Piece::kQueen>(them)) &
-      ~straight_blockers;
+  Bitboard straight_pinners = AttackTable<Piece::kRook>::GetAttackMap(
+                                  king_square, all_pieces ^ straight_blockers) &
+                              (GetPiecesByType<Piece::kRook>(them) |
+                               GetPiecesByType<Piece::kQueen>(them)) &
+                              ~straight_blockers;
 
   irreversible_data_.pinners[us_idx] = diagonal_pinners | straight_pinners;
 

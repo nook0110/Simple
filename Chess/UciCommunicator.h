@@ -174,7 +174,7 @@ class UciChessEngine {
 
  private:
   void StartSearch(bool ponder);
-  void StopSearch();
+  void StopSearch() noexcept;
 
   void ParseCommand(std::stringstream command);
 
@@ -439,7 +439,7 @@ inline void SimpleChessEngine::UciChessEngine::ParseDepth(
     std::stringstream command) {
   std::string token;
   command >> token;
-  info_.time_control = MaxDepth{std::stoull(token)};
+  info_.time_control = MaxDepth{static_cast<Depth>(std::stoul(token))};
 }
 
 inline void UciChessEngine::ParseStop(std::stringstream command) {
