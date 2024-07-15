@@ -15,7 +15,7 @@ class MovePicker {
 
   MoveGenerator::Moves::iterator GetNextMove();
 
-  void RemoveMove(const Move& move);
+  void SkipMove(const Move& move);
 
   [[nodiscard]] bool HasMoreMoves() const;
 
@@ -37,8 +37,9 @@ inline MoveGenerator::Moves::iterator MovePicker::GetNextMove() {
   /* TODO: Get best move from remaining moves */
   return current_move_++;
 }
-inline void MovePicker::RemoveMove(const Move& move) {
-  moves_.erase(std::remove(current_move_, moves_.end(), move), moves_.end());
+inline void MovePicker::SkipMove(const Move& move) {
+  std::iter_swap(current_move_, std::find(current_move_, moves_.end(), move));
+  ++current_move_;
 }
 inline bool MovePicker::HasMoreMoves() const {
   return current_move_ != moves_.end();

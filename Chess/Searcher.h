@@ -342,7 +342,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
     }
   } else {
     // skip the first move
-    move_picker_.RemoveMove(iteration_status_.best_move);
+    move_picker_.SkipMove(iteration_status_.best_move);
   }
 
   return PVSearch();
