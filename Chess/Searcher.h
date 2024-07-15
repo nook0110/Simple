@@ -383,11 +383,10 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
       SetTTEntry(Bound::kLower);
       return beta;
     }
-  } else {
-    std::erase(moves, best_move);
   }
 
-  return PVSearch(moves.begin(), moves.end());
+  std::iter_swap(moves.begin(), std::ranges::find(moves, best_move));
+  return PVSearch(moves.begin() + 1, moves.end());
 }
 
 template <bool is_principal_variation, class ExitCondition>
