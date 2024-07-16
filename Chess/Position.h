@@ -220,6 +220,9 @@ class Position {
     return history_stack_.Count(hash_) >= 3;
   }
 
+  [[nodiscard]] bool StaticExchangeEvaluation(const Move& move,
+                                              Eval threshold) const;
+
   [[nodiscard]] const std::optional<BitIndex>& GetEnCroissantSquare() const;
 
   [[nodiscard]] const std::array<std::bitset<2>, kColors>& GetCastlingRights()
@@ -301,9 +304,6 @@ class Position {
       const std::array<std::array<Bitboard, 2>, kColors>& cs_rook);
 
   [[nodiscard]] Eval EstimatePiece(Piece piece) const;
-
-  [[nodiscard]] bool StaticExchangeEvaluation(const Move& move,
-                                              Eval threshold) const;
 
   EvaluationData evaluation_data_;
   IrreversibleData irreversible_data_;

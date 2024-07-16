@@ -21,7 +21,6 @@ namespace SimpleChessEngine {
  *  - PVS
  *  - ZWS
  *  - Fail-soft
- *  - Aspiration windows
  *  - Transposition table
  *  - Iterative deepening
  *  - Quiescence search
@@ -36,6 +35,14 @@ class Searcher {
   constexpr static size_t kTTsize = 1 << 26;
 #endif
   using TranspositionTable = TranspositionTable<kTTsize>;
+
+  struct PruneParameters {
+    struct rfp {
+      static constexpr bool enabled = true;
+      static constexpr Depth depth_limit = 5;
+      static constexpr Eval threshold = 75;
+    };
+  };
 
   struct DebugInfo {
     std::size_t searched_nodes{};
@@ -132,13 +139,6 @@ class Searcher {
     requires StopSearchCondition<ExitCondition>
   struct SearchImplementation {
    public:
-    struct PruneParameters {
-      struct rfp {
-        static constexpr bool enabled = true;
-        static constexpr Depth depth_limit = 5;
-        static constexpr Eval threshold = 75;
-      };
-    };
     constexpr static size_t kEnoughNodesToCheckTime = 1 << 12;
 
     SearchImplementation(Searcher &searcher, SearchState state,

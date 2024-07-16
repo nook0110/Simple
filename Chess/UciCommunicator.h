@@ -105,6 +105,13 @@ struct OptionBase {
   std::string name_;
 };
 
+struct SpinOption : public OptionBase {
+  SpinOption(std::string name) : OptionBase(std::move(name)) {}
+
+  int value_ = 0;
+};
+
+template <bool default_value>
 struct BooleanOption : public OptionBase {
   BooleanOption(std::string name) : OptionBase(std::move(name)) {}
 
@@ -121,14 +128,14 @@ struct BooleanOption : public OptionBase {
   }
 
   std::string GetOptionDescription() const override {
-    return "type check default false";
+    return "type check default " + default_value ? "true" : "false";
   }
 
  private:
-  bool value_ = false;
+  bool value_ = default_value;
 };
 
-using PonderOption = BooleanOption;
+using PonderOption = BooleanOption<false>;
 struct EngineOptions {
   EngineOptions() {
     options.emplace_back(std::make_unique<PonderOption>("Ponder"));
