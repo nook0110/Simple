@@ -195,6 +195,7 @@ class UciChessEngine {
   void ParseDepth(std::stringstream command);
   void ParseStop(std::stringstream command);
   void ParseQuit(std::stringstream command);
+  void ParseDebug(std::stringstream command);
 
   void Send(const std::string& message) const {
     o_stream_ << message << std::endl;
@@ -261,6 +262,9 @@ inline void UciChessEngine::ParseCommand(std::stringstream command) {
   if (command_name == "setoption") {
     return ParseSetOption(std::move(command));
   }
+  if (command_name == "debug") {
+    return ParseDebug(std::move(command));
+  }
 
   Send("No such command!");
 }
@@ -274,7 +278,6 @@ inline void UciChessEngine::ParseUci(std::stringstream) {
 
   options_.PrintOptionsNames(o_stream_);
 
-  // ReSharper disable once StringLiteralTypo
   Send("uciok");
 }
 
@@ -449,6 +452,10 @@ inline void UciChessEngine::ParseStop(std::stringstream command) {
 inline void UciChessEngine::ParseQuit(std::stringstream command) {
   quit_ = true;
   StopSearch();
+}
+
+inline void UciChessEngine::ParseDebug(std::stringstream) {
+  o_stream_ << FenFactory{}(info_.position) << std::endl;
 }
 
 SearchThread::SearchThread(Position position, std::ostream& o_stream)

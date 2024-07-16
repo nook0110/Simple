@@ -114,6 +114,8 @@ class Position {
         last_reset{};  //!< Indices where the history was last reset.
   };
 
+  void Init() { history_stack_.Push(hash_, true); }
+
   [[nodiscard]] Eval Evaluate() const;
 
   /**
@@ -227,6 +229,17 @@ class Position {
   [[nodiscard]] Bitboard GetCastlingSquares(Castling::CastlingSide side) const;
 
   [[nodiscard]] IrreversibleData GetIrreversibleData() const;
+
+  size_t GetHalfMoveClock() const {
+    return std::max(1ULL, history_stack_.history.size() -
+                              history_stack_.last_reset.back()) -
+           1;
+  }
+
+  size_t GetFullMoveNumber() const {
+    return history_stack_.history.size() / 2 + 1;
+  }
+
   /**
    * \brief Default operator==()
    *

@@ -7,47 +7,49 @@
 #include "Move.h"
 #include "Utility.h"
 
-namespace SimpleChessEngine
-{
-inline static std::unordered_map<char, std::pair<Piece, Player>> kPieces = {
-    {'p', {Piece::kPawn, Player::kBlack}},
-    {'P', {Piece::kPawn, Player::kWhite}},
-    {'n', {Piece::kKnight, Player::kBlack}},
-    {'N', {Piece::kKnight, Player::kWhite}},
-    {'b', {Piece::kBishop, Player::kBlack}},
-    {'B', {Piece::kBishop, Player::kWhite}},
-    {'r', {Piece::kRook, Player::kBlack}},
-    {'R', {Piece::kRook, Player::kWhite}},
-    {'q', {Piece::kQueen, Player::kBlack}},
-    {'Q', {Piece::kQueen, Player::kWhite}},
-    {'k', {Piece::kKing, Player::kBlack}},
-    {'K', {Piece::kKing, Player::kWhite}}};
+namespace SimpleChessEngine {
+inline static std::unordered_map<char, std::pair<Piece, Player>> kCharToPiece =
+    {{'p', {Piece::kPawn, Player::kBlack}},
+     {'P', {Piece::kPawn, Player::kWhite}},
+     {'n', {Piece::kKnight, Player::kBlack}},
+     {'N', {Piece::kKnight, Player::kWhite}},
+     {'b', {Piece::kBishop, Player::kBlack}},
+     {'B', {Piece::kBishop, Player::kWhite}},
+     {'r', {Piece::kRook, Player::kBlack}},
+     {'R', {Piece::kRook, Player::kWhite}},
+     {'q', {Piece::kQueen, Player::kBlack}},
+     {'Q', {Piece::kQueen, Player::kWhite}},
+     {'k', {Piece::kKing, Player::kBlack}},
+     {'K', {Piece::kKing, Player::kWhite}}};
+
+inline constexpr std::array kPiecesChars = {' ', 'p', 'n', 'b', 'r', 'q', 'k'};
+
+inline char GetPieceChar(Piece piece, Player color) {
+  char piece_name = kPiecesChars[static_cast<size_t>(piece)];
+  return color == Player::kWhite ? toupper(piece_name) : piece_name;
+}
 
 inline std::ostream& PrintFile(const File file,
-                               std::ostream& stream = std::cout)
-{
+                               std::ostream& stream = std::cout) {
   stream << static_cast<char>(file + 'a');
   return stream;
 }
 
 inline std::ostream& PrintRank(const Rank rank,
-                               std::ostream& stream = std::cout)
-{
+                               std::ostream& stream = std::cout) {
   stream << rank + 1;
   return stream;
 }
 
 inline std::ostream& PrintCoordinates(const Coordinates coordinates,
-                                      std::ostream& stream)
-{
+                                      std::ostream& stream) {
   PrintFile(coordinates.first, stream);
   PrintRank(coordinates.second, stream);
 
   return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, const DefaultMove& move)
-{
+inline std::ostream& operator<<(std::ostream& stream, const DefaultMove& move) {
   const auto from = GetCoordinates(move.from);
   const auto to = GetCoordinates(move.to);
 
@@ -56,8 +58,7 @@ inline std::ostream& operator<<(std::ostream& stream, const DefaultMove& move)
 
   return stream;
 }
-inline std::ostream& operator<<(std::ostream& stream, const PawnPush& move)
-{
+inline std::ostream& operator<<(std::ostream& stream, const PawnPush& move) {
   const auto from = GetCoordinates(move.from);
   const auto to = GetCoordinates(move.to);
 
@@ -66,8 +67,7 @@ inline std::ostream& operator<<(std::ostream& stream, const PawnPush& move)
 
   return stream;
 }
-inline std::ostream& operator<<(std::ostream& stream, const DoublePush& move)
-{
+inline std::ostream& operator<<(std::ostream& stream, const DoublePush& move) {
   const auto from = GetCoordinates(move.from);
   const auto to = GetCoordinates(move.to);
 
@@ -76,8 +76,7 @@ inline std::ostream& operator<<(std::ostream& stream, const DoublePush& move)
 
   return stream;
 }
-inline std::ostream& operator<<(std::ostream& stream, const EnCroissant& move)
-{
+inline std::ostream& operator<<(std::ostream& stream, const EnCroissant& move) {
   const auto from = GetCoordinates(move.from);
   const auto to = GetCoordinates(move.to);
 
@@ -86,23 +85,19 @@ inline std::ostream& operator<<(std::ostream& stream, const EnCroissant& move)
 
   return stream;
 }
-inline std::ostream& operator<<(std::ostream& stream, const Promotion& move)
-{
+inline std::ostream& operator<<(std::ostream& stream, const Promotion& move) {
   const auto from = GetCoordinates(move.from);
   const auto to = GetCoordinates(move.to);
 
   PrintCoordinates(from, stream);
   PrintCoordinates(to, stream);
 
-  constexpr std::array pieces_name = {' ', 'p', 'n', 'b', 'r', 'q', 'k'};
-
-  std::cout << pieces_name[static_cast<size_t>(move.promoted_to)];
+  std::cout << kPiecesChars[static_cast<size_t>(move.promoted_to)];
 
   return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, const Castling& move)
-{
+inline std::ostream& operator<<(std::ostream& stream, const Castling& move) {
   const auto from = GetCoordinates(move.king_from);
 
   static constexpr std::array kCastlingShifts = {Compass::kEast,
@@ -118,8 +113,7 @@ inline std::ostream& operator<<(std::ostream& stream, const Castling& move)
   return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, const Move& move)
-{
+inline std::ostream& operator<<(std::ostream& stream, const Move& move) {
   std::visit([&](const auto& move) { stream << move; }, move);
   return stream;
 }
