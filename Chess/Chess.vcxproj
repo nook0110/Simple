@@ -27,6 +27,7 @@
     <ClCompile Include="Position.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Array.h" />
     <ClInclude Include="Concepts.h" />
     <ClInclude Include="KillerTable.h" />
     <ClInclude Include="MoveFactory.h" />

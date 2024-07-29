@@ -1,3 +1,4 @@
+#include "Array.h"
 #include "UciCommunicator.h"
 
 std::string program_info() {
@@ -24,6 +25,11 @@ int main(int argc, char** argv) {
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kRook>();
   SimpleChessEngine::InitPawnAttacks();
   SimpleChessEngine::InitPSQT();
+
+  enum class test { A, B };
+
+  EnumArray<int, 2, test> arr = {3, 5};
+  arr[test::A] = 2;
 
   std::cout << program_info() << std::endl;
 
