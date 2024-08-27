@@ -36,7 +36,7 @@ class Searcher {
 #endif
   using TranspositionTable = TranspositionTable<kTTsize>;
 
-  struct PruneParameters {
+  struct SearchParameters {
     struct rfp {
       static constexpr bool enabled = true;
       static constexpr Depth depth_limit = 5;
@@ -160,7 +160,6 @@ class Searcher {
     /* Local variables for search */
     IterationStatus iteration_status_;
     PositionInfo position_info_;
-    MovePicker move_picker_;
 
     SearchResult QuiescenceSearch();
     Eval GetEndGameScore() const;
@@ -186,12 +185,10 @@ class Searcher {
   Age age_{};
   Move best_move_{};
   Position current_position_;     //!< Current position.
-  MoveGenerator move_generator_;  //!< Move generator.
+  MoveGenerator move_generator_;  //!< Move generator
+  MovePicker move_picker_;        //!< Move picker
   TranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
-  std::array<std::array<std::array<uint64_t, kBoardArea + 1>, kBoardArea + 1>,
-             kColors>
-      history_ = {};
   KillerTable<2> killers_;
 
   DebugInfo debug_info_;
@@ -227,11 +224,7 @@ inline MoveGenerator::Moves Searcher::GetPrincipalVariation(
 
 inline void Searcher::InitStartOfSearch() {
   killers_.Clear();
-  for (size_t color = 0; color < kColors; ++color) {
-    for (BitIndex from = 0; from <= kBoardArea; ++from) {
-      history_[color][from].fill(0ull);
-    }
-  }
+  move_picker_.Clear();
 }
 
 template <bool is_principal_variation, class ExitCondition>
@@ -315,9 +308,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
   auto const &move_generator = searcher_.move_generator_;
   auto &current_position = searcher_.current_position_;
 
-  move_picker_ =
-      MovePicker{move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(
-          current_position)};
+  move_picker_.InitPicker(move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(current_position));
 
   // check if there are no possible moves
   if (!move_picker_.HasMoreMoves()) {
@@ -446,8 +437,8 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
   auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
   bool is_quiet = false;
-  for (auto it = move_picker_.GetNextMove(); it != move_picker_.end();
-       it = move_picker_.GetNextMove()) {
+  for (auto it = move_picker_.SelectNextMove(); it != move_picker_.end();
+       it = move_picker_.SelectNextMove()) {
     const auto &move = *it;
 
     is_quiet = move_picker_.GetMoveType(it) == MovePicker::MoveType::kQuiet;
