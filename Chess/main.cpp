@@ -6,15 +6,15 @@ std::string program_info() {
   ss << "Build date: " << __DATE__ << " " << __TIME__ << "\n";
 
   ss << std::boolalpha;
-  ss << "SearchParameters:\n";
+  ss << "PruneParameters:\n";
   using namespace SimpleChessEngine;
   ss << "rfp:\n";
-  ss << "enabled: " << Searcher::SearchParameters::rfp::enabled << "\n";
-  if constexpr (Searcher::SearchParameters::rfp::enabled) {
+  ss << "enabled: " << Searcher::PruneParameters::rfp::enabled << "\n";
+  if constexpr (Searcher::PruneParameters::rfp::enabled) {
     ss << "depth_limit: "
-       << static_cast<size_t>(Searcher::SearchParameters::rfp::depth_limit)
+       << static_cast<size_t>(Searcher::PruneParameters::rfp::depth_limit)
        << "\n";
-    ss << "threshold: " << Searcher::SearchParameters::rfp::threshold << "\n";
+    ss << "threshold: " << Searcher::PruneParameters::rfp::threshold << "\n";
   }
   return ss.str();
 }
