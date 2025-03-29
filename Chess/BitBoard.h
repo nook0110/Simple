@@ -1,6 +1,7 @@
 #pragma once
-#include "BitScan.h"
 #include <cstddef>
+
+#include "BitScan.h"
 
 #ifdef __GNUC__
 #define USE_GCC_BUILTINS
@@ -23,7 +24,7 @@
  * \author alfoos
  */
 class Bitboard {
-public:
+ public:
   /**
    * \brief Constructs a bitboard from its value.
    */
@@ -105,7 +106,7 @@ public:
     return value_;
   }
 
-private:
+ private:
   unsigned long long value_{};
 };
 
@@ -136,7 +137,7 @@ inline bool Bitboard::MoreThanOne() const {
 constexpr Bitboard Bitboard::operator-() const { return Bitboard{~value_ + 1}; }
 
 constexpr Bitboard Bitboard::operator-(const Bitboard &other) const {
-  return Bitboard{value_ - other.value_}; // may (and will) overflow
+  return Bitboard{value_ - other.value_};  // may (and will) overflow
 }
 
 inline Bitboard &Bitboard::operator-=(const Bitboard &other) {
@@ -145,7 +146,7 @@ inline Bitboard &Bitboard::operator-=(const Bitboard &other) {
 }
 
 constexpr Bitboard Bitboard::operator*(const Bitboard &other) const {
-  return Bitboard{value_ * other.value_}; // may (and will) overflow
+  return Bitboard{value_ * other.value_};  // may (and will) overflow
 }
 
 inline Bitboard &Bitboard::operator*=(const Bitboard &other) {

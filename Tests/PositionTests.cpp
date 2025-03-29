@@ -1,9 +1,10 @@
 /*
+#include <gtest/gtest.h>
+
 #include "Chess/MoveFactory.h"
 #include "Chess/MoveGenerator.h"
 #include "Chess/Position.h"
 #include "Chess/PositionFactory.h"
-#include <gtest/gtest.h>
 
 using namespace SimpleChessEngine;
 

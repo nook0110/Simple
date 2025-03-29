@@ -38,4 +38,4 @@ TEST(GetFirstBit, EachBit) {
     ASSERT_EQ(bitboard.GetFirstBit(), i);
   }
 }
-} // namespace BitBoardTests
+}  // namespace BitBoardTests

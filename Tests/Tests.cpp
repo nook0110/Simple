@@ -1,6 +1,7 @@
+#include <gtest/gtest.h>
+
 #include "Chess/Attacks.h"
 #include "Chess/PSQT.h"
-#include <gtest/gtest.h>
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);

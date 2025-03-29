@@ -1,8 +1,9 @@
 #include "Position.h"
-#include "PSQT.h"
 
 #include <numeric>
 #include <variant>
+
+#include "PSQT.h"
 
 using namespace SimpleChessEngine;
 const Hasher Position::hasher_{std::mt19937_64(0xb00b1e5)};
@@ -112,8 +113,7 @@ void Position::DoMove(const DefaultMove &move) {
   const auto piece_to_move = board_[from];
   assert(!!piece_to_move);
 
-  if (!!captured_piece)
-    RemovePiece(to, them);
+  if (!!captured_piece) RemovePiece(to, them);
   MovePiece(from, to, us);
 
   if (piece_to_move == Piece::kKing) {
@@ -181,8 +181,7 @@ void Position::DoMove(const Promotion &move) {
   const auto them = Flip(us);
 
   RemovePiece(from, us);
-  if (!!captured_piece)
-    RemovePiece(to, them);
+  if (!!captured_piece) RemovePiece(to, them);
   PlacePiece(to, promoted_to, us);
 
   for (const auto castling_side :
@@ -251,8 +250,7 @@ void Position::UndoMove(const DefaultMove &move) {
   const auto piece_to_move = board_[to];
 
   MovePiece(to, from, us);
-  if (!!captured_piece)
-    PlacePiece(to, captured_piece, them);
+  if (!!captured_piece) PlacePiece(to, captured_piece, them);
 
   if (piece_to_move == Piece::kKing)
     king_position_[static_cast<size_t>(us)] = from;
@@ -296,8 +294,7 @@ void Position::UndoMove(const Promotion &move) {
   const auto them = Flip(us);
 
   RemovePiece(to, us);
-  if (!!captured_piece)
-    PlacePiece(to, captured_piece, them);
+  if (!!captured_piece) PlacePiece(to, captured_piece, them);
   PlacePiece(from, Piece::kPawn, us);
 }
 
@@ -317,14 +314,13 @@ void Position::UndoMove(const Castling &move) {
   king_position_[static_cast<size_t>(us)] = king_from;
 }
 
-[[nodiscard]] bool
-Position::CanCastle(const Castling::CastlingSide castling_side) const {
+[[nodiscard]] bool Position::CanCastle(
+    const Castling::CastlingSide castling_side) const {
   const auto us = side_to_move_;
   const auto us_idx = static_cast<size_t>(us);
   const auto cs_idx = static_cast<size_t>(castling_side);
 
-  if (!irreversible_data_.castling_rights[us_idx].test(cs_idx))
-    return false;
+  if (!irreversible_data_.castling_rights[us_idx].test(cs_idx)) return false;
 
   const auto king_position = king_position_[us_idx];
   const auto rook_position = rook_positions_[us_idx][cs_idx];

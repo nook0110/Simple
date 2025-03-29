@@ -368,3 +368,6 @@ docs/
 
 *.doxygen
 /Tests/build
+.*
+!.github
+!.clang-format

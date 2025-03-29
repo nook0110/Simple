@@ -12,7 +12,7 @@ struct TestCase {
 
 template <Piece sliding_piece>
 class TestAttackMaskGeneration : public testing::TestWithParam<TestCase> {
-protected:
+ protected:
   [[nodiscard]] Bitboard GetMask() const {
     const auto [occupancy, square, answer] = GetParam();
     return GenerateAttackMask<sliding_piece>(square, occupancy);
@@ -110,7 +110,7 @@ struct TestCaseWithoutAnswer {
 template <Piece sliding_piece>
 class TestAttackMapTable
     : public testing::TestWithParam<TestCaseWithoutAnswer> {
-protected:
+ protected:
   [[nodiscard]] Bitboard GetMask() const {
     auto test_case = GetParam();
     return AttackTable<sliding_piece>::GetAttackMap(test_case.square,
@@ -185,4 +185,4 @@ INSTANTIATE_TEST_CASE_P(
                     TestCaseWithoutAnswer{Bitboard{0x40180e2241e00cc0}, 32},
                     TestCaseWithoutAnswer{Bitboard{0x8200c0002ca0c488}, 55},
                     TestCaseWithoutAnswer{Bitboard{0x6600e00418318140}, 43}));
-} // namespace AttackMapTests
+}  // namespace AttackMapTests

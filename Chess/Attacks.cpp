@@ -1,11 +1,9 @@
 #include "Attacks.h"
 
-#include <chrono>
-#include <random>
-
 using namespace SimpleChessEngine;
 
-template <Piece sliding_piece> constexpr std::array<Compass, 4> GetStepDelta() {
+template <Piece sliding_piece>
+constexpr std::array<Compass, 4> GetStepDelta() {
   if constexpr (sliding_piece == Piece::kBishop) {
     return {Compass::kNorthWest, Compass::kSouthWest, Compass::kSouthEast,
             Compass::kNorthEast};
@@ -32,14 +30,14 @@ Bitboard SimpleChessEngine::GenerateAttackMask(const BitIndex square,
          (occupancy & GetBitboardOfSquare(temp)).None();) {
       step = DoShiftIfValid(temp, direction).value_or(kEmptyBoard);
       result |= step;
-      if (step.None())
-        break;
+      if (step.None()) break;
     }
   }
   return result;
 }
 
-template <Piece sliding_piece> void SimpleChessEngine::InitBetween() {
+template <Piece sliding_piece>
+void SimpleChessEngine::InitBetween() {
   assert(IsWeakSlidingPiece(sliding_piece));
   for (BitIndex sq = 0; sq < kBoardArea; ++sq) {
     for (auto direction : GetStepDelta<sliding_piece>()) {
@@ -74,9 +72,9 @@ namespace {
 std::array<Bitboard, 88772> shared_table;
 }
 
-template <Piece sliding_piece> AttackTable<sliding_piece>::AttackTable() {
-  if constexpr (!IsWeakSlidingPiece(sliding_piece))
-    return;
+template <Piece sliding_piece>
+AttackTable<sliding_piece>::AttackTable() {
+  if constexpr (!IsWeakSlidingPiece(sliding_piece)) return;
 
   table_ = shared_table.data();
 

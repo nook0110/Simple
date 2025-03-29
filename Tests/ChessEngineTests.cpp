@@ -18,7 +18,7 @@ struct BestMoveTestCase {
 };
 
 class BestMoveTest : public testing::TestWithParam<BestMoveTestCase> {
-protected:
+ protected:
   [[nodiscard]] Move GetMove() const {
     return MoveFactory{}(GetPosition(), GetParam().best_move);
   }
@@ -45,4 +45,4 @@ INSTANTIATE_TEST_CASE_P(
         BestMoveTestCase{R"(1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - -)",
                          R"(d6d1)"},
         BestMoveTestCase{R"(8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -)", R"(a1b1)"}));
-} // namespace ChessEngineTests
+}  // namespace ChessEngineTests

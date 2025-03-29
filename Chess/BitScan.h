@@ -1,5 +1,6 @@
 #pragma once
 #include <cassert>
+#include <cstdint>
 
 #ifdef __GNUC__
 #define USE_GCC_BUILTINS

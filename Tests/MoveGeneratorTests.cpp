@@ -1,7 +1,8 @@
 
+#include <gtest/gtest.h>
+
 #include "Chess/MoveGenerator.h"
 #include "Chess/PositionFactory.h"
-#include <gtest/gtest.h>
 
 using namespace SimpleChessEngine;
 
@@ -25,8 +26,7 @@ struct GameInfo {
 
 [[nodiscard]] GameInfo CountPossibleGames(Position &position,
                                           const Depth depth) {
-  if (depth == 0)
-    return {1, 0, 0, 0};
+  if (depth == 0) return {1, 0, 0, 0};
 
   GameInfo answer{0, 0, 0, 0};
 
@@ -45,8 +45,7 @@ struct GameInfo {
       }
     }
 
-    if (moves.empty())
-      answer.ends_of_game.value() += 1;
+    if (moves.empty()) answer.ends_of_game.value() += 1;
 
     answer.possible_games = moves.size();
     return answer;
@@ -69,7 +68,7 @@ struct GenTestCase {
 };
 
 class GenerateMovesTest : public testing::TestWithParam<GenTestCase> {
-protected:
+ protected:
   void SetUp() override {
     const auto &[fen, infos] = GetParam();
 
@@ -86,7 +85,7 @@ protected:
 
   [[nodiscard]] Depth GetMaxDepth() const { return infos_.size(); }
 
-private:
+ private:
   void GeneratePosition() { position_ = PositionFactory{}(GetParam().fen); }
 
   std::vector<GameInfo> infos_;
@@ -107,10 +106,8 @@ TEST_P(GenerateMovesTest, Perft) {
     EXPECT_EQ(position.GetHash(), GetPosition().GetHash());
     if (possible_games_answer)
       EXPECT_EQ(*possible_games, *possible_games_answer);
-    if (en_croissants_answer)
-      EXPECT_EQ(*en_croissants, *en_croissants_answer);
-    if (castlings_answer)
-      EXPECT_EQ(*castlings, *castlings_answer);
+    if (en_croissants_answer) EXPECT_EQ(*en_croissants, *en_croissants_answer);
+    if (castlings_answer) EXPECT_EQ(*castlings, *castlings_answer);
   }
 }
 
@@ -120,60 +117,60 @@ INSTANTIATE_TEST_CASE_P(
         GenTestCase{
             R"(r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1)",
             {
-                {1, 0, 0, 0},               // depth 0
-                {48, 0, 2, 0},              // depth 1
-                {2039, 1, 91, 0},           // depth 2
-                {97862, 45, 3162, 0},       // depth 3
-                {4085603, 1929, 128013, 1}, // depth 4
+                {1, 0, 0, 0},                // depth 0
+                {48, 0, 2, 0},               // depth 1
+                {2039, 1, 91, 0},            // depth 2
+                {97862, 45, 3162, 0},        // depth 3
+                {4085603, 1929, 128013, 1},  // depth 4
             }},
         GenTestCase{R"(8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -)",
                     {
-                        {1, 0, 0, 0},           // depth 0
-                        {14, 0, 0, 0},          // depth 1
-                        {191, 0, 0, 0},         // depth 2
-                        {2812, 2, 0, 0},        // depth 3
-                        {43238, 123, 0, 0},     // depth 4
-                        {674624, 1165, 0, 17},  // depth 5
-                        {11030083, 33325, 0, 0} // depth 6
+                        {1, 0, 0, 0},            // depth 0
+                        {14, 0, 0, 0},           // depth 1
+                        {191, 0, 0, 0},          // depth 2
+                        {2812, 2, 0, 0},         // depth 3
+                        {43238, 123, 0, 0},      // depth 4
+                        {674624, 1165, 0, 17},   // depth 5
+                        {11030083, 33325, 0, 0}  // depth 6
                     }},
         GenTestCase{
             R"(r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1)",
             {
-                {1, 0, 0, 0},          // depth 0
-                {6, 0, 0, 0},          // depth 1
-                {264, 0, 6, 0},        // depth 2
-                {9467, 4, 0, 0},       // depth 3
-                {422333, 0, 7795, 22}, // depth 4
-                {15833292, 6512, 0, 5} // depth 5
+                {1, 0, 0, 0},           // depth 0
+                {6, 0, 0, 0},           // depth 1
+                {264, 0, 6, 0},         // depth 2
+                {9467, 4, 0, 0},        // depth 3
+                {422333, 0, 7795, 22},  // depth 4
+                {15833292, 6512, 0, 5}  // depth 5
             }},
         GenTestCase{
             R"(r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1)",
             {
-                {1, 0, 0, 0},          // depth 0
-                {6, 0, 0, 0},          // depth 1
-                {264, 0, 6, 0},        // depth 2
-                {9467, 4, 0, 0},       // depth 3
-                {422333, 0, 7795, 22}, // depth 4
-                {15833292, 6512, 0, 5} // depth 5
+                {1, 0, 0, 0},           // depth 0
+                {6, 0, 0, 0},           // depth 1
+                {264, 0, 6, 0},         // depth 2
+                {9467, 4, 0, 0},        // depth 3
+                {422333, 0, 7795, 22},  // depth 4
+                {15833292, 6512, 0, 5}  // depth 5
             }},
         GenTestCase{
             R"(r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1)",
             {
-                {1, 0, 0, 0},          // depth 0
-                {6, 0, 0, 0},          // depth 1
-                {264, 0, 6, 0},        // depth 2
-                {9467, 4, 0, 0},       // depth 3
-                {422333, 0, 7795, 22}, // depth 4
-                {15833292, 6512, 0, 5} // depth 5
+                {1, 0, 0, 0},           // depth 0
+                {6, 0, 0, 0},           // depth 1
+                {264, 0, 6, 0},         // depth 2
+                {9467, 4, 0, 0},        // depth 3
+                {422333, 0, 7795, 22},  // depth 4
+                {15833292, 6512, 0, 5}  // depth 5
             }},
         GenTestCase{
             R"(rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8)",
             {
-                {1},      // depth 0
-                {44},     // depth 1
-                {1486},   // depth 2
-                {62379},  // depth 3
-                {2103487} // depth 4
+                {1},       // depth 0
+                {44},      // depth 1
+                {1486},    // depth 2
+                {62379},   // depth 3
+                {2103487}  // depth 4
             }}));
 
 TEST(GenerateMoves, ShannonNumberCheck) {
@@ -202,4 +199,4 @@ TEST(GenerateMoves, ShannonNumberCheck) {
     ASSERT_EQ(ends_of_game, ends_of_game_answer[depth]);
   }
 }
-} // namespace MoveGeneratorTests
+}  // namespace MoveGeneratorTests

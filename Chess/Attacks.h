@@ -7,12 +7,11 @@
 #include "Utility.h"
 
 namespace SimpleChessEngine {
-template <Piece sliding_piece> constexpr size_t GetMagicShift() {
+template <Piece sliding_piece>
+constexpr size_t GetMagicShift() {
   assert(IsWeakSlidingPiece(sliding_piece));
-  if constexpr (sliding_piece == Piece::kBishop)
-    return 64 - 9;
-  if constexpr (sliding_piece == Piece::kRook)
-    return 64 - 12;
+  if constexpr (sliding_piece == Piece::kBishop) return 64 - 9;
+  if constexpr (sliding_piece == Piece::kRook) return 64 - 12;
   assert(false);
   return 0;
 }
@@ -33,13 +32,14 @@ struct Magic {
   }
 };
 
-template <Piece sliding_piece> class AttackTable {
-public:
+template <Piece sliding_piece>
+class AttackTable {
+ public:
   static Bitboard GetAttackMap(BitIndex square, Bitboard occupied);
 
   AttackTable();
 
-private:
+ private:
   static size_t GetAttackTableAddress(BitIndex square,
                                       Bitboard occupied = kEmptyBoard);
 
@@ -210,9 +210,10 @@ template class AttackTable<Piece::kRook>;
 template class AttackTable<Piece::kQueen>;
 template class AttackTable<Piece::kKing>;
 
-template <Piece sliding_piece> void InitBetween();
+template <Piece sliding_piece>
+void InitBetween();
 
 template <Piece sliding_piece>
-[[nodiscard]] Bitboard GenerateAttackMask(const BitIndex square,
-                                          const Bitboard occupancy = kEmptyBoard);
-} // namespace SimpleChessEngine
+[[nodiscard]] Bitboard GenerateAttackMask(
+    const BitIndex square, const Bitboard occupancy = kEmptyBoard);
+}  // namespace SimpleChessEngine
