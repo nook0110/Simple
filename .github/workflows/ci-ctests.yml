@@ -1,25 +1,45 @@
-name: CMake Tests
+name: CI
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: windows-latest
-
-    defaults:
-      run:
-        shell: cmd
+    runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Set up dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget unzip sudo g++ make git cmake
 
-    - name: Configure CMake
-      run: cmake -S ${{runner.workspace}}/Simple/Tests -B ${{runner.workspace}}/Simple/Tests/build -G "Visual Studio 17 2022"
+    - name: Install glog
+      run: |
+        git clone https://github.com/google/glog.git
+        cd glog && cmake -S . -B build -G "Unix Makefiles"
+        cmake --build build
+        sudo cmake --build build --target install
 
-    - name: Build
-      working-directory: ${{runner.workspace}}/Simple/Tests/build
-      run: cmake --build . --config Release
+    - name: Building the project
+      working-directory: ${{runner.workspace}}/Chess/build
+      run: |
+        cmake -DCMAKE_BUILD_TYPE=Debug ..
+        make
 
-    - name: Test
-      working-directory: ${{runner.workspace}}/Simple/Tests/build
-      run: ctest -E EPD -V
+    - name: Run tests
+      working-directory: ${{runner.workspace}}/Chess/build
+      run: |
+        ctest
+        
+    - name: Generate coverage report
+      working-directory: ${{runner.workspace}}/Chess/build
+      run: |
+        make coverage
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: build/coverage_report       

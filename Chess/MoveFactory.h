@@ -4,22 +4,24 @@
 #include "Position.h"
 #include "StreamUtility.h"
 #include "Utility.h"
+#include <string>
+#include <unordered_map>
 
 namespace SimpleChessEngine {
 struct MoveFactory {
-  Move operator()(const Position& position, const std::string& move) const;
+  Move operator()(const Position &position, const std::string &move) const;
 
- private:
+private:
   struct ParsedMove {
     BitIndex from;
     BitIndex to;
   };
 
-  static ParsedMove ParseDefaultMove(const std::string& move);
+  static ParsedMove ParseDefaultMove(const std::string &move);
 };
 
-inline Move MoveFactory::operator()(const Position& position,
-                                    const std::string& move) const {
+inline Move MoveFactory::operator()(const Position &position,
+                                    const std::string &move) const {
   if (move == "O-O") {
     return Castling{Castling::CastlingSide::k00,
                     position.GetKingSquare(position.GetSideToMove())};
@@ -65,8 +67,8 @@ inline Move MoveFactory::operator()(const Position& position,
   return DefaultMove{from, to, position.GetPiece(to)};
 }
 
-inline MoveFactory::ParsedMove MoveFactory::ParseDefaultMove(
-    const std::string& move) {
+inline MoveFactory::ParsedMove
+MoveFactory::ParseDefaultMove(const std::string &move) {
   constexpr size_t first_file = 0, first_rank = 1, second_file = 2,
                    second_rank = 3;
 
@@ -76,4 +78,4 @@ inline MoveFactory::ParsedMove MoveFactory::ParseDefaultMove(
 
   return parsed_move;
 }
-}  // namespace SimpleChessEngine
+} // namespace SimpleChessEngine

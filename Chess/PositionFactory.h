@@ -9,17 +9,17 @@
 namespace SimpleChessEngine {
 struct PositionFactory {
   Position operator()(
-      const std::string& fen =
+      const std::string &fen =
           "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") const;
 
   Position operator()(std::stringstream stream) const;
 };
 
 struct FenFactory {
-  std::string operator()(const Position& position);
+  std::string operator()(const Position &position);
 };
 
-inline Position PositionFactory::operator()(const std::string& fen) const {
+inline Position PositionFactory::operator()(const std::string &fen) const {
   std::stringstream fen_stream;
 
   fen_stream << fen;
@@ -48,7 +48,7 @@ inline Position PositionFactory::operator()(const std::string& fen) const {
         continue;
       }
 
-      const auto& [piece, color] = kCharToPiece[*current];
+      const auto &[piece, color] = kCharToPiece[*current];
       auto square = static_cast<BitIndex>(row * kBoardSize + column);
       position.PlacePiece(square, piece, color);
 
@@ -69,7 +69,8 @@ inline Position PositionFactory::operator()(const std::string& fen) const {
     }
 
     // skip '/'
-    if (current != board.end()) ++current;
+    if (current != board.end())
+      ++current;
   }
 
   std::string side_to_move;
@@ -88,24 +89,24 @@ inline Position PositionFactory::operator()(const std::string& fen) const {
 
   for (auto castling_right : castling_rights_string) {
     switch (castling_right) {
-      case 'K':
-        castling_rights[static_cast<size_t>(Player::kWhite)] |=
-            static_cast<size_t>(CastlingRights::k00);
-        break;
-      case 'k':
-        castling_rights[static_cast<size_t>(Player::kBlack)] |=
-            static_cast<size_t>(CastlingRights::k00);
-        break;
-      case 'Q':
-        castling_rights[static_cast<size_t>(Player::kWhite)] |=
-            static_cast<size_t>(CastlingRights::k000);
-        break;
-      case 'q':
-        castling_rights[static_cast<size_t>(Player::kBlack)] |=
-            static_cast<size_t>(CastlingRights::k000);
-        break;
-      default:
-        break;
+    case 'K':
+      castling_rights[static_cast<size_t>(Player::kWhite)] |=
+          static_cast<size_t>(CastlingRights::k00);
+      break;
+    case 'k':
+      castling_rights[static_cast<size_t>(Player::kBlack)] |=
+          static_cast<size_t>(CastlingRights::k00);
+      break;
+    case 'Q':
+      castling_rights[static_cast<size_t>(Player::kWhite)] |=
+          static_cast<size_t>(CastlingRights::k000);
+      break;
+    case 'q':
+      castling_rights[static_cast<size_t>(Player::kBlack)] |=
+          static_cast<size_t>(CastlingRights::k000);
+      break;
+    default:
+      break;
     }
   }
 
@@ -133,8 +134,8 @@ inline Position PositionFactory::operator()(std::stringstream stream) const {
   return Position{};
 }
 
-std::string SimpleChessEngine::FenFactory::operator()(
-    const Position& position) {
+inline std::string
+SimpleChessEngine::FenFactory::operator()(const Position &position) {
   std::ostringstream ss;
   for (Rank rank = 7; rank >= 0; --rank) {
     size_t empty = 0;
@@ -145,7 +146,8 @@ std::string SimpleChessEngine::FenFactory::operator()(
         continue;
       }
 
-      if (empty) ss << empty;
+      if (empty)
+        ss << empty;
       const auto piece_type = position.GetPiece(GetSquare(file, rank));
       const auto is_white = (position.GetPieces(Player::kWhite) &
                              GetBitboardOfSquare(GetSquare(file, rank)))
@@ -153,8 +155,10 @@ std::string SimpleChessEngine::FenFactory::operator()(
       ss << GetPieceChar(piece_type,
                          is_white ? Player::kWhite : Player::kBlack);
     }
-    if (empty) ss << empty;
-    if (rank > 1) ss << '/';
+    if (empty)
+      ss << empty;
+    if (rank > 1)
+      ss << '/';
   }
 
   ss << (position.GetSideToMove() == Player::kWhite ? " w " : " b ");
@@ -196,4 +200,4 @@ std::string SimpleChessEngine::FenFactory::operator()(
 
   return ss.str();
 }
-}  // namespace SimpleChessEngine
+} // namespace SimpleChessEngine

@@ -1,4 +1,5 @@
 #include "Position.h"
+#include "PSQT.h"
 
 #include <numeric>
 #include <variant>
@@ -76,8 +77,8 @@ void Position::MovePiece(const BitIndex from, const BitIndex to,
   hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][to];
 }
 
-void Position::DoMove(const Move& move) {
-  if (const auto& ep_square = irreversible_data_.en_croissant_square;
+void Position::DoMove(const Move &move) {
+  if (const auto &ep_square = irreversible_data_.en_croissant_square;
       ep_square.has_value()) {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
     irreversible_data_.en_croissant_square.reset();
@@ -88,7 +89,7 @@ void Position::DoMove(const Move& move) {
                     .to_ulong()];
   }
 
-  std::visit([this](const auto& unwrapped_move) { DoMove(unwrapped_move); },
+  std::visit([this](const auto &unwrapped_move) { DoMove(unwrapped_move); },
              move);
 
   for (const auto color : {Player::kWhite, Player::kBlack}) {
@@ -102,7 +103,7 @@ void Position::DoMove(const Move& move) {
   history_stack_.Push(hash_, DoesReset(move));
 }
 
-void Position::DoMove(const DefaultMove& move) {
+void Position::DoMove(const DefaultMove &move) {
   const auto [from, to, captured_piece] = move;
 
   const auto us = side_to_move_;
@@ -111,7 +112,8 @@ void Position::DoMove(const DefaultMove& move) {
   const auto piece_to_move = board_[from];
   assert(!!piece_to_move);
 
-  if (!!captured_piece) RemovePiece(to, them);
+  if (!!captured_piece)
+    RemovePiece(to, them);
   MovePiece(from, to, us);
 
   if (piece_to_move == Piece::kKing) {
@@ -138,7 +140,7 @@ void Position::DoMove(const DefaultMove& move) {
   }
 }
 
-void Position::DoMove(const PawnPush& move) {
+void Position::DoMove(const PawnPush &move) {
   const auto [from, to] = move;
 
   const auto us = side_to_move_;
@@ -146,7 +148,7 @@ void Position::DoMove(const PawnPush& move) {
   MovePiece(from, to, us);
 }
 
-void Position::DoMove(const DoublePush& move) {
+void Position::DoMove(const DoublePush &move) {
   const auto [from, to] = move;
   const auto file = GetCoordinates(from).first;
 
@@ -158,7 +160,7 @@ void Position::DoMove(const DoublePush& move) {
   MovePiece(from, to, us);
 }
 
-void Position::DoMove(const EnCroissant& move) {
+void Position::DoMove(const EnCroissant &move) {
   const auto [from, to] = move;
 
   const auto us = side_to_move_;
@@ -171,7 +173,7 @@ void Position::DoMove(const EnCroissant& move) {
   MovePiece(from, to, us);
 }
 
-void Position::DoMove(const Promotion& move) {
+void Position::DoMove(const Promotion &move) {
   const auto [from, to, captured_piece] = static_cast<DefaultMove>(move);
   const auto promoted_to = move.promoted_to;
 
@@ -179,7 +181,8 @@ void Position::DoMove(const Promotion& move) {
   const auto them = Flip(us);
 
   RemovePiece(from, us);
-  if (!!captured_piece) RemovePiece(to, them);
+  if (!!captured_piece)
+    RemovePiece(to, them);
   PlacePiece(to, promoted_to, us);
 
   for (const auto castling_side :
@@ -194,7 +197,7 @@ void Position::DoMove(const Promotion& move) {
   }
 }
 
-void Position::DoMove(const Castling& move) {
+void Position::DoMove(const Castling &move) {
   const auto [side, king_from, rook_from] = move;
 
   const auto us = side_to_move_;
@@ -212,8 +215,8 @@ void Position::DoMove(const Castling& move) {
   irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
 }
 
-void Position::UndoMove(const Move& move, const IrreversibleData& data) {
-  const auto& ep_square = irreversible_data_.en_croissant_square;
+void Position::UndoMove(const Move &move, const IrreversibleData &data) {
+  const auto &ep_square = irreversible_data_.en_croissant_square;
   for (const auto color : {Player::kWhite, Player::kBlack}) {
     hash_ ^= hasher_.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
@@ -233,13 +236,13 @@ void Position::UndoMove(const Move& move, const IrreversibleData& data) {
   }
   hash_ ^= hasher_.stm_hash;
   side_to_move_ = Flip(side_to_move_);
-  std::visit([this](const auto& unwrapped_move) { UndoMove(unwrapped_move); },
+  std::visit([this](const auto &unwrapped_move) { UndoMove(unwrapped_move); },
              move);
 
   history_stack_.Pop();
 }
 
-void Position::UndoMove(const DefaultMove& move) {
+void Position::UndoMove(const DefaultMove &move) {
   const auto [from, to, captured_piece] = move;
 
   const Player us = side_to_move_;
@@ -248,13 +251,14 @@ void Position::UndoMove(const DefaultMove& move) {
   const auto piece_to_move = board_[to];
 
   MovePiece(to, from, us);
-  if (!!captured_piece) PlacePiece(to, captured_piece, them);
+  if (!!captured_piece)
+    PlacePiece(to, captured_piece, them);
 
   if (piece_to_move == Piece::kKing)
     king_position_[static_cast<size_t>(us)] = from;
 }
 
-void Position::UndoMove(const PawnPush& move) {
+void Position::UndoMove(const PawnPush &move) {
   const auto [from, to] = move;
 
   const auto us = side_to_move_;
@@ -262,7 +266,7 @@ void Position::UndoMove(const PawnPush& move) {
   MovePiece(to, from, us);
 }
 
-void Position::UndoMove(const DoublePush& move) {
+void Position::UndoMove(const DoublePush &move) {
   const auto from = move.from;
 
   const auto us = side_to_move_;
@@ -272,7 +276,7 @@ void Position::UndoMove(const DoublePush& move) {
   MovePiece(to, from, us);
 }
 
-void Position::UndoMove(const EnCroissant& move) {
+void Position::UndoMove(const EnCroissant &move) {
   const auto [from, to] = move;
 
   const auto us = side_to_move_;
@@ -285,18 +289,19 @@ void Position::UndoMove(const EnCroissant& move) {
   PlacePiece(capture_square, Piece::kPawn, them);
 }
 
-void Position::UndoMove(const Promotion& move) {
+void Position::UndoMove(const Promotion &move) {
   const auto [from, to, captured_piece] = static_cast<DefaultMove>(move);
 
   const auto us = side_to_move_;
   const auto them = Flip(us);
 
   RemovePiece(to, us);
-  if (!!captured_piece) PlacePiece(to, captured_piece, them);
+  if (!!captured_piece)
+    PlacePiece(to, captured_piece, them);
   PlacePiece(from, Piece::kPawn, us);
 }
 
-void Position::UndoMove(const Castling& move) {
+void Position::UndoMove(const Castling &move) {
   const auto [side, king_from, rook_from] = move;
 
   const auto us = side_to_move_;
@@ -312,13 +317,14 @@ void Position::UndoMove(const Castling& move) {
   king_position_[static_cast<size_t>(us)] = king_from;
 }
 
-[[nodiscard]] bool Position::CanCastle(
-    const Castling::CastlingSide castling_side) const {
+[[nodiscard]] bool
+Position::CanCastle(const Castling::CastlingSide castling_side) const {
   const auto us = side_to_move_;
   const auto us_idx = static_cast<size_t>(us);
   const auto cs_idx = static_cast<size_t>(castling_side);
 
-  if (!irreversible_data_.castling_rights[us_idx].test(cs_idx)) return false;
+  if (!irreversible_data_.castling_rights[us_idx].test(cs_idx))
+    return false;
 
   const auto king_position = king_position_[us_idx];
   const auto rook_position = rook_positions_[us_idx][cs_idx];
@@ -341,10 +347,10 @@ void Position::UndoMove(const Castling& move) {
 }
 
 void Position::SetCastlingRights(
-    const std::array<std::bitset<2>, 2>& castling_rights) {
+    const std::array<std::bitset<2>, 2> &castling_rights) {
   irreversible_data_.castling_rights = castling_rights;
 }
 
-void Position::SetKingPositions(const std::array<BitIndex, 2>& king_position) {
+void Position::SetKingPositions(const std::array<BitIndex, 2> &king_position) {
   king_position_ = king_position;
 }

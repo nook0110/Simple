@@ -1,3 +1,4 @@
+#include "Chess/PSQT.h"
 #include "UciCommunicator.h"
 
 std::string program_info() {
@@ -19,7 +20,7 @@ std::string program_info() {
   return ss.str();
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kBishop>();
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kRook>();
   SimpleChessEngine::InitPawnAttacks();
