@@ -19,6 +19,7 @@ class MoveGenerator {
 
   inline static constexpr size_t kMaxMovesPerPosition = 218;
   MoveGenerator() { moves_.reserve(kMaxMovesPerPosition); }
+  ~MoveGenerator();
 
   using Moves = std::vector<Move>;
 
@@ -117,12 +118,11 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
   });
 
   // generate moves for piece
-  GenerateMovesForPiece<Piece::kKing>(moves_, position, king_target);
-  GenerateMovesForPiece<Piece::kKnight>(moves_, position, target);
-  GenerateMovesForPiece<Piece::kBishop>(moves_, position, target);
-  GenerateMovesForPiece<Piece::kRook>(moves_, position, target);
   GenerateMovesForPiece<Piece::kQueen>(moves_, position, target);
-
+  GenerateMovesForPiece<Piece::kRook>(moves_, position, target);
+  GenerateMovesForPiece<Piece::kBishop>(moves_, position, target);
+  GenerateMovesForPiece<Piece::kKnight>(moves_, position, target);
+  GenerateMovesForPiece<Piece::kKing>(moves_, position, king_target);
   GenerateCastling(moves_, position);
 
   // return moves
@@ -130,8 +130,9 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
 }
 
 template <Piece piece>
-void MoveGenerator::GenerateMovesForPiece(Moves& moves, Position& position,
-                                          const Bitboard target) const {
+inline void MoveGenerator::GenerateMovesForPiece(Moves& moves,
+                                                 Position& position,
+                                                 const Bitboard target) const {
   static_assert(piece != Piece::kPawn && piece != Piece::kKing);
 
   const auto us = position.GetSideToMove();

@@ -1,4 +1,4 @@
-#include "Chess/PSQT.h"
+#include "PSQT.h"
 #include "UciCommunicator.h"
 
 std::string program_info() {

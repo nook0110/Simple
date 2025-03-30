@@ -1,52 +1,47 @@
 #pragma once
-#include "MoveGenerator.h"
+#include <cstddef>
+#include <vector>
+
+#include "Move.h"
+#include "Utility.h"
 
 namespace SimpleChessEngine {
+class Searcher;
+
 class MovePicker {
  public:
-  enum class MoveType { kCapture, kQuiet, kOther };
+  using Moves = std::vector<Move>;
+  enum class Stage : uint8_t {
+    kGoodCaptures,
+    kKillers,
+    kQuiet,
+    kBadCaptures,
+    kEnd
+  };
 
-  MovePicker() = default;
-  MovePicker(MovePicker&&) = default;
-  explicit MovePicker(MoveGenerator::Moves&& moves);
+  MovePicker();
+  MovePicker(const Move&) = delete;
+  MovePicker(Move&&) = delete;
+  void InitPicker(Moves&& moves);
   ~MovePicker() = default;
 
-  MovePicker& operator=(MovePicker&&) = default;
+  MovePicker& operator=(MovePicker&&) = delete;
+  MovePicker& operator=(const MovePicker&) = delete;
 
-  MoveGenerator::Moves::iterator GetNextMove();
+  Moves::const_iterator SelectNextMove(const Searcher& searcher,
+                                       const Depth ply, const size_t color_idx);
 
   void SkipMove(const Move& move);
 
   [[nodiscard]] bool HasMoreMoves() const;
 
-  [[nodiscard]] MoveType GetMoveType(MoveGenerator::Moves::iterator move) const;
+  [[nodiscard]] Stage GetCurrentStage() const;
 
-  [[nodiscard]] MoveGenerator::Moves::const_iterator end() const {
-    return moves_.end();
-  }
+  [[nodiscard]] Moves::const_iterator end() const { return moves_.end(); }
 
  private:
-  MoveGenerator::Moves moves_;
-  MoveGenerator::Moves::iterator current_move_;
+  Moves moves_;
+  Moves::iterator current_move_;
+  Stage stage_ = Stage::kGoodCaptures;
 };
-
-MovePicker::MovePicker(MoveGenerator::Moves&& moves)
-    : moves_(std::move(moves)), current_move_(moves_.begin()) {}
-
-inline MoveGenerator::Moves::iterator MovePicker::GetNextMove() {
-  /* TODO: Get best move from remaining moves */
-  return current_move_++;
-}
-inline void MovePicker::SkipMove(const Move& move) {
-  std::iter_swap(current_move_, std::find(current_move_, moves_.end(), move));
-  ++current_move_;
-}
-inline bool MovePicker::HasMoreMoves() const {
-  return current_move_ != moves_.end();
-}
-inline MovePicker::MoveType MovePicker::GetMoveType(
-    MoveGenerator::Moves::iterator) const {
-  /* TODO: implement */
-  return MoveType::kOther;
-}
 }  // namespace SimpleChessEngine

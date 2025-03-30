@@ -3,6 +3,8 @@
 #include <cassert>
 
 namespace SimpleChessEngine {
+MoveGenerator::~MoveGenerator() = default;
+
 [[nodiscard]] bool MoveGenerator::IsPawnMoveLegal(Position& position,
                                                   const Move& move) {
   const auto us = position.GetSideToMove();

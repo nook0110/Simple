@@ -2,8 +2,14 @@ cmake_minimum_required(VERSION 3.10)
 project(SimpleChessEngine)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_package(glog 0.7.1 REQUIRED)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  add_compile_options(-Ofast -mtune=native -march=native -flto -frename-registers -funroll-loops)
+  add_link_options(-flto)
+endif()
 
 FILE(GLOB CHESS_SOURCES Chess/*.cpp)
 list(REMOVE_ITEM CHESS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Chess/main.cpp)
@@ -17,7 +23,7 @@ add_executable(${PROJECT_NAME}
     ${CHESS_SOURCES} Chess/main.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} chess_lib)
+target_link_libraries(${PROJECT_NAME} chess_lib glog::glog)
 
 include(FetchContent)
 FetchContent_Declare(

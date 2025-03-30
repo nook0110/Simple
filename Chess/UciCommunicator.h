@@ -283,7 +283,7 @@ inline void UciChessEngine::ParseUci(std::stringstream) {
   Send("id name " + name);
   Send("id author " + author);
 
-  options_.PrintOptionsNames(o_stream_);
+  // options_.PrintOptionsNames(o_stream_);
 
   Send("uciok");
 }
@@ -302,8 +302,7 @@ inline void UciChessEngine::ParseIsReady(std::stringstream) const {
   Send("readyok");
 }
 
-inline void UciChessEngine::ParseUciNewGame(std::stringstream) { /**/
-}
+inline void UciChessEngine::ParseUciNewGame(std::stringstream) { /**/ }
 
 inline void UciChessEngine::ParseFen(const std::string& fen) {
   info_.position = PositionFactory{}(fen);
