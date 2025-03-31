@@ -1,4 +1,6 @@
 #pragma once
+#include <glog/logging.h>
+
 #include <array>
 
 #include "Concepts.h"
@@ -394,6 +396,7 @@ inline SearchResult Searcher::SearchImplementation<
   auto &[max_depth, remaining_depth, alpha, beta] = state_;
 
   // make the move and search the tree
+  DLOG(INFO) << std::string(max_depth - remaining_depth, '\t') << move;
   current_position.DoMove(move);
 
   const auto eval_optional = Search<is_pv_move>(
@@ -452,6 +455,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     is_quiet = move_picker_.GetCurrentStage() == MovePicker::Stage::kQuiet;
 
+    DLOG(INFO) << std::string(max_depth - remaining_depth, '\t') << move;
     current_position.DoMove(move);  // make the move and search the tree
 
     auto temp_eval_optional =

@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.10)
 project(SimpleChessEngine)
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(glog 0.7.1 REQUIRED)
-
+add_definitions(-DGLOG_USE_GLOG_EXPORT)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  add_compile_options(-Ofast -mtune=native -march=native -flto -frename-registers -funroll-loops)
+  add_compile_options(-Ofast -mtune=native -march=native -fno-stack-protector -flto -frename-registers -funroll-loops)
   add_link_options(-flto)
 endif()
 
@@ -17,13 +17,13 @@ list(REMOVE_ITEM CHESS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Chess/main.cpp)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}) 
 
 
-add_library(chess_lib ${CHESS_SOURCES})
-add_library(chess_lib_tests ${CHESS_SOURCES})
+add_library(chess_lib STATIC ${CHESS_SOURCES})
+add_library(chess_lib_tests STATIC ${CHESS_SOURCES})
 add_executable(${PROJECT_NAME}
     ${CHESS_SOURCES} Chess/main.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} chess_lib glog::glog)
+target_link_libraries(${PROJECT_NAME} PRIVATE chess_lib glog::glog)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -36,7 +36,7 @@ FetchContent_MakeAvailable(googletest)
 set(CMAKE_CXX_STANDARD 20)
 FILE(GLOB CHESS_TEST_SOURCES Tests/*.cpp)
 add_executable(SCE_tests ${CHESS_TEST_SOURCES})
-target_link_libraries(SCE_tests gtest_main chess_lib_tests)
+target_link_libraries(SCE_tests gtest_main chess_lib_tests glog::glog)
 
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

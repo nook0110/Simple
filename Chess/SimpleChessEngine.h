@@ -273,7 +273,7 @@ void ChessEngine::PrintInfo(const Info& info) {
 
 inline std::ostream& operator<<(std::ostream& out,
                                 const DepthInfo& depth_info) {
-  return out << "info depth " << depth_info.current_depth << std::endl;
+  return out << "info depth " << +depth_info.current_depth << std::endl;
 }
 
 inline std::ostream& operator<<(std::ostream& out,
