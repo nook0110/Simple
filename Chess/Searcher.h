@@ -296,6 +296,12 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
 
+  if constexpr (is_principal_variation) {
+    if (remaining_depth <= 1) {
+      return Search<false>({max_depth, remaining_depth, alpha, beta});
+    }
+  }
+
   // return the evaluation of the current position if we have reached
   // the end of the search tree
   if (remaining_depth <= 0) {
@@ -311,13 +317,14 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
   if (CanRFP()) {
     return position_info_.static_eval;
   }
+
   auto &current_position = searcher_.current_position_;
 
   if (CanNullMove()) {
     current_position.DoMove(NullMove{});
     const auto eval_optional = Search<false>(
         {max_depth,
-         static_cast<Depth>(remaining_depth - 1 -
+         static_cast<Depth>(remaining_depth -
                             PruneParameters::NullMove::kNullMoveReduction),
          -beta, -beta + 1, true});
 
@@ -535,20 +542,19 @@ inline bool SimpleChessEngine::Searcher::SearchImplementation<
   if constexpr (!PruneParameters::NullMove::kEnabled) {
     return false;
   }
+  if constexpr (is_principal_variation) return false;
 
   const auto max_depth = state_.max_depth;
   const auto remaining_depth = state_.remaining_depth;
   const auto was_previous_move_a_null = state_.was_previous_move_a_null;
   const auto beta = state_.beta;
 
-  if constexpr (is_principal_variation) return false;
-
   if (remaining_depth <= PruneParameters::NullMove::kNullMoveReduction)
     return false;
 
   if (was_previous_move_a_null) return false;
-
-  if (searcher_.current_position_.IsUnderCheck()) return false;
+  if (position_info_.static_eval < beta) return false;
+  if (position_info_.is_under_check) return false;
 
   return true;
 }

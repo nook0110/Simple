@@ -1,7 +1,12 @@
 #pragma once
+#include <array>
+#include <cassert>
 #include <cstddef>
 #include <vector>
 
+#include "Chess/BitScan.h"
+#include "Chess/MoveGenerator.h"
+#include "Chess/Piece.h"
 #include "Move.h"
 #include "Utility.h"
 
@@ -42,6 +47,30 @@ class MovePicker {
  private:
   Moves moves_;
   Moves::iterator current_move_;
+
+  struct MoveData {
+    BitIndex from = {};
+    BitIndex to = {};
+    Piece captured = {};
+
+    bool operator==(const MoveData&) const = default;
+  };
+
+  std::array<MoveData, MoveGenerator::kMaxMovesPerPosition> data_;
+
+  void Swap(size_t lhs, size_t rhs) {
+    std::swap(moves_[lhs], moves_[rhs]);
+    std::swap(data_[lhs], data_[rhs]);
+  }
+
+  const MoveData& GetData(size_t idx) {
+    if (data_[idx] == MoveData{}) {
+      const auto [from, to, capture] = GetMoveData(moves_[idx]);
+      data_[idx] = {from, to, capture};
+    }
+    return data_[idx];
+  }
+
   Stage stage_ = Stage::kGoodCaptures;
 };
 }  // namespace SimpleChessEngine
