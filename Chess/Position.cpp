@@ -104,6 +104,18 @@ void Position::DoMove(const Move &move) {
   history_stack_.Push(hash_, DoesReset(move));
 }
 
+void SimpleChessEngine::Position::DoMove(NullMove) {
+  if (const auto &ep_square = irreversible_data_.en_croissant_square;
+      ep_square.has_value()) {
+    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
+    irreversible_data_.en_croissant_square.reset();
+  }
+  side_to_move_ = Flip(side_to_move_);
+  hash_ ^= hasher_.stm_hash;
+
+  history_stack_.Push(hash_, false);
+}
+
 void Position::DoMove(const DefaultMove &move) {
   const auto [from, to, captured_piece] = move;
 
@@ -237,6 +249,19 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
   side_to_move_ = Flip(side_to_move_);
   std::visit([this](const auto &unwrapped_move) { UndoMove(unwrapped_move); },
              move);
+
+  history_stack_.Pop();
+}
+
+void SimpleChessEngine::Position::UndoMove(NullMove,
+                                           const IrreversibleData &data) {
+  irreversible_data_ = data;
+  const auto &ep_square = irreversible_data_.en_croissant_square;
+  if (ep_square.has_value()) {
+    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
+  }
+  hash_ ^= hasher_.stm_hash;
+  side_to_move_ = Flip(side_to_move_);
 
   history_stack_.Pop();
 }

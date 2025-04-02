@@ -25,7 +25,7 @@ namespace SimpleChessEngine {
  * \author alfoos
  */
 class Position {
-public:
+ public:
   friend class PositionFactory;
   /**
    * \brief Struct to hold evaluation data for the position.
@@ -36,11 +36,11 @@ public:
   struct EvaluationData {
     bool operator==(const EvaluationData &) const = default;
 
-    Eval non_pawn_material{}; //!< Total material value excluding pawns.
+    Eval non_pawn_material{};  //!< Total material value excluding pawns.
     std::array<TaperedEval, kColors>
-        material{}; //!< Material value for each color.
+        material{};  //!< Material value for each color.
     std::array<TaperedEval, kColors>
-        psqt{}; //!< Piece-square table scores for each color.
+        psqt{};  //!< Piece-square table scores for each color.
   };
 
   /**
@@ -51,15 +51,15 @@ public:
    */
   struct IrreversibleData {
     std::optional<BitIndex>
-        en_croissant_square{}; //!< Optional square for en passant.
+        en_croissant_square{};  //!< Optional square for en passant.
 
     std::array<std::bitset<2>, kColors>
-        castling_rights{}; //!< Castling rights for each color.
+        castling_rights{};  //!< Castling rights for each color.
 
     std::array<Bitboard, kColors>
-        pinners{}; //!< Pieces that are pinning opponent's pieces.
+        pinners{};  //!< Pieces that are pinning opponent's pieces.
     std::array<Bitboard, kColors>
-        blockers{}; //!< Pieces that are blocking attacks on the king.
+        blockers{};  //!< Pieces that are blocking attacks on the king.
 
     bool operator==(const IrreversibleData &other) const {
       return std::tie(en_croissant_square, castling_rights) ==
@@ -75,7 +75,7 @@ public:
    */
   struct GameHistory {
     static constexpr size_t kHistorySize =
-        1024; //!< Maximum size of the game history.
+        1024;  //!< Maximum size of the game history.
 
     GameHistory() {
       history.reserve(kHistorySize);
@@ -107,9 +107,9 @@ public:
     }
 
     std::vector<Hash>
-        history{}; //!< Vector of hashes representing the game history.
+        history{};  //!< Vector of hashes representing the game history.
     std::vector<size_t>
-        last_reset{}; //!< Indices where the history was last reset.
+        last_reset{};  //!< Indices where the history was last reset.
   };
 
   void Init() { history_stack_.Push(hash_, true); }
@@ -130,8 +130,11 @@ public:
    */
   void UndoMove(const Move &move, const IrreversibleData &data);
 
-  [[nodiscard]] bool
-  CanCastle(const Castling::CastlingSide castling_side) const;
+  void DoMove(NullMove);
+  void UndoMove(NullMove, const IrreversibleData &data);
+
+  [[nodiscard]] bool CanCastle(
+      const Castling::CastlingSide castling_side) const;
 
   /**
    * \brief Gets hash of the position.
@@ -186,8 +189,8 @@ public:
 
   [[nodiscard]] BitIndex GetKingSquare(Player player) const;
 
-  [[nodiscard]] BitIndex
-  GetCastlingRookSquare(Player player, Castling::CastlingSide side) const;
+  [[nodiscard]] BitIndex GetCastlingRookSquare(
+      Player player, Castling::CastlingSide side) const;
 
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
@@ -223,8 +226,8 @@ public:
 
   [[nodiscard]] const std::optional<BitIndex> &GetEnCroissantSquare() const;
 
-  [[nodiscard]] const std::array<std::bitset<2>, kColors> &
-  GetCastlingRights() const;
+  [[nodiscard]] const std::array<std::bitset<2>, kColors> &GetCastlingRights()
+      const;
 
   template <Piece piece>
   [[nodiscard]] Bitboard GetCastlingSquares(Castling::CastlingSide side) const;
@@ -255,7 +258,7 @@ public:
                     other.pieces_by_color_, other.irreversible_data_);
   }
 
-private:
+ private:
   /**
    * \brief Places a piece with a color on a chosen square.
    *
@@ -307,18 +310,18 @@ private:
   IrreversibleData irreversible_data_;
   GameHistory history_stack_ = {};
 
-  Player side_to_move_{}; //!< Whose side to move.
+  Player side_to_move_{};  //!< Whose side to move.
 
   std::array<Bitboard, kPieceTypes>
-      pieces_by_type_{}; //!< Bitboard of pieces of certain type
+      pieces_by_type_{};  //!< Bitboard of pieces of certain type
   std::array<Bitboard, kColors>
-      pieces_by_color_{}; //!< Bitboard of pieces for each player
+      pieces_by_color_{};  //!< Bitboard of pieces for each player
 
-  std::array<Piece, kBoardArea> board_{}; //!< Current position of pieces
+  std::array<Piece, kBoardArea> board_{};  //!< Current position of pieces
 
   std::array<BitIndex, kColors> king_position_{};
   std::array<std::array<BitIndex, 2>, kColors>
-      rook_positions_{}; // doesn't need to be updated
+      rook_positions_{};  // doesn't need to be updated
 
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_king_{};
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
@@ -385,9 +388,8 @@ inline BitIndex Position::GetKingSquare(const Player player) const {
   return king_position_[static_cast<size_t>(player)];
 }
 
-inline BitIndex
-Position::GetCastlingRookSquare(Player player,
-                                Castling::CastlingSide side) const {
+inline BitIndex Position::GetCastlingRookSquare(
+    Player player, Castling::CastlingSide side) const {
   return rook_positions_[static_cast<size_t>(player)]
                         [static_cast<size_t>(side)];
 }
@@ -518,8 +520,8 @@ inline const std::optional<BitIndex> &Position::GetEnCroissantSquare() const {
   return irreversible_data_.en_croissant_square;
 }
 
-inline const std::array<std::bitset<2>, kColors> &
-Position::GetCastlingRights() const {
+inline const std::array<std::bitset<2>, kColors> &Position::GetCastlingRights()
+    const {
   return irreversible_data_.castling_rights;
 }
 
@@ -597,4 +599,4 @@ inline void Position::ComputePins(const Player us) {
 inline Position::IrreversibleData Position::GetIrreversibleData() const {
   return irreversible_data_;
 }
-} // namespace SimpleChessEngine
+}  // namespace SimpleChessEngine

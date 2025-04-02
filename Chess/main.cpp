@@ -2,20 +2,38 @@
 #include "UciCommunicator.h"
 
 std::string program_info() {
+  using namespace SimpleChessEngine;
   std::ostringstream ss;
   ss << "Welcome to SimpleChessEngine\n";
   ss << "Build date: " << __DATE__ << " " << __TIME__ << "\n";
+  ss << "Features:\n";
+  ss << "\tAlpha-Beta function\n";
+  ss << "\tQuiescence search\n";
+  ss << "\tPSQT\n";
+  ss << "\tMVV-LVA\n";
+  ss << "\tTT\n";
+  ss << "\tTT move ordering\n";
+  ss << "\tPVS\n";
+  ss << "\tHistory heuristics\n";
+  ss << "\tKiller moves\n";
+  ss << "\tTapered Evaluation\n";
 
   ss << std::boolalpha;
   ss << "PruneParameters:\n";
-  using namespace SimpleChessEngine;
-  ss << "rfp:\n";
-  ss << "enabled: " << Searcher::PruneParameters::rfp::enabled << "\n";
-  if constexpr (Searcher::PruneParameters::rfp::enabled) {
-    ss << "depth_limit: "
-       << static_cast<size_t>(Searcher::PruneParameters::rfp::depth_limit)
+  ss << "\trfp: " << Searcher::PruneParameters::rfp::kEnabled << "\n";
+  if constexpr (Searcher::PruneParameters::rfp::kEnabled) {
+    ss << "\t\tkDepthLimit: "
+       << static_cast<size_t>(Searcher::PruneParameters::rfp::kDepthLimit)
        << "\n";
-    ss << "threshold: " << Searcher::PruneParameters::rfp::threshold << "\n";
+    ss << "\t\tkThreshold: " << Searcher::PruneParameters::rfp::kThreshold
+       << "\n";
+  }
+  ss << "\tNullMove: " << Searcher::PruneParameters::NullMove::kEnabled << "\n";
+  if constexpr (Searcher::PruneParameters::NullMove::kEnabled) {
+    ss << "\t\tkNullMoveReduction: "
+       << static_cast<size_t>(
+              Searcher::PruneParameters::NullMove::kNullMoveReduction)
+       << "\n";
   }
   return ss.str();
 }

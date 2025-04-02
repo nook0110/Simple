@@ -23,8 +23,10 @@ jobs:
         sudo cmake --build build --target install
 
     - name: Building the project
-      working-directory: ${{runner.workspace}}/Chess/build
+      working-directory: ${{runner.workspace}}/Chess
       run: |
+        mkdir build
+        cd build
         cmake -DCMAKE_BUILD_TYPE=Debug ..
         make
 
