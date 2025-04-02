@@ -2,6 +2,8 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <vector>
 
 #include "Chess/BitScan.h"
@@ -27,14 +29,14 @@ class MovePicker {
   MovePicker();
   MovePicker(const Move&) = delete;
   MovePicker(Move&&) = delete;
-  void InitPicker(Moves&& moves);
+  void InitPicker(Moves&& moves, const Searcher& searcher);
   ~MovePicker() = default;
 
   MovePicker& operator=(MovePicker&&) = delete;
   MovePicker& operator=(const MovePicker&) = delete;
 
   Moves::const_iterator SelectNextMove(const Searcher& searcher,
-                                       const Depth ply, const size_t color_idx);
+                                       const Depth ply);
 
   void SkipMove(const Move& move);
 
@@ -49,26 +51,18 @@ class MovePicker {
   Moves::iterator current_move_;
 
   struct MoveData {
-    BitIndex from = {};
+    BitIndex from = {-1};
     BitIndex to = {};
     Piece captured = {};
-
-    bool operator==(const MoveData&) const = default;
   };
 
-  std::array<MoveData, MoveGenerator::kMaxMovesPerPosition> data_;
+  std::vector<MoveData> data_;
+  std::vector<uint64_t> history_;
 
   void Swap(size_t lhs, size_t rhs) {
     std::swap(moves_[lhs], moves_[rhs]);
     std::swap(data_[lhs], data_[rhs]);
-  }
-
-  const MoveData& GetData(size_t idx) {
-    if (data_[idx] == MoveData{}) {
-      const auto [from, to, capture] = GetMoveData(moves_[idx]);
-      data_[idx] = {from, to, capture};
-    }
-    return data_[idx];
+    std::swap(history_[lhs], history_[rhs]);
   }
 
   Stage stage_ = Stage::kGoodCaptures;

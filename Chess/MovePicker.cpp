@@ -47,11 +47,11 @@ MovePicker::Stage& operator++(MovePicker::Stage& stage) {
 }
 
 MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
-    const Searcher& searcher, const Depth ply, const size_t color_idx) {
+    const Searcher& searcher, const Depth ply) {
   const auto& position = searcher.GetPosition();
   const auto compare_captures = [this, &position](size_t lhs, size_t rhs) {
-    const auto [from_lhs, to_lhs, captured_piece_lhs] = GetData(lhs);
-    const auto [from_rhs, to_rhs, captured_piece_rhs] = GetData(rhs);
+    const auto [from_lhs, to_lhs, captured_piece_lhs] = data_[lhs];
+    const auto [from_rhs, to_rhs, captured_piece_rhs] = data_[rhs];
     const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
     const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
     const auto moving_idx_lhs = -static_cast<int>(position.GetPiece(from_lhs));
@@ -77,7 +77,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
                     is_good_capture, compare_captures);
       if (good_capture == moves_.size()) {
         ++stage_;
-        return SelectNextMove(searcher, ply, color_idx);
+        return SelectNextMove(searcher, ply);
       }
       Swap(good_capture, current_move_ - moves_.begin());
       return current_move_++;
@@ -94,20 +94,14 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
         }
       }
       ++stage_;
-      return SelectNextMove(searcher, ply, color_idx);
+      return SelectNextMove(searcher, ply);
     }
 
     case Stage::kQuiet: {
       const auto& history = searcher.GetHistory();
-      const auto is_quiet = [this](size_t idx) {
-        return !GetData(idx).captured;
-      };
-      const auto compare_quite = [this, &history, color_idx](size_t lhs,
-                                                             size_t rhs) {
-        const auto [from_lhs, to_lhs, captured_piece_lhs] = GetData(lhs);
-        const auto [from_rhs, to_rhs, captured_piece_rhs] = GetData(rhs);
-        return history[color_idx][from_lhs][to_lhs] >
-               history[color_idx][from_rhs][to_rhs];
+      const auto is_quiet = [this](size_t idx) { return !data_[idx].captured; };
+      const auto compare_quite = [this](size_t lhs, size_t rhs) {
+        return history_[lhs] > history_[rhs];
       };
 
       auto quiet_move = FindMaxIf(current_move_ - moves_.begin(), moves_.size(),
@@ -117,7 +111,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
         return current_move_++;
       }
       ++stage_;
-      return SelectNextMove(searcher, ply, color_idx);
+      return SelectNextMove(searcher, ply);
     }
 
     case Stage::kBadCaptures: {
@@ -128,7 +122,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
         return current_move_++;
       }
       ++stage_;
-      return SelectNextMove(searcher, ply, color_idx);
+      return SelectNextMove(searcher, ply);
     }
 
     case Stage::kEnd: {
@@ -139,8 +133,17 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
   assert(false);
 }
 
-void MovePicker::InitPicker(MoveGenerator::Moves&& moves) {
+void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
+                            const Searcher& searcher) {
   moves_ = std::move(moves);
+  data_.resize(moves_.size());
+  history_.resize(moves_.size());
+  for (size_t i = 0; i < moves_.size(); ++i) {
+    const auto [from, to, capture] = GetMoveData(moves_[i]);
+    data_[i] = {from, to, capture};
+    history_[i] = searcher.GetHistory()[static_cast<size_t>(
+        searcher.GetPosition().GetSideToMove())][from][to];
+  }
   current_move_ = moves_.begin();
 }
 

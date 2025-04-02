@@ -41,7 +41,7 @@ class Searcher {
       static constexpr Eval kThreshold = 75;
     };
     struct NullMove {
-      static constexpr bool kEnabled = true;
+      static constexpr bool kEnabled = false;
       static constexpr size_t kNullMoveReduction = 3;
     };
   };
@@ -342,7 +342,8 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
   move_picker_.InitPicker(
       move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(
-          current_position));
+          current_position),
+      searcher_);
 
   // check if there are no possible moves
   if (!move_picker_.HasMoreMoves()) {
@@ -351,8 +352,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
   if (!iteration_status_.has_stored_move) {
     auto has_cutoff_opt = CheckFirstMove<false>(
-        *move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth,
-                                     position_info_.side_to_move_idx));
+        *move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth));
     if (!has_cutoff_opt) {
       return std::nullopt;
     }
@@ -475,11 +475,9 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
   bool is_quiet = false;
   for (auto it =
-           move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth,
-                                       position_info_.side_to_move_idx);
-       it != move_picker_.end();
-       it = move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth,
-                                        position_info_.side_to_move_idx)) {
+           move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth);
+       it != move_picker_.end(); it = move_picker_.SelectNextMove(
+                                     searcher_, max_depth - remaining_depth)) {
     const auto &move = *it;
 
     is_quiet = move_picker_.GetCurrentStage() == MovePicker::Stage::kQuiet;
@@ -556,7 +554,13 @@ inline bool SimpleChessEngine::Searcher::SearchImplementation<
   if (position_info_.static_eval < beta) return false;
   if (position_info_.is_under_check) return false;
 
-  return true;
+  const auto &current_position = searcher_.GetPosition();
+  const auto side_to_move = current_position.GetSideToMove();
+  const auto king_and_pawns =
+      current_position.GetPiecesByType<Piece::kKing>(side_to_move) |
+      current_position.GetPiecesByType<Piece::kPawn>(side_to_move);
+
+  return current_position.GetPieces(side_to_move) != king_and_pawns;
 }
 
 template <bool is_principal_variation, class ExitCondition>
