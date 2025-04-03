@@ -92,7 +92,7 @@ inline std::ostream& operator<<(std::ostream& stream, const Promotion& move) {
   PrintCoordinates(from, stream);
   PrintCoordinates(to, stream);
 
-  std::cout << kPiecesChars[static_cast<size_t>(move.promoted_to)];
+  stream << kPiecesChars[static_cast<size_t>(move.promoted_to)];
 
   return stream;
 }

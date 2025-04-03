@@ -41,7 +41,7 @@ class Searcher {
       static constexpr Eval kThreshold = 75;
     };
     struct NullMove {
-      static constexpr bool kEnabled = false;
+      static constexpr bool kEnabled = true;
       static constexpr size_t kNullMoveReduction = 3;
     };
   };
@@ -49,12 +49,25 @@ class Searcher {
   struct DebugInfo {
     std::size_t searched_nodes{};
     std::size_t quiescence_nodes{};
-    std::size_t pv_hits{};
+
+    std::size_t zws_researches{};
+
+    std::size_t rfp_cuts{};
+    std::size_t nmp_tries{};
+    std::size_t nmp_cuts{};
+
+    std::size_t tt_hits{};
+    std::size_t tt_cuts{};
 
     DebugInfo &operator+=(const DebugInfo &other) {
       searched_nodes += other.searched_nodes;
       quiescence_nodes += other.quiescence_nodes;
-      pv_hits += other.pv_hits;
+      zws_researches += other.zws_researches;
+      rfp_cuts += other.rfp_cuts;
+      nmp_tries += other.nmp_tries;
+      nmp_cuts += other.nmp_cuts;
+      tt_hits += other.tt_hits;
+      tt_cuts += other.tt_cuts;
       return *this;
     }
   };
@@ -271,6 +284,7 @@ template <bool is_principal_variation_search>
 inline SearchResult
 Searcher::SearchImplementation<is_principal_variation, ExitCondition>::Search(
     SearchState state) {
+  DLOG(INFO) << "PV: " << std::boolalpha << is_principal_variation_search;
   return SearchImplementation<is_principal_variation_search, ExitCondition>{
       searcher_, state, exit_condition_}();
 }
@@ -296,12 +310,6 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
 
-  if constexpr (is_principal_variation) {
-    if (remaining_depth <= 1) {
-      return Search<false>({max_depth, remaining_depth, alpha, beta});
-    }
-  }
-
   // return the evaluation of the current position if we have reached
   // the end of the search tree
   if (remaining_depth <= 0) {
@@ -311,16 +319,19 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
   searcher_.debug_info_.searched_nodes++;
 
   if (auto result = CheckTranspositionTable()) {
+    searcher_.debug_info_.tt_cuts++;
     return *result;
   }
 
   if (CanRFP()) {
+    searcher_.debug_info_.rfp_cuts++;
     return position_info_.static_eval;
   }
 
   auto &current_position = searcher_.current_position_;
 
   if (CanNullMove()) {
+    searcher_.debug_info_.nmp_tries++;
     current_position.DoMove(NullMove{});
     const auto eval_optional = Search<false>(
         {max_depth,
@@ -334,6 +345,7 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     const auto &null_eval = -*eval_optional;
     if (null_eval >= beta) {
+      searcher_.debug_info_.nmp_cuts++;
       return null_eval;
     }
   }
@@ -428,8 +440,10 @@ inline SearchResult Searcher::SearchImplementation<
   DLOG(INFO) << std::string(max_depth - remaining_depth, '\t') << move;
   current_position.DoMove(move);
 
-  const auto eval_optional = Search<is_pv_move>(
-      {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
+  const auto eval_optional =
+      Search < is_pv_move &&
+      is_principal_variation >
+          ({max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
   if (!eval_optional) return std::nullopt;
 
   // undo the move
@@ -443,7 +457,8 @@ template <bool is_principal_variation, class ExitCondition>
 template <bool is_pv_move>
 inline std::optional<bool> SimpleChessEngine::Searcher::SearchImplementation<
     is_principal_variation, ExitCondition>::CheckFirstMove(const Move &move) {
-  const auto eval_optional = ProbeMove<is_pv_move>(move);
+  const auto eval_optional =
+      ProbeMove < is_pv_move && is_principal_variation > (move);
   if (!eval_optional) {
     return std::nullopt;
   }
@@ -493,18 +508,20 @@ inline SearchResult SimpleChessEngine::Searcher::SearchImplementation<
 
     auto temp_eval = -*temp_eval_optional;
 
-    if (temp_eval > alpha) /* make a research (ZWS failed) */
+    if (temp_eval > alpha &&
+        is_principal_variation) /* make a research (ZWS failed) */
     {
-      temp_eval_optional = Search<false>(
+      searcher_.debug_info_.zws_researches++;
+      temp_eval_optional = Search<true>(
           {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
       if (!temp_eval_optional) return std::nullopt;
 
       temp_eval = -*temp_eval_optional;
+    }
 
-      if (temp_eval > alpha) {
-        iteration_status_.has_raised_alpha = true;
-        alpha = temp_eval;
-      }
+    if (temp_eval > alpha) {
+      iteration_status_.has_raised_alpha = true;
+      alpha = temp_eval;
     }
 
     // undo the move
@@ -540,8 +557,6 @@ inline bool SimpleChessEngine::Searcher::SearchImplementation<
   if constexpr (!PruneParameters::NullMove::kEnabled) {
     return false;
   }
-  if constexpr (is_principal_variation) return false;
-
   const auto max_depth = state_.max_depth;
   const auto remaining_depth = state_.remaining_depth;
   const auto was_previous_move_a_null = state_.was_previous_move_a_null;
@@ -550,8 +565,6 @@ inline bool SimpleChessEngine::Searcher::SearchImplementation<
   if (remaining_depth <= PruneParameters::NullMove::kNullMoveReduction)
     return false;
 
-  if (was_previous_move_a_null) return false;
-  if (position_info_.static_eval < beta) return false;
   if (position_info_.is_under_check) return false;
 
   const auto &current_position = searcher_.GetPosition();
@@ -594,6 +607,7 @@ inline std::optional<SearchResult> Searcher::SearchImplementation<
                   .GetHash()) {  // check if current position was previously
                                  // searched at higher depth
     auto &[max_depth, remaining_depth, alpha, beta, __] = state_;
+    searcher_.debug_info_.tt_hits++;
 
     if (remaining_depth == max_depth) {
       searcher_.best_move_ = hash_move;
