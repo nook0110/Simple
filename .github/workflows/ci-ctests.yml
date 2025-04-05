@@ -23,7 +23,7 @@ jobs:
         sudo cmake --build build --target install
 
     - name: Building the project
-      working-directory: ${{runner.workspace}}/Simple/Chess
+      working-directory: ${{runner.workspace}}/Simple
       run: |
         mkdir build
         cd build
@@ -31,12 +31,12 @@ jobs:
         make
 
     - name: Run tests
-      working-directory: ${{runner.workspace}}/Simple/Chess/build
+      working-directory: ${{runner.workspace}}/Simple/build
       run: |
         ctest
         
     - name: Generate coverage report
-      working-directory: ${{runner.workspace}}/Simple/Chess/build
+      working-directory: ${{runner.workspace}}/Simple/build
       run: |
         make coverage
 
