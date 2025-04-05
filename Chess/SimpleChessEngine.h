@@ -223,8 +223,29 @@ class ChessEngine {
     static constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
     static constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
 
+    Eval GetLowerBound() const { return neg_inf; }
+    Eval GetUpperBound() const { return pos_inf; }
+
+    void FailedUpper() { upper_coeff *= 2; }
+    void FailedLower() { lower_coeff *= 2; }
+
+    void SetNewEval(Eval eval) {
+      lower_bound = eval;
+      upper_bound = eval;
+      lower_coeff = 1;
+      upper_coeff = 1;
+    }
+
+   private:
     Eval lower_bound = neg_inf;
     Eval upper_bound = pos_inf;
+
+    size_t lower_coeff = 1;
+    size_t upper_coeff = 1;
+    static constexpr Eval kPawnValue =
+        kPieceValues[static_cast<size_t>(Piece::kPawn)]
+            .eval[static_cast<size_t>(GamePhase::kMiddleGame)];
+    static constexpr Eval kDelta = kPawnValue / 8;
   };
 
   std::optional<Eval> MakeIteration(Window window, Depth depth,
@@ -249,9 +270,6 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   Searcher::DebugInfo info;
   EBFsInfo ebfs;
   Window window{};
-  constexpr Eval pawn_value =
-      kPieceValues[static_cast<size_t>(Piece::kPawn)]
-          .eval[static_cast<size_t>(GamePhase::kMiddleGame)];
 
   for (Depth current_depth = 1;
        condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
@@ -262,13 +280,13 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       break;
     }
     const auto eval = *eval_optional;
-    if (eval >= window.upper_bound) {
-      window.upper_bound += pawn_value * 3 / 2;
+    if (eval >= window.GetUpperBound()) {
+      window.FailedUpper();
       --current_depth;
       continue;
     }
-    if (eval <= window.lower_bound) {
-      window.lower_bound -= pawn_value * 3 / 2;
+    if (eval <= window.GetLowerBound()) {
+      window.FailedLower();
       --current_depth;
       continue;
     }
@@ -280,18 +298,18 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
               std::chrono::duration<double>{std::chrono::system_clock::now() -
                                             start_time});
     PrintInfo(ebfs.GetInfo());
-    o_stream_
-        << "info time "
-        << std::chrono::duration<double>{std::chrono::system_clock::now() -
-                                         start_time}
-        << "\n";
+    o_stream_ << "info time "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::system_clock::now() - start_time)
+                     .count()
+              << "\n";
 
     if (auto two_move_pv = searcher_.GetPrincipalVariation(2, position_);
         two_move_pv.size() > 1) {
       ponder_move_ = two_move_pv[1];
     }
     best_move_ = searcher_.GetCurrentBestMove();
-    window = {eval - pawn_value / 2, eval + pawn_value / 2};
+    window.SetNewEval(eval);
   }
 
   PrintBestMove(BestMoveInfo{best_move_, ponder_move_});
@@ -304,8 +322,10 @@ inline const Move& ChessEngine::GetCurrentBestMove() const {
 inline std::optional<Eval> ChessEngine::MakeIteration(
     const Window window, const Depth current_depth,
     const StopSearchCondition auto& condition) {
+  o_stream_ << "info window " << window.GetLowerBound() << " "
+            << window.GetUpperBound() << "\n";
   return searcher_.Search<true>(condition, current_depth, current_depth,
-                                window.lower_bound, window.upper_bound);
+                                window.GetLowerBound(), window.GetUpperBound());
 }
 
 template <class Info>
