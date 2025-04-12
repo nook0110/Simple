@@ -17,7 +17,7 @@ class Quiescence {
    *
    */
   Quiescence(const ExitCondition& exit_condition)
-      : exit_condition_(exit_condition){};
+      : exit_condition_(exit_condition) {};
 
   /**
    * \brief Performs the alpha-beta search algorithm.
@@ -30,10 +30,11 @@ class Quiescence {
    */
   template <bool start_of_search>
   [[nodiscard]] SearchResult Search(Position& current_position, Eval alpha,
-                                    Eval beta);
+                                    Eval beta, const Depth current_depth);
 
   [[nodiscard]] SearchResult SearchUnderCheck(Position& current_position,
-                                              Eval alpha, Eval beta);
+                                              Eval alpha, Eval beta,
+                                              const Depth current_depth);
 
   [[nodiscard]] std::size_t GetSearchedNodes() const { return searched_nodes_; }
 
@@ -70,14 +71,15 @@ template <class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <bool start_of_search>
 SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
-                                               Eval alpha, const Eval beta) {
+                                               Eval alpha, const Eval beta,
+                                               const Depth current_depth) {
   if constexpr (start_of_search) {
     searched_nodes_ = 0;
   }
   searched_nodes_++;
 
   if (current_position.IsUnderCheck()) {
-    return SearchUnderCheck(current_position, alpha, beta);
+    return SearchUnderCheck(current_position, alpha, beta, current_depth);
   }
 
   const auto stand_pat = current_position.Evaluate();
@@ -110,7 +112,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     // make the move and search the tree
     current_position.DoMove(move);
     const auto temp_eval_optional =
-        Search<false>(current_position, -beta, -alpha);
+        Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
     if (!temp_eval_optional) return std::nullopt;
 
@@ -134,9 +136,10 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
 template <class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 inline SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
-    Position& current_position, Eval alpha, Eval beta) {
+    Position& current_position, Eval alpha, Eval beta,
+    const Depth current_depth) {
   MoveGenerator::Moves moves =
-      move_generator_.GenerateMoves<MoveGenerator::Type::kDefault>(
+      move_generator_.GenerateMoves<MoveGenerator::Type::kAll>(
           current_position);
 
   if (moves.empty()) {
@@ -154,7 +157,7 @@ inline SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     // make the move and search the tree
     current_position.DoMove(move);
     const auto temp_eval_optional =
-        Search<false>(current_position, -beta, -alpha);
+        Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
     if (!temp_eval_optional) return std::nullopt;
 

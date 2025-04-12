@@ -15,7 +15,7 @@ namespace SimpleChessEngine {
  */
 class MoveGenerator {
  public:
-  enum class Type : uint8_t { kDefault, kQuiescence };
+  enum class Type : uint8_t { kAll = 0, kQuiescence = 1, kAddChecks = 2 };
 
   inline static constexpr size_t kMaxMovesPerPosition = 218;
   MoveGenerator() { moves_.reserve(kMaxMovesPerPosition); }
@@ -70,6 +70,22 @@ class MoveGenerator {
   mutable Moves moves_;
 };
 
+inline constexpr MoveGenerator::Type operator|(MoveGenerator::Type a,
+                                               MoveGenerator::Type b) {
+  return static_cast<MoveGenerator::Type>(static_cast<uint8_t>(a) |
+                                          static_cast<uint8_t>(b));
+}
+
+inline constexpr MoveGenerator::Type operator&(MoveGenerator::Type a,
+                                               MoveGenerator::Type b) {
+  return static_cast<MoveGenerator::Type>(static_cast<uint8_t>(a) &
+                                          static_cast<uint8_t>(b));
+}
+
+constexpr bool operator!(MoveGenerator::Type t) {
+  return static_cast<uint8_t>(t) == 0;
+}
+
 template <MoveGenerator::Type type>
 MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
   moves_.clear();
@@ -79,7 +95,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
 
   auto target = ~position.GetPieces(us);
 
-  if constexpr (type == Type::kQuiescence) {
+  if constexpr (!!(type & Type::kQuiescence)) {
     target &= position.GetPieces(Flip(us));
   }
 
@@ -99,8 +115,11 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
   const auto king_target = target;
   auto pawn_target = target;
 
-  if constexpr (type == Type::kQuiescence) {
+  if constexpr (!!(type & Type::kQuiescence)) {
     pawn_target |= (kRankBB[0] | kRankBB[7]);
+  }
+  if constexpr (!!(type & Type::kAddChecks)) {
+    pawn_target |= GetPawnAttacks(king_square, us);
   }
   // is in check
   if (king_attacker.Any()) {
@@ -111,18 +130,34 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
     pawn_target &= ray;
   }
 
-  GenerateMovesForPiece<Piece::kPawn>(moves_, position, pawn_target);
+  GenerateMovesForPiece<Piece::kPawn>(moves_, position,
+                                      pawn_target & ~position.GetPieces(us));
 
   std::erase_if(moves_, [&position](const Move& move) {
     return !IsPawnMoveLegal(position, move);
   });
 
   // generate moves for piece
-  GenerateMovesForPiece<Piece::kQueen>(moves_, position, target);
-  GenerateMovesForPiece<Piece::kRook>(moves_, position, target);
-  GenerateMovesForPiece<Piece::kBishop>(moves_, position, target);
-  GenerateMovesForPiece<Piece::kKnight>(moves_, position, target);
-  GenerateMovesForPiece<Piece::kKing>(moves_, position, king_target);
+  auto generate_move_for_piece = [this, &position, king_square,
+                                  us]<Piece piece>(Bitboard target) {
+    if constexpr (!!(type & Type::kAddChecks)) {
+      target |=
+          AttackTable<piece>::GetAttackMap(king_square, position.GetPieces(us));
+    }
+    GenerateMovesForPiece<piece>(moves_, position,
+                                 target & ~position.GetPieces(us));
+  };
+
+  auto generate_moves = [this, &position, target,
+                         &generate_move_for_piece]<Piece... pieces>() {
+    (generate_move_for_piece.template operator()<pieces>(target), ...);
+  };
+
+  generate_moves.template
+  operator()<Piece::kQueen, Piece::kRook, Piece::kBishop, Piece::kKnight>();
+
+  GenerateMovesForPiece<Piece::kKing>(moves_, position,
+                                      king_target & ~position.GetPieces(us));
   GenerateCastling(moves_, position);
 
   // return moves

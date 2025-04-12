@@ -33,7 +33,7 @@ struct GameInfo {
   static auto move_generator = MoveGenerator{};
 
   const auto moves =
-      move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(position);
+      move_generator.GenerateMoves<MoveGenerator::Type::kAll>(position);
 
   if (depth == 1) {
     for (const auto &move : moves) {

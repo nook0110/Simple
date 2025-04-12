@@ -169,8 +169,7 @@ inline SearchResult SimpleChessEngine::SearchImplementation<
   auto const &move_generator = searcher_.move_generator_;
 
   move_picker_.InitPicker(
-      move_generator.GenerateMoves<MoveGenerator::Type::kDefault>(
-          current_position),
+      move_generator.GenerateMoves<MoveGenerator::Type::kAll>(current_position),
       searcher_);
 
   // check if there are no possible moves
@@ -204,7 +203,7 @@ inline SearchResult SimpleChessEngine::SearchImplementation<
   auto quiescence_searcher = Quiescence{exit_condition_};
 
   const auto eval = quiescence_searcher.template Search<true>(
-      current_position, state_.alpha, state_.beta);
+      current_position, state_.alpha, state_.beta, 0);
   searcher_.debug_info_.quiescence_nodes +=
       quiescence_searcher.GetSearchedNodes();
   return eval;
