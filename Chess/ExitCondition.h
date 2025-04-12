@@ -3,11 +3,13 @@
 #include "Evaluation.h"
 namespace SimpleChessEngine {
 class Searcher;
+
 struct IterationInfo {
   const Searcher& searcher;
   Eval iteration_result;
   size_t depth;
 };
+
 template <class T>
 concept SearchCondition =
     StopSearchCondition<T> && requires(T condition, IterationInfo info) {

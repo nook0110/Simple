@@ -1,17 +1,19 @@
 #pragma once
 
+#include <string>
+#include <unordered_map>
+
+#include "Chess/Piece.h"
 #include "Move.h"
 #include "Position.h"
 #include "StreamUtility.h"
 #include "Utility.h"
-#include <string>
-#include <unordered_map>
 
 namespace SimpleChessEngine {
 struct MoveFactory {
   Move operator()(const Position &position, const std::string &move) const;
 
-private:
+ private:
   struct ParsedMove {
     BitIndex from;
     BitIndex to;
@@ -52,7 +54,7 @@ inline Move MoveFactory::operator()(const Position &position,
                      kCharToPiece[move.back()].first};
   }
 
-  if (piece_to_move != Piece::kPawn) {
+  if (piece_to_move != Piece::kPawn || position.GetPiece(to) != Piece::kNone) {
     return DefaultMove{from, to, position.GetPiece(to)};
   }
 
@@ -64,11 +66,11 @@ inline Move MoveFactory::operator()(const Position &position,
     return EnCroissant{from, to};
   }
 
-  return DefaultMove{from, to, position.GetPiece(to)};
+  return PawnPush{from, to};
 }
 
-inline MoveFactory::ParsedMove
-MoveFactory::ParseDefaultMove(const std::string &move) {
+inline MoveFactory::ParsedMove MoveFactory::ParseDefaultMove(
+    const std::string &move) {
   constexpr size_t first_file = 0, first_rank = 1, second_file = 2,
                    second_rank = 3;
 
@@ -78,4 +80,4 @@ MoveFactory::ParseDefaultMove(const std::string &move) {
 
   return parsed_move;
 }
-} // namespace SimpleChessEngine
+}  // namespace SimpleChessEngine

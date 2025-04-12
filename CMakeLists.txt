@@ -58,3 +58,6 @@ add_custom_target(coverage
 enable_testing()
 include(GoogleTest)
 gtest_discover_tests(SCE_tests)
+
+file(GLOB TEST_DATA_FILES ${CMAKE_SOURCE_DIR}/Tests/*.test)
+file(COPY ${TEST_DATA_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
