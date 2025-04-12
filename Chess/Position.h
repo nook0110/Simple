@@ -2,6 +2,7 @@
 #include <array>
 #include <bitset>
 #include <cassert>
+#include <cstddef>
 
 #include "Attacks.h"
 #include "BitBoard.h"
@@ -83,17 +84,26 @@ class Position {
       last_reset.push_back(0);
     }
 
-    size_t Count(const Hash hash) const {
-      size_t result = 0;
+    size_t Count(const Hash hash, Depth depth) const {
+      size_t presearch_result = 0;
       size_t parity_shift =
           (history.size() ^ last_reset[history.size()] ^ 1) % 2;
-      for (size_t i = last_reset[history.size()] + parity_shift;
-           i < history.size(); i += 2) {
+      size_t i = last_reset[history.size()] + parity_shift;
+      for (; i < history.size() - depth; i += 2) {
         if (history[i] == hash) {
-          ++result;
+          ++presearch_result;
         }
       }
-      return result;
+      size_t search_result = 0;
+      for (; i < history.size(); i += 2) {
+        if (history[i] == hash) {
+          ++search_result;
+        }
+      }
+      if (search_result >= 2) {
+        return 3;
+      }
+      return presearch_result + search_result;
     }
 
     void Push(const Hash hash, const bool reset) {
@@ -214,11 +224,11 @@ class Position {
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const;
 
-  [[nodiscard]] bool DetectRepetition() const {
+  [[nodiscard]] bool DetectRepetition(Depth depth) const {
     if (history_stack_.history.size() < 3) {
       return false;
     }
-    return history_stack_.Count(hash_) >= 3;
+    return history_stack_.Count(hash_, depth) >= 3;
   }
 
   [[nodiscard]] bool StaticExchangeEvaluation(const Move &move,

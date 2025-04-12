@@ -119,11 +119,11 @@ inline SearchResult SimpleChessEngine::SearchImplementation<
     return std::nullopt;
   }
 
-  if (searcher_.current_position_.DetectRepetition()) {
+  auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
+  if (searcher_.current_position_.DetectRepetition(max_depth -
+                                                   remaining_depth)) {
     return kDrawValue;
   }
-
-  auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
 
   // return the evaluation of the current position if we have reached
   // the end of the search tree
