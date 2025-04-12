@@ -6,6 +6,7 @@
 #include <variant>
 
 #include "Evaluation.h"
+#include "ExitCondition.h"
 #include "Move.h"
 #include "Searcher.h"
 
@@ -59,77 +60,7 @@ std::ostream& operator<<(std::ostream& out,
 std::ostream& operator<<(std::ostream& out, const BestMoveInfo& bm_info);
 std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info);
 
-struct IterationInfo {
-  const Searcher& searcher;
-  Eval iteration_result;
-  size_t depth;
-};
 
-template <class T>
-concept SearchCondition =
-    StopSearchCondition<T> && requires(T condition, IterationInfo info) {
-      { condition.ShouldContinueIteration() } -> std::convertible_to<bool>;
-      { condition.Update(info) };
-    };
-
-struct TimeCondition {
-  explicit TimeCondition(std::chrono::milliseconds time_for_move)
-      : time_for_move_(std::move(time_for_move)) {}
-
-  bool ShouldContinueIteration() const { return !IsTimeToExit(); }
-
-  bool IsTimeToExit() const {
-    return time_for_move_ < (std::chrono::system_clock::now() - start_time_);
-  }
-
-  void Update(const IterationInfo&) const {}
-
-  std::chrono::milliseconds time_for_move_;
-  TimePoint start_time_ = std::chrono::system_clock::now();
-};
-static_assert(SearchCondition<TimeCondition>);
-
-struct DepthCondition {
-  explicit DepthCondition(Depth max_depth) : max_depth_(max_depth) {}
-  bool ShouldContinueIteration() const { return cur_depth < max_depth_; }
-
-  bool IsTimeToExit() const { return false; }
-
-  void Update(const IterationInfo& info) { cur_depth = info.depth; }
-
-  Depth cur_depth = 0;
-  Depth max_depth_;
-};
-static_assert(SearchCondition<DepthCondition>);
-
-using Condition = std::variant<TimeCondition, DepthCondition>;
-
-struct Pondering {
-  bool ShouldContinueIteration() const { return !IsTimeToExit(); }
-
-  bool IsTimeToExit() const {
-    if (pondermiss) return true;
-    if (!condition) return false;
-    return std::visit(
-        [](const auto& unwrapped_control) -> bool {
-          return unwrapped_control.IsTimeToExit();
-        },
-        *condition);
-  }
-  void Update(const IterationInfo& info) {
-    if (!condition) return;
-    std::visit(
-        [&info](auto& unwrapped_condition) {
-          unwrapped_condition.Update(info);
-        },
-        *condition);
-  }
-
-  std::optional<Condition> condition;
-
-  bool pondermiss = false;
-};
-static_assert(SearchCondition<Pondering>);
 
 /**
  * \brief Class that represents a chess engine.
@@ -197,8 +128,7 @@ class ChessEngine {
     size_t previous_nodes_ = 0;
   };
 
-  void PrintInfo(const Searcher::DebugInfo& info, Eval eval,
-                 Depth current_depth,
+  void PrintInfo(const DebugInfo& info, Eval eval, Depth current_depth,
                  std::chrono::duration<double> search_time) {
     PrintInfo(ScoreInfo{eval});
     PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
@@ -267,7 +197,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   const TimePoint start_time = std::chrono::system_clock::now();
   searcher_.InitStartOfSearch();
 
-  Searcher::DebugInfo info;
+  DebugInfo info;
   EBFsInfo ebfs;
   Window window{};
 

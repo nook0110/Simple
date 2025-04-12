@@ -16,8 +16,8 @@ struct Settings {
       static constexpr bool kEnabled = true;
       static constexpr size_t kNullMoveReduction = 3;
     };
-    static constexpr RFPSettings kRFPSettings;
-    static constexpr NMPSettings kNMPSettings;
+    static constexpr RFPSettings kRFPSettings = {};
+    static constexpr NMPSettings kNMPSettings = {};
   };
   struct SearchParameters {
     struct AspirationWindowSettings {
@@ -26,10 +26,10 @@ struct Settings {
       static constexpr Eval kDelta = 10;
       static constexpr Strategy kStrategy = Strategy::Linear;
     };
-    static constexpr AspirationWindowSettings kAspirationWindowSettings;
+    static constexpr AspirationWindowSettings kAspirationWindowSettings = {};
   };
-  static constexpr PruneParameters kPruneParameters;
-  static constexpr SearchParameters kSearchParameters;
+  static constexpr PruneParameters kPruneParameters = {};
+  static constexpr SearchParameters kSearchParameters = {};
 };
 }  // namespace SimpleChessEngine
 
