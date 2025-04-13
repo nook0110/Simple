@@ -77,10 +77,11 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
                     is_good_capture, compare_captures);
       if (good_capture == moves_.size()) {
         ++stage_;
-        return SelectNextMove(searcher, ply);
+        [[fallthrough]];
+      } else {
+        Swap(good_capture, current_move_ - moves_.begin());
+        return current_move_++;
       }
-      Swap(good_capture, current_move_ - moves_.begin());
-      return current_move_++;
     }
 
     case Stage::kKillers: {
@@ -94,24 +95,23 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
         }
       }
       ++stage_;
-      return SelectNextMove(searcher, ply);
+      [[fallthrough]];
     }
 
     case Stage::kQuiet: {
-      const auto& history = searcher.GetHistory();
       const auto is_quiet = [this](size_t idx) { return !data_[idx].captured; };
-      const auto compare_quite = [this](size_t lhs, size_t rhs) {
-        return history_[lhs] > history_[rhs];
+      const auto compare_quiet = [this](size_t lhs, size_t rhs) {
+        return history_[lhs] < history_[rhs];
       };
 
       auto quiet_move = FindMaxIf(current_move_ - moves_.begin(), moves_.size(),
-                                  is_quiet, compare_quite);
+                                  is_quiet, compare_quiet);
       if (quiet_move != moves_.size()) {
         Swap(quiet_move, current_move_ - moves_.begin());
         return current_move_++;
       }
       ++stage_;
-      return SelectNextMove(searcher, ply);
+      [[fallthrough]];
     }
 
     case Stage::kBadCaptures: {
@@ -122,7 +122,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
         return current_move_++;
       }
       ++stage_;
-      return SelectNextMove(searcher, ply);
+      [[fallthrough]];
     }
 
     case Stage::kEnd: {
