@@ -85,25 +85,25 @@ class Position {
     }
 
     size_t Count(const Hash hash, Depth depth) const {
-      size_t presearch_result = 0;
+      size_t result = 0;
+      size_t current_result = 0;
       size_t parity_shift =
           (history.size() ^ last_reset[history.size()] ^ 1) % 2;
-      size_t i = last_reset[history.size()] + parity_shift;
-      for (; i < history.size() - depth; i += 2) {
+
+      for (int i = history.size() - 1;
+           i >= static_cast<int>(last_reset[history.size()] + parity_shift);
+           i -= 2) {
         if (history[i] == hash) {
-          ++presearch_result;
+          ++result;
+          if (i > static_cast<int>(history.size() - 1 - depth))
+            ++current_result;
         }
       }
-      size_t search_result = 0;
-      for (; i < history.size(); i += 2) {
-        if (history[i] == hash) {
-          ++search_result;
-        }
-      }
-      if (search_result >= 2) {
+
+      if (current_result >= 2) {
         return 3;
       }
-      return presearch_result + search_result;
+      return result;
     }
 
     void Push(const Hash hash, const bool reset) {
