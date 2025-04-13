@@ -56,7 +56,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
     const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
     const auto moving_idx_lhs = -static_cast<int>(position.GetPiece(from_lhs));
     const auto moving_idx_rhs = -static_cast<int>(position.GetPiece(from_rhs));
-    return std::tie(captured_idx_lhs, moving_idx_lhs) >
+    return std::tie(captured_idx_lhs, moving_idx_lhs) <
            std::tie(captured_idx_rhs, moving_idx_rhs);
   };
   switch (stage_) {

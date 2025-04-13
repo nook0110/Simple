@@ -16,7 +16,6 @@ list(REMOVE_ITEM CHESS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Chess/main.cpp)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}) 
 
-
 add_library(chess_lib STATIC ${CHESS_SOURCES})
 add_library(chess_lib_tests STATIC ${CHESS_SOURCES})
 add_executable(${PROJECT_NAME}
@@ -61,3 +60,7 @@ gtest_discover_tests(SCE_tests)
 
 file(GLOB TEST_DATA_FILES ${CMAKE_SOURCE_DIR}/Tests/*.test)
 file(COPY ${TEST_DATA_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+
+target_compile_definitions(chess_lib PUBLIC GOOGLE_STRIP_LOG=10)
+target_compile_definitions(${PROJECT_NAME} PUBLIC GOOGLE_STRIP_LOG=10)

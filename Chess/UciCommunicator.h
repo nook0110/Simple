@@ -384,6 +384,11 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
     return;
   }
 
+  if (token == "hash") {
+    o_stream_ << "hash: " << info_.position.GetHash() << std::endl;
+    return;
+  }
+
   if (token == "ponder") {
     startpos = command.tellg();
     command >> token;
