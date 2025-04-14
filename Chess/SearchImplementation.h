@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+
 #include "Searcher.h"
 #include "Settings.h"
 
@@ -99,6 +101,8 @@ template <bool is_principal_variation_search>
 inline SearchResult
 SearchImplementation<is_principal_variation, ExitCondition>::Search(
     SearchState state) {
+  assert(is_principal_variation_search || (state.beta - state.alpha == 1));
+  assert(state.alpha < state.beta);
   DLOG(INFO) << "PV: " << std::boolalpha << is_principal_variation_search;
   return SearchImplementation<is_principal_variation_search, ExitCondition>{
       searcher_, state, exit_condition_}();
@@ -120,6 +124,8 @@ inline SearchResult SimpleChessEngine::SearchImplementation<
   }
 
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
+  assert(is_principal_variation || beta - alpha == 1);
+
   if (searcher_.current_position_.DetectRepetition(max_depth -
                                                    remaining_depth)) {
     return kDrawValue;
@@ -162,7 +168,7 @@ inline SearchResult SimpleChessEngine::SearchImplementation<
     const auto &null_eval = -*eval_optional;
     if (null_eval >= beta) {
       searcher_.debug_info_.nmp_cuts++;
-      return null_eval;
+      return beta;
     }
   }
 
@@ -178,7 +184,7 @@ inline SearchResult SimpleChessEngine::SearchImplementation<
   }
 
   if (!iteration_status_.has_stored_move) {
-    auto has_cutoff_opt = CheckFirstMove<false>(
+    auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(
         *move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth));
     if (!has_cutoff_opt) {
       return std::nullopt;
@@ -256,6 +262,7 @@ SearchImplementation<is_principal_variation, ExitCondition>::ProbeMove(
   DLOG(INFO) << std::string(max_depth - remaining_depth, '\t') << move;
   current_position.DoMove(move);
 
+  assert((is_pv_move && is_principal_variation) == is_pv_move);
   const auto eval_optional =
       Search < is_pv_move &&
       is_principal_variation >
@@ -273,6 +280,8 @@ template <bool is_principal_variation, class ExitCondition>
 template <bool is_pv_move>
 inline std::optional<bool> SimpleChessEngine::SearchImplementation<
     is_principal_variation, ExitCondition>::CheckFirstMove(const Move &move) {
+  assert((is_pv_move && is_principal_variation) == is_pv_move);
+
   const auto eval_optional =
       ProbeMove < is_pv_move && is_principal_variation > (move);
   if (!eval_optional) {

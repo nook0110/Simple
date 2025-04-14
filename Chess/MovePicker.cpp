@@ -77,11 +77,11 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
                     is_good_capture, compare_captures);
       if (good_capture == moves_.size()) {
         ++stage_;
-        [[fallthrough]];
       } else {
         Swap(good_capture, current_move_ - moves_.begin());
         return current_move_++;
       }
+      [[fallthrough]];
     }
 
     case Stage::kKillers: {
