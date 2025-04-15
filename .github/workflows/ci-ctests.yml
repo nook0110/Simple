@@ -33,6 +33,7 @@ jobs:
     - name: Run tests
       working-directory: ${{runner.workspace}}/Simple/build
       run: |
+        ulimit -s unlimited
         ctest
         
     - name: Generate coverage report
