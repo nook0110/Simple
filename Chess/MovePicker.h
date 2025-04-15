@@ -1,15 +1,13 @@
 #pragma once
-#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <vector>
 
-#include "Chess/BitScan.h"
-#include "Chess/MoveGenerator.h"
-#include "Chess/Piece.h"
+#include "BitScan.h"
 #include "Move.h"
+#include "MoveGenerator.h"
+#include "Piece.h"
 #include "Utility.h"
 
 namespace SimpleChessEngine {

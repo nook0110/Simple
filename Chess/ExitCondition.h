@@ -1,6 +1,6 @@
 #pragma once
-#include "Chess/Searcher.h"
 #include "Evaluation.h"
+#include "Searcher.h"
 namespace SimpleChessEngine {
 class Searcher;
 

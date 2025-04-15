@@ -1,10 +1,9 @@
-/*
 #include <gtest/gtest.h>
 
-#include "Chess/MoveFactory.h"
-#include "Chess/MoveGenerator.h"
-#include "Chess/Position.h"
-#include "Chess/PositionFactory.h"
+#include "MoveFactory.h"
+#include "MoveGenerator.h"
+#include "Position.h"
+#include "PositionFactory.h"
 
 using namespace SimpleChessEngine;
 
@@ -14,7 +13,7 @@ TEST(DoMove, DoAndUndoEqualZero) {
   Position pos = start_pos;
 
   for (const auto moves =
-           MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kDefault>(pos);
+           MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(pos);
        const auto &move : moves) {
     const auto irreversible_data = pos.GetIrreversibleData();
     pos.DoMove(move);
@@ -58,5 +57,4 @@ TEST(TwoSimiliarPositions, DifferentHash) {
 
   ASSERT_NE(first_position.GetHash(), second_position.GetHash());
 }
-} // namespace PositionTests
-*/
+}  // namespace PositionTests

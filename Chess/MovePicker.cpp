@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 
-#include "Chess/Move.h"
+#include "Move.h"
 #include "Position.h"
 #include "Searcher.h"
 namespace SimpleChessEngine {
@@ -131,6 +131,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
   }
 
   assert(false);
+  return {};
 }
 
 void MovePicker::InitPicker(MoveGenerator::Moves&& moves,

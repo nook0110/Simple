@@ -1,6 +1,6 @@
 #pragma once
 
-#include <future>
+#include <cassert>
 #include <iostream>
 #include <optional>
 #include <sstream>
@@ -12,7 +12,6 @@
 #include "Perft.h"
 #include "Position.h"
 #include "SimpleChessEngine.h"
-#include "StreamUtility.h"
 
 namespace SimpleChessEngine {
 struct TournamentTime {
@@ -159,6 +158,8 @@ struct EngineOptions {
         return option->SetValue(value);
       }
     }
+
+    assert(false);
   }
 
   void PrintOptionsNames(std::ostream& out) {

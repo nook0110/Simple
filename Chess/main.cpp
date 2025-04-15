@@ -1,3 +1,4 @@
+#include "Attacks.h"
 #include "PSQT.h"
 #include "UciCommunicator.h"
 

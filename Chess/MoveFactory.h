@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "Chess/Piece.h"
+#include "Piece.h"
 #include "Move.h"
 #include "Position.h"
 #include "StreamUtility.h"

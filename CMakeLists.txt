@@ -14,7 +14,7 @@ endif()
 FILE(GLOB CHESS_SOURCES Chess/*.cpp)
 list(REMOVE_ITEM CHESS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Chess/main.cpp)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}) 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Chess) 
 
 add_library(chess_lib STATIC ${CHESS_SOURCES})
 add_library(chess_lib_tests STATIC ${CHESS_SOURCES})

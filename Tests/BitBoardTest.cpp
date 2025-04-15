@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "Chess/BitBoard.h"
-#include "Chess/Utility.h"
+#include "BitBoard.h"
+#include "Utility.h"
 
 using namespace SimpleChessEngine;
 

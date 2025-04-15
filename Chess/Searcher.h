@@ -10,9 +10,7 @@
 #include "KillerTable.h"
 #include "Move.h"
 #include "MoveGenerator.h"
-#include "MovePicker.h"
 #include "PositionFactory.h"
-#include "Quiescence.h"
 #include "TranspositionTable.h"
 
 namespace SimpleChessEngine {
@@ -40,7 +38,7 @@ class Searcher {
     requires StopSearchCondition<ExitCondition>
   friend struct SearchImplementation;
   constexpr static size_t kTTsize = 1 << 24;
-  using TranspositionTable = TranspositionTable<kTTsize>;
+  using SearcherTranspositionTable = TranspositionTable<kTTsize>;
 
   struct PruneParameters {
     struct rfp {
@@ -112,7 +110,7 @@ class Searcher {
   Move best_move_{};
   Position current_position_;     //!< Current position.
   MoveGenerator move_generator_;  //!< Move generator.
-  TranspositionTable
+  SearcherTranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
   std::array<std::array<std::array<uint64_t, kBoardArea + 1>, kBoardArea + 1>,
              kColors>

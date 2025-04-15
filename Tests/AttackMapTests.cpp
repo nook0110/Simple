@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "Chess/Attacks.h"
+#include "Attacks.h"
 using namespace SimpleChessEngine;
 
 namespace AttackMapTests {

@@ -5,9 +5,9 @@
 #include <sstream>
 #include <vector>
 
-#include "Chess/Move.h"
-#include "Chess/MoveFactory.h"
-#include "Chess/SimpleChessEngine.h"
+#include "Move.h"
+#include "MoveFactory.h"
+#include "SimpleChessEngine.h"
 
 using namespace SimpleChessEngine;
 
