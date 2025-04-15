@@ -6,12 +6,12 @@
 #include "Settings.h"
 
 namespace SimpleChessEngine {
-template class SearchImplementation<false, TimeCondition>;
-template class SearchImplementation<true, TimeCondition>;
-template class SearchImplementation<false, DepthCondition>;
-template class SearchImplementation<true, DepthCondition>;
-template class SearchImplementation<false, Pondering>;
-template class SearchImplementation<true, Pondering>;
+template struct SearchImplementation<false, TimeCondition>;
+template struct SearchImplementation<true, TimeCondition>;
+template struct SearchImplementation<false, DepthCondition>;
+template struct SearchImplementation<true, DepthCondition>;
+template struct SearchImplementation<false, Pondering>;
+template struct SearchImplementation<true, Pondering>;
 
 PositionInfo::PositionInfo(const Position &position)
     : static_eval(position.Evaluate()), is_under_check(position.IsUnderCheck()),
@@ -159,8 +159,6 @@ template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 void SimpleChessEngine::SearchImplementation<
     is_principal_variation, ExitCondition>::SetBestMove(const Move &move) {
-  auto &current_position = searcher_.current_position_;
-
   iteration_status_.best_move = move;
 
   if (state_.remaining_depth == state_.max_depth) {
@@ -311,10 +309,7 @@ bool SimpleChessEngine::SearchImplementation<
   if constexpr (!Settings::PruneParameters::NMPSettings::kEnabled) {
     return false;
   }
-  const auto max_depth = state_.max_depth;
   const auto remaining_depth = state_.remaining_depth;
-  const auto was_previous_move_a_null = state_.was_previous_move_a_null;
-  const auto beta = state_.beta;
 
   if (remaining_depth <=
       Settings::PruneParameters::NMPSettings::kNullMoveReduction)

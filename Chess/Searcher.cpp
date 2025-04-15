@@ -1,5 +1,6 @@
 #include "Searcher.h"
 
+#include "BitScan.h"
 #include "ExitCondition.h"
 #include "SearchImplementation.h"
 
@@ -27,7 +28,7 @@ MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
 void Searcher::InitStartOfSearch() {
   killers_.Clear();
   for (size_t color = 0; color < kColors; ++color) {
-    for (BitIndex from = 0; from <= kBoardArea; ++from) {
+    for (BitIndex from = 0; from <= static_cast<BitIndex>(kBoardArea); ++from) {
       history_[color][from].fill(0ull);
     }
   }

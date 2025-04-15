@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <utility>
 #include <variant>
 
 #include "MoveFactory.h"
@@ -81,6 +82,7 @@ class SearchThread {
       return DepthCondition{max_depth->depth};
     }
     assert(false);
+    std::unreachable();
   }
 
   void StopThread();
@@ -99,6 +101,8 @@ struct OptionBase {
   const std::string& GetName() const { return name_; }
 
   virtual std::string GetOptionDescription() const = 0;
+
+  virtual ~OptionBase() = default;
 
  private:
   std::string name_;
@@ -127,7 +131,8 @@ struct BooleanOption : public OptionBase {
   }
 
   std::string GetOptionDescription() const override {
-    return "type check default " + default_value ? "true" : "false";
+    return std::string("type check default ") +
+           (default_value ? "true" : "false");
   }
 
  private:
@@ -160,6 +165,7 @@ struct EngineOptions {
     }
 
     assert(false);
+    std::unreachable();
   }
 
   void PrintOptionsNames(std::ostream& out) {
@@ -470,13 +476,13 @@ inline void UciChessEngine::ParseDebug(std::stringstream) {
   o_stream_ << FenFactory{}(info_.position) << std::endl;
 }
 
-SearchThread::SearchThread(Position position, std::ostream& o_stream)
+inline SearchThread::SearchThread(Position position, std::ostream& o_stream)
     : engine_(std::move(position), o_stream) {}
 
-SearchThread::SearchThread(std::ostream& o_stream)
+inline SearchThread::SearchThread(std::ostream& o_stream)
     : engine_(PositionFactory{}(), o_stream) {}
 
-void SearchThread::Start(const Info& info) {
+inline void SearchThread::Start(const Info& info) {
   StopThread();
   engine_.SetPosition(info.position);
 
@@ -490,12 +496,12 @@ void SearchThread::Start(const Info& info) {
   });
 }
 
-void SearchThread::Stop() {
+inline void SearchThread::Stop() {
   if (!pondering_) engine_.PrintBestMove();
   StopThread();
 }
 
-void SearchThread::StopThread() {
+inline void SearchThread::StopThread() {
   if (thread_) {
     if (pondering_) {
       pondering_->pondermiss = true;

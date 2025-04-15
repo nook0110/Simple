@@ -4,6 +4,7 @@
 #include <variant>
 
 #include "Attacks.h"
+#include "BitBoard.h"
 #include "PSQT.h"
 #include "Piece.h"
 
@@ -584,20 +585,20 @@ Bitboard Position::Attackers(const BitIndex square,
                              const Bitboard transparent) const {
   assert(IsOk(square));
   const Bitboard occupancy = GetAllPieces() & ~transparent;
-  return GetPawnAttacks(square, Player::kWhite) &
-             GetPiecesByType<Piece::kPawn>(Player::kBlack) |
-         GetPawnAttacks(square, Player::kBlack) &
-             GetPiecesByType<Piece::kPawn>(Player::kWhite) |
-         AttackTable<Piece::kKnight>::GetAttackMap(square, occupancy) &
-             pieces_by_type_[static_cast<size_t>(Piece::kKnight)] |
-         AttackTable<Piece::kBishop>::GetAttackMap(square, occupancy) &
-             pieces_by_type_[static_cast<size_t>(Piece::kBishop)] |
-         AttackTable<Piece::kRook>::GetAttackMap(square, occupancy) &
-             pieces_by_type_[static_cast<size_t>(Piece::kRook)] |
-         AttackTable<Piece::kQueen>::GetAttackMap(square, occupancy) &
-             pieces_by_type_[static_cast<size_t>(Piece::kQueen)] |
-         AttackTable<Piece::kKing>::GetAttackMap(square, occupancy) &
-             pieces_by_type_[static_cast<size_t>(Piece::kKing)];
+  return (GetPawnAttacks(square, Player::kWhite) &
+          GetPiecesByType<Piece::kPawn>(Player::kBlack)) |
+         (GetPawnAttacks(square, Player::kBlack) &
+          GetPiecesByType<Piece::kPawn>(Player::kWhite)) |
+         (AttackTable<Piece::kKnight>::GetAttackMap(square, occupancy) &
+          pieces_by_type_[static_cast<size_t>(Piece::kKnight)]) |
+         (AttackTable<Piece::kBishop>::GetAttackMap(square, occupancy) &
+          pieces_by_type_[static_cast<size_t>(Piece::kBishop)]) |
+         (AttackTable<Piece::kRook>::GetAttackMap(square, occupancy) &
+          pieces_by_type_[static_cast<size_t>(Piece::kRook)]) |
+         (AttackTable<Piece::kQueen>::GetAttackMap(square, occupancy) &
+          pieces_by_type_[static_cast<size_t>(Piece::kQueen)]) |
+         (AttackTable<Piece::kKing>::GetAttackMap(square, occupancy) &
+          pieces_by_type_[static_cast<size_t>(Piece::kKing)]);
 }
 
 void Position::ComputePins(const Player us) {

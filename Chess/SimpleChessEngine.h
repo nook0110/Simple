@@ -3,7 +3,6 @@
 #include <chrono>
 #include <cmath>
 #include <numeric>
-#include <variant>
 
 #include "Evaluation.h"
 #include "ExitCondition.h"

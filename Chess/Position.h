@@ -26,7 +26,7 @@ namespace SimpleChessEngine {
  */
 class Position {
  public:
-  friend class PositionFactory;
+  friend struct PositionFactory;
   /**
    * \brief Struct to hold evaluation data for the position.
    *

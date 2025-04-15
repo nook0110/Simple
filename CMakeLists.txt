@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 project(SimpleChessEngine)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(glog 0.7.1 REQUIRED)
 add_definitions(-DGLOG_USE_GLOG_EXPORT)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+add_compile_options(-Wall)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_options(-Ofast -mtune=native -march=native -fno-stack-protector -flto -frename-registers -funroll-loops)
   add_link_options(-flto)
@@ -32,7 +33,6 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-set(CMAKE_CXX_STANDARD 20)
 FILE(GLOB CHESS_TEST_SOURCES Tests/*.cpp)
 add_executable(SCE_tests ${CHESS_TEST_SOURCES})
 target_link_libraries(SCE_tests gtest_main chess_lib_tests glog::glog)

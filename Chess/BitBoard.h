@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <utility>
 
 #include "BitScan.h"
 
@@ -117,6 +118,7 @@ inline size_t Bitboard::Count() const {
   return _mm_popcnt_u64(value_);
 #endif
   assert(false);
+  std::unreachable();
 }
 
 inline BitIndex Bitboard::GetFirstBit() const {

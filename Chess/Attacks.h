@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 
 #include "BitBoard.h"
 #include "Piece.h"
@@ -13,7 +14,7 @@ constexpr size_t GetMagicShift() {
   if constexpr (sliding_piece == Piece::kBishop) return 64 - 9;
   if constexpr (sliding_piece == Piece::kRook) return 64 - 12;
   assert(false);
-  return 0;
+  std::unreachable();
 }
 
 /**
@@ -201,7 +202,7 @@ Bitboard AttackTable<piece>::GetAttackMap(const BitIndex square,
     return self_->table_[GetAttackTableAddress(square, occupied)];
   }
   assert(false);
-  return {};
+  std::unreachable();
 }
 
 template class AttackTable<Piece::kKnight>;

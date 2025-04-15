@@ -1,5 +1,8 @@
 #include "Attacks.h"
 
+#include "BitBoard.h"
+#include "BitScan.h"
+
 using namespace SimpleChessEngine;
 
 template <Piece sliding_piece>
@@ -39,7 +42,7 @@ Bitboard SimpleChessEngine::GenerateAttackMask(const BitIndex square,
 template <Piece sliding_piece>
 void SimpleChessEngine::InitBetween() {
   assert(IsWeakSlidingPiece(sliding_piece));
-  for (BitIndex sq = 0; sq < kBoardArea; ++sq) {
+  for (BitIndex sq = 0; sq < static_cast<BitIndex>(kBoardArea); ++sq) {
     for (auto direction : GetStepDelta<sliding_piece>()) {
       Bitboard result{};
       BitIndex temp = sq;
@@ -340,7 +343,8 @@ AttackTable<sliding_piece>::AttackTable() {
                 size_t{14826}}}};
   }
 
-  for (BitIndex square = 0; square < kBoardArea; ++square) {
+  for (BitIndex square = 0; square < static_cast<BitIndex>(kBoardArea);
+       ++square) {
     Bitboard mask_subset(kEmptyBoard);
     do {
       table_[magic_[square].GetAddress<sliding_piece>(mask_subset)] =

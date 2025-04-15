@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "Attacks.h"
+#include "BitBoard.h"
 
 namespace SimpleChessEngine {
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<
@@ -292,8 +293,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
                                  target & ~position.GetPieces(us));
   };
 
-  auto generate_moves = [this, &position, target,
-                         &generate_move_for_piece]<Piece... pieces>() {
+  auto generate_moves = [target, &generate_move_for_piece]<Piece... pieces>() {
     (generate_move_for_piece.template operator()<pieces>(target), ...);
   };
 

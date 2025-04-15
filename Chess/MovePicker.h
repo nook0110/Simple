@@ -6,7 +6,6 @@
 
 #include "BitScan.h"
 #include "Move.h"
-#include "MoveGenerator.h"
 #include "Piece.h"
 #include "Utility.h"
 

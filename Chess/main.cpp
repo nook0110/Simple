@@ -1,3 +1,5 @@
+#include <cstddef>
+
 #include "Attacks.h"
 #include "PSQT.h"
 #include "UciCommunicator.h"
@@ -54,7 +56,7 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   }
   std::stringstream ss;
-  for (size_t arg_idx = 1; arg_idx < argc; ++arg_idx) {
+  for (size_t arg_idx = 1; arg_idx < static_cast<size_t>(argc); ++arg_idx) {
     ss << argv[arg_idx] << "\n";
   }
   SimpleChessEngine::UciChessEngine uci(ss);

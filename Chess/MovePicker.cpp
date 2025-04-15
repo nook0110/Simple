@@ -131,7 +131,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
   }
 
   assert(false);
-  return {};
+  std::unreachable();
 }
 
 void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
