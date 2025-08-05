@@ -64,3 +64,8 @@ file(COPY ${TEST_DATA_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 target_compile_definitions(chess_lib PUBLIC GOOGLE_STRIP_LOG=10)
 target_compile_definitions(${PROJECT_NAME} PUBLIC GOOGLE_STRIP_LOG=10)
+
+add_custom_target(file_toucher 
+        COMMAND ${CMAKE_COMMAND} -E touch_nocreate ${CMAKE_CURRENT_SOURCE_DIR}/Chess/main.cpp)
+
+add_dependencies(${PROJECT_NAME} file_toucher)

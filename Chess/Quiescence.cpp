@@ -1,5 +1,7 @@
 #include "Quiescence.h"
 
+#include <algorithm>
+
 #include "ExitCondition.h"
 
 namespace SimpleChessEngine {
@@ -71,7 +73,12 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
       current_position);
 
-  // std::ranges::sort(moves, kCompareMoves);
+  /*
+  std::ranges::sort(moves,
+                    [&current_position](const Move& lhs, const Move& rhs) {
+                      return kCompareMoves(lhs, rhs, current_position);
+                    });
+                    */
 
   for (const auto& move : moves) {
     if (!current_position.StaticExchangeEvaluation(
@@ -118,7 +125,12 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     return kMateValue + kMaxSearchPly;
   }
 
-  // std::ranges::sort(moves, kCompareMoves);
+  /*
+  std::ranges::sort(moves,
+                    [&current_position](const Move& lhs, const Move& rhs) {
+                      return kCompareMoves(lhs, rhs, current_position);
+                    });
+                    */
 
   for (const auto& move : moves) {
     const auto irreversible_data = current_position.GetIrreversibleData();

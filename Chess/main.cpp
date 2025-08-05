@@ -2,6 +2,7 @@
 
 #include "Attacks.h"
 #include "PSQT.h"
+#include "Settings.h"
 #include "UciCommunicator.h"
 
 std::string program_info() {
@@ -23,19 +24,27 @@ std::string program_info() {
 
   ss << std::boolalpha;
   ss << "PruneParameters:\n";
-  ss << "\trfp: " << Searcher::PruneParameters::rfp::kEnabled << "\n";
-  if constexpr (Searcher::PruneParameters::rfp::kEnabled) {
+  ss << "\trfp: "
+     << SimpleChessEngine::Settings::PruneParameters::RFPSettings::kEnabled
+     << "\n";
+  if constexpr (SimpleChessEngine::Settings::PruneParameters::RFPSettings::
+                    kEnabled) {
     ss << "\t\tkDepthLimit: "
-       << static_cast<size_t>(Searcher::PruneParameters::rfp::kDepthLimit)
+       << static_cast<size_t>(SimpleChessEngine::Settings::PruneParameters::
+                                  RFPSettings::kDepthLimit)
        << "\n";
-    ss << "\t\tkThreshold: " << Searcher::PruneParameters::rfp::kThreshold
+    ss << "\t\tkThreshold: "
+       << SimpleChessEngine::Settings::PruneParameters::RFPSettings::kThreshold
        << "\n";
   }
-  ss << "\tNullMove: " << Searcher::PruneParameters::NullMove::kEnabled << "\n";
-  if constexpr (Searcher::PruneParameters::NullMove::kEnabled) {
+  ss << "\tNullMove: "
+     << SimpleChessEngine::Settings::PruneParameters::NMPSettings::kEnabled
+     << "\n";
+  if constexpr (SimpleChessEngine::Settings::PruneParameters::NMPSettings::
+                    kEnabled) {
     ss << "\t\tkNullMoveReduction: "
-       << static_cast<size_t>(
-              Searcher::PruneParameters::NullMove::kNullMoveReduction)
+       << static_cast<size_t>(SimpleChessEngine::Settings::PruneParameters::
+                                  NMPSettings::kNullMoveReduction)
        << "\n";
   }
   return ss.str();

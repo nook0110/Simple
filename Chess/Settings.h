@@ -14,7 +14,7 @@ struct Settings {
     };
     struct NMPSettings {
       static constexpr bool kEnabled = true;
-      static constexpr size_t kNullMoveReduction = 3;
+      static constexpr size_t kNullMoveReduction = 4;
     };
     static constexpr RFPSettings kRFPSettings = {};
     static constexpr NMPSettings kNMPSettings = {};

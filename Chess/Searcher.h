@@ -37,20 +37,8 @@ class Searcher {
   template <bool is_principal_variation, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
   friend struct SearchImplementation;
-  constexpr static size_t kTTsize = 1 << 24;
+  constexpr static size_t kTTsize = 1 << 26;
   using SearcherTranspositionTable = TranspositionTable<kTTsize>;
-
-  struct PruneParameters {
-    struct rfp {
-      static constexpr bool kEnabled = true;
-      static constexpr Depth kDepthLimit = 5;
-      static constexpr Eval kThreshold = 75;
-    };
-    struct NullMove {
-      static constexpr bool kEnabled = true;
-      static constexpr size_t kNullMoveReduction = 3;
-    };
-  };
 
   /**
    * \brief Constructor.

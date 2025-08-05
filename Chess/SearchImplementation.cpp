@@ -69,11 +69,6 @@ SearchResult SimpleChessEngine::SearchImplementation<
 
   searcher_.debug_info_.searched_nodes++;
 
-  if (auto result = CheckTranspositionTable()) {
-    searcher_.debug_info_.tt_cuts++;
-    return *result;
-  }
-
   if (CanRFP()) {
     searcher_.debug_info_.rfp_cuts++;
     return position_info_.static_eval;
@@ -100,6 +95,11 @@ SearchResult SimpleChessEngine::SearchImplementation<
       searcher_.debug_info_.nmp_cuts++;
       return beta;
     }
+  }
+
+  if (auto result = CheckTranspositionTable()) {
+    searcher_.debug_info_.tt_cuts++;
+    return *result;
   }
 
   auto const &move_generator = searcher_.move_generator_;
