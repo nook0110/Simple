@@ -309,6 +309,10 @@ bool SimpleChessEngine::SearchImplementation<
   if constexpr (!Settings::PruneParameters::NMPSettings::kEnabled) {
     return false;
   }
+  if constexpr (!is_principal_variation) {
+    return false;
+  }
+
   const auto remaining_depth = state_.remaining_depth;
 
   if (remaining_depth <=
