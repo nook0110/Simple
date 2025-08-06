@@ -35,14 +35,3 @@ jobs:
       run: |
         ulimit -s unlimited
         ctest -E "BestMove.WinAtChess"
-        
-    - name: Generate coverage report
-      working-directory: ${{runner.workspace}}/Simple/build
-      run: |
-        make coverage
-
-    - name: Upload coverage report
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: build/coverage_report       
