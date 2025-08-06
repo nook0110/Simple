@@ -14,7 +14,7 @@ struct Settings {
     };
     struct NMPSettings {
       static constexpr bool kEnabled = true;
-      static constexpr size_t kNullMoveReduction = 4;
+      static constexpr size_t kNullMoveReduction = 3;
     };
     static constexpr RFPSettings kRFPSettings = {};
     static constexpr NMPSettings kNMPSettings = {};
@@ -23,7 +23,10 @@ struct Settings {
     struct AspirationWindowSettings {
       enum class Strategy { Linear, Exponential };
       static constexpr bool kEnabled = false;
-      static constexpr Eval kDelta = 10;
+      static constexpr Eval kPawnValue =
+          kPieceValues[static_cast<size_t>(Piece::kPawn)]
+              .eval[static_cast<size_t>(GamePhase::kMiddleGame)];
+      static constexpr Eval kDelta = kPawnValue * 3 / 4;
       static constexpr Strategy kStrategy = Strategy::Linear;
     };
     static constexpr AspirationWindowSettings kAspirationWindowSettings = {};
@@ -36,4 +39,6 @@ struct Settings {
 namespace SimpleChessEngine {
 std::ostream& operator<<(std::ostream& out,
                          Settings::SearchParameters parameters);
+std::ostream& operator<<(std::ostream& out,
+                         Settings::PruneParameters parameters);
 }  // namespace SimpleChessEngine

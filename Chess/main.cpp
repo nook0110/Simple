@@ -23,30 +23,8 @@ std::string program_info() {
   ss << "\tTapered Evaluation\n";
 
   ss << std::boolalpha;
-  ss << "PruneParameters:\n";
-  ss << "\trfp: "
-     << SimpleChessEngine::Settings::PruneParameters::RFPSettings::kEnabled
-     << "\n";
-  if constexpr (SimpleChessEngine::Settings::PruneParameters::RFPSettings::
-                    kEnabled) {
-    ss << "\t\tkDepthLimit: "
-       << static_cast<size_t>(SimpleChessEngine::Settings::PruneParameters::
-                                  RFPSettings::kDepthLimit)
-       << "\n";
-    ss << "\t\tkThreshold: "
-       << SimpleChessEngine::Settings::PruneParameters::RFPSettings::kThreshold
-       << "\n";
-  }
-  ss << "\tNullMove: "
-     << SimpleChessEngine::Settings::PruneParameters::NMPSettings::kEnabled
-     << "\n";
-  if constexpr (SimpleChessEngine::Settings::PruneParameters::NMPSettings::
-                    kEnabled) {
-    ss << "\t\tkNullMoveReduction: "
-       << static_cast<size_t>(SimpleChessEngine::Settings::PruneParameters::
-                                  NMPSettings::kNullMoveReduction)
-       << "\n";
-  }
+  ss << Settings::kPruneParameters;
+  ss << Settings::kSearchParameters;
   return ss.str();
 }
 

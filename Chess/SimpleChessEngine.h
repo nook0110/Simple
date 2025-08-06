@@ -8,6 +8,7 @@
 #include "ExitCondition.h"
 #include "Move.h"
 #include "Searcher.h"
+#include "Settings.h"
 
 namespace SimpleChessEngine {
 struct DepthInfo {
@@ -58,8 +59,6 @@ std::ostream& operator<<(std::ostream& out,
                          const TranspositionTableInfo& tt_info);
 std::ostream& operator<<(std::ostream& out, const BestMoveInfo& bm_info);
 std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info);
-
-
 
 /**
  * \brief Class that represents a chess engine.
@@ -152,29 +151,40 @@ class ChessEngine {
     static constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
     static constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
 
-    Eval GetLowerBound() const { return neg_inf; }
-    Eval GetUpperBound() const { return pos_inf; }
+    Eval GetLowerBound() const {
+      if constexpr (Settings::SearchParameters::AspirationWindowSettings::
+                        kEnabled) {
+        return lower_bound;
+      }
+      return neg_inf;
+    }
+    Eval GetUpperBound() const {
+      if constexpr (Settings::SearchParameters::AspirationWindowSettings::
+                        kEnabled) {
+        return upper_bound;
+      }
+      return pos_inf;
+    }
 
-    void FailedUpper() { upper_coeff *= 2; }
-    void FailedLower() { lower_coeff *= 2; }
+    void FailedUpper() {
+      upper_bound +=
+          Settings::SearchParameters::AspirationWindowSettings::kDelta / 3;
+    }
+    void FailedLower() {
+      lower_bound -=
+          Settings::SearchParameters::AspirationWindowSettings::kDelta / 3;
+    }
 
     void SetNewEval(Eval eval) {
-      lower_bound = eval;
-      upper_bound = eval;
-      lower_coeff = 1;
-      upper_coeff = 1;
+      lower_bound =
+          eval - Settings::SearchParameters::AspirationWindowSettings::kDelta;
+      upper_bound =
+          eval + Settings::SearchParameters::AspirationWindowSettings::kDelta;
     }
 
    private:
     Eval lower_bound = neg_inf;
     Eval upper_bound = pos_inf;
-
-    size_t lower_coeff = 1;
-    size_t upper_coeff = 1;
-    static constexpr Eval kPawnValue =
-        kPieceValues[static_cast<size_t>(Piece::kPawn)]
-            .eval[static_cast<size_t>(GamePhase::kMiddleGame)];
-    static constexpr Eval kDelta = kPawnValue / 8;
   };
 
   std::optional<Eval> MakeIteration(Window window, Depth depth,

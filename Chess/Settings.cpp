@@ -18,7 +18,7 @@ static std::ostream& operator<<(
   }
   return out;
 }
-static std::ostream& operator<<(std::ostream& out,
+std::ostream& operator<<(std::ostream& out,
                                 Settings::PruneParameters parameters) {
   out << "PruneParameters:\n";
   out << parameters.kRFPSettings << parameters.kNMPSettings;
@@ -36,7 +36,7 @@ static std::ostream& operator<<(
 static std::ostream& operator<<(
     std::ostream& out,
     Settings::SearchParameters::AspirationWindowSettings settings) {
-  out << "\tAspirationWindowSettings:";
+  out << "\tAspirationWindowSettings:\n";
   out << "\t\tkEnabled: " << std::boolalpha << settings.kEnabled << "\n";
   if constexpr (settings.kEnabled) {
     out << "\t\tkDelta: " << settings.kDelta << "\n";
@@ -45,7 +45,7 @@ static std::ostream& operator<<(
   return out;
 }
 
-inline std::ostream& operator<<(std::ostream& out,
+std::ostream& operator<<(std::ostream& out,
                                 Settings::SearchParameters parameters) {
   out << "SearchParameters:\n";
   out << parameters.kAspirationWindowSettings;
