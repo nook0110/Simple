@@ -1,9 +1,7 @@
 #include "Position.h"
 
-namespace SimpleChessEngine
-{
-[[nodiscard]] Eval TaperedEval::operator()(PhaseValue pv) const
-{
+namespace SimpleChessEngine {
+[[nodiscard]] Eval TaperedEval::operator()(PhaseValue pv) const {
   const auto mg_limit =
       kPhaseValueLimits[static_cast<size_t>(GamePhase::kMiddleGame)];
   const auto eg_limit =
@@ -14,8 +12,7 @@ namespace SimpleChessEngine
          kLimitsDifference;
 }
 
-[[nodiscard]] Eval Position::Evaluate() const
-{
+[[nodiscard]] Eval Position::Evaluate() const {
   const auto us = side_to_move_;
   const auto them = Flip(us);
   const auto us_idx = static_cast<size_t>(us);

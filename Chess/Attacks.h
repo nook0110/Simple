@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 
 #include "BitBoard.h"
 #include "Piece.h"
@@ -13,7 +14,7 @@ constexpr size_t GetMagicShift() {
   if constexpr (sliding_piece == Piece::kBishop) return 64 - 9;
   if constexpr (sliding_piece == Piece::kRook) return 64 - 12;
   assert(false);
-  return 0;
+  std::unreachable();
 }
 
 /**
@@ -43,7 +44,7 @@ class AttackTable {
   static size_t GetAttackTableAddress(BitIndex square,
                                       Bitboard occupied = kEmptyBoard);
 
-  Bitboard* table_ = nullptr;
+  Bitboard *table_ = nullptr;
   std::array<Magic, kBoardArea> magic_ = {};
 
   static const std::unique_ptr<AttackTable> self_;
@@ -201,7 +202,7 @@ Bitboard AttackTable<piece>::GetAttackMap(const BitIndex square,
     return self_->table_[GetAttackTableAddress(square, occupied)];
   }
   assert(false);
-  return {};
+  std::unreachable();
 }
 
 template class AttackTable<Piece::kKnight>;
@@ -212,4 +213,8 @@ template class AttackTable<Piece::kKing>;
 
 template <Piece sliding_piece>
 void InitBetween();
+
+template <Piece sliding_piece>
+[[nodiscard]] Bitboard GenerateAttackMask(
+    const BitIndex square, const Bitboard occupancy = kEmptyBoard);
 }  // namespace SimpleChessEngine

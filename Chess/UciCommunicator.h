@@ -1,18 +1,18 @@
 #pragma once
 
-#include <future>
+#include <cassert>
 #include <iostream>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <thread>
+#include <utility>
 #include <variant>
 
 #include "MoveFactory.h"
 #include "Perft.h"
 #include "Position.h"
 #include "SimpleChessEngine.h"
-#include "StreamUtility.h"
 
 namespace SimpleChessEngine {
 struct TournamentTime {
@@ -82,6 +82,7 @@ class SearchThread {
       return DepthCondition{max_depth->depth};
     }
     assert(false);
+    std::unreachable();
   }
 
   void StopThread();
@@ -101,10 +102,19 @@ struct OptionBase {
 
   virtual std::string GetOptionDescription() const = 0;
 
+  virtual ~OptionBase() = default;
+
  private:
   std::string name_;
 };
 
+struct SpinOption : public OptionBase {
+  SpinOption(std::string name) : OptionBase(std::move(name)) {}
+
+  int value_ = 0;
+};
+
+template <bool default_value>
 struct BooleanOption : public OptionBase {
   BooleanOption(std::string name) : OptionBase(std::move(name)) {}
 
@@ -121,14 +131,15 @@ struct BooleanOption : public OptionBase {
   }
 
   std::string GetOptionDescription() const override {
-    return "type check default false";
+    return std::string("type check default ") +
+           (default_value ? "true" : "false");
   }
 
  private:
-  bool value_ = false;
+  bool value_ = default_value;
 };
 
-using PonderOption = BooleanOption;
+using PonderOption = BooleanOption<false>;
 struct EngineOptions {
   EngineOptions() {
     options.emplace_back(std::make_unique<PonderOption>("Ponder"));
@@ -152,6 +163,9 @@ struct EngineOptions {
         return option->SetValue(value);
       }
     }
+
+    assert(false);
+    std::unreachable();
   }
 
   void PrintOptionsNames(std::ostream& out) {
@@ -174,7 +188,7 @@ class UciChessEngine {
 
  private:
   void StartSearch(bool ponder);
-  void StopSearch();
+  void StopSearch() noexcept;
 
   void ParseCommand(std::stringstream command);
 
@@ -195,6 +209,7 @@ class UciChessEngine {
   void ParseDepth(std::stringstream command);
   void ParseStop(std::stringstream command);
   void ParseQuit(std::stringstream command);
+  void ParseDebug(std::stringstream command);
 
   void Send(const std::string& message) const {
     o_stream_ << message << std::endl;
@@ -261,6 +276,9 @@ inline void UciChessEngine::ParseCommand(std::stringstream command) {
   if (command_name == "setoption") {
     return ParseSetOption(std::move(command));
   }
+  if (command_name == "debug") {
+    return ParseDebug(std::move(command));
+  }
 
   Send("No such command!");
 }
@@ -272,9 +290,8 @@ inline void UciChessEngine::ParseUci(std::stringstream) {
   Send("id name " + name);
   Send("id author " + author);
 
-  options_.PrintOptionsNames(o_stream_);
+  // options_.PrintOptionsNames(o_stream_);
 
-  // ReSharper disable once StringLiteralTypo
   Send("uciok");
 }
 
@@ -292,8 +309,7 @@ inline void UciChessEngine::ParseIsReady(std::stringstream) const {
   Send("readyok");
 }
 
-inline void UciChessEngine::ParseUciNewGame(std::stringstream) { /**/
-}
+inline void UciChessEngine::ParseUciNewGame(std::stringstream) { /**/ }
 
 inline void UciChessEngine::ParseFen(const std::string& fen) {
   info_.position = PositionFactory{}(fen);
@@ -375,6 +391,11 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
     return;
   }
 
+  if (token == "hash") {
+    o_stream_ << "hash: " << info_.position.GetHash() << std::endl;
+    return;
+  }
+
   if (token == "ponder") {
     startpos = command.tellg();
     command >> token;
@@ -439,7 +460,7 @@ inline void SimpleChessEngine::UciChessEngine::ParseDepth(
     std::stringstream command) {
   std::string token;
   command >> token;
-  info_.time_control = MaxDepth{std::stoull(token)};
+  info_.time_control = MaxDepth{static_cast<Depth>(std::stoul(token))};
 }
 
 inline void UciChessEngine::ParseStop(std::stringstream command) {
@@ -451,13 +472,17 @@ inline void UciChessEngine::ParseQuit(std::stringstream command) {
   StopSearch();
 }
 
-SearchThread::SearchThread(Position position, std::ostream& o_stream)
+inline void UciChessEngine::ParseDebug(std::stringstream) {
+  o_stream_ << FenFactory{}(info_.position) << std::endl;
+}
+
+inline SearchThread::SearchThread(Position position, std::ostream& o_stream)
     : engine_(std::move(position), o_stream) {}
 
-SearchThread::SearchThread(std::ostream& o_stream)
+inline SearchThread::SearchThread(std::ostream& o_stream)
     : engine_(PositionFactory{}(), o_stream) {}
 
-void SearchThread::Start(const Info& info) {
+inline void SearchThread::Start(const Info& info) {
   StopThread();
   engine_.SetPosition(info.position);
 
@@ -471,12 +496,12 @@ void SearchThread::Start(const Info& info) {
   });
 }
 
-void SearchThread::Stop() {
+inline void SearchThread::Stop() {
   if (!pondering_) engine_.PrintBestMove();
   StopThread();
 }
 
-void SearchThread::StopThread() {
+inline void SearchThread::StopThread() {
   if (thread_) {
     if (pondering_) {
       pondering_->pondermiss = true;

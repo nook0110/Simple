@@ -1,12 +1,14 @@
 #pragma once
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include <numeric>
-#include <variant>
 
 #include "Evaluation.h"
+#include "ExitCondition.h"
 #include "Move.h"
 #include "Searcher.h"
+#include "Settings.h"
 
 namespace SimpleChessEngine {
 struct DepthInfo {
@@ -58,78 +60,6 @@ std::ostream& operator<<(std::ostream& out,
 std::ostream& operator<<(std::ostream& out, const BestMoveInfo& bm_info);
 std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info);
 
-struct IterationInfo {
-  const Searcher& searcher;
-  Eval iteration_result;
-  size_t depth;
-};
-
-template <class T>
-concept SearchCondition =
-    StopSearchCondition<T> && requires(T condition, IterationInfo info) {
-      { condition.ShouldContinueIteration() } -> std::convertible_to<bool>;
-      { condition.Update(info) };
-    };
-
-struct TimeCondition {
-  explicit TimeCondition(std::chrono::milliseconds time_for_move)
-      : time_for_move_(std::move(time_for_move)) {}
-
-  bool ShouldContinueIteration() const { return !IsTimeToExit(); }
-
-  bool IsTimeToExit() const {
-    return time_for_move_ < (std::chrono::system_clock::now() - start_time_);
-  }
-
-  void Update(const IterationInfo&) const {}
-
-  std::chrono::milliseconds time_for_move_;
-  TimePoint start_time_ = std::chrono::system_clock::now();
-};
-static_assert(SearchCondition<TimeCondition>);
-
-struct DepthCondition {
-  explicit DepthCondition(Depth max_depth) : max_depth_(max_depth) {}
-  bool ShouldContinueIteration() const { return cur_depth < max_depth_; }
-
-  bool IsTimeToExit() const { return false; }
-
-  void Update(const IterationInfo& info) { cur_depth = info.depth; }
-
-  Depth cur_depth = 0;
-  Depth max_depth_;
-};
-static_assert(SearchCondition<DepthCondition>);
-
-using Condition = std::variant<TimeCondition, DepthCondition>;
-
-struct Pondering {
-  bool ShouldContinueIteration() const { return !IsTimeToExit(); }
-
-  bool IsTimeToExit() const {
-    if (pondermiss) return true;
-    if (!condition) return false;
-    return std::visit(
-        [](const auto& unwrapped_control) -> bool {
-          return unwrapped_control.IsTimeToExit();
-        },
-        *condition);
-  }
-  void Update(const IterationInfo& info) {
-    if (!condition) return;
-    std::visit(
-        [&info](auto& unwrapped_condition) {
-          unwrapped_condition.Update(info);
-        },
-        *condition);
-  }
-
-  std::optional<Condition> condition;
-
-  bool pondermiss = false;
-};
-static_assert(SearchCondition<Pondering>);
-
 /**
  * \brief Class that represents a chess engine.
  *
@@ -166,6 +96,7 @@ class ChessEngine {
 
  private:
   class EBFsInfo {
+   public:
     void Update(std::size_t searched_nodes) {
       if (previous_nodes_ != 0) {
         ebfs_.push_back(static_cast<float>(searched_nodes) /
@@ -179,35 +110,84 @@ class ChessEngine {
           odd_even_average_ /= static_cast<float>(ebfs_.size()) / 2.f;
         }
       }
+      previous_nodes_ = searched_nodes;
     }
 
     EBFInfo GetInfo() const {
-      return EBFInfo{ebfs_.back(), odd_even_average_,
-                     std::reduce(ebfs_.begin(), ebfs_.end()) / ebfs_.size()};
+      return EBFInfo{
+          ebfs_.empty() ? 0 : ebfs_.back(), odd_even_average_,
+          ebfs_.size() ? std::reduce(ebfs_.begin(), ebfs_.end()) / ebfs_.size()
+                       : INFINITY};
     }
 
+   private:
     float odd_even_average_;
     std::vector<float> ebfs_;
     size_t previous_nodes_ = 0;
   };
 
-  void PrintInfo(const Searcher::DebugInfo& info, Eval eval,
-                 Depth current_depth,
+  void PrintInfo(const DebugInfo& info, Eval eval, Depth current_depth,
                  std::chrono::duration<double> search_time) {
     PrintInfo(ScoreInfo{eval});
     PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
                                                  current_depth, position_)};
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
-    PrintInfo(NodesInfo{info.quiescence_nodes});
     PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
         (info.searched_nodes + info.quiescence_nodes) / search_time.count())});
+    o_stream_ << "info quiescence_nodes " << info.quiescence_nodes << "\n";
+    o_stream_ << "info zws_researches " << info.zws_researches << "\n";
+    o_stream_ << "info tt_hits " << info.tt_hits << "\n";
+    o_stream_ << "info tt_cuts " << info.tt_cuts << "\n";
+    o_stream_ << "info rfp_cuts " << info.rfp_cuts << "\n";
+    o_stream_ << "info nmp_tries " << info.nmp_tries << "\n";
+    o_stream_ << "info nmp_cuts " << info.nmp_cuts << "\n";
   }
 
   template <class Info>
   void PrintInfo(const Info& info);
 
-  std::optional<Eval> MakeIteration(Depth depth,
+  struct Window {
+    static constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
+    static constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
+
+    Eval GetLowerBound() const {
+      if constexpr (Settings::SearchParameters::AspirationWindowSettings::
+                        kEnabled) {
+        return lower_bound;
+      }
+      return neg_inf;
+    }
+    Eval GetUpperBound() const {
+      if constexpr (Settings::SearchParameters::AspirationWindowSettings::
+                        kEnabled) {
+        return upper_bound;
+      }
+      return pos_inf;
+    }
+
+    void FailedUpper() {
+      upper_bound +=
+          Settings::SearchParameters::AspirationWindowSettings::kDelta / 3;
+    }
+    void FailedLower() {
+      lower_bound -=
+          Settings::SearchParameters::AspirationWindowSettings::kDelta / 3;
+    }
+
+    void SetNewEval(Eval eval) {
+      lower_bound =
+          eval - Settings::SearchParameters::AspirationWindowSettings::kDelta;
+      upper_bound =
+          eval + Settings::SearchParameters::AspirationWindowSettings::kDelta;
+    }
+
+   private:
+    Eval lower_bound = neg_inf;
+    Eval upper_bound = pos_inf;
+  };
+
+  std::optional<Eval> MakeIteration(Window window, Depth depth,
                                     const StopSearchCondition auto& end);
 
   std::ostream& o_stream_;
@@ -226,28 +206,49 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   const TimePoint start_time = std::chrono::system_clock::now();
   searcher_.InitStartOfSearch();
 
-  Searcher::DebugInfo info;
+  DebugInfo info;
+  EBFsInfo ebfs;
+  Window window{};
 
   for (Depth current_depth = 1;
        condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
-    const auto eval_optional = MakeIteration(current_depth, condition);
+    const auto eval_optional = MakeIteration(window, current_depth, condition);
     if (!eval_optional) {
       break;
     }
-    condition.Update(IterationInfo{searcher_, *eval_optional, current_depth});
+    const auto eval = *eval_optional;
+    if (eval >= window.GetUpperBound()) {
+      window.FailedUpper();
+      --current_depth;
+      continue;
+    }
+    if (eval <= window.GetLowerBound()) {
+      window.FailedLower();
+      --current_depth;
+      continue;
+    }
 
+    condition.Update(IterationInfo{searcher_, eval, current_depth});
+    ebfs.Update(searcher_.GetInfo().searched_nodes);
     info += searcher_.GetInfo();
-    PrintInfo(info, *eval_optional, current_depth,
+    PrintInfo(info, eval, current_depth,
               std::chrono::duration<double>{std::chrono::system_clock::now() -
                                             start_time});
+    PrintInfo(ebfs.GetInfo());
+    o_stream_ << "info time "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::system_clock::now() - start_time)
+                     .count()
+              << "\n";
 
     if (auto two_move_pv = searcher_.GetPrincipalVariation(2, position_);
         two_move_pv.size() > 1) {
       ponder_move_ = two_move_pv[1];
     }
     best_move_ = searcher_.GetCurrentBestMove();
+    window.SetNewEval(eval);
   }
 
   PrintBestMove(BestMoveInfo{best_move_, ponder_move_});
@@ -258,12 +259,12 @@ inline const Move& ChessEngine::GetCurrentBestMove() const {
 }
 
 inline std::optional<Eval> ChessEngine::MakeIteration(
-    const Depth current_depth, const StopSearchCondition auto& condition) {
-  constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
-  constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
-
+    const Window window, const Depth current_depth,
+    const StopSearchCondition auto& condition) {
+  o_stream_ << "info window " << window.GetLowerBound() << " "
+            << window.GetUpperBound() << "\n";
   return searcher_.Search<true>(condition, current_depth, current_depth,
-                                neg_inf, pos_inf);
+                                window.GetLowerBound(), window.GetUpperBound());
 }
 
 template <class Info>
@@ -273,7 +274,7 @@ void ChessEngine::PrintInfo(const Info& info) {
 
 inline std::ostream& operator<<(std::ostream& out,
                                 const DepthInfo& depth_info) {
-  return out << "info depth " << depth_info.current_depth << std::endl;
+  return out << "info depth " << +depth_info.current_depth << std::endl;
 }
 
 inline std::ostream& operator<<(std::ostream& out,

@@ -30,6 +30,7 @@
     <ClInclude Include="Concepts.h" />
     <ClInclude Include="KillerTable.h" />
     <ClInclude Include="MoveFactory.h" />
+    <ClInclude Include="MovePicker.h" />
     <ClInclude Include="Perft.h" />
     <ClInclude Include="PSQT.h" />
     <ClInclude Include="Quiescence.h" />

@@ -147,7 +147,7 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
      {Compass::kSouthWest, Compass::kSouthEast}}};
 
 [[nodiscard]] inline bool IsOk(const BitIndex square) {
-  return 0 <= square && square < kBoardArea;
+  return 0 <= square && square < static_cast<BitIndex>(kBoardArea);
 }
 
 [[nodiscard]] inline Bitboard GetBitboardOfSquare(const BitIndex square) {
@@ -219,7 +219,8 @@ inline std::array<std::array<Bitboard, kBoardArea>, kColors> pawn_attacks{};
 
 inline void InitPawnAttacks() {
   for (auto color : {Player::kWhite, Player::kBlack}) {
-    for (BitIndex square = 0; square < kBoardArea; ++square) {
+    for (BitIndex square = 0; square < static_cast<BitIndex>(kBoardArea);
+         ++square) {
       Bitboard res{};
       for (const auto step :
            kPawnAttackDirections[static_cast<size_t>(color)]) {

@@ -81,7 +81,7 @@ constexpr Eval kDrawValue = 0;
 // returns zero if the score is not mate value
 // otherwise returns 1 if it is winning (positive), -1 if losing (negative)
 inline int IsMateScore(const int score) {
-  if (-std::abs(score) > kMateValue + kMaxSearchPly + 1) {
+  if (-std::abs(score) > kMateValue + static_cast<Eval>(kMaxSearchPly) + 1) {
     return 0;
   }
   return (score > 0) - (score < 0);
