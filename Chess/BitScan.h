@@ -4,7 +4,6 @@
 
 #ifdef __GNUC__
 #define USE_GCC_BUILTINS
-#pragma GCC target("avx2,bmi,bmi2,popcnt,lzcnt")
 #elif defined(_MSC_VER)
 #define USE_MSVC_INTRINSICS
 #pragma intrinsic(_BitScanForward)
