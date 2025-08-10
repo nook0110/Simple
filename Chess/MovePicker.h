@@ -50,6 +50,7 @@ class MovePicker {
     BitIndex from = {-1};
     BitIndex to = {};
     Piece captured = {};
+    bool is_good_capture = false;
   };
 
   std::vector<MoveData> data_;

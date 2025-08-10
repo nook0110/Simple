@@ -50,8 +50,8 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
     const Searcher& searcher, const Depth ply) {
   const auto& position = searcher.GetPosition();
   const auto compare_captures = [this, &position](size_t lhs, size_t rhs) {
-    const auto [from_lhs, to_lhs, captured_piece_lhs] = data_[lhs];
-    const auto [from_rhs, to_rhs, captured_piece_rhs] = data_[rhs];
+    const auto [from_lhs, to_lhs, captured_piece_lhs, _] = data_[lhs];
+    const auto [from_rhs, to_rhs, captured_piece_rhs, _] = data_[rhs];
     const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
     const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
     const auto moving_idx_lhs =
@@ -63,9 +63,8 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
   };
   switch (stage_) {
     case Stage::kGoodCaptures: {
-      const auto is_good_capture = [this, &position](size_t idx) {
-        const auto& move = moves_[idx];
-        return position.StaticExchangeEvaluation(move, -20);
+      const auto is_good_capture = [this](size_t idx) {
+        return data_[idx].is_good_capture;
       };
 
       auto good_capture =
@@ -136,8 +135,12 @@ void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
   data_.resize(moves_.size());
   history_.resize(moves_.size());
   for (size_t i = 0; i < moves_.size(); ++i) {
-    const auto [from, to, capture] = GetMoveData(moves_[i]);
-    data_[i] = {from, to, capture};
+    const auto& move = moves_[i];
+    const auto [from, to, capture] = GetMoveData(move);
+    data_[i] = {from, to, capture,
+                capture != Piece::kNone
+                    ? searcher.GetPosition().StaticExchangeEvaluation(move, -50)
+                    : false};
     history_[i] = searcher.GetHistory()[static_cast<size_t>(
         searcher.GetPosition().GetSideToMove())][from][to];
   }
