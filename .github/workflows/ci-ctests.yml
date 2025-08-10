@@ -16,7 +16,7 @@ jobs:
     - name: Set up dependencies
       run: |
         apt-get update
-        apt-get install -y wget unzip g++ make git cmake libgoogle-glog-dev
+        apt-get install -y wget unzip g++ make git cmake
 
     - name: Install glog
       run: |
@@ -24,6 +24,7 @@ jobs:
         cd glog && cmake -S . -B build -G "Unix Makefiles"
         cmake --build build
         cmake --build build --target install
+        ldconfig
 
     - name: Building the project
       working-directory: ${{runner.workspace}}/Simple
