@@ -54,8 +54,10 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
     const auto [from_rhs, to_rhs, captured_piece_rhs] = data_[rhs];
     const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
     const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
-    const auto moving_idx_lhs = -static_cast<int>(position.GetPieceAt(from_lhs));
-    const auto moving_idx_rhs = -static_cast<int>(position.GetPieceAt(from_rhs));
+    const auto moving_idx_lhs =
+        -static_cast<int>(position.GetPieceAt(from_lhs));
+    const auto moving_idx_rhs =
+        -static_cast<int>(position.GetPieceAt(from_rhs));
     return std::tie(captured_idx_lhs, moving_idx_lhs) <
            std::tie(captured_idx_rhs, moving_idx_rhs);
   };
@@ -63,13 +65,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
     case Stage::kGoodCaptures: {
       const auto is_good_capture = [this, &position](size_t idx) {
         const auto& move = moves_[idx];
-        if (std::holds_alternative<Promotion>(move) ||
-            std::holds_alternative<EnCroissant>(move))
-          return true;
-        if (!std::holds_alternative<DefaultMove>(move)) return false;
-        const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
-        return static_cast<size_t>(captured_piece) >=
-               static_cast<size_t>(position.GetPieceAt(from));
+        return position.StaticExchangeEvaluation(move, -20);
       };
 
       auto good_capture =
