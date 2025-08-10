@@ -1,19 +1,20 @@
 #pragma once
 #include <array>
+#include <bit>
 
 #include "Hasher.h"
 #include "Move.h"
 #include "Position.h"
 namespace SimpleChessEngine {
-enum class Bound : uint8_t { kLower = 1, kUpper = 2, kExact = kLower | kUpper };
+enum class Bound : std::uint8_t { kLower = 1, kUpper = 2, kExact = kLower | kUpper };
 
-inline uint8_t operator&(const Bound lhs, const Bound rhs) {
-  return static_cast<uint8_t>(lhs) & static_cast<uint8_t>(rhs);
+inline std::uint8_t operator&(const Bound lhs, const Bound rhs) {
+  return static_cast<std::uint8_t>(lhs) & static_cast<std::uint8_t>(rhs);
 }
 
 template <size_t TableSize>
 class TranspositionTable {
-  static_assert(!(TableSize & (TableSize - 1)));
+  static_assert(std::has_single_bit(TableSize));
 
  public:
 #pragma pack(push, 1)

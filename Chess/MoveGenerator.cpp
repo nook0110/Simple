@@ -15,18 +15,18 @@ template MoveGenerator::Moves MoveGenerator::GenerateMoves<
 
 constexpr MoveGenerator::Type operator|(MoveGenerator::Type a,
                                         MoveGenerator::Type b) {
-  return static_cast<MoveGenerator::Type>(static_cast<uint8_t>(a) |
-                                          static_cast<uint8_t>(b));
+  return static_cast<MoveGenerator::Type>(static_cast<std::uint8_t>(a) |
+                                          static_cast<std::uint8_t>(b));
 }
 
 constexpr MoveGenerator::Type operator&(MoveGenerator::Type a,
                                         MoveGenerator::Type b) {
-  return static_cast<MoveGenerator::Type>(static_cast<uint8_t>(a) &
-                                          static_cast<uint8_t>(b));
+  return static_cast<MoveGenerator::Type>(static_cast<std::uint8_t>(a) &
+                                          static_cast<std::uint8_t>(b));
 }
 
 constexpr bool operator!(MoveGenerator::Type t) {
-  return static_cast<uint8_t>(t) == 0;
+  return static_cast<std::uint8_t>(t) == 0;
 }
 
 MoveGenerator::~MoveGenerator() = default;
@@ -169,13 +169,13 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
 
       const auto from = Shift(to, opposite_attacks[attack_direction]);
 
-      moves.emplace_back(DefaultMove{from, to, position.GetPiece(to)});
+      moves.emplace_back(DefaultMove{from, to, position.GetPieceAt(to)});
     }
   }
 
   if (en_croissant_square) {
     const auto en_croissant_bitboard =
-        GetBitboardOfSquare(en_croissant_square.value());
+        SingleSquare(en_croissant_square.value());
     for (size_t attack_direction = 0; attack_direction < attacks.size();
          ++attack_direction) {
       auto attack_to = attacks_to[attack_direction] & en_croissant_bitboard;
@@ -198,13 +198,13 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
     const auto from = Shift(to, opposite_direction);
 
     moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kQueen});
+        Promotion{{from, to, position.GetPieceAt(to)}, Piece::kQueen});
     moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kKnight});
+        Promotion{{from, to, position.GetPieceAt(to)}, Piece::kKnight});
     moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kRook});
+        Promotion{{from, to, position.GetPieceAt(to)}, Piece::kRook});
     moves.emplace_back(
-        Promotion{{from, to, position.GetPiece(to)}, Piece::kBishop});
+        Promotion{{from, to, position.GetPieceAt(to)}, Piece::kBishop});
   }
 
   for (size_t attack_direction = 0; attack_direction < attacks.size();
@@ -220,13 +220,13 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
       const auto from = Shift(to, opposite_attacks[attack_direction]);
 
       moves.emplace_back(
-          Promotion{{from, to, position.GetPiece(to)}, Piece::kKnight});
+          Promotion{{from, to, position.GetPieceAt(to)}, Piece::kKnight});
       moves.emplace_back(
-          Promotion{{from, to, position.GetPiece(to)}, Piece::kBishop});
+          Promotion{{from, to, position.GetPieceAt(to)}, Piece::kBishop});
       moves.emplace_back(
-          Promotion{{from, to, position.GetPiece(to)}, Piece::kRook});
+          Promotion{{from, to, position.GetPieceAt(to)}, Piece::kRook});
       moves.emplace_back(
-          Promotion{{from, to, position.GetPiece(to)}, Piece::kQueen});
+          Promotion{{from, to, position.GetPieceAt(to)}, Piece::kQueen});
     }
   }
 }
@@ -270,7 +270,7 @@ MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
   if (king_attacker.Any()) {
     const auto attacker = king_attacker.GetFirstBit();
     const auto ray =
-        Between(king_square, attacker) | GetBitboardOfSquare(attacker);
+        Between(king_square, attacker) | SingleSquare(attacker);
     target &= ray;
     pawn_target &= ray;
   }
@@ -316,7 +316,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(Moves& moves,
   const auto them = Flip(us);
 
   const auto king_pos = position.GetKingSquare(us);
-  const auto king_mask = GetBitboardOfSquare(king_pos);
+  const auto king_mask = SingleSquare(king_pos);
 
   const auto occupancy = position.GetAllPieces() ^ king_mask;
 
@@ -358,7 +358,7 @@ template <Piece piece>
 void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
                                             const BitIndex from,
                                             Bitboard target) const {
-  assert(position.GetPiece(from) == piece);
+  assert(position.GetPieceAt(from) == piece);
 
   // get all squares that piece attacks
   const auto attacks =
@@ -380,7 +380,7 @@ void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
   while (valid_moves.Any()) {
     const auto to = valid_moves.PopFirstBit();
 
-    const auto move = DefaultMove{from, to, position.GetPiece(to)};
+    const auto move = DefaultMove{from, to, position.GetPieceAt(to)};
     moves.emplace_back(move);
   }
 }

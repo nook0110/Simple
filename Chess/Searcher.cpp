@@ -1,6 +1,5 @@
 #include "Searcher.h"
 
-#include "BitScan.h"
 #include "ExitCondition.h"
 #include "SearchImplementation.h"
 

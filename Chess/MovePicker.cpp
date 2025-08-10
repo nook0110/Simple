@@ -42,7 +42,7 @@ size_t MaxElement(size_t first, size_t last, Compare comp) {
 MovePicker::MovePicker() = default;
 
 MovePicker::Stage& operator++(MovePicker::Stage& stage) {
-  stage = MovePicker::Stage(static_cast<uint8_t>(stage) + 1);
+  stage = MovePicker::Stage(static_cast<std::uint8_t>(stage) + 1);
   return stage;
 }
 
@@ -54,8 +54,8 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
     const auto [from_rhs, to_rhs, captured_piece_rhs] = data_[rhs];
     const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
     const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
-    const auto moving_idx_lhs = -static_cast<int>(position.GetPiece(from_lhs));
-    const auto moving_idx_rhs = -static_cast<int>(position.GetPiece(from_rhs));
+    const auto moving_idx_lhs = -static_cast<int>(position.GetPieceAt(from_lhs));
+    const auto moving_idx_rhs = -static_cast<int>(position.GetPieceAt(from_rhs));
     return std::tie(captured_idx_lhs, moving_idx_lhs) <
            std::tie(captured_idx_rhs, moving_idx_rhs);
   };
@@ -69,7 +69,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
         if (!std::holds_alternative<DefaultMove>(move)) return false;
         const auto [from, to, captured_piece] = std::get<DefaultMove>(move);
         return static_cast<size_t>(captured_piece) >=
-               static_cast<size_t>(position.GetPiece(from));
+               static_cast<size_t>(position.GetPieceAt(from));
       };
 
       auto good_capture =
@@ -153,6 +153,8 @@ void MovePicker::SkipMove(const Move& move) {
        std::find(current_move_, moves_.end(), move) - moves_.begin());
   ++current_move_;
 }
-bool MovePicker::HasMoreMoves() const { return current_move_ != moves_.end(); }
+
+bool MovePicker::Done() const { return current_move_ == moves_.end(); }
+
 MovePicker::Stage MovePicker::GetCurrentStage() const { return stage_; }
 }  // namespace SimpleChessEngine

@@ -9,7 +9,7 @@ namespace SimpleChessEngine {
 using Eval = int;
 using SearchResult = std::optional<Eval>;
 
-enum class GamePhase : uint8_t { kMiddleGame, kEndGame };
+enum class GamePhase : std::uint8_t { kMiddleGame, kEndGame };
 
 constexpr size_t kGamePhases = 2;
 

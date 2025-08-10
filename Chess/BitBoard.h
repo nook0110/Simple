@@ -1,17 +1,11 @@
 #pragma once
+
+#include <bit>
+#include <cassert>
 #include <cstddef>
-#include <utility>
+#include <cstdint>
 
-#include "BitScan.h"
-
-#ifdef __GNUC__
-#define USE_GCC_BUILTINS
-#elif defined(_MSC_VER)
-#define USE_MSVC_INTRINSICS
-
-#include "nmmintrin.h"
-#pragma intrinsic(_BitScanForward)
-#endif
+using BitIndex = std::int8_t;
 
 /**
  * \brief Class that represents a bitboard.
@@ -29,7 +23,7 @@ class Bitboard {
    * \brief Constructs a bitboard from its value.
    */
 
-  constexpr explicit Bitboard(const uint64_t value) : value_(value) {}
+  constexpr explicit Bitboard(const std::uint64_t value) : value_(value) {}
 
   constexpr Bitboard() = default;
 
@@ -64,7 +58,7 @@ class Bitboard {
   }
 
   [[nodiscard]] constexpr bool Test(const size_t pos) const {
-    return static_cast<bool>(value_ & 1ull << pos);
+    return static_cast<bool>(value_ & (1ull << pos));
   }
 
   constexpr bool operator==(const Bitboard &other) const = default;
@@ -102,27 +96,21 @@ class Bitboard {
   constexpr Bitboard operator>>(size_t pos) const;
   Bitboard &operator>>=(size_t pos);
 
-  [[nodiscard]] explicit constexpr operator uint64_t() const noexcept {
+  [[nodiscard]] explicit constexpr operator std::uint64_t() const noexcept {
     return value_;
   }
 
  private:
-  unsigned long long value_{};
+  std::uint64_t value_{};
 };
 
 inline size_t Bitboard::Count() const {
-#ifdef USE_GCC_BUILTINS
-  return __builtin_popcountll(value_);
-#elif defined(USE_MSVC_INTRINSICS)
-  return _mm_popcnt_u64(value_);
-#endif
-  assert(false);
-  std::unreachable();
+  return std::popcount(value_);
 }
 
 inline BitIndex Bitboard::GetFirstBit() const {
   assert(Any());
-  return BitScan(value_);
+  return std::countr_zero(value_);
 }
 
 inline BitIndex Bitboard::PopFirstBit() {
@@ -132,7 +120,7 @@ inline BitIndex Bitboard::PopFirstBit() {
 }
 
 inline bool Bitboard::MoreThanOne() const {
-  return (*this & (*this - Bitboard{1})).Any();
+  return value_ & (value_ - 1); // more effective than std::has_single_bit(value) && Any()
 }
 
 constexpr Bitboard Bitboard::operator-() const { return Bitboard{~value_ + 1}; }
@@ -201,6 +189,3 @@ inline Bitboard &Bitboard::operator>>=(const size_t pos) {
   value_ >>= pos;
   return *this;
 }
-
-#undef USE_GCC_BUILTINS
-#undef USE_MSVC_INTRINSICS

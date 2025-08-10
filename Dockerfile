@@ -19,7 +19,7 @@ RUN git clone --branch v0.7.1 https://github.com/google/glog.git && \
 WORKDIR /app
 COPY . .
 
-RUN mkdir build && \
+RUN mkdir -p build && \
     cd build && \
     cmake .. && \
     cmake --build . --config Release

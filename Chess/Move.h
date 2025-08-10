@@ -46,7 +46,7 @@ struct Promotion : DefaultMove {
 };
 
 struct Castling {
-  enum class CastlingSide : uint8_t { k00, k000 };
+  enum class CastlingSide : std::uint8_t { k00, k000 };
 
   CastlingSide side;
 

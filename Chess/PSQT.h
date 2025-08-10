@@ -89,7 +89,7 @@ inline void InitPSQT() {
     for (BitIndex square = 0; square < static_cast<BitIndex>(kBoardArea);
          ++square) {
       const auto [file, rank] = GetCoordinates(square);
-      const BitIndex new_square = GetSquare(file, 7 - rank);
+      const BitIndex new_square = GetSquareIndex(file, 7 - rank);
       kPSQT[static_cast<size_t>(Player::kBlack)][static_cast<size_t>(piece)]
            [new_square] = kPSQT[static_cast<size_t>(Player::kWhite)]
                                [static_cast<size_t>(piece)][square];
