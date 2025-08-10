@@ -100,7 +100,7 @@ class Searcher {
   MoveGenerator move_generator_;  //!< Move generator.
   SearcherTranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
-  std::array<std::array<std::array<uint64_t, kBoardArea + 1>, kBoardArea + 1>,
+  std::array<std::array<std::array<std::uint64_t, kBoardArea + 1>, kBoardArea + 1>,
              kColors>
       history_ = {};
   KillerTable<2> killers_;

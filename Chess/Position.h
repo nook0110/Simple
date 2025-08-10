@@ -158,7 +158,7 @@ class Position {
    *
    * \return Piece on given square.
    */
-  [[nodiscard]] Piece GetPiece(BitIndex index) const;
+  [[nodiscard]] Piece GetPieceAt(BitIndex index) const;
 
   /**
    * \brief Gets side to move.

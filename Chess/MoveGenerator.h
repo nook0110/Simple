@@ -14,7 +14,7 @@ namespace SimpleChessEngine {
  */
 class MoveGenerator {
  public:
-  enum class Type : uint8_t { kAll = 0, kQuiescence = 1, kAddChecks = 2 };
+  enum class Type : std::uint8_t { kAll = 0, kQuiescence = 1, kAddChecks = 2 };
 
   static constexpr size_t kMaxMovesPerPosition = 218;
   MoveGenerator() { moves_.reserve(kMaxMovesPerPosition); }
@@ -66,6 +66,7 @@ class MoveGenerator {
 
   static void GenerateCastling(Moves& moves, const Position& position);
 
+  // mutable because it is used as a pre-allocated storage to return, not as an object state
   mutable Moves moves_;
 };
 

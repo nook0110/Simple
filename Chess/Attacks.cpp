@@ -1,7 +1,7 @@
 #include "Attacks.h"
+#include <utility>
 
 #include "BitBoard.h"
-#include "BitScan.h"
 
 using namespace SimpleChessEngine;
 
@@ -16,7 +16,7 @@ constexpr std::array<Compass, 4> GetStepDelta() {
   }
 
   assert(false);
-  return {};
+  std::unreachable();
 }
 
 template <Piece sliding_piece>
@@ -30,7 +30,7 @@ Bitboard SimpleChessEngine::GenerateAttackMask(const BitIndex square,
   for (auto direction : GetStepDelta<sliding_piece>()) {
     Bitboard step;
     for (BitIndex temp = square;
-         (occupancy & GetBitboardOfSquare(temp)).None();) {
+         (occupancy & SingleSquare(temp)).None();) {
       step = DoShiftIfValid(temp, direction).value_or(kEmptyBoard);
       result |= step;
       if (step.None()) break;

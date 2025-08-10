@@ -35,7 +35,7 @@ inline Move MoveFactory::operator()(const Position &position,
 
   const auto [from, to] = ParseDefaultMove(move);
 
-  const auto piece_to_move = position.GetPiece(from);
+  const auto piece_to_move = position.GetPieceAt(from);
 
   if (piece_to_move == Piece::kKing) {
     if (!IsAdjacent(from, to)) {
@@ -46,16 +46,16 @@ inline Move MoveFactory::operator()(const Position &position,
       auto [king_file, king_rank] = GetCoordinates(to);
 
       return Castling{castling_file[king_file], from,
-                      GetSquare(rook_from_file[king_file], king_rank)};
+                      GetSquareIndex(rook_from_file[king_file], king_rank)};
     }
   }
   if (constexpr size_t kPromotionSize = 5; move.size() == kPromotionSize) {
-    return Promotion{{from, to, position.GetPiece(to)},
+    return Promotion{{from, to, position.GetPieceAt(to)},
                      kCharToPiece[move.back()].first};
   }
 
-  if (piece_to_move != Piece::kPawn || position.GetPiece(to) != Piece::kNone) {
-    return DefaultMove{from, to, position.GetPiece(to)};
+  if (piece_to_move != Piece::kPawn || position.GetPieceAt(to) != Piece::kNone) {
+    return DefaultMove{from, to, position.GetPieceAt(to)};
   }
 
   if (!IsAdjacent(from, to)) {
@@ -75,8 +75,8 @@ inline MoveFactory::ParsedMove MoveFactory::ParseDefaultMove(
                    second_rank = 3;
 
   const ParsedMove parsed_move{
-      GetSquare(move[first_file] - 'a', move[first_rank] - '0' - 1),
-      GetSquare(move[second_file] - 'a', move[second_rank] - '0' - 1)};
+      GetSquareIndex(move[first_file] - 'a', move[first_rank] - '0' - 1),
+      GetSquareIndex(move[second_file] - 'a', move[second_rank] - '0' - 1)};
 
   return parsed_move;
 }

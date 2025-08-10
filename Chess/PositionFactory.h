@@ -139,16 +139,16 @@ inline std::string SimpleChessEngine::FenFactory::operator()(
   for (Rank rank = 7; rank >= 0; --rank) {
     size_t empty = 0;
     for (File file = 0; file < 8; ++file) {
-      if ((position.GetAllPieces() & GetBitboardOfSquare(GetSquare(file, rank)))
+      if ((position.GetAllPieces() & SingleSquare(GetSquareIndex(file, rank)))
               .None()) {
         ++empty;
         continue;
       }
 
       if (empty) ss << empty;
-      const auto piece_type = position.GetPiece(GetSquare(file, rank));
+      const auto piece_type = position.GetPieceAt(GetSquareIndex(file, rank));
       const auto is_white = (position.GetPieces(Player::kWhite) &
-                             GetBitboardOfSquare(GetSquare(file, rank)))
+                             SingleSquare(GetSquareIndex(file, rank)))
                                 .Any();
       ss << GetPieceChar(piece_type,
                          is_white ? Player::kWhite : Player::kBlack);

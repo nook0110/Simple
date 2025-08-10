@@ -154,12 +154,12 @@ void Position::DoMove(const DefaultMove &move) {
                                            [static_cast<size_t>(castling_side)];
     if (from == our_rook) {
       irreversible_data_.castling_rights[static_cast<size_t>(us)] &=
-          ~static_cast<int8_t>(
+          ~static_cast<std::int8_t>(
               kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
     }
     if (to == their_rook) {
       irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
-          ~static_cast<int8_t>(
+          ~static_cast<std::int8_t>(
               kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
     }
   }
@@ -363,8 +363,8 @@ void Position::UndoMove(const Castling &move) {
   const auto king_position = king_position_[us_idx];
   const auto rook_position = rook_positions_[us_idx][cs_idx];
 
-  const auto obstacles = GetAllPieces() & ~GetBitboardOfSquare(king_position) &
-                         ~GetBitboardOfSquare(rook_position);
+  const auto obstacles = GetAllPieces() & ~SingleSquare(king_position) &
+                         ~SingleSquare(rook_position);
 
   auto king_path = castling_squares_for_king_[us_idx][cs_idx];
 
@@ -438,7 +438,7 @@ Bitboard Position::GetAllPawnAttacks(const Player player) const {
          Shift(pawns, kPawnAttackDirections[us][1]);
 }
 
-Piece Position::GetPiece(const BitIndex index) const {
+Piece Position::GetPieceAt(const BitIndex index) const {
   assert(IsOk(index));
   return board_[index];
 }
@@ -482,7 +482,7 @@ bool Position::StaticExchangeEvaluation(const Move &move,
   const auto promotion_or = std::get_if<Promotion>(&move);
 
   Piece next_victim =
-      !promotion_or ? GetPiece(from) : promotion_or->promoted_to;
+      !promotion_or ? GetPieceAt(from) : promotion_or->promoted_to;
 
   Eval balance = EstimatePiece(captured_piece);
 
@@ -506,10 +506,10 @@ bool Position::StaticExchangeEvaluation(const Move &move,
   }
 
   Bitboard occupancy =
-      GetAllPieces() ^ GetBitboardOfSquare(from) ^ GetBitboardOfSquare(to);
+      GetAllPieces() ^ SingleSquare(from) ^ SingleSquare(to);
 
   [[unlikely]] if (std::holds_alternative<EnCroissant>(move)) {
-    occupancy ^= Shift(GetBitboardOfSquare(to),
+    occupancy ^= Shift(SingleSquare(to),
                        kPawnMoveDirection[static_cast<size_t>(them)]);
   }
 

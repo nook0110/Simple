@@ -8,7 +8,7 @@
 namespace SimpleChessEngine {
 class Position;
 
-using Hash = uint64_t;
+using Hash = std::uint64_t;
 
 struct Hasher {
   template <class RNG>

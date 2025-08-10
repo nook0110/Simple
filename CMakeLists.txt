@@ -10,9 +10,10 @@ find_package(glog 0.7.1 REQUIRED)
 add_definitions(-DGLOG_USE_GLOG_EXPORT)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_compile_options(-Wall)
+add_compile_options(-Wall -Wextra -Wpedantic)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  add_compile_options(-Ofast -mtune=native -march=native -fno-stack-protector -flto -frename-registers -funroll-loops)
+  add_compile_definitions(-DNDEBUG)
+  add_compile_options(-Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti)
   add_link_options(-flto)
 endif()
 

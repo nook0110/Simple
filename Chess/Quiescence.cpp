@@ -37,9 +37,9 @@ auto kCompareMoves = [](const Move& lhs, const Move& rhs,
   const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
   const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
   const auto moving_idx_lhs =
-      -static_cast<int>(current_position.GetPiece(from_lhs));
+      -static_cast<int>(current_position.GetPieceAt(from_lhs));
   const auto moving_idx_rhs =
-      -static_cast<int>(current_position.GetPiece(from_rhs));
+      -static_cast<int>(current_position.GetPieceAt(from_rhs));
   return std::tie(captured_idx_lhs, moving_idx_lhs) >
          std::tie(captured_idx_rhs, moving_idx_rhs);
 };

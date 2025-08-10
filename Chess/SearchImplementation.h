@@ -11,7 +11,7 @@
 
 namespace SimpleChessEngine {
 class Searcher;
-enum class Bound : uint8_t;
+enum class Bound : std::uint8_t;
 
 struct SearchState {
   const Depth max_depth;

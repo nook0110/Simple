@@ -109,7 +109,7 @@ SearchResult SimpleChessEngine::SearchImplementation<
       searcher_);
 
   // check if there are no possible moves
-  if (!move_picker_.HasMoreMoves()) {
+  if (move_picker_.Done()) {
     return GetEndGameScore();
   }
 

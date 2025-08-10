@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <vector>
 
-#include "BitScan.h"
 #include "Move.h"
 #include "Piece.h"
 #include "Utility.h"
@@ -15,7 +14,7 @@ class Searcher;
 class MovePicker {
  public:
   using Moves = std::vector<Move>;
-  enum class Stage : uint8_t {
+  enum class Stage : std::uint8_t {
     kGoodCaptures,
     kKillers,
     kQuiet,
@@ -37,7 +36,7 @@ class MovePicker {
 
   void SkipMove(const Move& move);
 
-  [[nodiscard]] bool HasMoreMoves() const;
+  [[nodiscard]] bool Done() const;
 
   [[nodiscard]] Stage GetCurrentStage() const;
 
@@ -54,7 +53,7 @@ class MovePicker {
   };
 
   std::vector<MoveData> data_;
-  std::vector<uint64_t> history_;
+  std::vector<std::uint64_t> history_;
 
   void Swap(size_t lhs, size_t rhs) {
     std::swap(moves_[lhs], moves_[rhs]);
