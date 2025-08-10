@@ -5,6 +5,9 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: 
+      image: gcc:15
+      options: --user root
 
     steps:
     - name: Checkout code
@@ -12,15 +15,16 @@ jobs:
     
     - name: Set up dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y wget unzip sudo g++ make git cmake
+        apt-get update
+        apt-get install -y wget unzip g++ make git cmake
 
     - name: Install glog
       run: |
         git clone https://github.com/google/glog.git
         cd glog && cmake -S . -B build -G "Unix Makefiles"
         cmake --build build
-        sudo cmake --build build --target install
+        cmake --build build --target install
+        ldconfig
 
     - name: Building the project
       working-directory: ${{runner.workspace}}/Simple

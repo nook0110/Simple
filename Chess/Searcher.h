@@ -37,7 +37,7 @@ class Searcher {
   template <bool is_principal_variation, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
   friend struct SearchImplementation;
-  constexpr static size_t kTTsize = 1 << 24;
+  constexpr static size_t kTTsize = 1 << 26;
   using SearcherTranspositionTable = TranspositionTable<kTTsize>;
 
   /**
@@ -100,8 +100,9 @@ class Searcher {
   MoveGenerator move_generator_;  //!< Move generator.
   SearcherTranspositionTable
       best_moves_;  //!< Transposition-table to store the best moves.
-  std::array<std::array<std::array<std::uint64_t, kBoardArea + 1>, kBoardArea + 1>,
-             kColors>
+  std::array<
+      std::array<std::array<std::uint64_t, kBoardArea + 1>, kBoardArea + 1>,
+      kColors>
       history_ = {};
   KillerTable<2> killers_;
 
