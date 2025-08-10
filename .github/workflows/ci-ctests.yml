@@ -16,7 +16,7 @@ jobs:
     - name: Set up dependencies
       run: |
         apt-get update
-        apt-get install -y wget unzip g++ make git cmake
+        apt-get install -y wget unzip g++ make git cmake libgoogle-glog-dev
 
     - name: Install glog
       run: |
