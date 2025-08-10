@@ -12,7 +12,7 @@ static std::ostream& operator<<(
 }
 static std::ostream& operator<<(
     std::ostream& out, Settings::PruneParameters::NMPSettings settings) {
-  out << "\tRFP: " << std::boolalpha << settings.kEnabled << "\n";
+  out << "\tNMP: " << std::boolalpha << settings.kEnabled << "\n";
   if constexpr (settings.kEnabled) {
     out << "\t\tkNullMoveReduction: " << +settings.kNullMoveReduction << "\n";
   }

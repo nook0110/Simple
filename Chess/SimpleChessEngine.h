@@ -9,6 +9,7 @@
 #include "Move.h"
 #include "Searcher.h"
 #include "Settings.h"
+#include "Utility.h"
 
 namespace SimpleChessEngine {
 struct DepthInfo {
@@ -207,10 +208,12 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   searcher_.InitStartOfSearch();
 
   DebugInfo info;
+  Eval eval;
   EBFsInfo ebfs;
   Window window{};
+  Depth current_depth = 1;
 
-  for (Depth current_depth = 1;
+  for (current_depth = 1;
        condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
@@ -218,7 +221,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     if (!eval_optional) {
       break;
     }
-    const auto eval = *eval_optional;
+    eval = *eval_optional;
     if (eval >= window.GetUpperBound()) {
       window.FailedUpper();
       --current_depth;
@@ -250,6 +253,10 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     best_move_ = searcher_.GetCurrentBestMove();
     window.SetNewEval(eval);
   }
+
+  PrintInfo(info, eval, current_depth,
+            std::chrono::duration<double>{std::chrono::system_clock::now() -
+                                          start_time});
 
   PrintBestMove(BestMoveInfo{best_move_, ponder_move_});
 }
