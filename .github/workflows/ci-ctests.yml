@@ -26,9 +26,8 @@ jobs:
       working-directory: ${{runner.workspace}}/Simple
       run: |
         mkdir build
-        cd build
         cmake -DCMAKE_BUILD_TYPE=Release ..
-        make
+        cmake --build build -t SCE_tests
 
     - name: Run tests
       working-directory: ${{runner.workspace}}/Simple/build
