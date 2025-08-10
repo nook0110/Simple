@@ -69,6 +69,7 @@ struct SearchImplementation {
 
   void SetBestMove(const Move &move);
   void SetTTEntry(const Bound bound);
+  template <bool is_first_move>
   void UpdateQuietMove(const Move &move);
 
   template <bool is_pv_move>
