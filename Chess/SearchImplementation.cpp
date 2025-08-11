@@ -253,6 +253,11 @@ SearchResult SimpleChessEngine::SearchImplementation<
   auto &current_position = searcher_.current_position_;
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
 
+  const bool lmr_conditions_met =
+      Settings::PruneParameters::LMRSettings::kEnabled &&
+      !is_principal_variation &&
+      remaining_depth >= Settings::PruneParameters::LMRSettings::kDepthLimit;
+
   for (auto it =
            move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth);
        it != move_picker_.end(); it = move_picker_.SelectNextMove(
@@ -263,13 +268,42 @@ SearchResult SimpleChessEngine::SearchImplementation<
 
     current_position.DoMove(move);  // make the move and search the tree
 
+    // Late Move Reduction
+    int R = 0;
+    if (lmr_conditions_met &&
+        move_picker_.GetCurrentStage() >= MovePicker::Stage::kQuiet) {
+      R = 0.99 +
+          std::log(remaining_depth) *
+              std::log(move_picker_.current() - move_picker_.begin()) / 3.14 -
+          (position_info_.is_under_check
+               ? Settings::PruneParameters::LMRSettings::
+                     kUnderCheckReductionPenalty
+               : 0) -
+          (current_position.IsUnderCheck()
+               ? Settings::PruneParameters::LMRSettings::
+                     kDoingCheckReductionPenalty
+               : 0);
+      R = std::clamp(R, 0, static_cast<int>(remaining_depth - 1));
+    }
+
     auto temp_eval_optional =
-        Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
-                       -alpha - 1, -alpha});  // ZWS
+        Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1 - R),
+                       -alpha - 1, -alpha});  // Reduced ZWS
 
     if (!temp_eval_optional) return std::nullopt;
 
     auto temp_eval = -*temp_eval_optional;
+    if (R > 0 &&
+        temp_eval >
+            alpha) { /* research at full depth, but still with zero window */
+      temp_eval_optional =
+          Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
+                         -alpha - 1, -alpha});
+
+      if (!temp_eval_optional) return std::nullopt;
+
+      temp_eval = -*temp_eval_optional;
+    }
 
     if (temp_eval > alpha &&
         is_principal_variation) /* make a research (ZWS failed) */
@@ -299,7 +333,8 @@ SearchResult SimpleChessEngine::SearchImplementation<
         // lower-bound
         SetTTEntry(Bound::kLower);
 
-        if (move_picker_.GetCurrentStage() == MovePicker::Stage::kKillers || move_picker_.GetCurrentStage() == MovePicker::Stage::kQuiet) {
+        if (move_picker_.GetCurrentStage() == MovePicker::Stage::kKillers ||
+            move_picker_.GetCurrentStage() == MovePicker::Stage::kQuiet) {
           UpdateQuietMove<false>(move);
         }
 

@@ -16,8 +16,15 @@ struct Settings {
       static constexpr bool kEnabled = true;
       static constexpr size_t kNullMoveReduction = 3;
     };
+    struct LMRSettings {
+      static constexpr bool kEnabled = true;
+      static constexpr size_t kDepthLimit = 4;
+      static constexpr int kUnderCheckReductionPenalty = 1;
+      static constexpr int kDoingCheckReductionPenalty = 1;
+    };
     static constexpr RFPSettings kRFPSettings = {};
     static constexpr NMPSettings kNMPSettings = {};
+    static constexpr LMRSettings kLMRSettings = {};
   };
   struct SearchParameters {
     struct AspirationWindowSettings {
