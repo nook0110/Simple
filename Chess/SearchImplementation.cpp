@@ -1,6 +1,7 @@
 #include "SearchImplementation.h"
 
 #include "ExitCondition.h"
+#include "MovePicker.h"
 #include "Quiescence.h"
 #include "Searcher.h"
 #include "Settings.h"
@@ -33,10 +34,13 @@ SearchResult SearchImplementation<is_principal_variation,
                                   ExitCondition>::Search(SearchState state) {
   assert(is_principal_variation_search || (state.beta - state.alpha == 1));
   assert(state.alpha < state.beta);
+
   DLOG(INFO) << "PV: " << std::boolalpha << is_principal_variation_search;
+
   return SearchImplementation<is_principal_variation_search, ExitCondition>{
       searcher_, state, exit_condition_}();
 }
+
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition> bool
 SimpleChessEngine::SearchImplementation<is_principal_variation,
@@ -78,7 +82,9 @@ SearchResult SimpleChessEngine::SearchImplementation<
 
   if (CanNullMove()) {
     searcher_.debug_info_.nmp_tries++;
+
     current_position.DoMove(NullMove{});
+
     const auto eval_optional = Search<false>(
         {max_depth,
          static_cast<Depth>(
@@ -140,10 +146,13 @@ SearchResult SimpleChessEngine::SearchImplementation<
 
   const auto eval = quiescence_searcher.template Search<true>(
       current_position, state_.alpha, state_.beta, 0);
+
   searcher_.debug_info_.quiescence_nodes +=
       quiescence_searcher.GetSearchedNodes();
+
   return eval;
 }
+
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 Eval SimpleChessEngine::SearchImplementation<
@@ -152,6 +161,7 @@ Eval SimpleChessEngine::SearchImplementation<
     return kMateValue +
            static_cast<Eval>(state_.max_depth - state_.remaining_depth);
   }
+
   return kDrawValue;
 }
 
@@ -225,8 +235,10 @@ std::optional<bool> SimpleChessEngine::SearchImplementation<
       if (IsQuiet(iteration_status_.best_move)) {
         UpdateQuietMove<true>(iteration_status_.best_move);
       }
+
       return true;
     }
+
     iteration_status_.has_raised_alpha = true;
     alpha = iteration_status_.best_eval;
   }
@@ -241,16 +253,14 @@ SearchResult SimpleChessEngine::SearchImplementation<
   auto &current_position = searcher_.current_position_;
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
 
-  bool is_quiet = false;
   for (auto it =
            move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth);
        it != move_picker_.end(); it = move_picker_.SelectNextMove(
                                      searcher_, max_depth - remaining_depth)) {
     const auto &move = *it;
 
-    is_quiet = move_picker_.GetCurrentStage() == MovePicker::Stage::kQuiet;
-
     DLOG(INFO) << std::string(max_depth - remaining_depth, '\t') << move;
+
     current_position.DoMove(move);  // make the move and search the tree
 
     auto temp_eval_optional =
@@ -288,9 +298,11 @@ SearchResult SimpleChessEngine::SearchImplementation<
         // beta-cutoff occurs, node is cut-type, returned score is
         // lower-bound
         SetTTEntry(Bound::kLower);
-        if (is_quiet) {
+
+        if (move_picker_.GetCurrentStage() == MovePicker::Stage::kKillers || move_picker_.GetCurrentStage() == MovePicker::Stage::kQuiet) {
           UpdateQuietMove<false>(move);
         }
+
         return beta;
       }
 
@@ -298,8 +310,10 @@ SearchResult SimpleChessEngine::SearchImplementation<
     }
   }
 
+  // no beta-cutoff occured, so it is either an all node or a pv node
   SetTTEntry(iteration_status_.has_raised_alpha ? Bound::kExact
                                                 : Bound::kUpper);
+
   return alpha;
 }
 
@@ -310,6 +324,7 @@ SimpleChessEngine::SearchImplementation<is_principal_variation,
   if constexpr (!Settings::PruneParameters::NMPSettings::kEnabled) {
     return false;
   }
+
   const auto remaining_depth = state_.remaining_depth;
 
   if (remaining_depth <=
@@ -334,16 +349,19 @@ void SimpleChessEngine::SearchImplementation<
     is_principal_variation, ExitCondition>::UpdateQuietMove(const Move &move) {
   // history malus
   if constexpr (!is_first_move) {
-    for (auto it = move_picker_.begin_quiet(); it != move_picker_.current(); ++it) {
+    for (auto it = move_picker_.begin_quiet(); it != move_picker_.current();
+         ++it) {
       const auto [from, to, captured_piece] = GetMoveData(*it);
       searcher_.history_[position_info_.side_to_move_idx][from][to] -=
           state_.remaining_depth * state_.remaining_depth;
     }
   }
+
   // history bonus
   const auto [from, to, captured_piece] = GetMoveData(move);
   searcher_.history_[position_info_.side_to_move_idx][from][to] +=
       state_.remaining_depth * state_.remaining_depth;
+
   // killer heuristic
   searcher_.killers_.TryAdd(state_.max_depth - state_.remaining_depth, move);
 }
@@ -352,7 +370,9 @@ template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition> bool
 SearchImplementation<is_principal_variation, ExitCondition>::CanRFP() const {
   if constexpr (!Settings::PruneParameters::RFPSettings::kEnabled) return false;
+
   if constexpr (is_principal_variation) return false;
+
   return !position_info_.is_under_check &&
          state_.remaining_depth <=
              Settings::PruneParameters::RFPSettings::kDepthLimit &&
@@ -360,6 +380,7 @@ SearchImplementation<is_principal_variation, ExitCondition>::CanRFP() const {
              state_.beta + Settings::PruneParameters::RFPSettings::kThreshold *
                                state_.remaining_depth;
 }
+
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 std::optional<SearchResult> SearchImplementation<
@@ -383,21 +404,28 @@ std::optional<SearchResult> SearchImplementation<
           entry_score <= alpha) {
         return alpha;
       }
+
       if (static_cast<Bound>(entry_bound) & Bound::kLower &&
           entry_score > alpha) {
         if (entry_score >= beta) {
           if (IsQuiet(hash_move)) {
             UpdateQuietMove<true>(hash_move);
           }
+
+          // TODO: update entry age
+
           return beta;
         }
+
         iteration_status_.has_raised_alpha = true;
         alpha = entry_score;
       }
+
       if (static_cast<Bound>(entry_bound) == Bound::kExact) {
         return entry_score;
       }
     }
+
     auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(hash_move);
     if (!has_cutoff_opt) {
       return SearchResult{std::nullopt};
@@ -408,6 +436,7 @@ std::optional<SearchResult> SearchImplementation<
     }
     iteration_status_.has_stored_move = true;
   }
+
   return std::nullopt;
 }
 }  // namespace SimpleChessEngine
