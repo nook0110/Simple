@@ -28,7 +28,7 @@ void Searcher::InitStartOfSearch() {
   killers_.Clear();
   for (size_t color = 0; color < kColors; ++color) {
     for (BitIndex from = 0; from <= static_cast<BitIndex>(kBoardArea); ++from) {
-      history_[color][from].fill(0ull);
+      history_[color][from].fill(0LL);
     }
   }
 }

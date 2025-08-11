@@ -76,6 +76,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
         Swap(good_capture, current_move_ - moves_.begin());
         return current_move_++;
       }
+      begin_quiet_ = current_move_;
       [[fallthrough]];
     }
 
@@ -139,7 +140,7 @@ void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
     const auto [from, to, capture] = GetMoveData(move);
     data_[i] = {from, to, capture,
                 capture != Piece::kNone
-                    ? searcher.GetPosition().StaticExchangeEvaluation(move, -50)
+                    ? searcher.GetPosition().StaticExchangeEvaluation(move, kGoodCaptureThreshold)
                     : false};
     history_[i] = searcher.GetHistory()[static_cast<size_t>(
         searcher.GetPosition().GetSideToMove())][from][to];
