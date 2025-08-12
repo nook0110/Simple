@@ -314,7 +314,7 @@ SearchResult SearchNode<is_principal_variation, ExitCondition>::PVSearch() {
       temp_eval = -*temp_eval_optional;
     }
 
-    assert(is_principal_variation_search || (state.beta - state.alpha == 1));
+    assert(is_principal_variation || (beta - alpha == 1));
     if (is_principal_variation &&
         temp_eval > alpha) /* make a research (ZWS failed) */
     {
