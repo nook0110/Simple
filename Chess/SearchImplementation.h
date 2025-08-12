@@ -23,9 +23,8 @@ struct SearchState {
 };
 
 struct IterationStatus {
-  bool has_stored_move = false;
   bool has_raised_alpha = false;
-  Move best_move;
+  std::optional<Move> best_move;
   Eval best_eval = {};
 };
 
@@ -39,15 +38,15 @@ struct PositionInfo {
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-struct SearchImplementation {
+struct SearchNode {
  public:
   constexpr static size_t kEnoughNodesToCheckTime = 1 << 12;
 
-  SearchImplementation(Searcher &searcher, SearchState state,
-                       const ExitCondition &exit_condition);
+  SearchNode(Searcher &searcher, SearchState state,
+             const ExitCondition &exit_condition);
 
   template <bool is_principal_variation_search>
-  SearchResult Search(SearchState state);
+  SearchResult StartSubsearch(SearchState state);
 
   bool IsTimeToExit() const;
 
@@ -67,10 +66,12 @@ struct SearchImplementation {
   SearchResult QuiescenceSearch();
   Eval GetEndGameScore() const;
 
-  void SetBestMove(const Move &move);
+  void SetBestMove(Move move);
   void SetTTEntry(const Bound bound);
   template <bool is_first_move>
   void UpdateQuietMove(const Move &move);
+
+  Position &GetCurrentPosition();
 
   template <bool is_pv_move>
   SearchResult ProbeMove(const Move &move);

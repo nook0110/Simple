@@ -2,7 +2,9 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <numeric>
+#include <optional>
 
 #include "Evaluation.h"
 #include "ExitCondition.h"
@@ -91,7 +93,9 @@ class ChessEngine {
 
   [[nodiscard]] const Move& GetCurrentBestMove() const;
 
-  void PrintBestMove() { o_stream_ << BestMoveInfo{GetCurrentBestMove()}; }
+  void PrintBestMove() {
+    o_stream_ << BestMoveInfo{GetCurrentBestMove(), std::nullopt};
+  }
 
   void PrintBestMove(const BestMoveInfo& bm_info) { o_stream_ << bm_info; }
 
@@ -118,7 +122,7 @@ class ChessEngine {
       return EBFInfo{
           ebfs_.empty() ? 0 : ebfs_.back(), odd_even_average_,
           ebfs_.size() ? std::reduce(ebfs_.begin(), ebfs_.end()) / ebfs_.size()
-                       : INFINITY};
+                       : 0};
     }
 
    private:

@@ -58,11 +58,7 @@ TEST(BestMove, WinAtChess) {
   std::string line;
   std::stringstream ss;
 
-  size_t solved = {};
-  size_t tests = {};
-
   while (std::getline(positions, line)) {
-    ++tests;
     size_t delimeter = line.rfind('#');
 
     auto position = PositionFactory{}(line.substr(0, delimeter));
@@ -74,16 +70,9 @@ TEST(BestMove, WinAtChess) {
     ChessEngine engine(position, ss);
     auto time_for_move = TimeCondition{std::chrono::milliseconds{3000}};
     engine.ComputeBestMove(time_for_move);
-    if (std::ranges::find(best_moves, engine.GetCurrentBestMove()) !=
-        best_moves.end()) {
-      ++solved;
-    } else {
-      LOG(WARNING) << line.substr(0, delimeter) << " "
-                   << line.substr(delimeter + 1);
-      LOG(WARNING) << engine.GetCurrentBestMove();
-    }
+    ASSERT_TRUE(std::ranges::find(best_moves, engine.GetCurrentBestMove()) !=
+                best_moves.end());
   };
-  ASSERT_GE(solved, tests * 0.5);
 }
 
 INSTANTIATE_TEST_CASE_P(
