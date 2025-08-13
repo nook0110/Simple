@@ -72,6 +72,10 @@ SearchResult SearchNode<is_principal_variation, ExitCondition>::operator()() {
 
   searcher_.debug_info_.searched_nodes++;
 
+  if (!ProbeTranspositionTable()) {
+    // state_.remaining_depth--;
+  }
+
   if (CanRFP()) {
     searcher_.debug_info_.rfp_cuts++;
     return position_info_.static_eval;
@@ -437,14 +441,25 @@ bool SearchNode<is_principal_variation, ExitCondition>::CanRFP() const {
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
+bool SearchNode<is_principal_variation,
+                ExitCondition>::ProbeTranspositionTable() {
+  auto node = searcher_.best_moves_.GetNode(searcher_.current_position_);
+  if (node.true_hash == GetCurrentPosition().GetHash()) {
+    iteration_status_.tt_info = std::move(node);
+    return true;
+  }
+  return false;
+}
+
+template <bool is_principal_variation, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
 std::optional<SearchResult>
 SearchNode<is_principal_variation, ExitCondition>::CheckTranspositionTable() {
-  if (auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
-          searcher_.best_moves_.GetNode(searcher_.current_position_);
-      hash == searcher_.current_position_
-                  .GetHash()) {  // check if current position was previously
-                                 // searched at higher depth
-    auto &[max_depth, remaining_depth, alpha, beta, __] = state_;
+  if (iteration_status_.tt_info) {
+    auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
+    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+        *iteration_status_.tt_info;
+
     searcher_.debug_info_.tt_hits++;
 
     if (remaining_depth == max_depth) {
@@ -487,6 +502,10 @@ SearchNode<is_principal_variation, ExitCondition>::CheckTranspositionTable() {
     if (*has_cutoff_opt) {
       SetTTEntry(Bound::kLower);
       return beta;
+    }
+  } else {
+    if (state_.remaining_depth > 1) {
+      state_.remaining_depth--;
     }
   }
 
