@@ -503,10 +503,6 @@ SearchNode<is_principal_variation, ExitCondition>::CheckTranspositionTable() {
       SetTTEntry(Bound::kLower);
       return beta;
     }
-  } else {
-    if (state_.remaining_depth > 1) {
-      state_.remaining_depth--;
-    }
   }
 
   return std::nullopt;
