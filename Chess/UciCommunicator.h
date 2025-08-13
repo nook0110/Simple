@@ -463,11 +463,9 @@ inline void SimpleChessEngine::UciChessEngine::ParseDepth(
   info_.time_control = MaxDepth{static_cast<Depth>(std::stoul(token))};
 }
 
-inline void UciChessEngine::ParseStop(std::stringstream command) {
-  StopSearch();
-}
+inline void UciChessEngine::ParseStop(std::stringstream) { StopSearch(); }
 
-inline void UciChessEngine::ParseQuit(std::stringstream command) {
+inline void UciChessEngine::ParseQuit(std::stringstream) {
   quit_ = true;
   StopSearch();
 }

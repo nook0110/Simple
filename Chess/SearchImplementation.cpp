@@ -1,18 +1,21 @@
 #include "SearchImplementation.h"
 
+#include <cassert>
+
 #include "ExitCondition.h"
 #include "MovePicker.h"
+#include "Position.h"
 #include "Quiescence.h"
 #include "Searcher.h"
 #include "Settings.h"
 
 namespace SimpleChessEngine {
-template struct SearchImplementation<false, TimeCondition>;
-template struct SearchImplementation<true, TimeCondition>;
-template struct SearchImplementation<false, DepthCondition>;
-template struct SearchImplementation<true, DepthCondition>;
-template struct SearchImplementation<false, Pondering>;
-template struct SearchImplementation<true, Pondering>;
+template struct SearchNode<false, TimeCondition>;
+template struct SearchNode<true, TimeCondition>;
+template struct SearchNode<false, DepthCondition>;
+template struct SearchNode<true, DepthCondition>;
+template struct SearchNode<false, Pondering>;
+template struct SearchNode<true, Pondering>;
 
 PositionInfo::PositionInfo(const Position &position)
     : static_eval(position.Evaluate()), is_under_check(position.IsUnderCheck()),
@@ -21,38 +24,35 @@ PositionInfo::PositionInfo(const Position &position)
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-SearchImplementation<is_principal_variation, ExitCondition>::
-    SearchImplementation(Searcher &searcher, SearchState state,
-                         const ExitCondition &exit_condition)
+SearchNode<is_principal_variation, ExitCondition>::SearchNode(
+    Searcher &searcher, SearchState state, const ExitCondition &exit_condition)
     : state_(state), exit_condition_(exit_condition),
       position_info_(searcher.GetPosition()), searcher_(searcher) {}
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <bool is_principal_variation_search>
-SearchResult SearchImplementation<is_principal_variation,
-                                  ExitCondition>::Search(SearchState state) {
+SearchResult SearchNode<is_principal_variation, ExitCondition>::StartSubsearch(
+    SearchState state) {
   assert(is_principal_variation_search || (state.beta - state.alpha == 1));
   assert(state.alpha < state.beta);
 
   DLOG(INFO) << "PV: " << std::boolalpha << is_principal_variation_search;
 
-  return SearchImplementation<is_principal_variation_search, ExitCondition>{
+  return SearchNode<is_principal_variation_search, ExitCondition>{
       searcher_, state, exit_condition_}();
 }
 
 template <bool is_principal_variation, class ExitCondition>
-  requires StopSearchCondition<ExitCondition> bool
-SimpleChessEngine::SearchImplementation<is_principal_variation,
-                                        ExitCondition>::IsTimeToExit() const {
+  requires StopSearchCondition<ExitCondition>
+bool SearchNode<is_principal_variation, ExitCondition>::IsTimeToExit() const {
   return searcher_.debug_info_.searched_nodes % kEnoughNodesToCheckTime == 0 &&
          exit_condition_.IsTimeToExit();
 }
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-SearchResult SimpleChessEngine::SearchImplementation<
-    is_principal_variation, ExitCondition>::operator()() {
+SearchResult SearchNode<is_principal_variation, ExitCondition>::operator()() {
   if (IsTimeToExit()) {
     return std::nullopt;
   }
@@ -60,8 +60,7 @@ SearchResult SimpleChessEngine::SearchImplementation<
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
   assert(is_principal_variation || beta - alpha == 1);
 
-  if (searcher_.current_position_.DetectRepetition(max_depth -
-                                                   remaining_depth)) {
+  if (GetCurrentPosition().DetectRepetition(max_depth - remaining_depth)) {
     return kDrawValue;
   }
 
@@ -78,23 +77,23 @@ SearchResult SimpleChessEngine::SearchImplementation<
     return position_info_.static_eval;
   }
 
-  auto &current_position = searcher_.current_position_;
+  auto &current_position = GetCurrentPosition();
 
   if (CanNullMove()) {
     searcher_.debug_info_.nmp_tries++;
 
     current_position.DoMove(NullMove{});
 
-    const auto eval_optional = Search<false>(
+    const auto eval_optional = StartSubsearch<false>(
         {max_depth,
          static_cast<Depth>(
              remaining_depth -
              Settings::PruneParameters::NMPSettings::kNullMoveReduction),
          -beta, -beta + 1, true});
 
-    if (!eval_optional) return std::nullopt;
-
     current_position.UndoMove(NullMove{}, position_info_.irreversible_data);
+
+    if (!eval_optional) return std::nullopt;
 
     const auto &null_eval = -*eval_optional;
     if (null_eval >= beta) {
@@ -119,7 +118,7 @@ SearchResult SimpleChessEngine::SearchImplementation<
     return GetEndGameScore();
   }
 
-  if (!iteration_status_.has_stored_move) {
+  if (!iteration_status_.best_move) {
     auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(
         *move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth));
     if (!has_cutoff_opt) {
@@ -131,7 +130,8 @@ SearchResult SimpleChessEngine::SearchImplementation<
     }
   } else {
     // skip the first move
-    move_picker_.SkipMove(iteration_status_.best_move);
+    assert(iteration_status_.best_move);
+    move_picker_.SkipMove(*iteration_status_.best_move);
   }
 
   return PVSearch();
@@ -139,13 +139,14 @@ SearchResult SimpleChessEngine::SearchImplementation<
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-SearchResult SimpleChessEngine::SearchImplementation<
-    is_principal_variation, ExitCondition>::QuiescenceSearch() {
-  auto &current_position = searcher_.current_position_;
+SearchResult
+SearchNode<is_principal_variation, ExitCondition>::QuiescenceSearch() {
+  auto &current_position = GetCurrentPosition();
   auto quiescence_searcher = Quiescence{exit_condition_};
 
-  const auto eval = quiescence_searcher.template Search<true>(
-      current_position, state_.alpha, state_.beta, 0);
+  const auto eval =
+      quiescence_searcher.template Search</* start of quiscence search */ true>(
+          current_position, state_.alpha, state_.beta, 0);
 
   searcher_.debug_info_.quiescence_nodes +=
       quiescence_searcher.GetSearchedNodes();
@@ -155,8 +156,8 @@ SearchResult SimpleChessEngine::SearchImplementation<
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-Eval SimpleChessEngine::SearchImplementation<
-    is_principal_variation, ExitCondition>::GetEndGameScore() const {
+Eval SearchNode<is_principal_variation, ExitCondition>::GetEndGameScore()
+    const {
   if (position_info_.is_under_check) {
     return kMateValue +
            static_cast<Eval>(state_.max_depth - state_.remaining_depth);
@@ -167,21 +168,20 @@ Eval SimpleChessEngine::SearchImplementation<
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-void SimpleChessEngine::SearchImplementation<
-    is_principal_variation, ExitCondition>::SetBestMove(const Move &move) {
-  iteration_status_.best_move = move;
-
+void SearchNode<is_principal_variation, ExitCondition>::SetBestMove(Move move) {
   if (state_.remaining_depth == state_.max_depth) {
     searcher_.best_move_ = move;
   }
+  iteration_status_.best_move = std::move(move);
 }
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-void SimpleChessEngine::SearchImplementation<
-    is_principal_variation, ExitCondition>::SetTTEntry(const Bound bound) {
+void SearchNode<is_principal_variation, ExitCondition>::SetTTEntry(
+    const Bound bound) {
+  assert(iteration_status_.best_move);
   searcher_.best_moves_.SetEntry(
-      searcher_.current_position_, iteration_status_.best_move,
+      GetCurrentPosition(), *iteration_status_.best_move,
       iteration_status_.best_eval +
           IsMateScore(iteration_status_.best_eval) *
               (state_.max_depth - state_.remaining_depth),
@@ -191,9 +191,9 @@ void SimpleChessEngine::SearchImplementation<
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <bool is_pv_move>
-SearchResult SearchImplementation<is_principal_variation,
-                                  ExitCondition>::ProbeMove(const Move &move) {
-  auto &current_position = searcher_.current_position_;
+SearchResult SearchNode<is_principal_variation, ExitCondition>::ProbeMove(
+    const Move &move) {
+  auto &current_position = GetCurrentPosition();
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
 
   // make the move and search the tree
@@ -202,13 +202,14 @@ SearchResult SearchImplementation<is_principal_variation,
 
   assert((is_pv_move && is_principal_variation) == is_pv_move);
   const auto eval_optional =
-      Search < is_pv_move &&
+      StartSubsearch < is_pv_move &&
       is_principal_variation >
           ({max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
-  if (!eval_optional) return std::nullopt;
 
   // undo the move
   current_position.UndoMove(move, position_info_.irreversible_data);
+
+  if (!eval_optional) return std::nullopt;
 
   return eval_optional;
 }
@@ -216,9 +217,11 @@ SearchResult SearchImplementation<is_principal_variation,
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <bool is_pv_move>
-std::optional<bool> SimpleChessEngine::SearchImplementation<
-    is_principal_variation, ExitCondition>::CheckFirstMove(const Move &move) {
+std::optional<bool>
+SearchNode<is_principal_variation, ExitCondition>::CheckFirstMove(
+    const Move &move) {
   assert((is_pv_move && is_principal_variation) == is_pv_move);
+  assert(!iteration_status_.best_move);
 
   const auto eval_optional =
       ProbeMove < is_pv_move && is_principal_variation > (move);
@@ -232,8 +235,9 @@ std::optional<bool> SimpleChessEngine::SearchImplementation<
 
   if (iteration_status_.best_eval > alpha) {
     if (iteration_status_.best_eval >= beta) {
-      if (IsQuiet(iteration_status_.best_move)) {
-        UpdateQuietMove<true>(iteration_status_.best_move);
+      assert(iteration_status_.best_move);
+      if (IsQuiet(*iteration_status_.best_move)) {
+        UpdateQuietMove<true>(*iteration_status_.best_move);
       }
 
       return true;
@@ -248,9 +252,8 @@ std::optional<bool> SimpleChessEngine::SearchImplementation<
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-SearchResult SimpleChessEngine::SearchImplementation<
-    is_principal_variation, ExitCondition>::PVSearch() {
-  auto &current_position = searcher_.current_position_;
+SearchResult SearchNode<is_principal_variation, ExitCondition>::PVSearch() {
+  auto &current_position = GetCurrentPosition();
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
 
   const bool lmr_conditions_met =
@@ -286,32 +289,42 @@ SearchResult SimpleChessEngine::SearchImplementation<
       R = std::clamp(R, 0, static_cast<int>(remaining_depth - 1));
     }
 
-    auto temp_eval_optional =
-        Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1 - R),
-                       -alpha - 1, -alpha});  // Reduced ZWS
+    auto temp_eval_optional = StartSubsearch<false>(
+        {max_depth, static_cast<Depth>(remaining_depth - 1 - R), -alpha - 1,
+         -alpha});  // Reduced ZWS
 
-    if (!temp_eval_optional) return std::nullopt;
+    if (!temp_eval_optional) {
+      current_position.UndoMove(move, position_info_.irreversible_data);
+      return std::nullopt;
+    }
 
     auto temp_eval = -*temp_eval_optional;
     if (R > 0 &&
         temp_eval >
             alpha) { /* research at full depth, but still with zero window */
-      temp_eval_optional =
-          Search<false>({max_depth, static_cast<Depth>(remaining_depth - 1),
-                         -alpha - 1, -alpha});
+      temp_eval_optional = StartSubsearch<false>(
+          {max_depth, static_cast<Depth>(remaining_depth - 1), -alpha - 1,
+           -alpha});
 
-      if (!temp_eval_optional) return std::nullopt;
+      if (!temp_eval_optional) {
+        current_position.UndoMove(move, position_info_.irreversible_data);
+        return std::nullopt;
+      }
 
       temp_eval = -*temp_eval_optional;
     }
 
-    if (temp_eval > alpha &&
-        is_principal_variation) /* make a research (ZWS failed) */
+    assert(is_principal_variation || (beta - alpha == 1));
+    if (is_principal_variation &&
+        temp_eval > alpha) /* make a research (ZWS failed) */
     {
       searcher_.debug_info_.zws_researches++;
-      temp_eval_optional = Search<true>(
+      temp_eval_optional = StartSubsearch<true>(
           {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha});
-      if (!temp_eval_optional) return std::nullopt;
+      if (!temp_eval_optional) {
+        current_position.UndoMove(move, position_info_.irreversible_data);
+        return std::nullopt;
+      }
 
       temp_eval = -*temp_eval_optional;
     }
@@ -353,9 +366,8 @@ SearchResult SimpleChessEngine::SearchImplementation<
 }
 
 template <bool is_principal_variation, class ExitCondition>
-  requires StopSearchCondition<ExitCondition> bool
-SimpleChessEngine::SearchImplementation<is_principal_variation,
-                                        ExitCondition>::CanNullMove() const {
+  requires StopSearchCondition<ExitCondition>
+bool SearchNode<is_principal_variation, ExitCondition>::CanNullMove() const {
   if constexpr (!Settings::PruneParameters::NMPSettings::kEnabled) {
     return false;
   }
@@ -380,8 +392,8 @@ SimpleChessEngine::SearchImplementation<is_principal_variation,
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <bool is_first_move>
-void SimpleChessEngine::SearchImplementation<
-    is_principal_variation, ExitCondition>::UpdateQuietMove(const Move &move) {
+void SearchNode<is_principal_variation, ExitCondition>::UpdateQuietMove(
+    const Move &move) {
   // history malus
   if constexpr (!is_first_move) {
     for (auto it = move_picker_.begin_quiet(); it != move_picker_.current();
@@ -402,8 +414,15 @@ void SimpleChessEngine::SearchImplementation<
 }
 
 template <bool is_principal_variation, class ExitCondition>
-  requires StopSearchCondition<ExitCondition> bool
-SearchImplementation<is_principal_variation, ExitCondition>::CanRFP() const {
+  requires StopSearchCondition<ExitCondition>
+Position &
+SearchNode<is_principal_variation, ExitCondition>::GetCurrentPosition() {
+  return searcher_.current_position_;
+}
+
+template <bool is_principal_variation, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+bool SearchNode<is_principal_variation, ExitCondition>::CanRFP() const {
   if constexpr (!Settings::PruneParameters::RFPSettings::kEnabled) return false;
 
   if constexpr (is_principal_variation) return false;
@@ -418,8 +437,8 @@ SearchImplementation<is_principal_variation, ExitCondition>::CanRFP() const {
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-std::optional<SearchResult> SearchImplementation<
-    is_principal_variation, ExitCondition>::CheckTranspositionTable() {
+std::optional<SearchResult>
+SearchNode<is_principal_variation, ExitCondition>::CheckTranspositionTable() {
   if (auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
           searcher_.best_moves_.GetNode(searcher_.current_position_);
       hash == searcher_.current_position_
@@ -469,7 +488,6 @@ std::optional<SearchResult> SearchImplementation<
       SetTTEntry(Bound::kLower);
       return beta;
     }
-    iteration_status_.has_stored_move = true;
   }
 
   return std::nullopt;

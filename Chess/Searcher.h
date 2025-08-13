@@ -16,7 +16,7 @@
 namespace SimpleChessEngine {
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-struct SearchImplementation;
+struct SearchNode;
 
 /**
  * \brief A simple implementation of the alpha-beta search algorithm.
@@ -36,7 +36,7 @@ class Searcher {
  public:
   template <bool is_principal_variation, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
-  friend struct SearchImplementation;
+  friend struct SearchNode;
   constexpr static size_t kTTsize = 1 << 26;
   using SearcherTranspositionTable = TranspositionTable<kTTsize>;
 

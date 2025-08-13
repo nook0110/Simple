@@ -41,7 +41,7 @@ SearchResult SimpleChessEngine::Searcher::Search(
   debug_info_ = DebugInfo{};
   ++age_;
 
-  return SearchImplementation<is_principal_variation, ExitCondition>{
+  return SearchNode<is_principal_variation, ExitCondition>{
       *this,
       {max_depth, remaining_depth, alpha, beta},
       stop_search_condition}();

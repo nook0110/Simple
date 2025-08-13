@@ -11,8 +11,6 @@ struct PositionFactory {
   Position operator()(
       const std::string &fen =
           "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") const;
-
-  Position operator()(std::stringstream stream) const;
 };
 
 struct FenFactory {
@@ -127,10 +125,6 @@ inline Position PositionFactory::operator()(const std::string &fen) const {
 
   position.Init();
   return position;
-}
-
-inline Position PositionFactory::operator()(std::stringstream stream) const {
-  return Position{};
 }
 
 inline std::string SimpleChessEngine::FenFactory::operator()(
