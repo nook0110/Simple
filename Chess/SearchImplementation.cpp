@@ -72,8 +72,38 @@ SearchResult SearchNode<is_principal_variation, ExitCondition>::operator()() {
 
   searcher_.debug_info_.searched_nodes++;
 
-  if (!ProbeTranspositionTable()) {
-    // state_.remaining_depth--;
+  if (ProbeTranspositionTable()) {
+    searcher_.debug_info_.tt_hits++;
+    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+        *iteration_status_.tt_info;
+    entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
+
+    if (!is_principal_variation && entry_depth >= remaining_depth) {
+      if (static_cast<Bound>(entry_bound) & Bound::kUpper &&
+          entry_score <= alpha) {
+        return alpha;
+      }
+
+      if (static_cast<Bound>(entry_bound) & Bound::kLower &&
+          entry_score > alpha) {
+        if (entry_score >= beta) {
+          if (IsQuiet(hash_move)) {
+            UpdateQuietMove<true>(hash_move);
+          }
+
+          // TODO: update entry age
+
+          return beta;
+        }
+
+        iteration_status_.has_raised_alpha = true;
+        alpha = entry_score;
+      }
+
+      if (static_cast<Bound>(entry_bound) == Bound::kExact) {
+        return entry_score;
+      }
+    }
   }
 
   if (CanRFP()) {
@@ -104,6 +134,10 @@ SearchResult SearchNode<is_principal_variation, ExitCondition>::operator()() {
       searcher_.debug_info_.nmp_cuts++;
       return beta;
     }
+  }
+
+  if (!iteration_status_.tt_info && remaining_depth >= 2) {
+    --remaining_depth;
   }
 
   if (auto result = CheckTranspositionTable()) {
@@ -459,41 +493,6 @@ SearchNode<is_principal_variation, ExitCondition>::CheckTranspositionTable() {
     auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
     auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
         *iteration_status_.tt_info;
-
-    searcher_.debug_info_.tt_hits++;
-
-    if (remaining_depth == max_depth) {
-      searcher_.best_move_ = hash_move;
-    }
-
-    entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
-
-    if (!is_principal_variation && entry_depth >= remaining_depth) {
-      if (static_cast<Bound>(entry_bound) & Bound::kUpper &&
-          entry_score <= alpha) {
-        return alpha;
-      }
-
-      if (static_cast<Bound>(entry_bound) & Bound::kLower &&
-          entry_score > alpha) {
-        if (entry_score >= beta) {
-          if (IsQuiet(hash_move)) {
-            UpdateQuietMove<true>(hash_move);
-          }
-
-          // TODO: update entry age
-
-          return beta;
-        }
-
-        iteration_status_.has_raised_alpha = true;
-        alpha = entry_score;
-      }
-
-      if (static_cast<Bound>(entry_bound) == Bound::kExact) {
-        return entry_score;
-      }
-    }
 
     auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(hash_move);
     if (!has_cutoff_opt) {
