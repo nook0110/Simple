@@ -10,11 +10,12 @@
 #include "KillerTable.h"
 #include "Move.h"
 #include "MoveGenerator.h"
+#include "NodeType.h"
 #include "PositionFactory.h"
 #include "TranspositionTable.h"
 
 namespace SimpleChessEngine {
-template <bool is_principal_variation, class ExitCondition>
+template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 struct SearchNode;
 
@@ -34,7 +35,7 @@ struct SearchNode;
  */
 class Searcher {
  public:
-  template <bool is_principal_variation, class ExitCondition>
+  template <NodeType node_type, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
   friend struct SearchNode;
   constexpr static size_t kTTsize = 1 << 26;
@@ -79,7 +80,7 @@ class Searcher {
    *
    * \return Evaluation of subtree.
    */
-  template <bool is_principal_variation, class ExitCondition>
+  template <NodeType node_type, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
   [[nodiscard]] SearchResult Search(const ExitCondition &stop_search_condition,
                                     Depth max_depth, Depth remaining_depth,
@@ -114,3 +115,49 @@ class Searcher {
 ///////////////////////////////////////////////////////////////////////////////
 // Implementation
 ///////////////////////////////////////////////////////////////////////////////
+#include "SearchImplementation.h"
+
+namespace SimpleChessEngine {
+inline void Searcher::SetPosition(Position position) {
+  current_position_ = std::move(position);
+}
+
+inline const Position &Searcher::GetPosition() const { return current_position_; }
+
+inline const Move &Searcher::GetCurrentBestMove() const { return best_move_; }
+
+inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
+                                                     Position position) const {
+  MoveGenerator::Moves answer;
+  for (Depth i = 0; i < max_depth; ++i) {
+    const auto &hashed_node = best_moves_.GetNode(position);
+    if (hashed_node.true_hash != position.GetHash()) break;
+    position.DoMove(hashed_node.move);
+    answer.push_back(hashed_node.move);
+  }
+  return answer;
+}
+
+inline void Searcher::InitStartOfSearch() {
+  killers_.Clear();
+  for (size_t color = 0; color < kColors; ++color) {
+    for (BitIndex from = 0; from <= static_cast<BitIndex>(kBoardArea); ++from) {
+      history_[color][from].fill(0LL);
+    }
+  }
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+SearchResult SimpleChessEngine::Searcher::Search(
+    const ExitCondition &stop_search_condition, Depth max_depth,
+    Depth remaining_depth, Eval alpha, Eval beta) {
+  debug_info_ = DebugInfo{};
+  ++age_;
+
+  return SearchNode<node_type, ExitCondition>{
+      *this,
+      {max_depth, remaining_depth, alpha, beta},
+      stop_search_condition}();
+}
+}  // namespace SimpleChessEngine

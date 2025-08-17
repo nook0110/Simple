@@ -9,6 +9,7 @@
 #include "Evaluation.h"
 #include "ExitCondition.h"
 #include "Move.h"
+#include "NodeType.h"
 #include "Searcher.h"
 #include "Settings.h"
 #include "Utility.h"
@@ -274,8 +275,9 @@ inline std::optional<Eval> ChessEngine::MakeIteration(
     const StopSearchCondition auto& condition) {
   o_stream_ << "info window " << window.GetLowerBound() << " "
             << window.GetUpperBound() << "\n";
-  return searcher_.Search<true>(condition, current_depth, current_depth,
-                                window.GetLowerBound(), window.GetUpperBound());
+  return searcher_.Search<NodeType::kPV>(condition, current_depth,
+                                         current_depth, window.GetLowerBound(),
+                                         window.GetUpperBound());
 }
 
 template <class Info>
