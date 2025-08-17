@@ -50,6 +50,11 @@ struct SearchNode {
       : node_type == NodeType::kCut ? NodeType::kAll
       : node_type == NodeType::kAll ? NodeType::kCut
                                     : NodeType::kInvalid;
+  constexpr static NodeType KZWSNodeType =
+      node_type == NodeType::kPV    ? NodeType::kCut
+      : node_type == NodeType::kCut ? NodeType::kAll
+      : node_type == NodeType::kAll ? NodeType::kCut
+                                    : NodeType::kInvalid;
 
   SearchNode(Searcher &searcher, SearchState state,
              const ExitCondition &exit_condition);
@@ -130,8 +135,6 @@ SearchResult SearchNode<node_type, ExitCondition>::StartSubsearch(
   assert(expected_node_type == NodeType::kPV ||
          (state.beta - state.alpha == 1));
   assert(state.alpha < state.beta);
-
-  DLOG(INFO) << "PV: " << std::boolalpha << expected_node_type;
 
   return SearchNode<expected_node_type, ExitCondition>{searcher_, state,
                                                        exit_condition_}();
@@ -325,7 +328,6 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
 
   // make the move and search the tree
-  DLOG(INFO) << std::string(max_depth - remaining_depth, '\t') << move;
   current_position.DoMove(move);
 
   static_assert(expected_node_type != NodeType::kPV ||
@@ -394,8 +396,6 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
                                      searcher_, max_depth - remaining_depth)) {
     const auto &move = *it;
 
-    DLOG(INFO) << std::string(max_depth - remaining_depth, '\t') << move;
-
     current_position.DoMove(move);  // make the move and search the tree
 
     // Late Move Reduction
@@ -416,7 +416,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
       R = std::clamp(R, 0, static_cast<int>(remaining_depth - 1));
     }
 
-    auto temp_eval_optional = StartSubsearch<NodeType::kCut>(
+    auto temp_eval_optional = StartSubsearch<KZWSNodeType>(
         {max_depth, static_cast<Depth>(remaining_depth - 1 - R), -alpha - 1,
          -alpha});  // Reduced ZWS
 
@@ -429,7 +429,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     if (R > 0 &&
         temp_eval >
             alpha) { /* research at full depth, but still with zero window */
-      temp_eval_optional = StartSubsearch<SwapNodeType<node_type>()>(
+      temp_eval_optional = StartSubsearch<KZWSNodeType>(
           {max_depth, static_cast<Depth>(remaining_depth - 1), -alpha - 1,
            -alpha});
 

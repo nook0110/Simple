@@ -1,6 +1,4 @@
 #pragma once
-#include <glog/logging.h>
-
 #include <array>
 #include <cstddef>
 

@@ -6,8 +6,6 @@ option(BUILD_TESTS "Build tests" OFF)
 
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-find_package(glog 0.7.1 REQUIRED)
-add_definitions(-DGLOG_USE_GLOG_EXPORT)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_compile_options(-Wall -Wextra -Wpedantic)
@@ -29,7 +27,7 @@ add_executable(${PROJECT_NAME}
     ${CHESS_SOURCES} Chess/main.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE chess_lib glog::glog)
+target_link_libraries(${PROJECT_NAME} PRIVATE chess_lib)
 
 # Тесты включаются только если BUILD_TESTS=ON
 if(BUILD_TESTS)
@@ -47,7 +45,6 @@ if(BUILD_TESTS)
         PRIVATE 
         gtest_main 
         chess_lib  # Используем основную библиотеку
-        glog::glog
     )
 
     # Настройки покрытия только для тестов
@@ -74,10 +71,6 @@ if(BUILD_TESTS)
     file(GLOB TEST_DATA_FILES ${CMAKE_SOURCE_DIR}/Tests/*.test)
     file(COPY ${TEST_DATA_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 endif()
-
-# Общие настройки логирования
-target_compile_definitions(chess_lib PUBLIC GOOGLE_STRIP_LOG=10)
-target_compile_definitions(${PROJECT_NAME} PUBLIC GOOGLE_STRIP_LOG=10)
 
 # Фиктивная цель для триггера пересборки (оставлено как в оригинале)
 add_custom_target(file_toucher 

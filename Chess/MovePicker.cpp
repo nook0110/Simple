@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <utility>
 
 #include "Move.h"
 #include "Position.h"
@@ -140,7 +141,8 @@ void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
     const auto [from, to, capture] = GetMoveData(move);
     data_[i] = {from, to, capture,
                 capture != Piece::kNone
-                    ? searcher.GetPosition().StaticExchangeEvaluation(move, kGoodCaptureThreshold)
+                    ? searcher.GetPosition().StaticExchangeEvaluation(
+                          move, kGoodCaptureThreshold)
                     : false};
     history_[i] = searcher.GetHistory()[static_cast<size_t>(
         searcher.GetPosition().GetSideToMove())][from][to];

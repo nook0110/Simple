@@ -29,7 +29,6 @@ std::string program_info() {
 }
 
 int main(int argc, char **argv) {
-  google::InitGoogleLogging(argv[0]);
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kBishop>();
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kRook>();
   SimpleChessEngine::InitPawnAttacks();
