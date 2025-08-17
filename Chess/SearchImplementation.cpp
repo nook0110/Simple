@@ -72,6 +72,40 @@ SearchResult SearchNode<is_principal_variation, ExitCondition>::operator()() {
 
   searcher_.debug_info_.searched_nodes++;
 
+  if (ProbeTranspositionTable()) {
+    searcher_.debug_info_.tt_hits++;
+    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+        *iteration_status_.tt_info;
+    entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
+
+    if (!is_principal_variation && entry_depth >= remaining_depth) {
+      if (static_cast<Bound>(entry_bound) & Bound::kUpper &&
+          entry_score <= alpha) {
+        return alpha;
+      }
+
+      if (static_cast<Bound>(entry_bound) & Bound::kLower &&
+          entry_score > alpha) {
+        if (entry_score >= beta) {
+          if (IsQuiet(hash_move)) {
+            UpdateQuietMove<true>(hash_move);
+          }
+
+          // TODO: update entry age
+
+          return beta;
+        }
+
+        iteration_status_.has_raised_alpha = true;
+        alpha = entry_score;
+      }
+
+      if (static_cast<Bound>(entry_bound) == Bound::kExact) {
+        return entry_score;
+      }
+    }
+  }
+
   if (CanRFP()) {
     searcher_.debug_info_.rfp_cuts++;
     return position_info_.static_eval;
@@ -100,6 +134,10 @@ SearchResult SearchNode<is_principal_variation, ExitCondition>::operator()() {
       searcher_.debug_info_.nmp_cuts++;
       return beta;
     }
+  }
+
+  if (!iteration_status_.tt_info && remaining_depth >= 2) {
+    --remaining_depth;
   }
 
   if (auto result = CheckTranspositionTable()) {
@@ -437,48 +475,24 @@ bool SearchNode<is_principal_variation, ExitCondition>::CanRFP() const {
 
 template <bool is_principal_variation, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
+bool SearchNode<is_principal_variation,
+                ExitCondition>::ProbeTranspositionTable() {
+  auto node = searcher_.best_moves_.GetNode(searcher_.current_position_);
+  if (node.true_hash == GetCurrentPosition().GetHash()) {
+    iteration_status_.tt_info = std::move(node);
+    return true;
+  }
+  return false;
+}
+
+template <bool is_principal_variation, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
 std::optional<SearchResult>
 SearchNode<is_principal_variation, ExitCondition>::CheckTranspositionTable() {
-  if (auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
-          searcher_.best_moves_.GetNode(searcher_.current_position_);
-      hash == searcher_.current_position_
-                  .GetHash()) {  // check if current position was previously
-                                 // searched at higher depth
-    auto &[max_depth, remaining_depth, alpha, beta, __] = state_;
-    searcher_.debug_info_.tt_hits++;
-
-    if (remaining_depth == max_depth) {
-      searcher_.best_move_ = hash_move;
-    }
-
-    entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
-
-    if (!is_principal_variation && entry_depth >= remaining_depth) {
-      if (static_cast<Bound>(entry_bound) & Bound::kUpper &&
-          entry_score <= alpha) {
-        return alpha;
-      }
-
-      if (static_cast<Bound>(entry_bound) & Bound::kLower &&
-          entry_score > alpha) {
-        if (entry_score >= beta) {
-          if (IsQuiet(hash_move)) {
-            UpdateQuietMove<true>(hash_move);
-          }
-
-          // TODO: update entry age
-
-          return beta;
-        }
-
-        iteration_status_.has_raised_alpha = true;
-        alpha = entry_score;
-      }
-
-      if (static_cast<Bound>(entry_bound) == Bound::kExact) {
-        return entry_score;
-      }
-    }
+  if (iteration_status_.tt_info) {
+    auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
+    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+        *iteration_status_.tt_info;
 
     auto has_cutoff_opt = CheckFirstMove<is_principal_variation>(hash_move);
     if (!has_cutoff_opt) {

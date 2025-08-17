@@ -4,7 +4,7 @@ project(SimpleChessEngine)
 # Добавляем опцию для включения/выключения тестов
 option(BUILD_TESTS "Build tests" OFF)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(glog 0.7.1 REQUIRED)
 add_definitions(-DGLOG_USE_GLOG_EXPORT)

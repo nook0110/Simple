@@ -7,6 +7,7 @@
 #include "Move.h"
 #include "MovePicker.h"
 #include "Position.h"
+#include "TranspositionTable.h"
 #include "Utility.h"
 
 namespace SimpleChessEngine {
@@ -15,7 +16,7 @@ enum class Bound : std::uint8_t;
 
 struct SearchState {
   const Depth max_depth;
-  const Depth remaining_depth;
+  Depth remaining_depth;
   Eval alpha = {};
   const Eval beta;
 
@@ -25,6 +26,7 @@ struct SearchState {
 struct IterationStatus {
   bool has_raised_alpha = false;
   std::optional<Move> best_move;
+  std::optional<Node> tt_info;
   Eval best_eval = {};
 };
 
@@ -80,6 +82,7 @@ struct SearchNode {
 
   [[nodiscard]] bool CanRFP() const;
 
+  bool ProbeTranspositionTable();
   std::optional<SearchResult> CheckTranspositionTable();
 
   SearchResult PVSearch();
