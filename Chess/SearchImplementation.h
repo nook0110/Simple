@@ -32,7 +32,7 @@ struct IterationStatus {
 };
 
 struct PositionInfo {
-  PositionInfo(const Position &position);
+  explicit PositionInfo(const Position &position);
   const Eval static_eval;
   const bool is_under_check = false;
   const Position::IrreversibleData irreversible_data;
@@ -50,7 +50,7 @@ struct SearchNode {
       : node_type == NodeType::kCut ? NodeType::kAll
       : node_type == NodeType::kAll ? NodeType::kCut
                                     : NodeType::kInvalid;
-  constexpr static NodeType KZWSNodeType =
+  constexpr static NodeType kZWSNodeType =
       node_type == NodeType::kPV    ? NodeType::kCut
       : node_type == NodeType::kCut ? NodeType::kAll
       : node_type == NodeType::kAll ? NodeType::kCut
@@ -279,8 +279,9 @@ SearchResult SearchNode<node_type, ExitCondition>::QuiescenceSearch() {
   auto quiescence_searcher = Quiescence{exit_condition_};
 
   const auto eval =
-      quiescence_searcher.template Search</* start of quiscence search */ true>(
-          current_position, state_.alpha, state_.beta, 0);
+      quiescence_searcher
+          .template Search</* start of the quiescence search */ true>(
+              current_position, state_.alpha, state_.beta, 0);
 
   searcher_.debug_info_.quiescence_nodes +=
       quiescence_searcher.GetSearchedNodes();
@@ -416,7 +417,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
       R = std::clamp(R, 0, static_cast<int>(remaining_depth - 1));
     }
 
-    auto temp_eval_optional = StartSubsearch<KZWSNodeType>(
+    auto temp_eval_optional = StartSubsearch<kZWSNodeType>(
         {max_depth, static_cast<Depth>(remaining_depth - 1 - R), -alpha - 1,
          -alpha});  // Reduced ZWS
 
@@ -429,7 +430,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     if (R > 0 &&
         temp_eval >
             alpha) { /* research at full depth, but still with zero window */
-      temp_eval_optional = StartSubsearch<KZWSNodeType>(
+      temp_eval_optional = StartSubsearch<kZWSNodeType>(
           {max_depth, static_cast<Depth>(remaining_depth - 1), -alpha - 1,
            -alpha});
 
@@ -485,7 +486,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     }
   }
 
-  // no beta-cutoff occured, so it is either an all node or a pv node
+  // no beta-cutoff occurred, so it is either an all node or a pv node
   SetTTEntry(iteration_status_.has_raised_alpha ? Bound::kExact
                                                 : Bound::kUpper);
 
@@ -563,11 +564,12 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool SearchNode<node_type, ExitCondition>::ProbeTranspositionTable() {
-  auto node = searcher_.best_moves_.GetNode(searcher_.current_position_);
-  if (node.true_hash == GetCurrentPosition().GetHash()) {
+  if (auto node = searcher_.best_moves_.GetNode(searcher_.current_position_);
+      node.true_hash == GetCurrentPosition().GetHash()) {
     iteration_status_.tt_info = std::move(node);
     return true;
   }
+
   return false;
 }
 
