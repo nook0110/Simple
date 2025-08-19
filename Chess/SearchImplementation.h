@@ -136,6 +136,11 @@ SearchResult SearchNode<node_type, ExitCondition>::StartSubsearch(
          (state.beta - state.alpha == 1));
   assert(state.alpha < state.beta);
 
+  assert(expected_node_type != NodeType::kPV || node_type == NodeType::kPV);
+  assert(expected_node_type != NodeType::kCut ||
+         (node_type == NodeType::kPV || node_type == NodeType::kAll));
+  assert(expected_node_type != NodeType::kAll || node_type == NodeType::kCut);
+
   return SearchNode<expected_node_type, ExitCondition>{searcher_, state,
                                                        exit_condition_}();
 }
@@ -215,7 +220,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
     current_position.DoMove(NullMove{});
 
-    const auto eval_optional = StartSubsearch<NodeType::kCut>(
+    const auto eval_optional = StartSubsearch<NodeType::kAll>(
         {max_depth,
          static_cast<Depth>(
              remaining_depth -
