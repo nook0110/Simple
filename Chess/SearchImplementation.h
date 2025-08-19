@@ -233,8 +233,16 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     }
   }
 
-  if (!iteration_status_.tt_info && remaining_depth >= 2) {
-    --remaining_depth;
+  // Internal Iterative Reduction
+  if constexpr (node_type == NodeType::kPV || node_type == NodeType::kCut) {
+    if (!iteration_status_.tt_info &&
+        remaining_depth >=
+            Settings::PruneParameters::IIRSettings::kBaseLimit +
+                (node_type == NodeType::kCut
+                     ? Settings::PruneParameters::IIRSettings::kCutNodePenalty
+                     : 0)) {
+      remaining_depth -= Settings::PruneParameters::IIRSettings::kReduction;
+    }
   }
 
   if (auto result = CheckTranspositionTable()) {
@@ -497,6 +505,10 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool SearchNode<node_type, ExitCondition>::CanNullMove() const {
   if constexpr (!Settings::PruneParameters::NMPSettings::kEnabled) {
+    return false;
+  }
+
+  if constexpr (node_type != NodeType::kCut) {
     return false;
   }
 

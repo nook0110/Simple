@@ -16,6 +16,11 @@ struct Settings {
       static constexpr bool kEnabled = true;
       static constexpr size_t kNullMoveReduction = 3;
     };
+    struct IIRSettings {
+      static constexpr Depth kBaseLimit = 2;
+      static constexpr Depth kCutNodePenalty = 2;
+      static constexpr Depth kReduction = 1;
+    };
     struct LMRSettings {
       static constexpr bool kEnabled = true;
       static constexpr size_t kDepthLimit = 4;
@@ -24,6 +29,7 @@ struct Settings {
     };
     static constexpr RFPSettings kRFPSettings = {};
     static constexpr NMPSettings kNMPSettings = {};
+    static constexpr IIRSettings kIIRSettings = {};
     static constexpr LMRSettings kLMRSettings = {};
   };
   struct SearchParameters {
