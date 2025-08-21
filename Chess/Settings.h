@@ -18,7 +18,7 @@ struct Settings {
     };
     struct IIRSettings {
       static constexpr Depth kBaseLimit = 2;
-      static constexpr Depth kCutNodePenalty = 2;
+      static constexpr Depth kCutNodePenalty = 0;
       static constexpr Depth kReduction = 1;
     };
     struct LMRSettings {
