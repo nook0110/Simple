@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <bit>
+#include <vector>
 
 #include "Hasher.h"
 #include "Move.h"
@@ -28,9 +29,8 @@ struct Node {
 #pragma pack(pop)
 
 template <size_t TableSize>
+  requires(std::has_single_bit(TableSize))
 class TranspositionTable {
-  static_assert(std::has_single_bit(TableSize));
-
  public:
   [[nodiscard]] bool Contains(const Position& position) const {
     return position.GetHash() == GetNode(position).true_hash;
@@ -59,6 +59,6 @@ class TranspositionTable {
     return table_[position.GetHash() % TableSize];
   }
 
-  std::array<Node, TableSize> table_;  //!< The table.
+  std::vector<Node> table_ = std::vector<Node>(TableSize);  //!< The table.
 };
 }  // namespace SimpleChessEngine
