@@ -1,6 +1,8 @@
 #pragma once
+#include <algorithm>
 #include <array>
 #include <cstddef>
+#include <ranges>
 
 #include "Concepts.h"
 #include "DebugInfo.h"
@@ -36,7 +38,7 @@ class Searcher {
   template <NodeType node_type, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
   friend struct SearchNode;
-  constexpr static size_t kTTsize = 1 << 26;
+  constexpr static size_t kTTsize = 1 << 24;
   using SearcherTranspositionTable = TranspositionTable<kTTsize>;
 
   /**
@@ -120,18 +122,20 @@ inline void Searcher::SetPosition(Position position) {
   current_position_ = std::move(position);
 }
 
-inline const Position &Searcher::GetPosition() const { return current_position_; }
+inline const Position &Searcher::GetPosition() const {
+  return current_position_;
+}
 
 inline const Move &Searcher::GetCurrentBestMove() const { return best_move_; }
 
-inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
-                                                     Position position) const {
+inline MoveGenerator::Moves Searcher::GetPrincipalVariation(
+    Depth max_depth, Position position) const {
   MoveGenerator::Moves answer;
   for (Depth i = 0; i < max_depth; ++i) {
     const auto &hashed_node = best_moves_.GetNode(position);
-    if (hashed_node.true_hash != position.GetHash()) break;
-    position.DoMove(hashed_node.move);
-    answer.push_back(hashed_node.move);
+    if (!hashed_node) break;
+    position.DoMove(hashed_node->move);
+    answer.push_back(hashed_node->move);
   }
   return answer;
 }
