@@ -1,14 +1,21 @@
 #pragma once
+#include <cassert>
 #include <cstdint>
 #include <tuple>
 #include <variant>
 
 #include "BitBoard.h"
 #include "Piece.h"
+#include "Utility.h"
 namespace SimpleChessEngine {
 struct NullMove {};
 
 struct DefaultMove {
+  DefaultMove(BitIndex from = {}, BitIndex to = {}, Piece captured_piece = {})
+      : from(from), to(to), captured_piece(captured_piece) {
+    assert(IsOk(from));
+    assert(IsOk(to));
+  }
   bool operator==(const DefaultMove&) const = default;
 
   BitIndex from{};
@@ -17,6 +24,10 @@ struct DefaultMove {
 };
 
 struct PawnPush {
+  PawnPush(BitIndex from = {}, BitIndex to = {}) : from(from), to(to) {
+    assert(IsOk(from));
+    assert(IsOk(to));
+  }
   bool operator==(const PawnPush&) const = default;
 
   BitIndex from{};
@@ -24,6 +35,10 @@ struct PawnPush {
 };
 
 struct DoublePush {
+  DoublePush(BitIndex from = {}, BitIndex to = {}) : from(from), to(to) {
+    assert(IsOk(from));
+    assert(IsOk(to));
+  }
   bool operator==(const DoublePush&) const = default;
 
   BitIndex from{};
@@ -31,6 +46,10 @@ struct DoublePush {
 };
 
 struct EnCroissant {
+  EnCroissant(BitIndex from = {}, BitIndex to = {}) : from(from), to(to) {
+    assert(IsOk(from));
+    assert(IsOk(to));
+  }
   BitIndex from{};
   BitIndex to{};
 
@@ -48,6 +67,11 @@ struct Promotion : DefaultMove {
 struct Castling {
   enum class CastlingSide : std::uint8_t { k00, k000 };
 
+  Castling(CastlingSide side, BitIndex king_from = {}, BitIndex rook_from = {})
+      : side(side), king_from(king_from), rook_from(rook_from) {
+    assert(IsOk(king_from));
+    assert(IsOk(rook_from));
+  }
   CastlingSide side;
 
   BitIndex king_from{};

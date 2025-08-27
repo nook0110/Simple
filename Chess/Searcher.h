@@ -120,18 +120,21 @@ inline void Searcher::SetPosition(Position position) {
   current_position_ = std::move(position);
 }
 
-inline const Position &Searcher::GetPosition() const { return current_position_; }
+inline const Position &Searcher::GetPosition() const {
+  return current_position_;
+}
 
 inline const Move &Searcher::GetCurrentBestMove() const { return best_move_; }
 
-inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
-                                                     Position position) const {
+inline MoveGenerator::Moves Searcher::GetPrincipalVariation(
+    Depth max_depth, Position position) const {
   MoveGenerator::Moves answer;
   for (Depth i = 0; i < max_depth; ++i) {
     const auto &hashed_node = best_moves_.GetNode(position);
     if (hashed_node.true_hash != position.GetHash()) break;
-    position.DoMove(hashed_node.move);
-    answer.push_back(hashed_node.move);
+    auto move = ConvertMove(hashed_node.move, position);
+    position.DoMove(move);
+    answer.push_back(move);
   }
   return answer;
 }

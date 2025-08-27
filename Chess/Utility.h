@@ -67,7 +67,8 @@ using Coordinates = std::pair<File, Rank>;
   return std::make_pair(square % kLineSize, square / kLineSize);
 }
 
-[[nodiscard]] constexpr BitIndex GetSquareIndex(const File file, const Rank rank) {
+[[nodiscard]] constexpr BitIndex GetSquareIndex(const File file,
+                                                const Rank rank) {
   assert(file >= 0 && file < kLineSize);
   assert(rank >= 0 && rank < kLineSize);
   return rank << 3 | file;
@@ -152,6 +153,16 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
 
 [[nodiscard]] inline Bitboard SingleSquare(const BitIndex square_index) {
   return Bitboard{1ull << square_index};
+}
+
+[[nodiscard]] inline bool IsDoublePush(const BitIndex sq_first,
+                                       const BitIndex sq_second) {
+  return (sq_second - sq_first) % 16 == 0;
+}
+
+[[nodiscard]] inline bool IsPawnPush(const BitIndex sq_first,
+                                     const BitIndex sq_second) {
+  return (sq_second - sq_first) % 8 == 0;
 }
 
 [[nodiscard]] inline bool IsAdjacent(const BitIndex sq_first,
