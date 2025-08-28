@@ -36,9 +36,6 @@ class Searcher {
   template <NodeType node_type, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
   friend struct SearchNode;
-  constexpr static size_t kTTsize = 1 << 26;
-  using SearcherTranspositionTable = TranspositionTable<kTTsize>;
-
   /**
    * \brief Constructor.
    *
@@ -97,8 +94,8 @@ class Searcher {
   Move best_move_{};
   Position current_position_;     //!< Current position.
   MoveGenerator move_generator_;  //!< Move generator.
-  SearcherTranspositionTable
-      best_moves_;  //!< Transposition-table to store the best moves.
+  TranspositionTable best_moves_{
+      1 << 26};  //!< Table to store the best moves.
   std::array<
       std::array<std::array<std::int64_t, kBoardArea + 1>, kBoardArea + 1>,
       kColors>
@@ -130,8 +127,9 @@ inline MoveGenerator::Moves Searcher::GetPrincipalVariation(
     Depth max_depth, Position position) const {
   MoveGenerator::Moves answer;
   for (Depth i = 0; i < max_depth; ++i) {
-    const auto &hashed_node = best_moves_.GetNode(position);
-    if (hashed_node.true_hash != position.GetHash()) break;
+    const auto &hashed_node_opt = best_moves_.GetNode(position);
+    if (!hashed_node_opt) break;
+    const auto &hashed_node = *hashed_node_opt;
     auto move = ConvertMove(hashed_node.move, position);
     position.DoMove(move);
     answer.push_back(move);

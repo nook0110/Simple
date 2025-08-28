@@ -582,9 +582,9 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool SearchNode<node_type, ExitCondition>::ProbeTranspositionTable() {
-  if (auto node = searcher_.best_moves_.GetNode(searcher_.current_position_);
-      node.true_hash == GetCurrentPosition().GetHash()) {
-    iteration_status_.tt_info = std::move(node);
+  if (auto node_optional =
+          searcher_.best_moves_.GetNode(searcher_.current_position_)) {
+    iteration_status_.tt_info = std::move(*node_optional);
     return true;
   }
 

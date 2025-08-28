@@ -1,7 +1,8 @@
 #pragma once
-#include <array>
 #include <bit>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -10,6 +11,7 @@
 #include "Move.h"
 #include "Piece.h"
 #include "Position.h"
+#include "Types.h"
 #include "Utility.h"
 namespace SimpleChessEngine {
 enum class Bound : std::uint8_t {
@@ -20,6 +22,30 @@ enum class Bound : std::uint8_t {
 
 inline std::uint8_t operator&(const Bound lhs, const Bound rhs) {
   return static_cast<std::uint8_t>(lhs) & static_cast<std::uint8_t>(rhs);
+}
+
+inline std::uint64_t MulHi64(std::uint64_t a, std::uint64_t b) {
+  if constexpr (kHasUInt128Support) {
+    return static_cast<std::uint64_t>(static_cast<uint128_t>(a) * b >> 64);
+  } else {
+    std::uint64_t low_a = a & 0xFFFFFFFF;
+    std::uint64_t high_a = a >> 32;
+    std::uint64_t low_b = b & 0xFFFFFFFF;
+    std::uint64_t high_b = b >> 32;
+
+    std::uint64_t low_low_product = low_a * low_b;
+    std::uint64_t low_high_product = low_a * high_b;
+    std::uint64_t high_low_product = high_a * low_b;
+    std::uint64_t high_high_product = high_a * high_b;
+
+    std::uint64_t middle_carry = (low_low_product >> 32) +
+                                 (low_high_product & 0xFFFFFFFF) +
+                                 (high_low_product & 0xFFFFFFFF);
+    middle_carry >>= 32;
+
+    return high_high_product + (low_high_product >> 32) +
+           (high_low_product >> 32) + middle_carry;
+  }
 }
 
 enum class PromotionPiece : uint8_t {
@@ -51,13 +77,15 @@ struct TTMove {
   PromotionPiece promotion : 2;
 };
 
+using SubHash = std::uint32_t;
+
 struct Node {
-  Hash true_hash{};
+  SubHash sub_hash{};
   TTMove move{};
   Eval score{};
   Depth depth : 6 {};
   Bound bound : 2 {};
-  Age age{};
+  Age age : 8 {};
 };
 #pragma pack(pop)
 
@@ -146,33 +174,47 @@ inline TTMove ConvertMove(const Move& move) {
       move);
 }
 
-template <size_t TableSize>
-  requires(std::has_single_bit(TableSize))
+class HashTable {
+ public:
+  explicit HashTable(Hash size) : table_(size) {}
+
+  const Node& operator[](Hash hash) const { return table_[GetIndex(hash)]; }
+  Node& operator[](Hash hash) { return table_[GetIndex(hash)]; }
+
+ private:
+  size_t GetIndex(Hash hash) const { return MulHi64(hash, table_.size()); }
+
+  std::vector<Node> table_;
+};
+
 class TranspositionTable {
  public:
-  [[nodiscard]] bool Contains(const Position& position) const {
-    return position.GetHash() == GetNode(position).true_hash;
-  }
+  TranspositionTable(size_t size) : table_(size) {};
 
   void SetEntry(const Position& position, const Move& move, const Eval score,
                 const Depth depth, const Bound bound, const Age age) {
-    Node inserting_node = {
-        position.GetHash(), ConvertMove(move), score, depth, bound, age};
-    auto& entry_node = GetNode(position);
+    Node inserting_node = {static_cast<SubHash>(position.GetHash()),
+                           ConvertMove(move),
+                           score,
+                           depth,
+                           bound,
+                           age};
+    auto& entry_node = table_[position.GetHash()];
     if (bound == Bound::kExact ||
         !(entry_node.bound == Bound::kExact && entry_node.age == age)) {
       entry_node = inserting_node;
     }
   }
 
-  Node& GetNode(const Position& position) {
-    return table_[position.GetHash() % TableSize];
+  std::optional<Node> GetNode(const Position& position) const {
+    auto& node = table_[position.GetHash()];
+    if (node.sub_hash == static_cast<SubHash>(position.GetHash())) {
+      return node;
+    }
+    return std::nullopt;
   }
 
-  const Node& GetNode(const Position& position) const {
-    return table_[position.GetHash() % TableSize];
-  }
-
-  std::vector<Node> table_ = std::vector<Node>(TableSize);  //!< The table.
+ private:
+  HashTable table_;  //!< The table.
 };
 }  // namespace SimpleChessEngine
