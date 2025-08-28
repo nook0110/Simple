@@ -176,9 +176,8 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   if (ProbeTranspositionTable()) {
     searcher_.debug_info_.tt_hits++;
-    auto [hash, tt_hash_move, entry_score, entry_depth, entry_bound, _] =
+    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
         *iteration_status_.tt_info;
-    auto hash_move = ConvertMove(tt_hash_move, GetCurrentPosition());
     entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
 
     if (!kIsPrincipalVariation && entry_depth >= remaining_depth) {
@@ -597,9 +596,8 @@ std::optional<SearchResult>
 SearchNode<node_type, ExitCondition>::CheckTranspositionTable() {
   if (iteration_status_.tt_info) {
     auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
-    auto [hash, tt_hash_move, entry_score, entry_depth, entry_bound, _] =
+    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
         *iteration_status_.tt_info;
-    auto hash_move = ConvertMove(tt_hash_move, GetCurrentPosition());
     auto has_cutoff_opt =
         CheckFirstMove<kFirstChildNodeExpectedType>(hash_move);
     if (!has_cutoff_opt) {

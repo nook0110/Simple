@@ -92,10 +92,9 @@ class Searcher {
  private:
   Age age_{};
   Move best_move_{};
-  Position current_position_;     //!< Current position.
-  MoveGenerator move_generator_;  //!< Move generator.
-  TranspositionTable best_moves_{
-      1 << 26};  //!< Table to store the best moves.
+  Position current_position_;                //!< Current position.
+  MoveGenerator move_generator_;             //!< Move generator.
+  TranspositionTable best_moves_{93952409};  //!< Table to store the best moves.
   std::array<
       std::array<std::array<std::int64_t, kBoardArea + 1>, kBoardArea + 1>,
       kColors>
@@ -130,7 +129,7 @@ inline MoveGenerator::Moves Searcher::GetPrincipalVariation(
     const auto &hashed_node_opt = best_moves_.GetNode(position);
     if (!hashed_node_opt) break;
     const auto &hashed_node = *hashed_node_opt;
-    auto move = ConvertMove(hashed_node.move, position);
+    const auto &move = hashed_node.move;
     position.DoMove(move);
     answer.push_back(move);
   }
