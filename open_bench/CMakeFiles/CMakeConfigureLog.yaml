@@ -1,0 +1,1792 @@
+
+---
+events:
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineSystem.cmake:12 (find_program)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_UNAME"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "uname"
+    candidate_directories:
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    searched_directories:
+      - "/home/blokhtin/.local/bin/uname"
+      - "/home/blokhtin/bin/uname"
+      - "/usr/local/sbin/uname"
+      - "/usr/local/bin/uname"
+      - "/usr/sbin/uname"
+    found: "/usr/bin/uname"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineSystem.cmake:212 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The system is: Linux - 6.8.0-87-generic - x86_64
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeUnixFindMake.cmake:5 (find_program)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_MAKE_PROGRAM"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gmake"
+      - "make"
+      - "smake"
+    candidate_directories:
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    searched_directories:
+      - "/home/blokhtin/.local/bin/gmake"
+      - "/home/blokhtin/bin/gmake"
+      - "/usr/local/sbin/gmake"
+      - "/usr/local/bin/gmake"
+      - "/usr/sbin/gmake"
+    found: "/usr/bin/gmake"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompiler.cmake:73 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:64 (_cmake_find_compiler)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER"
+    description: "C compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "cc"
+      - "gcc"
+      - "cl"
+      - "bcc"
+      - "xlc"
+      - "icx"
+      - "clang"
+    candidate_directories:
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    searched_directories:
+      - "/home/blokhtin/.local/bin/cc"
+      - "/home/blokhtin/bin/cc"
+      - "/usr/local/sbin/cc"
+      - "/usr/local/bin/cc"
+      - "/usr/sbin/cc"
+    found: "/usr/bin/cc"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:462 (find_file)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:500 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCCompilerId.c.in"
+    candidate_directories:
+      - "/bin/cmake/share/cmake-4.1/Modules/"
+    found: "/bin/cmake/share/cmake-4.1/Modules/CMakeCCompilerId.c.in"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /usr/bin/cc 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+      
+      The C compiler identification is GNU, found in:
+        /home/blokhtin/github/Simple/open_bench/CMakeFiles/4.1.2/CompilerIdC/a.out
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_AR"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ar"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    found: "/usr/bin/ar"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_RANLIB"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ranlib"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    found: "/usr/bin/ranlib"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_STRIP"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "strip"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    found: "/usr/bin/strip"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_LINKER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ld"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    found: "/usr/bin/ld"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_NM"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "nm"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    found: "/usr/bin/nm"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_OBJDUMP"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "objdump"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    found: "/usr/bin/objdump"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_OBJCOPY"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "objcopy"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    found: "/usr/bin/objcopy"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_READELF"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "readelf"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    found: "/usr/bin/readelf"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_DLLTOOL"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "dlltool"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    searched_directories:
+      - "/usr/bin/dlltool"
+      - "/home/blokhtin/.local/bin/dlltool"
+      - "/home/blokhtin/bin/dlltool"
+      - "/usr/local/sbin/dlltool"
+      - "/usr/local/bin/dlltool"
+      - "/usr/sbin/dlltool"
+      - "/sbin/dlltool"
+      - "/bin/dlltool"
+      - "/usr/games/dlltool"
+      - "/usr/local/games/dlltool"
+      - "/snap/bin/dlltool"
+      - "/bin/cmake/bin/dlltool"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_ADDR2LINE"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "addr2line"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    found: "/usr/bin/addr2line"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_TAPI"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "tapi"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    searched_directories:
+      - "/usr/bin/tapi"
+      - "/home/blokhtin/.local/bin/tapi"
+      - "/home/blokhtin/bin/tapi"
+      - "/usr/local/sbin/tapi"
+      - "/usr/local/bin/tapi"
+      - "/usr/sbin/tapi"
+      - "/sbin/tapi"
+      - "/bin/tapi"
+      - "/usr/games/tapi"
+      - "/usr/local/games/tapi"
+      - "/snap/bin/tapi"
+      - "/bin/cmake/bin/tapi"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/Compiler/GNU-FindBinUtils.cmake:18 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:201 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER_AR"
+    description: "A wrapper around 'ar' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gcc-ar-15.2"
+      - "gcc-ar-15"
+      - "gcc-ar15"
+      - "gcc-ar"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    searched_directories:
+      - "/usr/bin/gcc-ar-15.2"
+      - "/home/blokhtin/.local/bin/gcc-ar-15.2"
+      - "/home/blokhtin/bin/gcc-ar-15.2"
+      - "/usr/local/sbin/gcc-ar-15.2"
+      - "/usr/local/bin/gcc-ar-15.2"
+      - "/usr/sbin/gcc-ar-15.2"
+      - "/sbin/gcc-ar-15.2"
+      - "/bin/gcc-ar-15.2"
+      - "/usr/games/gcc-ar-15.2"
+      - "/usr/local/games/gcc-ar-15.2"
+      - "/snap/bin/gcc-ar-15.2"
+      - "/bin/cmake/bin/gcc-ar-15.2"
+      - "/usr/bin/gcc-ar-15"
+      - "/home/blokhtin/.local/bin/gcc-ar-15"
+      - "/home/blokhtin/bin/gcc-ar-15"
+      - "/usr/local/sbin/gcc-ar-15"
+      - "/usr/local/bin/gcc-ar-15"
+      - "/usr/sbin/gcc-ar-15"
+      - "/sbin/gcc-ar-15"
+      - "/bin/gcc-ar-15"
+      - "/usr/games/gcc-ar-15"
+      - "/usr/local/games/gcc-ar-15"
+      - "/snap/bin/gcc-ar-15"
+      - "/bin/cmake/bin/gcc-ar-15"
+      - "/usr/bin/gcc-ar15"
+      - "/home/blokhtin/.local/bin/gcc-ar15"
+      - "/home/blokhtin/bin/gcc-ar15"
+      - "/usr/local/sbin/gcc-ar15"
+      - "/usr/local/bin/gcc-ar15"
+      - "/usr/sbin/gcc-ar15"
+      - "/sbin/gcc-ar15"
+      - "/bin/gcc-ar15"
+      - "/usr/games/gcc-ar15"
+      - "/usr/local/games/gcc-ar15"
+      - "/snap/bin/gcc-ar15"
+      - "/bin/cmake/bin/gcc-ar15"
+    found: "/usr/bin/gcc-ar"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/Compiler/GNU-FindBinUtils.cmake:30 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:201 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER_RANLIB"
+    description: "A wrapper around 'ranlib' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gcc-ranlib-15.2"
+      - "gcc-ranlib-15"
+      - "gcc-ranlib15"
+      - "gcc-ranlib"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    searched_directories:
+      - "/usr/bin/gcc-ranlib-15.2"
+      - "/home/blokhtin/.local/bin/gcc-ranlib-15.2"
+      - "/home/blokhtin/bin/gcc-ranlib-15.2"
+      - "/usr/local/sbin/gcc-ranlib-15.2"
+      - "/usr/local/bin/gcc-ranlib-15.2"
+      - "/usr/sbin/gcc-ranlib-15.2"
+      - "/sbin/gcc-ranlib-15.2"
+      - "/bin/gcc-ranlib-15.2"
+      - "/usr/games/gcc-ranlib-15.2"
+      - "/usr/local/games/gcc-ranlib-15.2"
+      - "/snap/bin/gcc-ranlib-15.2"
+      - "/bin/cmake/bin/gcc-ranlib-15.2"
+      - "/usr/bin/gcc-ranlib-15"
+      - "/home/blokhtin/.local/bin/gcc-ranlib-15"
+      - "/home/blokhtin/bin/gcc-ranlib-15"
+      - "/usr/local/sbin/gcc-ranlib-15"
+      - "/usr/local/bin/gcc-ranlib-15"
+      - "/usr/sbin/gcc-ranlib-15"
+      - "/sbin/gcc-ranlib-15"
+      - "/bin/gcc-ranlib-15"
+      - "/usr/games/gcc-ranlib-15"
+      - "/usr/local/games/gcc-ranlib-15"
+      - "/snap/bin/gcc-ranlib-15"
+      - "/bin/cmake/bin/gcc-ranlib-15"
+      - "/usr/bin/gcc-ranlib15"
+      - "/home/blokhtin/.local/bin/gcc-ranlib15"
+      - "/home/blokhtin/bin/gcc-ranlib15"
+      - "/usr/local/sbin/gcc-ranlib15"
+      - "/usr/local/bin/gcc-ranlib15"
+      - "/usr/sbin/gcc-ranlib15"
+      - "/sbin/gcc-ranlib15"
+      - "/bin/gcc-ranlib15"
+      - "/usr/games/gcc-ranlib15"
+      - "/usr/local/games/gcc-ranlib15"
+      - "/snap/bin/gcc-ranlib15"
+      - "/bin/cmake/bin/gcc-ranlib15"
+    found: "/usr/bin/gcc-ranlib"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompiler.cmake:54 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:69 (_cmake_find_compiler)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER"
+    description: "CXX compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "c++"
+      - "CC"
+      - "g++"
+      - "aCC"
+      - "cl"
+      - "bcc"
+      - "xlC"
+      - "icpx"
+      - "icx"
+      - "clang++"
+    candidate_directories:
+      - "/usr/bin/"
+    found: "/usr/bin/c++"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:462 (find_file)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:500 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "/bin/cmake/share/cmake-4.1/Modules/"
+    found: "/bin/cmake/share/cmake-4.1/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /usr/bin/c++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is GNU, found in:
+        /home/blokhtin/github/Simple/open_bench/CMakeFiles/4.1.2/CompilerIdCXX/a.out
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/Compiler/GNU-FindBinUtils.cmake:18 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:207 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER_AR"
+    description: "A wrapper around 'ar' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gcc-ar-15.2"
+      - "gcc-ar-15"
+      - "gcc-ar15"
+      - "gcc-ar"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    searched_directories:
+      - "/usr/bin/gcc-ar-15.2"
+      - "/home/blokhtin/.local/bin/gcc-ar-15.2"
+      - "/home/blokhtin/bin/gcc-ar-15.2"
+      - "/usr/local/sbin/gcc-ar-15.2"
+      - "/usr/local/bin/gcc-ar-15.2"
+      - "/usr/sbin/gcc-ar-15.2"
+      - "/sbin/gcc-ar-15.2"
+      - "/bin/gcc-ar-15.2"
+      - "/usr/games/gcc-ar-15.2"
+      - "/usr/local/games/gcc-ar-15.2"
+      - "/snap/bin/gcc-ar-15.2"
+      - "/bin/cmake/bin/gcc-ar-15.2"
+      - "/usr/bin/gcc-ar-15"
+      - "/home/blokhtin/.local/bin/gcc-ar-15"
+      - "/home/blokhtin/bin/gcc-ar-15"
+      - "/usr/local/sbin/gcc-ar-15"
+      - "/usr/local/bin/gcc-ar-15"
+      - "/usr/sbin/gcc-ar-15"
+      - "/sbin/gcc-ar-15"
+      - "/bin/gcc-ar-15"
+      - "/usr/games/gcc-ar-15"
+      - "/usr/local/games/gcc-ar-15"
+      - "/snap/bin/gcc-ar-15"
+      - "/bin/cmake/bin/gcc-ar-15"
+      - "/usr/bin/gcc-ar15"
+      - "/home/blokhtin/.local/bin/gcc-ar15"
+      - "/home/blokhtin/bin/gcc-ar15"
+      - "/usr/local/sbin/gcc-ar15"
+      - "/usr/local/bin/gcc-ar15"
+      - "/usr/sbin/gcc-ar15"
+      - "/sbin/gcc-ar15"
+      - "/bin/gcc-ar15"
+      - "/usr/games/gcc-ar15"
+      - "/usr/local/games/gcc-ar15"
+      - "/snap/bin/gcc-ar15"
+      - "/bin/cmake/bin/gcc-ar15"
+    found: "/usr/bin/gcc-ar"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/Compiler/GNU-FindBinUtils.cmake:30 (find_program)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:207 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER_RANLIB"
+    description: "A wrapper around 'ranlib' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gcc-ranlib-15.2"
+      - "gcc-ranlib-15"
+      - "gcc-ranlib15"
+      - "gcc-ranlib"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/blokhtin/.local/bin/"
+      - "/home/blokhtin/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/bin/cmake/bin/"
+    searched_directories:
+      - "/usr/bin/gcc-ranlib-15.2"
+      - "/home/blokhtin/.local/bin/gcc-ranlib-15.2"
+      - "/home/blokhtin/bin/gcc-ranlib-15.2"
+      - "/usr/local/sbin/gcc-ranlib-15.2"
+      - "/usr/local/bin/gcc-ranlib-15.2"
+      - "/usr/sbin/gcc-ranlib-15.2"
+      - "/sbin/gcc-ranlib-15.2"
+      - "/bin/gcc-ranlib-15.2"
+      - "/usr/games/gcc-ranlib-15.2"
+      - "/usr/local/games/gcc-ranlib-15.2"
+      - "/snap/bin/gcc-ranlib-15.2"
+      - "/bin/cmake/bin/gcc-ranlib-15.2"
+      - "/usr/bin/gcc-ranlib-15"
+      - "/home/blokhtin/.local/bin/gcc-ranlib-15"
+      - "/home/blokhtin/bin/gcc-ranlib-15"
+      - "/usr/local/sbin/gcc-ranlib-15"
+      - "/usr/local/bin/gcc-ranlib-15"
+      - "/usr/sbin/gcc-ranlib-15"
+      - "/sbin/gcc-ranlib-15"
+      - "/bin/gcc-ranlib-15"
+      - "/usr/games/gcc-ranlib-15"
+      - "/usr/local/games/gcc-ranlib-15"
+      - "/snap/bin/gcc-ranlib-15"
+      - "/bin/cmake/bin/gcc-ranlib-15"
+      - "/usr/bin/gcc-ranlib15"
+      - "/home/blokhtin/.local/bin/gcc-ranlib15"
+      - "/home/blokhtin/bin/gcc-ranlib15"
+      - "/usr/local/sbin/gcc-ranlib15"
+      - "/usr/local/bin/gcc-ranlib15"
+      - "/usr/sbin/gcc-ranlib15"
+      - "/sbin/gcc-ranlib15"
+      - "/bin/gcc-ranlib15"
+      - "/usr/games/gcc-ranlib15"
+      - "/usr/local/games/gcc-ranlib15"
+      - "/snap/bin/gcc-ranlib15"
+      - "/bin/cmake/bin/gcc-ranlib15"
+    found: "/usr/bin/gcc-ranlib"
+    search_context:
+      ENV{PATH}:
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/.local/bin"
+        - "/home/blokhtin/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/bin/cmake/bin"
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-2dnADw"
+      binary: "/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-2dnADw"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-2dnADw'
+        
+        Run Build Command(s): /bin/cmake/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_90bb0/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_90bb0.dir/build.make CMakeFiles/cmTC_90bb0.dir/build
+        gmake[1]: Entering directory '/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-2dnADw'
+        Building C object CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o
+        /usr/bin/cc   -v -o CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o -c /bin/cmake/share/cmake-4.1/Modules/CMakeCCompilerABI.c
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/cc
+        Target: x86_64-pc-linux-gnu
+        Configured with: ../gcc/configure --prefix=/opt/gcc-15 --disable-multilib --enable-languages=c,c++
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 15.2.0 (GCC) 
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90bb0.dir/'
+         /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/cc1 -quiet -v -imultiarch x86_64-linux-gnu /bin/cmake/share/cmake-4.1/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_90bb0.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -o /tmp/cctBY9QT.s
+        GNU C23 (GCC) version 15.2.0 (x86_64-pc-linux-gnu)
+        	compiled by GNU C version 15.2.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
+        
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+        ignoring nonexistent directory "/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../x86_64-pc-linux-gnu/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include
+         /usr/local/include
+         /opt/gcc-15/include
+         /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu
+         /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        Compiler executable checksum: 310d6b2bc8b406cc02aa2c5a4163b6d3
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90bb0.dir/'
+         as -v --64 -o CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o /tmp/cctBY9QT.s
+        GNU assembler version 2.38 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.38
+        COMPILER_PATH=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/
+        LIBRARY_PATH=/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.'
+        Linking C executable cmTC_90bb0
+        /bin/cmake/bin/cmake -E cmake_link_script CMakeFiles/cmTC_90bb0.dir/link.txt --verbose=1
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/cc
+        COLLECT_LTO_WRAPPER=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper
+        Target: x86_64-pc-linux-gnu
+        Configured with: ../gcc/configure --prefix=/opt/gcc-15 --disable-multilib --enable-languages=c,c++
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 15.2.0 (GCC) 
+        COMPILER_PATH=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/
+        LIBRARY_PATH=/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_90bb0' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_90bb0.'
+         /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/collect2 -plugin /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/liblto_plugin.so -plugin-opt=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cchvDSIA.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_90bb0 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o
+        collect2 version 15.2.0
+        /usr/bin/ld -plugin /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/liblto_plugin.so -plugin-opt=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cchvDSIA.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_90bb0 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o
+        GNU ld (GNU Binutils for Ubuntu) 2.38
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_90bb0' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_90bb0.'
+        /usr/bin/cc  -v -Wl,-v CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o -o cmTC_90bb0
+        gmake[1]: Leaving directory '/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-2dnADw'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:217 (message)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include]
+          add: [/usr/local/include]
+          add: [/opt/gcc-15/include]
+          add: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu]
+          add: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed]
+          add: [/usr/include/x86_64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include] ==> [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/opt/gcc-15/include] ==> [/opt/gcc-15/include]
+        collapse include dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu] ==> [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu]
+        collapse include dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed] ==> [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed]
+        collapse include dir [/usr/include/x86_64-linux-gnu] ==> [/usr/include/x86_64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include;/usr/local/include;/opt/gcc-15/include;/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu;/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed;/usr/include/x86_64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
+        ignore line: [Change Dir: '/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-2dnADw']
+        ignore line: []
+        ignore line: [Run Build Command(s): /bin/cmake/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_90bb0/fast]
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_90bb0.dir/build.make CMakeFiles/cmTC_90bb0.dir/build]
+        ignore line: [gmake[1]: Entering directory '/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-2dnADw']
+        ignore line: [Building C object CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/usr/bin/cc   -v -o CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o -c /bin/cmake/share/cmake-4.1/Modules/CMakeCCompilerABI.c]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/cc]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Configured with: ../gcc/configure --prefix=/opt/gcc-15 --disable-multilib --enable-languages=c c++]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 15.2.0 (GCC) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90bb0.dir/']
+        ignore line: [ /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/cc1 -quiet -v -imultiarch x86_64-linux-gnu /bin/cmake/share/cmake-4.1/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_90bb0.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -o /tmp/cctBY9QT.s]
+        ignore line: [GNU C23 (GCC) version 15.2.0 (x86_64-pc-linux-gnu)]
+        ignore line: [	compiled by GNU C version 15.2.0  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version isl-0.24-GMP]
+        ignore line: []
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../x86_64-pc-linux-gnu/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /opt/gcc-15/include]
+        ignore line: [ /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu]
+        ignore line: [ /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Compiler executable checksum: 310d6b2bc8b406cc02aa2c5a4163b6d3]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90bb0.dir/']
+        ignore line: [ as -v --64 -o CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o /tmp/cctBY9QT.s]
+        ignore line: [GNU assembler version 2.38 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.38]
+        ignore line: [COMPILER_PATH=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.']
+        ignore line: [Linking C executable cmTC_90bb0]
+        ignore line: [/bin/cmake/bin/cmake -E cmake_link_script CMakeFiles/cmTC_90bb0.dir/link.txt --verbose=1]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/cc]
+        ignore line: [COLLECT_LTO_WRAPPER=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Configured with: ../gcc/configure --prefix=/opt/gcc-15 --disable-multilib --enable-languages=c c++]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 15.2.0 (GCC) ]
+        ignore line: [COMPILER_PATH=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_90bb0' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_90bb0.']
+        link line: [ /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/collect2 -plugin /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/liblto_plugin.so -plugin-opt=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cchvDSIA.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_90bb0 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o]
+          arg [/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/cchvDSIA.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_90bb0] ==> ignore
+          arg [/lib/x86_64-linux-gnu/crt1.o] ==> obj [/lib/x86_64-linux-gnu/crt1.o]
+          arg [/lib/x86_64-linux-gnu/crti.o] ==> obj [/lib/x86_64-linux-gnu/crti.o]
+          arg [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o] ==> obj [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o]
+          arg [-L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0] ==> dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0]
+          arg [-L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64] ==> dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
+          arg [-L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../..] ==> dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../..]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [-lgcc] ==> lib [gcc]
+          arg [--push-state] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--pop-state] ==> ignore
+          arg [-lc] ==> lib [c]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--push-state] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--pop-state] ==> ignore
+          arg [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o] ==> obj [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o]
+          arg [/lib/x86_64-linux-gnu/crtn.o] ==> obj [/lib/x86_64-linux-gnu/crtn.o]
+        ignore line: [collect2 version 15.2.0]
+        ignore line: [/usr/bin/ld -plugin /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/liblto_plugin.so -plugin-opt=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cchvDSIA.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_90bb0 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_90bb0.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o]
+        linker tool for 'C': /usr/bin/ld
+        collapse library dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0] ==> [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0]
+        collapse library dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64] ==> [/opt/gcc-15/lib64]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib64] ==> [/lib64]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
+        collapse library dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../..] ==> [/opt/gcc-15/lib]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        implicit libs: [gcc;gcc_s;c;gcc;gcc_s]
+        implicit objs: [/lib/x86_64-linux-gnu/crt1.o;/lib/x86_64-linux-gnu/crti.o;/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o;/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o;/lib/x86_64-linux-gnu/crtn.o]
+        implicit dirs: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0;/opt/gcc-15/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/usr/lib64;/opt/gcc-15/lib;/lib;/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/Internal/CMakeDetermineLinkerId.cmake:36 (message)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the C compiler's linker: "/usr/bin/ld" "-v"
+      GNU ld (GNU Binutils for Ubuntu) 2.38
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-8vaTsS"
+      binary: "/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-8vaTsS"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-8vaTsS'
+        
+        Run Build Command(s): /bin/cmake/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_c27bf/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_c27bf.dir/build.make CMakeFiles/cmTC_c27bf.dir/build
+        gmake[1]: Entering directory '/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-8vaTsS'
+        Building CXX object CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o
+        /usr/bin/c++   -v -o CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o -c /bin/cmake/share/cmake-4.1/Modules/CMakeCXXCompilerABI.cpp
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        Target: x86_64-pc-linux-gnu
+        Configured with: ../gcc/configure --prefix=/opt/gcc-15 --disable-multilib --enable-languages=c,c++
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 15.2.0 (GCC) 
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c27bf.dir/'
+         /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /bin/cmake/share/cmake-4.1/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_c27bf.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -o /tmp/cchHBTRf.s
+        GNU C++17 (GCC) version 15.2.0 (x86_64-pc-linux-gnu)
+        	compiled by GNU C version 15.2.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
+        
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+        ignoring nonexistent directory "/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../x86_64-pc-linux-gnu/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0
+         /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0/x86_64-pc-linux-gnu
+         /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0/backward
+         /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include
+         /usr/local/include
+         /opt/gcc-15/include
+         /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu
+         /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        Compiler executable checksum: 64b75f144076ba24f6f05385aef05c98
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c27bf.dir/'
+         as -v --64 -o CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o /tmp/cchHBTRf.s
+        GNU assembler version 2.38 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.38
+        COMPILER_PATH=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/
+        LIBRARY_PATH=/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.'
+        Linking CXX executable cmTC_c27bf
+        /bin/cmake/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c27bf.dir/link.txt --verbose=1
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        COLLECT_LTO_WRAPPER=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper
+        Target: x86_64-pc-linux-gnu
+        Configured with: ../gcc/configure --prefix=/opt/gcc-15 --disable-multilib --enable-languages=c,c++
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 15.2.0 (GCC) 
+        COMPILER_PATH=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/
+        LIBRARY_PATH=/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_c27bf' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_c27bf.'
+         /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/collect2 -plugin /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/liblto_plugin.so -plugin-opt=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cc4NAAmm.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_c27bf /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o
+        collect2 version 15.2.0
+        /usr/bin/ld -plugin /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/liblto_plugin.so -plugin-opt=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cc4NAAmm.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_c27bf /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o
+        GNU ld (GNU Binutils for Ubuntu) 2.38
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_c27bf' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_c27bf.'
+        /usr/bin/c++  -v -Wl,-v CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_c27bf
+        gmake[1]: Leaving directory '/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-8vaTsS'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:217 (message)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0]
+          add: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0/x86_64-pc-linux-gnu]
+          add: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0/backward]
+          add: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include]
+          add: [/usr/local/include]
+          add: [/opt/gcc-15/include]
+          add: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu]
+          add: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed]
+          add: [/usr/include/x86_64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0] ==> [/opt/gcc-15/include/c++/15.2.0]
+        collapse include dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0/x86_64-pc-linux-gnu] ==> [/opt/gcc-15/include/c++/15.2.0/x86_64-pc-linux-gnu]
+        collapse include dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0/backward] ==> [/opt/gcc-15/include/c++/15.2.0/backward]
+        collapse include dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include] ==> [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/opt/gcc-15/include] ==> [/opt/gcc-15/include]
+        collapse include dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu] ==> [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu]
+        collapse include dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed] ==> [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed]
+        collapse include dir [/usr/include/x86_64-linux-gnu] ==> [/usr/include/x86_64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/opt/gcc-15/include/c++/15.2.0;/opt/gcc-15/include/c++/15.2.0/x86_64-pc-linux-gnu;/opt/gcc-15/include/c++/15.2.0/backward;/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include;/usr/local/include;/opt/gcc-15/include;/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu;/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed;/usr/include/x86_64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
+        ignore line: [Change Dir: '/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-8vaTsS']
+        ignore line: []
+        ignore line: [Run Build Command(s): /bin/cmake/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_c27bf/fast]
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_c27bf.dir/build.make CMakeFiles/cmTC_c27bf.dir/build]
+        ignore line: [gmake[1]: Entering directory '/home/blokhtin/github/Simple/open_bench/CMakeFiles/CMakeScratch/TryCompile-8vaTsS']
+        ignore line: [Building CXX object CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/usr/bin/c++   -v -o CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o -c /bin/cmake/share/cmake-4.1/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Configured with: ../gcc/configure --prefix=/opt/gcc-15 --disable-multilib --enable-languages=c c++]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 15.2.0 (GCC) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c27bf.dir/']
+        ignore line: [ /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /bin/cmake/share/cmake-4.1/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_c27bf.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -o /tmp/cchHBTRf.s]
+        ignore line: [GNU C++17 (GCC) version 15.2.0 (x86_64-pc-linux-gnu)]
+        ignore line: [	compiled by GNU C version 15.2.0  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version isl-0.24-GMP]
+        ignore line: []
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../x86_64-pc-linux-gnu/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0]
+        ignore line: [ /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0/x86_64-pc-linux-gnu]
+        ignore line: [ /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../include/c++/15.2.0/backward]
+        ignore line: [ /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /opt/gcc-15/include]
+        ignore line: [ /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed/x86_64-linux-gnu]
+        ignore line: [ /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include-fixed]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Compiler executable checksum: 64b75f144076ba24f6f05385aef05c98]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c27bf.dir/']
+        ignore line: [ as -v --64 -o CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o /tmp/cchHBTRf.s]
+        ignore line: [GNU assembler version 2.38 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.38]
+        ignore line: [COMPILER_PATH=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.']
+        ignore line: [Linking CXX executable cmTC_c27bf]
+        ignore line: [/bin/cmake/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c27bf.dir/link.txt --verbose=1]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [COLLECT_LTO_WRAPPER=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Configured with: ../gcc/configure --prefix=/opt/gcc-15 --disable-multilib --enable-languages=c c++]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 15.2.0 (GCC) ]
+        ignore line: [COMPILER_PATH=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_c27bf' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_c27bf.']
+        link line: [ /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/collect2 -plugin /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/liblto_plugin.so -plugin-opt=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cc4NAAmm.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_c27bf /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o]
+          arg [/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/cc4NAAmm.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_c27bf] ==> ignore
+          arg [/lib/x86_64-linux-gnu/crt1.o] ==> obj [/lib/x86_64-linux-gnu/crt1.o]
+          arg [/lib/x86_64-linux-gnu/crti.o] ==> obj [/lib/x86_64-linux-gnu/crti.o]
+          arg [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o] ==> obj [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o]
+          arg [-L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0] ==> dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0]
+          arg [-L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64] ==> dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
+          arg [-L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../..] ==> dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../..]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o] ==> obj [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o]
+          arg [/lib/x86_64-linux-gnu/crtn.o] ==> obj [/lib/x86_64-linux-gnu/crtn.o]
+        ignore line: [collect2 version 15.2.0]
+        ignore line: [/usr/bin/ld -plugin /opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/liblto_plugin.so -plugin-opt=/opt/gcc-15/libexec/gcc/x86_64-pc-linux-gnu/15.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cc4NAAmm.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_c27bf /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_c27bf.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o]
+        linker tool for 'CXX': /usr/bin/ld
+        collapse library dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0] ==> [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0]
+        collapse library dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../../../lib64] ==> [/opt/gcc-15/lib64]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib64] ==> [/lib64]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
+        collapse library dir [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/../../..] ==> [/opt/gcc-15/lib]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
+        implicit objs: [/lib/x86_64-linux-gnu/crt1.o;/lib/x86_64-linux-gnu/crti.o;/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtbegin.o;/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0/crtend.o;/lib/x86_64-linux-gnu/crtn.o]
+        implicit dirs: [/opt/gcc-15/lib/gcc/x86_64-pc-linux-gnu/15.2.0;/opt/gcc-15/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/usr/lib64;/opt/gcc-15/lib;/lib;/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/bin/cmake/share/cmake-4.1/Modules/Internal/CMakeDetermineLinkerId.cmake:36 (message)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
+      - "/bin/cmake/share/cmake-4.1/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the CXX compiler's linker: "/usr/bin/ld" "-v"
+      GNU ld (GNU Binutils for Ubuntu) 2.38
+...

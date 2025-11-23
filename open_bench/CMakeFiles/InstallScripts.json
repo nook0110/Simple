@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/blokhtin/github/Simple/open_bench/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

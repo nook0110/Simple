@@ -1,0 +1,2 @@
+/usr/bin/ar qc libchess_lib.a CMakeFiles/chess_lib.dir/Chess/Attacks.cpp.o CMakeFiles/chess_lib.dir/Chess/Evaluation.cpp.o CMakeFiles/chess_lib.dir/Chess/MoveGenerator.cpp.o CMakeFiles/chess_lib.dir/Chess/MovePicker.cpp.o CMakeFiles/chess_lib.dir/Chess/Perft.cpp.o CMakeFiles/chess_lib.dir/Chess/Position.cpp.o CMakeFiles/chess_lib.dir/Chess/Quiescence.cpp.o CMakeFiles/chess_lib.dir/Chess/Settings.cpp.o
+/usr/bin/ranlib libchess_lib.a

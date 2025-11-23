@@ -1,0 +1,5 @@
+/home/blokhtin/github/Simple/open_bench/CMakeFiles/chess_lib.dir
+/home/blokhtin/github/Simple/open_bench/CMakeFiles/SimpleChessEngine.dir
+/home/blokhtin/github/Simple/open_bench/CMakeFiles/file_toucher.dir
+/home/blokhtin/github/Simple/open_bench/CMakeFiles/edit_cache.dir
+/home/blokhtin/github/Simple/open_bench/CMakeFiles/rebuild_cache.dir

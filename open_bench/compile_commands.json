@@ -1,0 +1,104 @@
+[
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/chess_lib.dir/Chess/Attacks.cpp.o -c /home/blokhtin/github/Simple/Chess/Attacks.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Attacks.cpp",
+  "output": "CMakeFiles/chess_lib.dir/Chess/Attacks.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/chess_lib.dir/Chess/Evaluation.cpp.o -c /home/blokhtin/github/Simple/Chess/Evaluation.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Evaluation.cpp",
+  "output": "CMakeFiles/chess_lib.dir/Chess/Evaluation.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/chess_lib.dir/Chess/MoveGenerator.cpp.o -c /home/blokhtin/github/Simple/Chess/MoveGenerator.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/MoveGenerator.cpp",
+  "output": "CMakeFiles/chess_lib.dir/Chess/MoveGenerator.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/chess_lib.dir/Chess/MovePicker.cpp.o -c /home/blokhtin/github/Simple/Chess/MovePicker.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/MovePicker.cpp",
+  "output": "CMakeFiles/chess_lib.dir/Chess/MovePicker.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/chess_lib.dir/Chess/Perft.cpp.o -c /home/blokhtin/github/Simple/Chess/Perft.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Perft.cpp",
+  "output": "CMakeFiles/chess_lib.dir/Chess/Perft.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/chess_lib.dir/Chess/Position.cpp.o -c /home/blokhtin/github/Simple/Chess/Position.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Position.cpp",
+  "output": "CMakeFiles/chess_lib.dir/Chess/Position.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/chess_lib.dir/Chess/Quiescence.cpp.o -c /home/blokhtin/github/Simple/Chess/Quiescence.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Quiescence.cpp",
+  "output": "CMakeFiles/chess_lib.dir/Chess/Quiescence.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/chess_lib.dir/Chess/Settings.cpp.o -c /home/blokhtin/github/Simple/Chess/Settings.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Settings.cpp",
+  "output": "CMakeFiles/chess_lib.dir/Chess/Settings.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/SimpleChessEngine.dir/Chess/Attacks.cpp.o -c /home/blokhtin/github/Simple/Chess/Attacks.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Attacks.cpp",
+  "output": "CMakeFiles/SimpleChessEngine.dir/Chess/Attacks.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/SimpleChessEngine.dir/Chess/Evaluation.cpp.o -c /home/blokhtin/github/Simple/Chess/Evaluation.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Evaluation.cpp",
+  "output": "CMakeFiles/SimpleChessEngine.dir/Chess/Evaluation.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/SimpleChessEngine.dir/Chess/MoveGenerator.cpp.o -c /home/blokhtin/github/Simple/Chess/MoveGenerator.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/MoveGenerator.cpp",
+  "output": "CMakeFiles/SimpleChessEngine.dir/Chess/MoveGenerator.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/SimpleChessEngine.dir/Chess/MovePicker.cpp.o -c /home/blokhtin/github/Simple/Chess/MovePicker.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/MovePicker.cpp",
+  "output": "CMakeFiles/SimpleChessEngine.dir/Chess/MovePicker.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/SimpleChessEngine.dir/Chess/Perft.cpp.o -c /home/blokhtin/github/Simple/Chess/Perft.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Perft.cpp",
+  "output": "CMakeFiles/SimpleChessEngine.dir/Chess/Perft.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/SimpleChessEngine.dir/Chess/Position.cpp.o -c /home/blokhtin/github/Simple/Chess/Position.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Position.cpp",
+  "output": "CMakeFiles/SimpleChessEngine.dir/Chess/Position.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/SimpleChessEngine.dir/Chess/Quiescence.cpp.o -c /home/blokhtin/github/Simple/Chess/Quiescence.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Quiescence.cpp",
+  "output": "CMakeFiles/SimpleChessEngine.dir/Chess/Quiescence.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/SimpleChessEngine.dir/Chess/Settings.cpp.o -c /home/blokhtin/github/Simple/Chess/Settings.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/Settings.cpp",
+  "output": "CMakeFiles/SimpleChessEngine.dir/Chess/Settings.cpp.o"
+},
+{
+  "directory": "/home/blokhtin/github/Simple/open_bench",
+  "command": "/usr/bin/c++ -DNDEBUG -I/home/blokhtin/github/Simple/Chess -O3 -DNDEBUG -std=gnu++26 -Wall -Wextra -Wpedantic -Ofast -mtune=native -march=native -fno-stack-protector -flto=auto -frename-registers -fno-exceptions -fno-rtti -o CMakeFiles/SimpleChessEngine.dir/Chess/main.cpp.o -c /home/blokhtin/github/Simple/Chess/main.cpp",
+  "file": "/home/blokhtin/github/Simple/Chess/main.cpp",
+  "output": "CMakeFiles/SimpleChessEngine.dir/Chess/main.cpp.o"
+}
+]

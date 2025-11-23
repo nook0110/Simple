@@ -60,7 +60,7 @@ EQUALS = =
 CMAKE_SOURCE_DIR = /home/blokhtin/github/Simple
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/blokhtin/github/Simple/build
+CMAKE_BINARY_DIR = /home/blokhtin/github/Simple/open_bench
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -68,7 +68,7 @@ CMAKE_BINARY_DIR = /home/blokhtin/github/Simple/build
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Running CMake cache editor..."
-	/snap/cmake/1487/bin/ccmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	/bin/cmake/bin/ccmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/blokhtin/github/Simple/build/CMakeFiles /home/blokhtin/github/Simple/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/blokhtin/github/Simple/open_bench/CMakeFiles /home/blokhtin/github/Simple/open_bench//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/blokhtin/github/Simple/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/blokhtin/github/Simple/open_bench/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
