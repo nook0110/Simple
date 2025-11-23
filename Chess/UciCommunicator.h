@@ -283,7 +283,7 @@ inline void UciChessEngine::ParseCommand(std::stringstream command) {
     ParsePosition(std::stringstream{std::string{"startpos"}});
     const auto result = PerftBench(info_.position, 7);
     o_stream_ << result.nodes << " nodes " << result.nps << " nps" << std::endl;
-    return;
+    std::exit(0);
   }
 
   Send("No such command!");
