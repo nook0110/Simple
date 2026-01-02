@@ -30,18 +30,26 @@ template SearchResult Quiescence<Pondering>::Search<true>(
 
 auto kCompareMoves = [](const Move& lhs, const Move& rhs,
                         const Position& current_position) {
-  if (lhs.index() != rhs.index()) return lhs.index() > rhs.index();
-  if (!std::holds_alternative<DefaultMove>(lhs)) return false;
-  const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
-  const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
-  const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
-  const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
-  const auto moving_idx_lhs =
-      -static_cast<int>(current_position.GetPieceAt(from_lhs));
-  const auto moving_idx_rhs =
-      -static_cast<int>(current_position.GetPieceAt(from_rhs));
-  return std::tie(captured_idx_lhs, moving_idx_lhs) >
-         std::tie(captured_idx_rhs, moving_idx_rhs);
+  // Compare move types: promotions > en passant > castling > normal
+  const auto lhs_type = static_cast<int>(lhs.Type());
+  const auto rhs_type = static_cast<int>(rhs.Type());
+  if (lhs_type != rhs_type) return lhs_type > rhs_type;
+  
+  // For normal moves, compare by captured piece value (MVV-LVA)
+  if (lhs.IsNormal()) {
+    const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
+    const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
+    const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
+    const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
+    const auto moving_idx_lhs =
+        -static_cast<int>(current_position.GetPieceAt(from_lhs));
+    const auto moving_idx_rhs =
+        -static_cast<int>(current_position.GetPieceAt(from_rhs));
+    return std::tie(captured_idx_lhs, moving_idx_lhs) >
+           std::tie(captured_idx_rhs, moving_idx_rhs);
+  }
+  
+  return false;
 };
 
 template <class ExitCondition>

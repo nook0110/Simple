@@ -1,4 +1,5 @@
 #pragma once
+#include <variant>
 #include "Evaluation.h"
 #include "Searcher.h"
 namespace SimpleChessEngine {

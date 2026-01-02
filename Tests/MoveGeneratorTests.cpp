@@ -37,10 +37,10 @@ struct GameInfo {
 
   if (depth == 1) {
     for (const auto &move : moves) {
-      if (std::get_if<EnCroissant>(&move)) {
+      if (move.IsEnPassant()) {
         answer.en_croissants.value()++;
       }
-      if (std::get_if<Castling>(&move)) {
+      if (move.IsCastling()) {
         answer.castlings.value()++;
       }
     }

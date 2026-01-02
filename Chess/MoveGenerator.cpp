@@ -35,7 +35,7 @@ MoveGenerator::~MoveGenerator() = default;
                                                   const Move& move) {
   const auto us = position.GetSideToMove();
 
-  if (std::holds_alternative<EnCroissant>(move)) {
+  if (move.IsEnPassant()) {
     const auto irreversible_data = position.GetIrreversibleData();
     position.DoMove(move);
     const auto valid = !position.IsUnderCheck(us);
@@ -43,22 +43,9 @@ MoveGenerator::~MoveGenerator() = default;
     return valid;
   }
 
-  BitIndex from{};
-  BitIndex to{};
-  std::visit(
-      [&from, &to]<typename MoveType>(const MoveType& unwrapped_move) {
-        if constexpr (std::same_as<std::remove_cvref_t<MoveType>,
-                                   DefaultMove> ||
-                      std::same_as<std::remove_cvref_t<MoveType>, PawnPush> ||
-                      std::same_as<std::remove_cvref_t<MoveType>, DoublePush> ||
-                      std::same_as<std::remove_cvref_t<MoveType>, Promotion>) {
-          from = unwrapped_move.from;
-          to = unwrapped_move.to;
-          return;
-        }
-        assert(false);
-      },
-      move);
+  const auto from = move.From();
+  const auto to = move.To();
+  
   return !position.GetIrreversibleData().blockers[static_cast<size_t>(us)].Test(
              from) ||
          Ray(position.GetKingSquare(us), from).Test(to);
@@ -70,15 +57,16 @@ void MoveGenerator::GenerateCastling(Moves& moves, const Position& position) {
   }
 
   const auto side_to_move = position.GetSideToMove();
-
   const auto king_square = position.GetKingSquare(side_to_move);
+  const auto color_idx = static_cast<size_t>(side_to_move);
 
   for (const auto castling_side :
        {Castling::CastlingSide::k00, Castling::CastlingSide::k000}) {
     if (position.CanCastle(castling_side)) {
-      const auto rook_square =
-          position.GetCastlingRookSquare(side_to_move, castling_side);
-      moves.emplace_back(Castling{castling_side, king_square, rook_square});
+      const auto side_idx = static_cast<size_t>(castling_side);
+      const auto king_to = kKingCastlingDestination[color_idx][side_idx];
+      
+      moves.emplace_back(Move::Make<MoveType::kCastling>(king_square, king_to));
     }
   }
 }
@@ -123,10 +111,8 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
   push &= target;
   while (push.Any()) {
     const auto to = push.PopFirstBit();
-
     const auto from = Shift(to, opposite_direction);
-
-    moves.emplace_back(PawnPush{from, to});
+    moves.emplace_back(Move(from, to));
   }
 
   auto double_push = Shift(double_push_pawns, direction) & valid_squares;
@@ -134,10 +120,8 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
   double_push &= target;
   while (double_push.Any()) {
     const auto to = double_push.PopFirstBit();
-
     const auto from = Shift(Shift(to, opposite_direction), opposite_direction);
-
-    moves.emplace_back(DoublePush{from, to});
+    moves.emplace_back(Move(from, to));
   }
 
   static constexpr std::array cant_attack_files = {kFileBB[0], kFileBB[7]};
@@ -166,10 +150,8 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
 
     while (attack_squares.Any()) {
       const auto to = attack_squares.PopFirstBit();
-
       const auto from = Shift(to, opposite_attacks[attack_direction]);
-
-      moves.emplace_back(DefaultMove{from, to, position.GetPieceAt(to)});
+      moves.emplace_back(Move(from, to));
     }
   }
 
@@ -181,8 +163,8 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
       auto attack_to = attacks_to[attack_direction] & en_croissant_bitboard;
       if (attack_to.Any()) {
         const auto to = en_croissant_square.value();
-        moves.emplace_back(
-            EnCroissant{Shift(to, opposite_attacks[attack_direction]), to});
+        const auto from = Shift(to, opposite_attacks[attack_direction]);
+        moves.emplace_back(Move::Make<MoveType::kEnPassant>(from, to));
       }
     }
   }
@@ -194,17 +176,12 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
 
   while (promotion_push.Any()) {
     const auto to = promotion_push.PopFirstBit();
-
     const auto from = Shift(to, opposite_direction);
 
-    moves.emplace_back(
-        Promotion{{from, to, position.GetPieceAt(to)}, Piece::kQueen});
-    moves.emplace_back(
-        Promotion{{from, to, position.GetPieceAt(to)}, Piece::kKnight});
-    moves.emplace_back(
-        Promotion{{from, to, position.GetPieceAt(to)}, Piece::kRook});
-    moves.emplace_back(
-        Promotion{{from, to, position.GetPieceAt(to)}, Piece::kBishop});
+    moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen));
+    moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight));
+    moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kRook));
+    moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop));
   }
 
   for (size_t attack_direction = 0; attack_direction < attacks.size();
@@ -216,17 +193,12 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
 
     while (attack_squares.Any()) {
       const auto to = attack_squares.PopFirstBit();
-
       const auto from = Shift(to, opposite_attacks[attack_direction]);
 
-      moves.emplace_back(
-          Promotion{{from, to, position.GetPieceAt(to)}, Piece::kKnight});
-      moves.emplace_back(
-          Promotion{{from, to, position.GetPieceAt(to)}, Piece::kBishop});
-      moves.emplace_back(
-          Promotion{{from, to, position.GetPieceAt(to)}, Piece::kRook});
-      moves.emplace_back(
-          Promotion{{from, to, position.GetPieceAt(to)}, Piece::kQueen});
+      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight));
+      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop));
+      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kRook));
+      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen));
     }
   }
 }
@@ -379,9 +351,7 @@ void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
 
   while (valid_moves.Any()) {
     const auto to = valid_moves.PopFirstBit();
-
-    const auto move = DefaultMove{from, to, position.GetPieceAt(to)};
-    moves.emplace_back(move);
+    moves.emplace_back(Move(from, to));
   }
 }
 }  // namespace SimpleChessEngine

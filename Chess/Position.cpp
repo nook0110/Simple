@@ -103,8 +103,93 @@ void Position::DoMove(const Move &move) {
                     .to_ulong()];
   }
 
-  std::visit([this](const auto &unwrapped_move) { DoMove(unwrapped_move); },
-             move);
+  const auto from = move.From();
+  const auto to = move.To();
+  const auto us = side_to_move_;
+  const auto them = Flip(us);
+  
+  // Store captured piece for undo
+  irreversible_data_.captured_piece = board_[to];
+
+  if (move.IsEnPassant()) {
+    const auto capture_square = Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
+    irreversible_data_.captured_piece = Piece::kPawn;  // En passant always captures a pawn
+    RemovePiece(capture_square, them);
+    MovePiece(from, to, us);
+  } else if (move.IsPromotion()) {
+    const auto promoted_to = move.PromotionPiece();
+    const auto captured_piece = board_[to];
+    RemovePiece(from, us);
+    if (!!captured_piece) RemovePiece(to, them);
+    PlacePiece(to, promoted_to, us);
+    
+    for (const auto castling_side : {Castling::CastlingSide::k00, Castling::CastlingSide::k000}) {
+      const auto their_rook = rook_positions_[static_cast<size_t>(them)][static_cast<size_t>(castling_side)];
+      if (to == their_rook) {
+        irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
+            ~static_cast<char>(kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
+      }
+    }
+  } else if (move.IsCastling()) {
+    irreversible_data_.captured_piece = Piece::kNone;  // Castling never captures
+    // Determine castling side and rook position from move
+    const auto king_to = to;
+    const auto king_from = from;
+    
+    // Determine which side based on king destination
+    const auto color_idx = static_cast<size_t>(us);
+    Castling::CastlingSide side;
+    BitIndex rook_from;
+    
+    if (king_to == kKingCastlingDestination[color_idx][0]) {
+      side = Castling::CastlingSide::k00;
+      rook_from = rook_positions_[color_idx][0];
+    } else {
+      side = Castling::CastlingSide::k000;
+      rook_from = rook_positions_[color_idx][1];
+    }
+    
+    const auto side_idx = static_cast<size_t>(side);
+    RemovePiece(king_from, us);
+    RemovePiece(rook_from, us);
+    PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us);
+    PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us);
+    
+    king_position_[color_idx] = kKingCastlingDestination[color_idx][side_idx];
+    irreversible_data_.castling_rights[color_idx] = 0;
+  } else {
+    // Normal move (including pawn pushes and double pushes)
+    const auto piece_to_move = board_[from];
+    const auto captured_piece = board_[to];
+    
+    // Check if it's a double pawn push
+    if (piece_to_move == Piece::kPawn && std::abs(from - to) == 16) {
+      const auto file = GetCoordinates(from).first;
+      hash_ ^= hasher_.en_croissant_hash[file];
+      irreversible_data_.en_croissant_square = std::midpoint(from, to);
+    }
+    
+    if (!!captured_piece) RemovePiece(to, them);
+    MovePiece(from, to, us);
+    
+    if (piece_to_move == Piece::kKing) {
+      king_position_[static_cast<size_t>(us)] = to;
+      irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
+    }
+    
+    for (auto castling_side : {Castling::CastlingSide::k00, Castling::CastlingSide::k000}) {
+      const auto our_rook = rook_positions_[static_cast<size_t>(us)][static_cast<size_t>(castling_side)];
+      const auto their_rook = rook_positions_[static_cast<size_t>(them)][static_cast<size_t>(castling_side)];
+      if (from == our_rook) {
+        irreversible_data_.castling_rights[static_cast<size_t>(us)] &=
+            ~static_cast<std::int8_t>(kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
+      }
+      if (to == their_rook) {
+        irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
+            ~static_cast<std::int8_t>(kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
+      }
+    }
+  }
 
   for (const auto color : {Player::kWhite, Player::kBlack}) {
     hash_ ^= hasher_.cr_hash[static_cast<size_t>(
@@ -129,115 +214,6 @@ void SimpleChessEngine::Position::DoMove(NullMove) {
   history_stack_.Push(hash_, false);
 }
 
-void Position::DoMove(const DefaultMove &move) {
-  const auto [from, to, captured_piece] = move;
-
-  const auto us = side_to_move_;
-  const auto them = Flip(us);
-
-  const auto piece_to_move = board_[from];
-  assert(!!piece_to_move);
-
-  if (!!captured_piece) RemovePiece(to, them);
-  MovePiece(from, to, us);
-
-  if (piece_to_move == Piece::kKing) {
-    king_position_[static_cast<size_t>(us)] = to;
-    irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
-  }
-
-  for (auto castling_side :
-       {Castling::CastlingSide::k00, Castling::CastlingSide::k000}) {
-    const auto our_rook = rook_positions_[static_cast<size_t>(us)]
-                                         [static_cast<size_t>(castling_side)];
-    const auto their_rook = rook_positions_[static_cast<size_t>(them)]
-                                           [static_cast<size_t>(castling_side)];
-    if (from == our_rook) {
-      irreversible_data_.castling_rights[static_cast<size_t>(us)] &=
-          ~static_cast<std::int8_t>(
-              kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
-    }
-    if (to == their_rook) {
-      irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
-          ~static_cast<std::int8_t>(
-              kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
-    }
-  }
-}
-
-void Position::DoMove(const PawnPush &move) {
-  const auto [from, to] = move;
-
-  const auto us = side_to_move_;
-
-  MovePiece(from, to, us);
-}
-
-void Position::DoMove(const DoublePush &move) {
-  const auto [from, to] = move;
-  const auto file = GetCoordinates(from).first;
-
-  const auto us = side_to_move_;
-
-  hash_ ^= hasher_.en_croissant_hash[file];
-  irreversible_data_.en_croissant_square = std::midpoint(from, to);
-
-  MovePiece(from, to, us);
-}
-
-void Position::DoMove(const EnCroissant &move) {
-  const auto [from, to] = move;
-
-  const auto us = side_to_move_;
-  const auto them = Flip(us);
-
-  const auto capture_square =
-      Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
-
-  RemovePiece(capture_square, them);
-  MovePiece(from, to, us);
-}
-
-void Position::DoMove(const Promotion &move) {
-  const auto [from, to, captured_piece] = static_cast<DefaultMove>(move);
-  const auto promoted_to = move.promoted_to;
-
-  const auto us = side_to_move_;
-  const auto them = Flip(us);
-
-  RemovePiece(from, us);
-  if (!!captured_piece) RemovePiece(to, them);
-  PlacePiece(to, promoted_to, us);
-
-  for (const auto castling_side :
-       {Castling::CastlingSide::k00, Castling::CastlingSide::k000}) {
-    const auto their_rook = rook_positions_[static_cast<size_t>(them)]
-                                           [static_cast<size_t>(castling_side)];
-    if (to == their_rook) {
-      irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
-          ~static_cast<char>(
-              kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
-    }
-  }
-}
-
-void Position::DoMove(const Castling &move) {
-  const auto [side, king_from, rook_from] = move;
-
-  const auto us = side_to_move_;
-
-  const auto color_idx = static_cast<size_t>(us);
-  const auto side_idx = static_cast<size_t>(side);
-
-  RemovePiece(king_from, us);
-  RemovePiece(rook_from, us);
-  PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us);
-  PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us);
-
-  king_position_[static_cast<size_t>(us)] =
-      kKingCastlingDestination[color_idx][side_idx];
-  irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
-}
 
 void Position::UndoMove(const Move &move, const IrreversibleData &data) {
   const auto &ep_square = irreversible_data_.en_croissant_square;
@@ -249,19 +225,69 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
   if (ep_square.has_value()) {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
   }
+  
+  const auto from = move.From();
+  const auto to = move.To();
+  const auto them = side_to_move_;  // Current side (after the move was made)
+  const auto us = Flip(them);       // Side that made the move
+  
+  // Get captured piece from current irreversible data before restoring
+  const auto captured_piece = irreversible_data_.captured_piece;
+  
   irreversible_data_ = data;
   for (const auto color : {Player::kWhite, Player::kBlack}) {
     hash_ ^= hasher_.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
                     .to_ulong()];
   }
-  if (ep_square.has_value()) {
-    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
+  if (irreversible_data_.en_croissant_square.has_value()) {
+    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(irreversible_data_.en_croissant_square.value()).first];
   }
   hash_ ^= hasher_.stm_hash;
   side_to_move_ = Flip(side_to_move_);
-  std::visit([this](const auto &unwrapped_move) { UndoMove(unwrapped_move); },
-             move);
+
+  if (move.IsEnPassant()) {
+    const auto capture_square = Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
+    MovePiece(to, from, us);
+    PlacePiece(capture_square, Piece::kPawn, them);
+  } else if (move.IsPromotion()) {
+    RemovePiece(to, us);
+    if (!!captured_piece) PlacePiece(to, captured_piece, them);
+    PlacePiece(from, Piece::kPawn, us);
+  } else if (move.IsCastling()) {
+    const auto color_idx = static_cast<size_t>(us);
+    
+    // Determine which side based on king destination
+    Castling::CastlingSide side;
+    if (to == kKingCastlingDestination[color_idx][0]) {
+      side = Castling::CastlingSide::k00;
+    } else {
+      side = Castling::CastlingSide::k000;
+    }
+    
+    const auto side_idx = static_cast<size_t>(side);
+    const auto rook_from = rook_positions_[color_idx][side_idx];
+    
+    // Remove pieces from castled positions first
+    RemovePiece(kKingCastlingDestination[color_idx][side_idx], us);
+    RemovePiece(kRookCastlingDestination[color_idx][side_idx], us);
+    
+    // Place pieces back at original positions
+    PlacePiece(from, Piece::kKing, us);
+    PlacePiece(rook_from, Piece::kRook, us);
+    
+    king_position_[color_idx] = from;
+  } else {
+    // Normal move
+    const auto piece_to_move = board_[to];
+    
+    MovePiece(to, from, us);
+    if (!!captured_piece) PlacePiece(to, captured_piece, them);
+    
+    if (piece_to_move == Piece::kKing) {
+      king_position_[static_cast<size_t>(us)] = from;
+    }
+  }
 
   history_stack_.Pop();
 }
@@ -279,78 +305,6 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
   history_stack_.Pop();
 }
 
-void Position::UndoMove(const DefaultMove &move) {
-  const auto [from, to, captured_piece] = move;
-
-  const Player us = side_to_move_;
-  const Player them = Flip(us);
-
-  const auto piece_to_move = board_[to];
-
-  MovePiece(to, from, us);
-  if (!!captured_piece) PlacePiece(to, captured_piece, them);
-
-  if (piece_to_move == Piece::kKing)
-    king_position_[static_cast<size_t>(us)] = from;
-}
-
-void Position::UndoMove(const PawnPush &move) {
-  const auto [from, to] = move;
-
-  const auto us = side_to_move_;
-
-  MovePiece(to, from, us);
-}
-
-void Position::UndoMove(const DoublePush &move) {
-  const auto from = move.from;
-
-  const auto us = side_to_move_;
-
-  const auto to = move.to;
-
-  MovePiece(to, from, us);
-}
-
-void Position::UndoMove(const EnCroissant &move) {
-  const auto [from, to] = move;
-
-  const auto us = side_to_move_;
-  const auto them = Flip(us);
-
-  const auto capture_square =
-      Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
-
-  MovePiece(to, from, us);
-  PlacePiece(capture_square, Piece::kPawn, them);
-}
-
-void Position::UndoMove(const Promotion &move) {
-  const auto [from, to, captured_piece] = static_cast<DefaultMove>(move);
-
-  const auto us = side_to_move_;
-  const auto them = Flip(us);
-
-  RemovePiece(to, us);
-  if (!!captured_piece) PlacePiece(to, captured_piece, them);
-  PlacePiece(from, Piece::kPawn, us);
-}
-
-void Position::UndoMove(const Castling &move) {
-  const auto [side, king_from, rook_from] = move;
-
-  const auto us = side_to_move_;
-
-  const auto color_idx = static_cast<size_t>(us);
-  const auto side_idx = static_cast<size_t>(side);
-
-  PlacePiece(king_from, Piece::kKing, us);
-  PlacePiece(rook_from, Piece::kRook, us);
-  RemovePiece(kKingCastlingDestination[color_idx][side_idx], us);
-  RemovePiece(kRookCastlingDestination[color_idx][side_idx], us);
-
-  king_position_[static_cast<size_t>(us)] = king_from;
-}
 
 [[nodiscard]] bool Position::CanCastle(
     const Castling::CastlingSide castling_side) const {
@@ -479,17 +433,17 @@ bool Position::StaticExchangeEvaluation(const Move &move,
 
   const auto [from, to, captured_piece] = GetMoveData(move);
 
-  const auto promotion_or = std::get_if<Promotion>(&move);
-
-  Piece next_victim =
-      !promotion_or ? GetPieceAt(from) : promotion_or->promoted_to;
+  Piece next_victim = GetPieceAt(from);
+  
+  if (move.IsPromotion()) {
+    next_victim = move.PromotionPiece();
+  }
 
   Eval balance = EstimatePiece(captured_piece);
 
-  if (promotion_or) {
-    balance +=
-        EstimatePiece(promotion_or->promoted_to) - EstimatePiece(Piece::kPawn);
-  } else if (std::holds_alternative<EnCroissant>(move)) {
+  if (move.IsPromotion()) {
+    balance += EstimatePiece(move.PromotionPiece()) - EstimatePiece(Piece::kPawn);
+  } else if (move.IsEnPassant()) {
     balance = EstimatePiece(Piece::kPawn);
   }
 
@@ -505,12 +459,10 @@ bool Position::StaticExchangeEvaluation(const Move &move,
     return true;
   }
 
-  Bitboard occupancy =
-      GetAllPieces() ^ SingleSquare(from) ^ SingleSquare(to);
+  Bitboard occupancy = GetAllPieces() ^ SingleSquare(from) ^ SingleSquare(to);
 
-  [[unlikely]] if (std::holds_alternative<EnCroissant>(move)) {
-    occupancy ^= Shift(SingleSquare(to),
-                       kPawnMoveDirection[static_cast<size_t>(them)]);
+  [[unlikely]] if (move.IsEnPassant()) {
+    occupancy ^= Shift(SingleSquare(to), kPawnMoveDirection[static_cast<size_t>(them)]);
   }
 
   Bitboard attackers = Attackers(to, ~occupancy) & occupancy;

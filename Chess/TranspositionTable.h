@@ -28,10 +28,11 @@ struct Node {
 };
 #pragma pack(pop)
 
-template <size_t TableSize>
-  requires(std::has_single_bit(TableSize))
+template <size_t TableSizeMB>
 class TranspositionTable {
  public:
+  static constexpr size_t kTableSize = (TableSizeMB * 1024 * 1024) / sizeof(Node);
+
   [[nodiscard]] bool Contains(const Position& position) const {
     return position.GetHash() == GetNode(position).true_hash;
   }
@@ -52,13 +53,13 @@ class TranspositionTable {
   }
 
   Node& GetNode(const Position& position) {
-    return table_[position.GetHash() % TableSize];
+    return table_[position.GetHash() % kTableSize];
   }
 
   const Node& GetNode(const Position& position) const {
-    return table_[position.GetHash() % TableSize];
+    return table_[position.GetHash() % kTableSize];
   }
 
-  std::vector<Node> table_ = std::vector<Node>(TableSize);  //!< The table.
+  std::vector<Node> table_ = std::vector<Node>(kTableSize);  //!< The table.
 };
 }  // namespace SimpleChessEngine

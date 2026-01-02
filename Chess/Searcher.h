@@ -36,8 +36,8 @@ class Searcher {
   template <NodeType node_type, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
   friend struct SearchNode;
-  constexpr static size_t kTTsize = 1 << 25;
-  using SearcherTranspositionTable = TranspositionTable<kTTsize>;
+  constexpr static size_t kTTSizeInMb = 512;
+  using SearcherTranspositionTable = TranspositionTable<kTTSizeInMb>;
 
   /**
    * \brief Constructor.

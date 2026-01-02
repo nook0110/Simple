@@ -60,10 +60,12 @@ class Position {
         pinners{};  //!< Pieces that are pinning opponent's pieces.
     std::array<Bitboard, kColors>
         blockers{};  //!< Pieces that are blocking attacks on the king.
+    
+    Piece captured_piece{Piece::kNone};  //!< Piece captured by the last move
 
     bool operator==(const IrreversibleData &other) const {
-      return std::tie(en_croissant_square, castling_rights) ==
-             std::tie(other.en_croissant_square, other.castling_rights);
+      return std::tie(en_croissant_square, castling_rights, captured_piece) ==
+             std::tie(other.en_croissant_square, other.castling_rights, other.captured_piece);
     }
   };
 
@@ -269,18 +271,6 @@ class Position {
 
   void MovePiece(const BitIndex from, const BitIndex to, const Player color);
 
-  void DoMove(const DefaultMove &move);
-  void DoMove(const PawnPush &move);
-  void DoMove(const DoublePush &move);
-  void DoMove(const EnCroissant &move);
-  void DoMove(const Promotion &move);
-  void DoMove(const Castling &move);
-  void UndoMove(const DefaultMove &move);
-  void UndoMove(const PawnPush &move);
-  void UndoMove(const DoublePush &move);
-  void UndoMove(const EnCroissant &move);
-  void UndoMove(const Promotion &move);
-  void UndoMove(const Castling &move);
 
   void SetCastlingRights(const std::array<std::bitset<2>, 2> &castling_rights);
 
