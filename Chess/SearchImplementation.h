@@ -189,11 +189,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
       if (static_cast<Bound>(entry_bound) & Bound::kLower &&
           entry_score > alpha) {
         if (entry_score >= beta) {
-          // Check if it's a quiet move (no capture, not en passant, not promotion)
-          const auto to = hash_move.To();
-          const bool is_quiet = hash_move.IsNormal() &&
-                               searcher_.GetPosition().GetPieceAt(to) == Piece::kNone;
-          if (is_quiet) {
+          if (hash_move.IsQuiet(searcher_.GetPosition())) {
             UpdateQuietMove<true>(hash_move);
           }
 
@@ -383,14 +379,8 @@ std::optional<bool> SearchNode<node_type, ExitCondition>::CheckFirstMove(
   if (iteration_status_.best_eval > alpha) {
     if (iteration_status_.best_eval >= beta) {
       assert(iteration_status_.best_move);
-      // Check if it's a quiet move (no capture, not en passant, not promotion)
-      // Note: We check the position BEFORE the move was made (stored in position_info_)
-      const auto& best_move = *iteration_status_.best_move;
-      const auto to = best_move.To();
-      const bool is_quiet = best_move.IsNormal() &&
-                           searcher_.GetPosition().GetPieceAt(to) == Piece::kNone;
-      if (is_quiet) {
-        UpdateQuietMove<true>(best_move);
+      if (iteration_status_.best_move->IsQuiet(searcher_.GetPosition())) {
+        UpdateQuietMove<true>(*iteration_status_.best_move);
       }
 
       return true;

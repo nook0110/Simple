@@ -65,6 +65,13 @@ public:
     constexpr bool IsEnPassant() const { return Type() == MoveType::kEnPassant; }
     constexpr bool IsCastling() const { return Type() == MoveType::kCastling; }
     constexpr bool IsNormal() const { return Type() == MoveType::kNormal; }
+    
+    template<typename Position>
+    bool IsQuiet(const Position& position) const {
+        if (IsPromotion() || IsEnPassant()) return false;
+        if (IsCastling()) return true;
+        return position.GetPieceAt(To()) == Piece::kNone;
+    }
 
     static constexpr Move Null() { return Move(kNullValue); }
     static constexpr Move None() { return Move(kNoneValue); }
