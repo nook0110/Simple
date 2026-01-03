@@ -189,7 +189,11 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
       if (static_cast<Bound>(entry_bound) & Bound::kLower &&
           entry_score > alpha) {
         if (entry_score >= beta) {
-          if (IsQuiet(hash_move)) {
+          // Check if it's a quiet move (no capture, not en passant, not promotion)
+          const auto to = hash_move.To();
+          const bool is_quiet = hash_move.IsNormal() &&
+                               searcher_.GetPosition().GetPieceAt(to) == Piece::kNone;
+          if (is_quiet) {
             UpdateQuietMove<true>(hash_move);
           }
 
@@ -379,8 +383,14 @@ std::optional<bool> SearchNode<node_type, ExitCondition>::CheckFirstMove(
   if (iteration_status_.best_eval > alpha) {
     if (iteration_status_.best_eval >= beta) {
       assert(iteration_status_.best_move);
-      if (IsQuiet(*iteration_status_.best_move)) {
-        UpdateQuietMove<true>(*iteration_status_.best_move);
+      // Check if it's a quiet move (no capture, not en passant, not promotion)
+      // Note: We check the position BEFORE the move was made (stored in position_info_)
+      const auto& best_move = *iteration_status_.best_move;
+      const auto to = best_move.To();
+      const bool is_quiet = best_move.IsNormal() &&
+                           searcher_.GetPosition().GetPieceAt(to) == Piece::kNone;
+      if (is_quiet) {
+        UpdateQuietMove<true>(best_move);
       }
 
       return true;
@@ -542,14 +552,16 @@ void SearchNode<node_type, ExitCondition>::UpdateQuietMove(const Move &move) {
   if constexpr (!is_first_move) {
     for (auto it = move_picker_.begin_quiet(); it != move_picker_.current();
          ++it) {
-      const auto [from, to, captured_piece] = GetMoveData(*it);
+      const auto from = it->From();
+      const auto to = it->To();
       searcher_.history_[position_info_.side_to_move_idx][from][to] -=
           state_.remaining_depth * state_.remaining_depth;
     }
   }
 
   // history bonus
-  const auto [from, to, captured_piece] = GetMoveData(move);
+  const auto from = move.From();
+  const auto to = move.To();
   searcher_.history_[position_info_.side_to_move_idx][from][to] +=
       state_.remaining_depth * state_.remaining_depth;
 

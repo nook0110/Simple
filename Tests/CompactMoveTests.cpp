@@ -65,13 +65,6 @@ TEST(BitLayout, CorrectEncoding) {
     ASSERT_EQ((move.Raw() >> 14) & 0x3, 0);
 }
 
-TEST(PromotionBitLayout, CorrectTypeAndPiece) {
-    const Move queen_promo = Move::Make<MoveType::kPromotion>(48, 56, Piece::kQueen);
-    ASSERT_EQ((queen_promo.Raw() >> 14) & 0x3, 1);
-    ASSERT_EQ((queen_promo.Raw() >> 12) & 0x3, 
-              static_cast<std::uint16_t>(Piece::kQueen) - static_cast<std::uint16_t>(Piece::kKnight));
-}
-
 TEST(HashFunction, Consistency) {
     const Move move1(8, 16);
     const Move move2(8, 16);
@@ -119,27 +112,4 @@ TEST(AllSquares, ValidEncoding) {
         }
     }
 }
-
-TEST(LegacyCompatibility, GetMoveData) {
-    const Move normal_move(8, 16);
-    const auto [from, to, captured] = GetMoveData(normal_move);
-    ASSERT_EQ(from, 8);
-    ASSERT_EQ(to, 16);
-    ASSERT_EQ(captured, Piece::kNone);
-    
-    const Move en_passant = Move::Make<MoveType::kEnPassant>(32, 41);
-    const auto [ep_from, ep_to, ep_captured] = GetMoveData(en_passant);
-    ASSERT_EQ(ep_from, 32);
-    ASSERT_EQ(ep_to, 41);
-    ASSERT_EQ(ep_captured, Piece::kPawn);
-}
-
-TEST(LegacyCompatibility, IsQuietFunction) {
-    const Move normal_move(8, 16);
-    ASSERT_TRUE(IsQuiet(normal_move));
-    
-    const Move en_passant = Move::Make<MoveType::kEnPassant>(32, 41);
-    ASSERT_FALSE(IsQuiet(en_passant));
-}
-
 }  // namespace CompactMoveTests

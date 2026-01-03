@@ -11,9 +11,9 @@ struct NullMove {};
 
 enum class MoveType : std::uint16_t {
     kNormal    = 0,
-    kPromotion = 1 << 14,
+    kCastling  = 1 << 14,
     kEnPassant = 2 << 14,
-    kCastling  = 3 << 14
+    kPromotion = 3 << 14,
 };
 
 class Move {
@@ -84,29 +84,7 @@ private:
     std::uint16_t data_;
 };
 
-// Legacy compatibility functions
-inline std::tuple<BitIndex, BitIndex, Piece> GetMoveData(const Move& move) {
-    if (move.IsEnPassant()) {
-        return {move.From(), move.To(), Piece::kPawn};
-    }
-    if (move.IsCastling()) {
-        return {move.From(), 64, Piece::kNone};
-    }
-    return {move.From(), move.To(), Piece::kNone};
-}
-
-inline bool IsQuiet(const Move& move) {
-    return move.IsNormal() && !move.IsEnPassant();
-}
-
-inline bool DoesReset(const Move& move) {
-    return !move.IsCastling();
-}
-
-// Castling side enum for position management
-struct Castling {
-    enum class CastlingSide : std::uint8_t { k00, k000 };
-};
+enum class CastlingSide : std::uint8_t { k00, k000 };
 
 static_assert(sizeof(Move) == 2, "Move must be exactly 2 bytes");
 static_assert(alignof(Move) == 2, "Move should be 2-byte aligned");

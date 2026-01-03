@@ -125,7 +125,7 @@ class Position {
   void UndoMove(NullMove, const IrreversibleData &data);
 
   [[nodiscard]] bool CanCastle(
-      const Castling::CastlingSide castling_side) const;
+      const CastlingSide castling_side) const;
 
   /**
    * \brief Gets hash of the position.
@@ -181,7 +181,7 @@ class Position {
   [[nodiscard]] BitIndex GetKingSquare(Player player) const;
 
   [[nodiscard]] BitIndex GetCastlingRookSquare(
-      Player player, Castling::CastlingSide side) const;
+      Player player, CastlingSide side) const;
 
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
@@ -221,7 +221,7 @@ class Position {
       const;
 
   template <Piece piece>
-  [[nodiscard]] Bitboard GetCastlingSquares(Castling::CastlingSide side) const;
+  [[nodiscard]] Bitboard GetCastlingSquares(CastlingSide side) const;
 
   [[nodiscard]] IrreversibleData GetIrreversibleData() const;
 

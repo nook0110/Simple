@@ -61,7 +61,7 @@ void MoveGenerator::GenerateCastling(Moves& moves, const Position& position) {
   const auto color_idx = static_cast<size_t>(side_to_move);
 
   for (const auto castling_side :
-       {Castling::CastlingSide::k00, Castling::CastlingSide::k000}) {
+       {CastlingSide::k00, CastlingSide::k000}) {
     if (position.CanCastle(castling_side)) {
       const auto side_idx = static_cast<size_t>(castling_side);
       const auto king_to = kKingCastlingDestination[color_idx][side_idx];

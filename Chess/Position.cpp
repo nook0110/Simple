@@ -1,7 +1,6 @@
 #include "Position.h"
 
 #include <numeric>
-#include <variant>
 
 #include "Attacks.h"
 #include "BitBoard.h"
@@ -123,7 +122,7 @@ void Position::DoMove(const Move &move) {
     if (!!captured_piece) RemovePiece(to, them);
     PlacePiece(to, promoted_to, us);
     
-    for (const auto castling_side : {Castling::CastlingSide::k00, Castling::CastlingSide::k000}) {
+    for (const auto castling_side : {CastlingSide::k00, CastlingSide::k000}) {
       const auto their_rook = rook_positions_[static_cast<size_t>(them)][static_cast<size_t>(castling_side)];
       if (to == their_rook) {
         irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
@@ -138,14 +137,14 @@ void Position::DoMove(const Move &move) {
     
     // Determine which side based on king destination
     const auto color_idx = static_cast<size_t>(us);
-    Castling::CastlingSide side;
+    CastlingSide side;
     BitIndex rook_from;
     
     if (king_to == kKingCastlingDestination[color_idx][0]) {
-      side = Castling::CastlingSide::k00;
+      side = CastlingSide::k00;
       rook_from = rook_positions_[color_idx][0];
     } else {
-      side = Castling::CastlingSide::k000;
+      side = CastlingSide::k000;
       rook_from = rook_positions_[color_idx][1];
     }
     
@@ -177,7 +176,7 @@ void Position::DoMove(const Move &move) {
       irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
     }
     
-    for (auto castling_side : {Castling::CastlingSide::k00, Castling::CastlingSide::k000}) {
+    for (auto castling_side : {CastlingSide::k00, CastlingSide::k000}) {
       const auto our_rook = rook_positions_[static_cast<size_t>(us)][static_cast<size_t>(castling_side)];
       const auto their_rook = rook_positions_[static_cast<size_t>(them)][static_cast<size_t>(castling_side)];
       if (from == our_rook) {
@@ -199,7 +198,11 @@ void Position::DoMove(const Move &move) {
   side_to_move_ = Flip(side_to_move_);
   hash_ ^= hasher_.stm_hash;
 
-  history_stack_.Push(hash_, DoesReset(move));
+  // 50-move rule: reset counter if it's a pawn move or a capture
+  const bool resets_fifty_move =
+      (board_[to] == Piece::kPawn) ||  // Moving piece is a pawn
+      (irreversible_data_.captured_piece != Piece::kNone);  // Any capture
+  history_stack_.Push(hash_, resets_fifty_move);
 }
 
 void SimpleChessEngine::Position::DoMove(NullMove) {
@@ -258,11 +261,11 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
     const auto color_idx = static_cast<size_t>(us);
     
     // Determine which side based on king destination
-    Castling::CastlingSide side;
+    CastlingSide side;
     if (to == kKingCastlingDestination[color_idx][0]) {
-      side = Castling::CastlingSide::k00;
+      side = CastlingSide::k00;
     } else {
-      side = Castling::CastlingSide::k000;
+      side = CastlingSide::k000;
     }
     
     const auto side_idx = static_cast<size_t>(side);
@@ -307,7 +310,7 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
 
 
 [[nodiscard]] bool Position::CanCastle(
-    const Castling::CastlingSide castling_side) const {
+    const CastlingSide castling_side) const {
   const auto us = side_to_move_;
   const auto us_idx = static_cast<size_t>(us);
   const auto cs_idx = static_cast<size_t>(castling_side);
@@ -371,7 +374,7 @@ Bitboard Position::GetPiecesByType(const Player player) const {
 }
 
 template <Piece piece>
-Bitboard Position::GetCastlingSquares(Castling::CastlingSide side) const {
+Bitboard Position::GetCastlingSquares(CastlingSide side) const {
   static_assert(piece == Piece::kRook || piece == Piece::kKing);
   if constexpr (piece == Piece::kKing) {
     return castling_squares_for_king_[static_cast<size_t>(side_to_move_)]
@@ -402,7 +405,7 @@ BitIndex Position::GetKingSquare(const Player player) const {
 }
 
 BitIndex Position::GetCastlingRookSquare(Player player,
-                                         Castling::CastlingSide side) const {
+                                         CastlingSide side) const {
   return rook_positions_[static_cast<size_t>(player)]
                         [static_cast<size_t>(side)];
 }
@@ -431,7 +434,16 @@ bool Position::StaticExchangeEvaluation(const Move &move,
   const auto us = side_to_move_;
   const auto them = Flip(us);
 
-  const auto [from, to, captured_piece] = GetMoveData(move);
+  const auto from = move.From();
+  const auto to = move.To();
+  
+  // Get captured piece from the board
+  Piece captured_piece = Piece::kNone;
+  if (move.IsEnPassant()) {
+    captured_piece = Piece::kPawn;
+  } else if (!move.IsCastling()) {
+    captured_piece = GetPieceAt(to);
+  }
 
   Piece next_victim = GetPieceAt(from);
   

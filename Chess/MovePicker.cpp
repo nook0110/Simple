@@ -138,7 +138,17 @@ void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
   history_.resize(moves_.size());
   for (size_t i = 0; i < moves_.size(); ++i) {
     const auto& move = moves_[i];
-    const auto [from, to, capture] = GetMoveData(move);
+    const auto from = move.From();
+    const auto to = move.To();
+    
+    // Determine captured piece
+    Piece capture = Piece::kNone;
+    if (move.IsEnPassant()) {
+      capture = Piece::kPawn;
+    } else if (!move.IsCastling()) {
+      capture = searcher.GetPosition().GetPieceAt(to);
+    }
+    
     data_[i] = {from, to, capture,
                 capture != Piece::kNone
                     ? searcher.GetPosition().StaticExchangeEvaluation(
