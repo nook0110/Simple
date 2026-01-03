@@ -19,12 +19,7 @@ size_t Perft(std::ostream& o_stream, Position& position, const Depth depth) {
 
   for (const auto& move : moves) {
     if constexpr (print) {
-      std::visit(
-          [&o_stream](const auto& unwrapped_move) {
-            o_stream << unwrapped_move;
-          },
-          move);
-      o_stream << ": ";
+      o_stream << move << ": ";
     }
 
     size_t cur_answer;

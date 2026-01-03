@@ -49,72 +49,18 @@ inline std::ostream& PrintCoordinates(const Coordinates coordinates,
   return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, const DefaultMove& move) {
-  const auto from = GetCoordinates(move.from);
-  const auto to = GetCoordinates(move.to);
-
-  PrintCoordinates(from, stream);
-  PrintCoordinates(to, stream);
-
-  return stream;
-}
-inline std::ostream& operator<<(std::ostream& stream, const PawnPush& move) {
-  const auto from = GetCoordinates(move.from);
-  const auto to = GetCoordinates(move.to);
-
-  PrintCoordinates(from, stream);
-  PrintCoordinates(to, stream);
-
-  return stream;
-}
-inline std::ostream& operator<<(std::ostream& stream, const DoublePush& move) {
-  const auto from = GetCoordinates(move.from);
-  const auto to = GetCoordinates(move.to);
-
-  PrintCoordinates(from, stream);
-  PrintCoordinates(to, stream);
-
-  return stream;
-}
-inline std::ostream& operator<<(std::ostream& stream, const EnCroissant& move) {
-  const auto from = GetCoordinates(move.from);
-  const auto to = GetCoordinates(move.to);
-
-  PrintCoordinates(from, stream);
-  PrintCoordinates(to, stream);
-
-  return stream;
-}
-inline std::ostream& operator<<(std::ostream& stream, const Promotion& move) {
-  const auto from = GetCoordinates(move.from);
-  const auto to = GetCoordinates(move.to);
-
-  PrintCoordinates(from, stream);
-  PrintCoordinates(to, stream);
-
-  stream << kPiecesChars[static_cast<size_t>(move.promoted_to)];
-
-  return stream;
-}
-
-inline std::ostream& operator<<(std::ostream& stream, const Castling& move) {
-  const auto from = GetCoordinates(move.king_from);
-
-  static constexpr std::array kCastlingShifts = {Compass::kEast,
-                                                 Compass::kWest};
-
-  const auto shift = kCastlingShifts[static_cast<size_t>(move.side)];
-
-  const auto to = GetCoordinates(Shift(Shift(move.king_from, shift), shift));
-
-  PrintCoordinates(from, stream);
-  PrintCoordinates(to, stream);
-
-  return stream;
-}
-
 inline std::ostream& operator<<(std::ostream& stream, const Move& move) {
-  std::visit([&](const auto& move) { stream << move; }, move);
+  const auto from = GetCoordinates(move.From());
+  const auto to = GetCoordinates(move.To());
+
+  PrintCoordinates(from, stream);
+  PrintCoordinates(to, stream);
+
+  if (move.IsPromotion()) {
+    stream << kPiecesChars[static_cast<size_t>(move.PromotionPiece())];
+  }
+
   return stream;
 }
+
 }  // namespace SimpleChessEngine

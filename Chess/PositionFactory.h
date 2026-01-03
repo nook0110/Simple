@@ -156,19 +156,19 @@ inline std::string SimpleChessEngine::FenFactory::operator()(
   const auto castling_rights = position.GetCastlingRights();
 
   if (castling_rights[static_cast<size_t>(Player::kWhite)].test(
-          static_cast<size_t>(Castling::CastlingSide::k00))) {
+          static_cast<size_t>(CastlingSide::k00))) {
     ss << 'K';
   }
   if (castling_rights[static_cast<size_t>(Player::kWhite)].test(
-          static_cast<size_t>(Castling::CastlingSide::k000))) {
+          static_cast<size_t>(CastlingSide::k000))) {
     ss << 'Q';
   }
   if (castling_rights[static_cast<size_t>(Player::kBlack)].test(
-          static_cast<size_t>(Castling::CastlingSide::k00))) {
+          static_cast<size_t>(CastlingSide::k00))) {
     ss << 'k';
   }
   if (castling_rights[static_cast<size_t>(Player::kBlack)].test(
-          static_cast<size_t>(Castling::CastlingSide::k000))) {
+          static_cast<size_t>(CastlingSide::k000))) {
     ss << 'q';
   }
 

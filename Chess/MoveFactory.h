@@ -10,6 +10,7 @@
 #include "Utility.h"
 
 namespace SimpleChessEngine {
+
 struct MoveFactory {
   Move operator()(const Position &position, const std::string &move) const;
 
@@ -25,12 +26,14 @@ struct MoveFactory {
 inline Move MoveFactory::operator()(const Position &position,
                                     const std::string &move) const {
   if (move == "O-O") {
-    return Castling{Castling::CastlingSide::k00,
-                    position.GetKingSquare(position.GetSideToMove())};
+    return Move::Make<MoveType::kCastling>(
+        position.GetKingSquare(position.GetSideToMove()), 
+        position.GetKingSquare(position.GetSideToMove()) + 2);
   }
   if (move == "O-O-O") {
-    return Castling{Castling::CastlingSide::k000,
-                    position.GetKingSquare(position.GetSideToMove())};
+    return Move::Make<MoveType::kCastling>(
+        position.GetKingSquare(position.GetSideToMove()),
+        position.GetKingSquare(position.GetSideToMove()) - 2);
   }
 
   const auto [from, to] = ParseDefaultMove(move);
@@ -39,34 +42,27 @@ inline Move MoveFactory::operator()(const Position &position,
 
   if (piece_to_move == Piece::kKing) {
     if (!IsAdjacent(from, to)) {
-      static std::unordered_map<File, Castling::CastlingSide> castling_file = {
-          {2, Castling::CastlingSide::k000}, {6, Castling::CastlingSide::k00}};
-      static std::unordered_map<File, File> rook_from_file = {{1, 0}, {6, 7}};
-
-      auto [king_file, king_rank] = GetCoordinates(to);
-
-      return Castling{castling_file[king_file], from,
-                      GetSquareIndex(rook_from_file[king_file], king_rank)};
+      return Move::Make<MoveType::kCastling>(from, to);
     }
   }
+  
   if (constexpr size_t kPromotionSize = 5; move.size() == kPromotionSize) {
-    return Promotion{{from, to, position.GetPieceAt(to)},
-                     kCharToPiece[move.back()].first};
+    return Move::Make<MoveType::kPromotion>(from, to, kCharToPiece[move.back()].first);
   }
 
   if (piece_to_move != Piece::kPawn || position.GetPieceAt(to) != Piece::kNone) {
-    return DefaultMove{from, to, position.GetPieceAt(to)};
+    return Move(from, to);
   }
 
   if (!IsAdjacent(from, to)) {
-    return DoublePush{from, to};
+    return Move(from, to);
   }
 
   if (to == position.GetEnCroissantSquare()) {
-    return EnCroissant{from, to};
+    return Move::Make<MoveType::kEnPassant>(from, to);
   }
 
-  return PawnPush{from, to};
+  return Move(from, to);
 }
 
 inline MoveFactory::ParsedMove MoveFactory::ParseDefaultMove(

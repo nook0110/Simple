@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <ostream>
 
 #include "Move.h"
 #include "MoveFactory.h"
@@ -19,6 +20,10 @@ struct BestMoveTestCase {
   std::string fen;
   std::string best_move;
 };
+
+std::ostream& operator<<(std::ostream& os, const BestMoveTestCase& test_case) {
+    return os << "FEN: " << test_case.fen << ", Expected move: " << test_case.best_move;
+}
 
 class BestMoveTest : public testing::TestWithParam<BestMoveTestCase> {
  protected:

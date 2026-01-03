@@ -189,7 +189,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
       if (static_cast<Bound>(entry_bound) & Bound::kLower &&
           entry_score > alpha) {
         if (entry_score >= beta) {
-          if (IsQuiet(hash_move)) {
+          if (hash_move.IsQuiet(searcher_.GetPosition())) {
             UpdateQuietMove<true>(hash_move);
           }
 
@@ -379,7 +379,7 @@ std::optional<bool> SearchNode<node_type, ExitCondition>::CheckFirstMove(
   if (iteration_status_.best_eval > alpha) {
     if (iteration_status_.best_eval >= beta) {
       assert(iteration_status_.best_move);
-      if (IsQuiet(*iteration_status_.best_move)) {
+      if (iteration_status_.best_move->IsQuiet(searcher_.GetPosition())) {
         UpdateQuietMove<true>(*iteration_status_.best_move);
       }
 
@@ -542,14 +542,16 @@ void SearchNode<node_type, ExitCondition>::UpdateQuietMove(const Move &move) {
   if constexpr (!is_first_move) {
     for (auto it = move_picker_.begin_quiet(); it != move_picker_.current();
          ++it) {
-      const auto [from, to, captured_piece] = GetMoveData(*it);
+      const auto from = it->From();
+      const auto to = it->To();
       searcher_.history_[position_info_.side_to_move_idx][from][to] -=
           state_.remaining_depth * state_.remaining_depth;
     }
   }
 
   // history bonus
-  const auto [from, to, captured_piece] = GetMoveData(move);
+  const auto from = move.From();
+  const auto to = move.To();
   searcher_.history_[position_info_.side_to_move_idx][from][to] +=
       state_.remaining_depth * state_.remaining_depth;
 

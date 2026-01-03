@@ -28,22 +28,6 @@ template SearchResult Quiescence<Pondering>::Search<true>(
     Position& current_position, Eval alpha, const Eval beta,
     const Depth current_depth);
 
-auto kCompareMoves = [](const Move& lhs, const Move& rhs,
-                        const Position& current_position) {
-  if (lhs.index() != rhs.index()) return lhs.index() > rhs.index();
-  if (!std::holds_alternative<DefaultMove>(lhs)) return false;
-  const auto [from_lhs, to_lhs, captured_piece_lhs] = GetMoveData(lhs);
-  const auto [from_rhs, to_rhs, captured_piece_rhs] = GetMoveData(rhs);
-  const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
-  const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
-  const auto moving_idx_lhs =
-      -static_cast<int>(current_position.GetPieceAt(from_lhs));
-  const auto moving_idx_rhs =
-      -static_cast<int>(current_position.GetPieceAt(from_rhs));
-  return std::tie(captured_idx_lhs, moving_idx_lhs) >
-         std::tie(captured_idx_rhs, moving_idx_rhs);
-};
-
 template <class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <bool start_of_search>
