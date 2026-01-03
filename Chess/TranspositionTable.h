@@ -31,7 +31,7 @@ struct Node {
 template <size_t TableSizeMB>
 class TranspositionTable {
  public:
-  static constexpr size_t kTableSize = 1 << 25;
+  static constexpr size_t kTableSize = (TableSizeMB * 1024 * 1024) / sizeof(Node);
 
   [[nodiscard]] bool Contains(const Position& position) const {
     return position.GetHash() == GetNode(position).true_hash;
