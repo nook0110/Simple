@@ -234,7 +234,6 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
   const auto them = side_to_move_;  // Current side (after the move was made)
   const auto us = Flip(them);       // Side that made the move
   
-  // Get captured piece from current irreversible data before restoring
   const auto captured_piece = irreversible_data_.captured_piece;
   
   irreversible_data_ = data;
@@ -260,7 +259,6 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
   } else if (move.IsCastling()) {
     const auto color_idx = static_cast<size_t>(us);
     
-    // Determine which side based on king destination
     CastlingSide side;
     if (to == kKingCastlingDestination[color_idx][0]) {
       side = CastlingSide::k00;
@@ -271,11 +269,9 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
     const auto side_idx = static_cast<size_t>(side);
     const auto rook_from = rook_positions_[color_idx][side_idx];
     
-    // Remove pieces from castled positions first
     RemovePiece(kKingCastlingDestination[color_idx][side_idx], us);
     RemovePiece(kRookCastlingDestination[color_idx][side_idx], us);
     
-    // Place pieces back at original positions
     PlacePiece(from, Piece::kKing, us);
     PlacePiece(rook_from, Piece::kRook, us);
     
@@ -437,7 +433,6 @@ bool Position::StaticExchangeEvaluation(const Move &move,
   const auto from = move.From();
   const auto to = move.To();
   
-  // Get captured piece from the board
   Piece captured_piece = Piece::kNone;
   if (move.IsEnPassant()) {
     captured_piece = Piece::kPawn;
