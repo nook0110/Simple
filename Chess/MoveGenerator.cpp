@@ -195,10 +195,10 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
       const auto to = attack_squares.PopFirstBit();
       const auto from = Shift(to, opposite_attacks[attack_direction]);
 
-      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight));
-      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop));
-      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kRook));
       moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen));
+      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight));
+      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kRook));
+      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop));
     }
   }
 }
