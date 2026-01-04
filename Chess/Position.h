@@ -212,6 +212,19 @@ class Position {
     return history_stack_.Count(hash_, depth) >= 3;
   }
 
+  /**
+   * \brief Checks if the position has insufficient material to mate.
+   *
+   * Detects positions where neither side can force checkmate:
+   * - K vs K
+   * - K+B vs K
+   * - K+N vs K
+   * - K+B vs K+B (same color bishops)
+   *
+   * \return True if insufficient material, false otherwise.
+   */
+  [[nodiscard]] bool HasInsufficientMaterial() const;
+
   [[nodiscard]] bool StaticExchangeEvaluation(const Move &move,
                                               Eval threshold) const;
 

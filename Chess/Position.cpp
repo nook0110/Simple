@@ -634,4 +634,52 @@ size_t Position::GameHistory::Count(const Hash hash, Depth depth) const {
   }
   return result;
 }
+
+bool Position::HasInsufficientMaterial() const {
+  if (pieces_by_type_[static_cast<size_t>(Piece::kPawn)].Any() ||
+      pieces_by_type_[static_cast<size_t>(Piece::kRook)].Any() ||
+      pieces_by_type_[static_cast<size_t>(Piece::kQueen)].Any()) {
+    return false;
+  }
+
+  const auto white_pieces = pieces_by_color_[static_cast<size_t>(Player::kWhite)];
+  const auto black_pieces = pieces_by_color_[static_cast<size_t>(Player::kBlack)];
+  
+  const auto white_knights = GetPiecesByType<Piece::kKnight>(Player::kWhite);
+  const auto black_knights = GetPiecesByType<Piece::kKnight>(Player::kBlack);
+  const auto white_bishops = GetPiecesByType<Piece::kBishop>(Player::kWhite);
+  const auto black_bishops = GetPiecesByType<Piece::kBishop>(Player::kBlack);
+
+  const auto white_count = white_pieces.Count();
+  const auto black_count = black_pieces.Count();
+
+  if (white_count == 1 && black_count == 1) {
+    return true;
+  }
+
+  if ((white_count == 2 && black_count == 1 && white_knights.Count() == 1) ||
+      (white_count == 1 && black_count == 2 && black_knights.Count() == 1)) {
+    return true;
+  }
+
+  if ((white_count == 2 && black_count == 1 && white_bishops.Count() == 1) ||
+      (white_count == 1 && black_count == 2 && black_bishops.Count() == 1)) {
+    return true;
+  }
+
+  if (white_count == 2 && black_count == 2 &&
+      white_bishops.Count() == 1 && black_bishops.Count() == 1) {
+    const auto white_bishop_square = white_bishops.GetFirstBit();
+    const auto black_bishop_square = black_bishops.GetFirstBit();
+    
+    const auto white_color = (white_bishop_square / 8 + white_bishop_square % 8) % 2;
+    const auto black_color = (black_bishop_square / 8 + black_bishop_square % 8) % 2;
+    
+    if (white_color == black_color) {
+      return true;
+    }
+  }
+
+  return false;
+}
 }  // namespace SimpleChessEngine

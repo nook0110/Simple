@@ -166,6 +166,11 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     return kDrawValue;
   }
 
+  // Check for insufficient material (e.g., KBvK, KNvK, etc.)
+  if (GetCurrentPosition().HasInsufficientMaterial()) {
+    return kDrawValue;
+  }
+
   // return the evaluation of the current position if we have reached
   // the end of the search tree
   if (remaining_depth <= 0) {
