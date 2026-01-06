@@ -56,9 +56,9 @@ class Position {
     std::array<std::bitset<2>, kColors>
         castling_rights{};  //!< Castling rights for each color.
 
-    std::array<Bitboard, kColors>
+    mutable std::array<Bitboard, kColors>
         pinners{};  //!< Pieces that are pinning opponent's pieces.
-    std::array<Bitboard, kColors>
+    mutable std::array<Bitboard, kColors>
         blockers{};  //!< Pieces that are blocking attacks on the king.
     
     Piece captured_piece{Piece::kNone};  //!< Piece captured by the last move
@@ -186,7 +186,7 @@ class Position {
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
 
-  void ComputePins(Player us);
+  void ComputePins(Player us) const;
 
   [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us,
                                    Bitboard transparent = kEmptyBoard) const;
@@ -214,6 +214,10 @@ class Position {
 
   [[nodiscard]] bool StaticExchangeEvaluation(const Move &move,
                                               Eval threshold) const;
+
+  [[nodiscard]] bool PseudoLegal(const Move &move) const;
+
+  [[nodiscard]] bool Legal(const Move &move) const;
 
   [[nodiscard]] const std::optional<BitIndex> &GetEnCroissantSquare() const;
 

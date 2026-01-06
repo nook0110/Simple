@@ -176,7 +176,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   if (ProbeTranspositionTable()) {
     searcher_.debug_info_.tt_hits++;
-    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+    auto [hash_move, entry_score, entry_depth, entry_bound, is_pv] =
         *iteration_status_.tt_info;
     entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
 
@@ -225,7 +225,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
          static_cast<Depth>(
              remaining_depth -
              Settings::PruneParameters::NMPSettings::kNullMoveReduction),
-         -beta, -beta + 1, true});
+         -beta, -beta + Eval(1), true});
 
     current_position.UndoMove(NullMove{}, position_info_.irreversible_data);
 
@@ -258,7 +258,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   auto const &move_generator = searcher_.move_generator_;
 
   move_picker_.InitPicker(
-      move_generator.GenerateMoves<MoveGenerator::Type::kAll>(current_position),
+      move_generator.GenerateMoves<MoveGenerator::Type::kLegal>(current_position),
       searcher_);
 
   // check if there are no possible moves
@@ -307,7 +307,7 @@ template <NodeType node_type, class ExitCondition>
 Eval SearchNode<node_type, ExitCondition>::GetEndGameScore() const {
   if (position_info_.is_under_check) {
     return kMateValue +
-           static_cast<Eval>(state_.max_depth - state_.remaining_depth);
+           Eval(state_.max_depth - state_.remaining_depth);
   }
 
   return kDrawValue;
@@ -326,12 +326,15 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
   assert(iteration_status_.best_move);
-  searcher_.best_moves_.SetEntry(
-      GetCurrentPosition(), *iteration_status_.best_move,
+  auto result = searcher_.best_moves_.Probe(GetCurrentPosition().GetHash());
+  result.entry.get().Save(
+      GetCurrentPosition().GetHash(),
       iteration_status_.best_eval +
           IsMateScore(iteration_status_.best_eval) *
               (state_.max_depth - state_.remaining_depth),
-      state_.remaining_depth, bound, searcher_.age_);
+      kIsPrincipalVariation, bound, state_.remaining_depth,
+      *iteration_status_.best_move, iteration_status_.best_eval,
+      searcher_.best_moves_.GetGeneration());
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -431,8 +434,8 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     }
 
     auto temp_eval_optional = StartSubsearch<kZWSNodeType>(
-        {max_depth, static_cast<Depth>(remaining_depth - 1 - R), -alpha - 1,
-         -alpha});  // Reduced ZWS
+        {max_depth, static_cast<Depth>(remaining_depth - 1 - R), -alpha - Eval(1),
+         -alpha});
 
     if (!temp_eval_optional) {
       current_position.UndoMove(move, position_info_.irreversible_data);
@@ -444,7 +447,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
         temp_eval >
             alpha) { /* research at full depth, but still with zero window */
       temp_eval_optional = StartSubsearch<kZWSNodeType>(
-          {max_depth, static_cast<Depth>(remaining_depth - 1), -alpha - 1,
+          {max_depth, static_cast<Depth>(remaining_depth - 1), -alpha - Eval(1),
            -alpha});
 
       if (!temp_eval_optional) {
@@ -583,9 +586,9 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool SearchNode<node_type, ExitCondition>::ProbeTranspositionTable() {
-  if (auto node = searcher_.best_moves_.GetNode(searcher_.current_position_);
-      node.true_hash == GetCurrentPosition().GetHash()) {
-    iteration_status_.tt_info = std::move(node);
+  auto result = searcher_.best_moves_.Probe(GetCurrentPosition().GetHash());
+  if (result.found) {
+    iteration_status_.tt_info = std::move(result.data);
     return true;
   }
 
@@ -598,9 +601,13 @@ std::optional<SearchResult>
 SearchNode<node_type, ExitCondition>::CheckTranspositionTable() {
   if (iteration_status_.tt_info) {
     auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
-    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+    auto [hash_move, entry_score, entry_depth, entry_bound, is_pv] =
         *iteration_status_.tt_info;
 
+    if(!hash_move || !GetCurrentPosition().PseudoLegal(hash_move) || 
+        !GetCurrentPosition().Legal(hash_move)) {
+          return entry_score;
+        }
     auto has_cutoff_opt =
         CheckFirstMove<kFirstChildNodeExpectedType>(hash_move);
     if (!has_cutoff_opt) {

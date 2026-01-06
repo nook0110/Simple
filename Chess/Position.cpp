@@ -1,9 +1,11 @@
 #include "Position.h"
 
+#include <algorithm>
 #include <numeric>
 
 #include "Attacks.h"
 #include "BitBoard.h"
+#include "MoveGenerator.h"
 #include "PSQT.h"
 #include "Piece.h"
 
@@ -106,13 +108,15 @@ void Position::DoMove(const Move &move) {
   const auto to = move.To();
   const auto us = side_to_move_;
   const auto them = Flip(us);
-  
+
   // Store captured piece for undo
   irreversible_data_.captured_piece = board_[to];
 
   if (move.IsEnPassant()) {
-    const auto capture_square = Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
-    irreversible_data_.captured_piece = Piece::kPawn;  // En passant always captures a pawn
+    const auto capture_square =
+        Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
+    irreversible_data_.captured_piece =
+        Piece::kPawn;  // En passant always captures a pawn
     RemovePiece(capture_square, them);
     MovePiece(from, to, us);
   } else if (move.IsPromotion()) {
@@ -121,25 +125,29 @@ void Position::DoMove(const Move &move) {
     RemovePiece(from, us);
     if (!!captured_piece) RemovePiece(to, them);
     PlacePiece(to, promoted_to, us);
-    
+
     for (const auto castling_side : {CastlingSide::k00, CastlingSide::k000}) {
-      const auto their_rook = rook_positions_[static_cast<size_t>(them)][static_cast<size_t>(castling_side)];
+      const auto their_rook =
+          rook_positions_[static_cast<size_t>(them)]
+                         [static_cast<size_t>(castling_side)];
       if (to == their_rook) {
         irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
-            ~static_cast<char>(kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
+            ~static_cast<char>(
+                kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
       }
     }
   } else if (move.IsCastling()) {
-    irreversible_data_.captured_piece = Piece::kNone;  // Castling never captures
+    irreversible_data_.captured_piece =
+        Piece::kNone;  // Castling never captures
     // Determine castling side and rook position from move
     const auto king_to = to;
     const auto king_from = from;
-    
+
     // Determine which side based on king destination
     const auto color_idx = static_cast<size_t>(us);
     CastlingSide side;
     BitIndex rook_from;
-    
+
     if (king_to == kKingCastlingDestination[color_idx][0]) {
       side = CastlingSide::k00;
       rook_from = rook_positions_[color_idx][0];
@@ -147,45 +155,50 @@ void Position::DoMove(const Move &move) {
       side = CastlingSide::k000;
       rook_from = rook_positions_[color_idx][1];
     }
-    
+
     const auto side_idx = static_cast<size_t>(side);
     RemovePiece(king_from, us);
     RemovePiece(rook_from, us);
     PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us);
     PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us);
-    
+
     king_position_[color_idx] = kKingCastlingDestination[color_idx][side_idx];
     irreversible_data_.castling_rights[color_idx] = 0;
   } else {
     // Normal move (including pawn pushes and double pushes)
     const auto piece_to_move = board_[from];
     const auto captured_piece = board_[to];
-    
+
     // Check if it's a double pawn push
     if (piece_to_move == Piece::kPawn && std::abs(from - to) == 16) {
       const auto file = GetCoordinates(from).first;
       hash_ ^= hasher_.en_croissant_hash[file];
       irreversible_data_.en_croissant_square = std::midpoint(from, to);
     }
-    
+
     if (!!captured_piece) RemovePiece(to, them);
     MovePiece(from, to, us);
-    
+
     if (piece_to_move == Piece::kKing) {
       king_position_[static_cast<size_t>(us)] = to;
       irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
     }
-    
+
     for (auto castling_side : {CastlingSide::k00, CastlingSide::k000}) {
-      const auto our_rook = rook_positions_[static_cast<size_t>(us)][static_cast<size_t>(castling_side)];
-      const auto their_rook = rook_positions_[static_cast<size_t>(them)][static_cast<size_t>(castling_side)];
+      const auto our_rook = rook_positions_[static_cast<size_t>(us)]
+                                           [static_cast<size_t>(castling_side)];
+      const auto their_rook =
+          rook_positions_[static_cast<size_t>(them)]
+                         [static_cast<size_t>(castling_side)];
       if (from == our_rook) {
         irreversible_data_.castling_rights[static_cast<size_t>(us)] &=
-            ~static_cast<std::int8_t>(kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
+            ~static_cast<std::int8_t>(
+                kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
       }
       if (to == their_rook) {
         irreversible_data_.castling_rights[static_cast<size_t>(them)] &=
-            ~static_cast<std::int8_t>(kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
+            ~static_cast<std::int8_t>(
+                kCastlingRightsForSide[static_cast<size_t>(castling_side)]);
       }
     }
   }
@@ -217,7 +230,6 @@ void SimpleChessEngine::Position::DoMove(NullMove) {
   history_stack_.Push(hash_, false);
 }
 
-
 void Position::UndoMove(const Move &move, const IrreversibleData &data) {
   const auto &ep_square = irreversible_data_.en_croissant_square;
   for (const auto color : {Player::kWhite, Player::kBlack}) {
@@ -228,14 +240,14 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
   if (ep_square.has_value()) {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
   }
-  
+
   const auto from = move.From();
   const auto to = move.To();
   const auto them = side_to_move_;  // Current side (after the move was made)
   const auto us = Flip(them);       // Side that made the move
-  
+
   const auto captured_piece = irreversible_data_.captured_piece;
-  
+
   irreversible_data_ = data;
   for (const auto color : {Player::kWhite, Player::kBlack}) {
     hash_ ^= hasher_.cr_hash[static_cast<size_t>(
@@ -243,13 +255,16 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
                     .to_ulong()];
   }
   if (irreversible_data_.en_croissant_square.has_value()) {
-    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(irreversible_data_.en_croissant_square.value()).first];
+    hash_ ^= hasher_.en_croissant_hash
+                 [GetCoordinates(irreversible_data_.en_croissant_square.value())
+                      .first];
   }
   hash_ ^= hasher_.stm_hash;
   side_to_move_ = Flip(side_to_move_);
 
   if (move.IsEnPassant()) {
-    const auto capture_square = Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
+    const auto capture_square =
+        Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
     MovePiece(to, from, us);
     PlacePiece(capture_square, Piece::kPawn, them);
   } else if (move.IsPromotion()) {
@@ -258,31 +273,31 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
     PlacePiece(from, Piece::kPawn, us);
   } else if (move.IsCastling()) {
     const auto color_idx = static_cast<size_t>(us);
-    
+
     CastlingSide side;
     if (to == kKingCastlingDestination[color_idx][0]) {
       side = CastlingSide::k00;
     } else {
       side = CastlingSide::k000;
     }
-    
+
     const auto side_idx = static_cast<size_t>(side);
     const auto rook_from = rook_positions_[color_idx][side_idx];
-    
+
     RemovePiece(kKingCastlingDestination[color_idx][side_idx], us);
     RemovePiece(kRookCastlingDestination[color_idx][side_idx], us);
-    
+
     PlacePiece(from, Piece::kKing, us);
     PlacePiece(rook_from, Piece::kRook, us);
-    
+
     king_position_[color_idx] = from;
   } else {
     // Normal move
     const auto piece_to_move = board_[to];
-    
+
     MovePiece(to, from, us);
     if (!!captured_piece) PlacePiece(to, captured_piece, them);
-    
+
     if (piece_to_move == Piece::kKing) {
       king_position_[static_cast<size_t>(us)] = from;
     }
@@ -304,9 +319,7 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
   history_stack_.Pop();
 }
 
-
-[[nodiscard]] bool Position::CanCastle(
-    const CastlingSide castling_side) const {
+[[nodiscard]] bool Position::CanCastle(const CastlingSide castling_side) const {
   const auto us = side_to_move_;
   const auto us_idx = static_cast<size_t>(us);
   const auto cs_idx = static_cast<size_t>(castling_side);
@@ -432,7 +445,7 @@ bool Position::StaticExchangeEvaluation(const Move &move,
 
   const auto from = move.From();
   const auto to = move.To();
-  
+
   Piece captured_piece = Piece::kNone;
   if (move.IsEnPassant()) {
     captured_piece = Piece::kPawn;
@@ -441,7 +454,7 @@ bool Position::StaticExchangeEvaluation(const Move &move,
   }
 
   Piece next_victim = GetPieceAt(from);
-  
+
   if (move.IsPromotion()) {
     next_victim = move.PromotionPiece();
   }
@@ -449,7 +462,8 @@ bool Position::StaticExchangeEvaluation(const Move &move,
   Eval balance = EstimatePiece(captured_piece);
 
   if (move.IsPromotion()) {
-    balance += EstimatePiece(move.PromotionPiece()) - EstimatePiece(Piece::kPawn);
+    balance +=
+        EstimatePiece(move.PromotionPiece()) - EstimatePiece(Piece::kPawn);
   } else if (move.IsEnPassant()) {
     balance = EstimatePiece(Piece::kPawn);
   }
@@ -469,7 +483,8 @@ bool Position::StaticExchangeEvaluation(const Move &move,
   Bitboard occupancy = GetAllPieces() ^ SingleSquare(from) ^ SingleSquare(to);
 
   [[unlikely]] if (move.IsEnPassant()) {
-    occupancy ^= Shift(SingleSquare(to), kPawnMoveDirection[static_cast<size_t>(them)]);
+    occupancy ^=
+        Shift(SingleSquare(to), kPawnMoveDirection[static_cast<size_t>(them)]);
   }
 
   Bitboard attackers = Attackers(to, ~occupancy) & occupancy;
@@ -560,7 +575,7 @@ Bitboard Position::Attackers(const BitIndex square,
           pieces_by_type_[static_cast<size_t>(Piece::kKing)]);
 }
 
-void Position::ComputePins(const Player us) {
+void Position::ComputePins(const Player us) const {
   const Player them = Flip(us);
 
   const auto us_idx = static_cast<size_t>(us);
@@ -634,4 +649,147 @@ size_t Position::GameHistory::Count(const Hash hash, Depth depth) const {
   }
   return result;
 }
+
+bool Position::PseudoLegal(const Move &move) const {
+  const auto us = side_to_move_;
+  const auto from = move.From();
+  const auto to = move.To();
+  const auto piece = GetPieceAt(from);
+
+  if (!move.IsNormal()) {
+    MoveGenerator generator;
+    const auto moves =
+        IsUnderCheck(us)
+            ? generator.GenerateMoves<MoveGenerator::Type::kEvasions>(*this)
+            : generator.GenerateMoves<MoveGenerator::Type::kNonEvasions>(*this);
+    return std::find(moves.begin(), moves.end(), move) != moves.end();
+  }
+
+  if (piece == Piece::kNone || GetPieces(us).Test(from) == false) {
+    return false;
+  }
+
+  if (GetPieces(us).Test(to)) {
+    return false;
+  }
+
+  if (piece == Piece::kPawn) {
+    if ((kRankBB[7] | kRankBB[0]).Test(to)) {
+      return false;
+    }
+
+    const auto is_capture =
+        (GetPawnAttacks(from, us) & GetPieces(Flip(us))).Test(to);
+    const auto is_single_push =
+        (Shift(from, kPawnMoveDirection[static_cast<size_t>(us)]) == to) &&
+        GetPieceAt(to) == Piece::kNone;
+    const auto is_double_push =
+        (Shift(from, kPawnMoveDirection[static_cast<size_t>(us)]) +
+             static_cast<BitIndex>(
+                 kPawnMoveDirection[static_cast<size_t>(us)]) ==
+         to) &&
+        (GetCoordinates(from).second == (us == Player::kWhite ? 1 : 6)) &&
+        GetPieceAt(to) == Piece::kNone &&
+        GetPieceAt(
+            Shift(to, kPawnMoveDirection[static_cast<size_t>(Flip(us))])) ==
+            Piece::kNone;
+
+    if (!(is_capture || is_single_push || is_double_push)) {
+      return false;
+    }
+  } else if (!(AttackTable<Piece::kKnight>::GetAttackMap(from, GetAllPieces())
+                   .Test(to) &&
+               piece == Piece::kKnight) &&
+             !(AttackTable<Piece::kBishop>::GetAttackMap(from, GetAllPieces())
+                   .Test(to) &&
+               piece == Piece::kBishop) &&
+             !(AttackTable<Piece::kRook>::GetAttackMap(from, GetAllPieces())
+                   .Test(to) &&
+               piece == Piece::kRook) &&
+             !(AttackTable<Piece::kQueen>::GetAttackMap(from, GetAllPieces())
+                   .Test(to) &&
+               piece == Piece::kQueen) &&
+             !(AttackTable<Piece::kKing>::GetAttackMap(from, GetAllPieces())
+                   .Test(to) &&
+               piece == Piece::kKing)) {
+    return false;
+  }
+
+  if (IsUnderCheck()) {
+    if (piece != Piece::kKing) {
+      const auto checkers = Attackers(GetKingSquare(us)) & GetPieces(Flip(us));
+      if (checkers.MoreThanOne()) {
+        return false;
+      }
+
+      if (!Between(GetKingSquare(us), checkers.GetFirstBit()).Test(to)) {
+        return false;
+      }
+    } else if (IsUnderAttack(to, us, SingleSquare(from))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool Position::Legal(const Move &move) const {
+  assert(move.IsValid());
+
+  const auto us = side_to_move_;
+  const auto from = move.From();
+  const auto to = move.To();
+
+  assert(GetPieces(us).Test(from));
+  assert(GetPieceAt(GetKingSquare(us)) == Piece::kKing);
+
+  if (move.IsEnPassant()) {
+    const auto king_square = GetKingSquare(us);
+    const auto capture_square =
+        Shift(to, kPawnMoveDirection[static_cast<size_t>(Flip(us))]);
+    const auto occupied =
+        (GetAllPieces() ^ SingleSquare(from) ^ SingleSquare(capture_square)) |
+        SingleSquare(to);
+
+    assert(to == GetEnCroissantSquare().value());
+    assert(GetPieceAt(from) == Piece::kPawn);
+    assert(GetPieceAt(capture_square) == Piece::kPawn);
+    assert(GetPieceAt(to) == Piece::kNone);
+
+    return !(AttackTable<Piece::kRook>::GetAttackMap(king_square, occupied) &
+             (GetPiecesByType<Piece::kQueen>(Flip(us)) |
+              GetPiecesByType<Piece::kRook>(Flip(us))))
+                .Any() &&
+           !(AttackTable<Piece::kBishop>::GetAttackMap(king_square, occupied) &
+             (GetPiecesByType<Piece::kQueen>(Flip(us)) |
+              GetPiecesByType<Piece::kBishop>(Flip(us))))
+                .Any();
+  }
+
+  if (move.IsCastling()) {
+    const auto color_idx = static_cast<size_t>(us);
+    const auto final_king_pos = to > from
+                                    ? kKingCastlingDestination[color_idx][0]
+                                    : kKingCastlingDestination[color_idx][1];
+    const auto step = to > from ? Compass::kWest : Compass::kEast;
+
+    for (auto square = final_king_pos; square != from;
+         square = Shift(square, step)) {
+      if (IsUnderAttack(square, us)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  if (GetPieceAt(from) == Piece::kKing) {
+    return !IsUnderAttack(to, us, SingleSquare(from));
+  }
+
+  return !(irreversible_data_.blockers[static_cast<size_t>(us)].Test(from)) ||
+         ((Ray(from, to) | Ray(to, from)) & GetPiecesByType<Piece::kKing>(us))
+             .Any();
+}
+
 }  // namespace SimpleChessEngine

@@ -3,17 +3,17 @@
 #include <array>
 #include <cstdint>
 
+#include "Eval.h"
 #include "Utility.h"
 
 namespace SimpleChessEngine {
-using Eval = int;
 using SearchResult = std::optional<Eval>;
 
 enum class GamePhase : std::uint8_t { kMiddleGame, kEndGame };
 
 constexpr size_t kGamePhases = 2;
 
-using PhaseValue = int;
+using PhaseValue = Eval;
 
 struct TaperedEval {
   std::array<Eval, kGamePhases> eval{};
@@ -68,19 +68,19 @@ constexpr Eval kFullNonPawnMaterial =
             .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
         2;
 
-constexpr std::array kPhaseValueLimits = {kFullNonPawnMaterial, 0};
+constexpr std::array kPhaseValueLimits = {kFullNonPawnMaterial, Eval{0}};
 
 constexpr PhaseValue kLimitsDifference =
     kPhaseValueLimits[0] - kPhaseValueLimits[1];
 
 constexpr Eval kTempoBonus = 20;
 
-constexpr Eval kMateValue = -100'000;
+constexpr Eval kMateValue = -10'000;
 constexpr Eval kDrawValue = 0;
 
 // returns zero if the score is not mate value
 // otherwise returns 1 if it is winning (positive), -1 if losing (negative)
-inline int IsMateScore(const int score) {
+inline int IsMateScore(const Eval score) {
   if (-std::abs(score) > kMateValue + static_cast<Eval>(kMaxSearchPly) + 1) {
     return 0;
   }

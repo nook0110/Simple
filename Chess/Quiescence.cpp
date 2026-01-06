@@ -54,7 +54,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   }
 
   // get all the attacks moves
-  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
+  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kCaptures>(
       current_position);
 
   /*
@@ -66,7 +66,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
 
   for (const auto& move : moves) {
     if (!current_position.StaticExchangeEvaluation(
-            move, std::max(1, alpha - stand_pat - kSEEMargin))) {
+            move, std::max<Eval>(1, alpha - stand_pat - kSEEMargin))) {
       continue;
     }
 
@@ -102,11 +102,11 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     Position& current_position, Eval alpha, Eval beta,
     const Depth current_depth) {
   MoveGenerator::Moves moves =
-      move_generator_.GenerateMoves<MoveGenerator::Type::kAll>(
+      move_generator_.GenerateMoves<MoveGenerator::Type::kLegal>(
           current_position);
 
   if (moves.empty()) {
-    return kMateValue + kMaxSearchPly;
+    return kMateValue + Eval(kMaxSearchPly);
   }
 
   /*

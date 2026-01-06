@@ -6,10 +6,10 @@ namespace SimpleChessEngine {
       kPhaseValueLimits[static_cast<size_t>(GamePhase::kMiddleGame)];
   const auto eg_limit =
       kPhaseValueLimits[static_cast<size_t>(GamePhase::kEndGame)];
-  pv = std::clamp(pv, eg_limit, mg_limit);
-  return (eval[static_cast<size_t>(GamePhase::kMiddleGame)] * (pv - eg_limit) +
-          eval[static_cast<size_t>(GamePhase::kEndGame)] * (mg_limit - pv)) /
-         kLimitsDifference;
+  pv = std::clamp<Eval>(pv, eg_limit, mg_limit);
+  return (eval[static_cast<size_t>(GamePhase::kMiddleGame)].value * (pv - eg_limit).value +
+          eval[static_cast<size_t>(GamePhase::kEndGame)].value * (mg_limit - pv).value) /
+         kLimitsDifference.value;
 }
 
 [[nodiscard]] Eval Position::Evaluate() const {

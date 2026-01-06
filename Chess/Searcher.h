@@ -36,8 +36,7 @@ class Searcher {
   template <NodeType node_type, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
   friend struct SearchNode;
-  constexpr static size_t kTTSizeInMb = 640;
-  using SearcherTranspositionTable = TranspositionTable<kTTSizeInMb>;
+  using SearcherTranspositionTable = TranspositionTable;
 
   /**
    * \brief Constructor.
@@ -89,8 +88,8 @@ class Searcher {
   [[nodiscard]] const auto &GetKillers() const { return killers_; }
   [[nodiscard]] const auto &GetHistory() const { return history_; }
 
-  [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
-      Depth max_depth, Position position) const;
+  [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(Depth max_depth,
+                                                           Position position);
 
  private:
   Age age_{};
@@ -120,18 +119,22 @@ inline void Searcher::SetPosition(Position position) {
   current_position_ = std::move(position);
 }
 
-inline const Position &Searcher::GetPosition() const { return current_position_; }
+inline const Position &Searcher::GetPosition() const {
+  return current_position_;
+}
 
 inline const Move &Searcher::GetCurrentBestMove() const { return best_move_; }
 
 inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
-                                                     Position position) const {
+                                                            Position position) {
   MoveGenerator::Moves answer;
   for (Depth i = 0; i < max_depth; ++i) {
-    const auto &hashed_node = best_moves_.GetNode(position);
-    if (hashed_node.true_hash != position.GetHash()) break;
-    position.DoMove(hashed_node.move);
-    answer.push_back(hashed_node.move);
+    const auto result = best_moves_.Probe(position.GetHash());
+    if (!result.found || !position.PseudoLegal(result.data.move) ||
+        !position.Legal(result.data.move))
+      break;
+    position.DoMove(result.data.move);
+    answer.push_back(result.data.move);
   }
   return answer;
 }

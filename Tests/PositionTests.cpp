@@ -13,7 +13,7 @@ TEST(DoMove, DoAndUndoEqualZero) {
   Position pos = start_pos;
 
   for (const auto moves =
-           MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(pos);
+           MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kLegal>(pos);
        const auto &move : moves) {
     const auto irreversible_data = pos.GetIrreversibleData();
     pos.DoMove(move);

@@ -1,7 +1,6 @@
 #pragma once
 #include <cstdint>
 #include <cassert>
-#include <tuple>
 #include "BitBoard.h"
 #include "Piece.h"
 

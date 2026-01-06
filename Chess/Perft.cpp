@@ -13,7 +13,7 @@ size_t Perft(std::ostream& o_stream, Position& position, const Depth depth) {
   static auto move_generator = MoveGenerator{};
 
   const auto moves =
-      move_generator.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      move_generator.GenerateMoves<MoveGenerator::Type::kLegal>(position);
 
   size_t answer{};
 

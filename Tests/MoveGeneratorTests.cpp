@@ -33,7 +33,7 @@ struct GameInfo {
   static auto move_generator = MoveGenerator{};
 
   const auto moves =
-      move_generator.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      move_generator.GenerateMoves<MoveGenerator::Type::kLegal>(position);
 
   if (depth == 1) {
     for (const auto &move : moves) {
@@ -66,6 +66,10 @@ struct GenTestCase {
 
   std::vector<GameInfo> infos;
 };
+
+std::ostream& operator<<(std::ostream& os, const GenTestCase& test_case) {
+    return os << "FEN: " << test_case.fen;
+}
 
 class GenerateMovesTest : public testing::TestWithParam<GenTestCase> {
  protected:
