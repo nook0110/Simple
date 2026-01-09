@@ -26,22 +26,26 @@ class MoveGenerator {
   MoveGenerator() { moves_.reserve(kMaxMovesPerPosition); }
   ~MoveGenerator();
 
-  using Moves = std::vector<Move>;
-
   template <Type type>
-  [[nodiscard]] Moves GenerateMoves(const Position& position) const;
+  [[nodiscard]] auto GenerateMoves(const Position& position) const
+      -> std::conditional_t<type == Type::kLegal, MoveList<LegalTag>,
+                            MoveList<PseudoLegalTag>>;
 
  private:
+  using Moves = std::vector<Move>;
   template <Player Us, Type GenType>
   void GenerateAll(Moves& moves, const Position& position) const;
 
   template <Player Us, Type GenType>
-  void GeneratePawnMoves(Moves& moves, const Position& position, Bitboard target) const;
+  void GeneratePawnMoves(Moves& moves, const Position& position,
+                         Bitboard target) const;
 
   template <Player Us, Piece Pt>
-  void GeneratePieceMoves(Moves& moves, const Position& position, Bitboard target) const;
+  void GeneratePieceMoves(Moves& moves, const Position& position,
+                          Bitboard target) const;
 
-  void GenerateCastling(Moves& moves, const Position& position, Player us) const;
+  void GenerateCastling(Moves& moves, const Position& position,
+                        Player us) const;
 
   mutable Moves moves_;
 };

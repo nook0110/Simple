@@ -67,8 +67,8 @@ struct GenTestCase {
   std::vector<GameInfo> infos;
 };
 
-std::ostream& operator<<(std::ostream& os, const GenTestCase& test_case) {
-    return os << "FEN: " << test_case.fen;
+std::ostream &operator<<(std::ostream &os, const GenTestCase &test_case) {
+  return os << "FEN: " << test_case.fen;
 }
 
 class GenerateMovesTest : public testing::TestWithParam<GenTestCase> {
@@ -108,10 +108,15 @@ TEST_P(GenerateMovesTest, Perft) {
 
     EXPECT_EQ(position, GetPosition());
     EXPECT_EQ(position.GetHash(), GetPosition().GetHash());
-    if (possible_games_answer)
+    if (possible_games_answer) {
       EXPECT_EQ(*possible_games, *possible_games_answer);
-    if (en_croissants_answer) EXPECT_EQ(*en_croissants, *en_croissants_answer);
-    if (castlings_answer) EXPECT_EQ(*castlings, *castlings_answer);
+    }
+    if (en_croissants_answer) {
+      EXPECT_EQ(*en_croissants, *en_croissants_answer);
+    }
+    if (castlings_answer) {
+      EXPECT_EQ(*castlings, *castlings_answer);
+    }
   }
 }
 

@@ -33,11 +33,11 @@ struct NodePerSecondInfo {
 
 struct PrincipalVariationInfo {
   size_t current_depth = 0;
-  MoveGenerator::Moves moves;
+  MoveList<LegalTag> moves;
 };
 
 struct BestMoveInfo {
-  const Move& move;
+  LegalMove move;
   std::optional<Move> ponder;
 };
 
@@ -92,7 +92,7 @@ class ChessEngine {
 
   void ComputeBestMove(SearchCondition auto& conditions);
 
-  [[nodiscard]] const Move& GetCurrentBestMove() const;
+  [[nodiscard]] LegalMove GetCurrentBestMove() const;
 
   void PrintBestMove() {
     o_stream_ << BestMoveInfo{GetCurrentBestMove(), std::nullopt};
@@ -144,6 +144,7 @@ class ChessEngine {
     o_stream_ << "info quiescence_nodes " << info.quiescence_nodes << "\n";
     o_stream_ << "info zws_researches " << info.zws_researches << "\n";
     o_stream_ << "info tt_hits " << info.tt_hits << "\n";
+    o_stream_ << "info tt_pv_misses " << info.tt_pv_misses << "\n";
     o_stream_ << "info tt_cuts " << info.tt_cuts << "\n";
     o_stream_ << "info rfp_cuts " << info.rfp_cuts << "\n";
     o_stream_ << "info nmp_tries " << info.nmp_tries << "\n";
@@ -201,8 +202,8 @@ class ChessEngine {
   Searcher searcher_;
   Position position_;
 
-  Move best_move_;
-  std::optional<Move> ponder_move_;
+  LegalMove best_move_;
+  std::optional<LegalMove> ponder_move_;
 };
 }  // namespace SimpleChessEngine
 
@@ -250,6 +251,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
                      std::chrono::system_clock::now() - start_time)
                      .count()
               << "\n";
+    o_stream_ << "info hashfull " << searcher_.HashFull() << "\n";
 
     if (auto two_move_pv = searcher_.GetPrincipalVariation(2, position_);
         two_move_pv.size() > 1) {
@@ -266,7 +268,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   PrintBestMove(BestMoveInfo{best_move_, ponder_move_});
 }
 
-inline const Move& ChessEngine::GetCurrentBestMove() const {
+inline LegalMove ChessEngine::GetCurrentBestMove() const {
   return searcher_.GetCurrentBestMove();
 }
 

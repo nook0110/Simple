@@ -60,12 +60,13 @@ class Position {
         pinners{};  //!< Pieces that are pinning opponent's pieces.
     mutable std::array<Bitboard, kColors>
         blockers{};  //!< Pieces that are blocking attacks on the king.
-    
+
     Piece captured_piece{Piece::kNone};  //!< Piece captured by the last move
 
     bool operator==(const IrreversibleData &other) const {
       return std::tie(en_croissant_square, castling_rights, captured_piece) ==
-             std::tie(other.en_croissant_square, other.castling_rights, other.captured_piece);
+             std::tie(other.en_croissant_square, other.castling_rights,
+                      other.captured_piece);
     }
   };
 
@@ -112,20 +113,19 @@ class Position {
    *
    * \param move Move to do.
    */
-  void DoMove(const Move &move);
+  void DoMove(LegalMove move);
 
   /**
    * \brief Undoes given move.
    *
    * \param move Move to undo.
    */
-  void UndoMove(const Move &move, const IrreversibleData &data);
+  void UndoMove(LegalMove move, const IrreversibleData &data);
 
   void DoMove(NullMove);
   void UndoMove(NullMove, const IrreversibleData &data);
 
-  [[nodiscard]] bool CanCastle(
-      const CastlingSide castling_side) const;
+  [[nodiscard]] bool CanCastle(const CastlingSide castling_side) const;
 
   /**
    * \brief Gets hash of the position.
@@ -180,8 +180,8 @@ class Position {
 
   [[nodiscard]] BitIndex GetKingSquare(Player player) const;
 
-  [[nodiscard]] BitIndex GetCastlingRookSquare(
-      Player player, CastlingSide side) const;
+  [[nodiscard]] BitIndex GetCastlingRookSquare(Player player,
+                                               CastlingSide side) const;
 
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
@@ -275,7 +275,6 @@ class Position {
 
   void MovePiece(const BitIndex from, const BitIndex to, const Player color);
 
-
   void SetCastlingRights(const std::array<std::bitset<2>, 2> &castling_rights);
 
   void SetKingPositions(const std::array<BitIndex, 2> &king_position);
@@ -312,5 +311,53 @@ class Position {
   const static Hasher hasher_;
   Hash hash_{};
 };
+
+template <typename To, typename From>
+std::optional<To> MoveCast(From move, const Position &position);
+
+template <>
+inline std::optional<PseudoLegalMove> MoveCast<PseudoLegalMove, Move>(
+    Move move, const Position &position) {
+  if (!move || !position.PseudoLegal(move)) {
+    return std::nullopt;
+  }
+  return UnsafeMoveCast<PseudoLegalMove>(move);
+}
+
+template <>
+inline std::optional<LegalMove> MoveCast<LegalMove, PseudoLegalMove>(
+    PseudoLegalMove move, const Position &position) {
+  if (!position.Legal(move)) {
+    return std::nullopt;
+  }
+  return UnsafeMoveCast<LegalMove>(move);
+}
+
+template <>
+inline std::optional<LegalMove> MoveCast<LegalMove, Move>(
+    Move move, const Position &position) {
+  if (!position.PseudoLegal(move) || !position.Legal(move)) {
+    return std::nullopt;
+  }
+  return UnsafeMoveCast<LegalMove>(move);
+}
+
+template <>
+inline std::optional<LegalMove> MoveCast<LegalMove, PseudoLegalMoveRef>(
+    PseudoLegalMoveRef move, const Position &position) {
+  return MoveCast<LegalMove>(static_cast<PseudoLegalMove>(move), position);
+}
+
+template <>
+inline std::optional<LegalMove> MoveCast<LegalMove, PseudoLegalMoveConstRef>(
+    PseudoLegalMoveConstRef move, const Position &position) {
+  return MoveCast<LegalMove>(static_cast<Move>(move.get()), position);
+}
+
+template <typename To, typename From>
+To UnsafeMoveCast(From move, [[maybe_unused]] const Position &position) {
+  assert(MoveCast<To>(move, position).has_value());
+  return UnsafeMoveCast<To>(move);
+}
 
 }  // namespace SimpleChessEngine
