@@ -98,7 +98,7 @@ class Move {
   };
 
  private:
-  std::uint16_t data_;
+  std::uint16_t data_ = {};
 };
 
 enum class CastlingSide : std::uint8_t { k00, k000 };
@@ -498,9 +498,7 @@ class MoveList {
   const_iterator end() const noexcept { return const_iterator(moves_.end()); }
   const_iterator cend() const noexcept { return const_iterator(moves_.end()); }
 
-  void push_back(TypedMove<Tag, Move> move) {
-    moves_.push_back(move.get());
-  }
+  void push_back(TypedMove<Tag, Move> move) { moves_.push_back(move.get()); }
 
   template <typename... Args>
   Reference emplace_back(Args&&... args) {
@@ -588,4 +586,3 @@ void swap(
   std::swap(lhs.get(), rhs.get());
 }
 }  // namespace std
-

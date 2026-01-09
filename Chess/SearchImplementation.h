@@ -209,6 +209,9 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   } else if constexpr (kIsPrincipalVariation) {
     searcher_.debug_info_.tt_pv_misses += remaining_depth > 1;
   }
+  else {
+    searcher_.debug_info_.tt_other_misses += remaining_depth > 1;
+  }
 
   if (CanRFP()) {
     searcher_.debug_info_.rfp_cuts++;
@@ -603,6 +606,7 @@ SearchNode<node_type, ExitCondition>::CheckTranspositionTable() {
     auto [hash_move, entry_score, entry_depth, entry_bound, is_pv] =
         *iteration_status_.tt_info;
 
+    GetCurrentPosition().ComputePins(GetCurrentPosition().GetSideToMove());
     auto legal_move = MoveCast<LegalMove>(hash_move, GetCurrentPosition());
     if (!legal_move) {
       return std::nullopt;

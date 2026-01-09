@@ -17,8 +17,6 @@ class Position;
 using ShortHash = std::uint16_t;
 using Generation = std::uint8_t;
 
-constexpr Depth kDepthOffset = 0;
-
 enum class Bound : std::uint8_t {
   kNone = 0,
   kLower = 1,
@@ -49,7 +47,7 @@ constexpr std::uint8_t kGenerationSizeInBits = 5;
 struct TableEntry {
   ShortHash short_hash{0};
   Depth depth_stored{0};
-  Generation generation : kGenerationSizeInBits {};
+  Generation generation : kGenerationSizeInBits{};
   Bound bound : 2 {};
   bool is_pv : 1 {};
   Move move{};
@@ -65,7 +63,8 @@ struct TableEntry {
 #pragma pack(pop)
 
 struct EntryCluster {
-  std::array<TableEntry, 3> entries{};
+  static constexpr size_t kClusterSize = 3;
+  std::array<TableEntry, kClusterSize> entries{};
   std::array<std::byte, 2> padding{};
 };
 
@@ -81,8 +80,8 @@ struct ProbeResult {
 
 class TranspositionTable {
  public:
-  static constexpr size_t kClusterSize = 3;
-  static constexpr size_t kBytesPerCluster = 32;
+  static constexpr size_t kClusterSize = EntryCluster::kClusterSize;
+  static constexpr size_t kBytesPerCluster = sizeof(EntryCluster);
   static constexpr size_t kDefaultSizeMB = 640;
   static constexpr size_t kClusterCount =
       (kDefaultSizeMB * 1024 * 1024) / kBytesPerCluster;
@@ -96,7 +95,7 @@ class TranspositionTable {
   [[nodiscard]] ProbeResult Probe(Hash key);
 
  private:
-  [[nodiscard]] std::array<TableEntry, 3>::iterator GetFirstEntry(Hash key) ;
+  [[nodiscard]] std::array<TableEntry, 3>::iterator GetFirstEntry(Hash key);
 
   std::vector<EntryCluster> table_;
   Generation generation_{0};
@@ -127,7 +126,7 @@ inline int TranspositionTable::HashFull(int max_age) const {
   return count / kClusterSize;
 }
 
-inline ProbeResult TranspositionTable::Probe(Hash key)  {
+inline ProbeResult TranspositionTable::Probe(Hash key) {
   auto first_entry = GetFirstEntry(key);
   const ShortHash short_hash = static_cast<ShortHash>(key);
   for (size_t i = 0; i < kClusterSize; ++i) {
@@ -149,56 +148,47 @@ inline ProbeResult TranspositionTable::Probe(Hash key)  {
     }
   }
 
-  return {false, Node{Move::None(), 0, kDepthOffset, Bound::kNone, false},
+  return {false, Node{Move::None(), 0, 0, Bound::kNone, false},
           std::ref(*replace)};
 }
 
-inline std::array<TableEntry, 3>::iterator
-TranspositionTable::GetFirstEntry(Hash key) {
-  const size_t cluster_index =
-      static_cast<size_t>((static_cast<__uint128_t>(key) * kClusterCount) >>
-                          64);
+inline std::array<TableEntry, 3>::iterator TranspositionTable::GetFirstEntry(
+    Hash key) {
+  const size_t cluster_index = static_cast<size_t>(
+      (static_cast<__uint128_t>(key) * kClusterCount) >> 64);
   return table_[cluster_index].entries.begin();
 }
 
 inline Node TableEntry::Read() const {
-  return Node{move,
-              score,
-              static_cast<Depth>(depth_stored + kDepthOffset),
-              bound,
-              is_pv};
+  return Node{move, score, static_cast<Depth>(depth_stored), bound, is_pv};
 }
 
 inline void TableEntry::Save(Hash key, Eval score_value, bool is_pv_node,
-                              Bound bound_value, Depth depth_value,
-                              Move move_value, Eval static_eval_value,
-                              Generation gen) {
-  if (move_value || static_cast<ShortHash>(key) != short_hash) {
-    move = move_value;
-  }
-
-  const bool should_replace =
-      bound_value == Bound::kExact ||
-      static_cast<ShortHash>(key) != short_hash ||
-      depth_value - kDepthOffset + 2 * is_pv_node > depth_stored - 4 ||
-      RelativeAge(gen) > 0;
+                             Bound bound_value, Depth depth_value,
+                             Move move_value, Eval static_eval_value,
+                             Generation gen) {
+  const bool should_replace = !this->move || bound_value == Bound::kExact ||
+                              depth_value + 2 * is_pv_node > depth_stored - 4 ||
+                              RelativeAge(gen) > 0;
 
   if (should_replace) {
     short_hash = static_cast<ShortHash>(key);
-    depth_stored = static_cast<std::uint8_t>(depth_value - kDepthOffset);
+    depth_stored = static_cast<std::uint8_t>(depth_value);
     generation = gen;
     bound = bound_value;
     is_pv = is_pv_node;
     this->score = score_value;
     this->static_eval = static_eval_value;
+    this->move = move_value;
   }
 }
 
-inline std::uint8_t TableEntry::RelativeAge(Generation current_generation) const {
-    constexpr std::uint8_t kMaxGeneration = (1 << kGenerationSizeInBits) - 1;
-    constexpr std::uint8_t kGenerationRange = 1 << kGenerationSizeInBits;
-    
-    return (kGenerationRange + current_generation - generation) & kMaxGeneration;
+inline std::uint8_t TableEntry::RelativeAge(
+    Generation current_generation) const {
+  constexpr std::uint8_t kMaxGeneration = (1 << kGenerationSizeInBits) - 1;
+  constexpr std::uint8_t kGenerationRange = 1 << kGenerationSizeInBits;
+
+  return (kGenerationRange + current_generation - generation) & kMaxGeneration;
 }
 
 }  // namespace SimpleChessEngine

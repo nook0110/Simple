@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "ExitCondition.h"
+#include "Move.h"
 #include "Position.h"
 
 namespace SimpleChessEngine {
@@ -105,8 +106,10 @@ template <class ExitCondition>
 SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     Position& current_position, Eval alpha, Eval beta,
     const Depth current_depth) {
-  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kLegal>(
+  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kEvasions>(
       current_position);
+
+  bool found_legal_move = false;
 
   if (moves.empty()) {
     return kMateValue + Eval(kMaxSearchPly);
@@ -122,9 +125,12 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
   for (const auto& move : moves) {
     const auto irreversible_data = current_position.GetIrreversibleData();
 
-    // make the move and search the tree
-    const LegalMoveConstRef legal_move_ref = move;
-    current_position.DoMove(legal_move_ref);
+    const auto legal_move = MoveCast<LegalMove>(move, current_position);
+    if (!legal_move) {
+      continue;
+    }
+    found_legal_move = true;
+    current_position.DoMove(*legal_move);
     const auto temp_eval_optional =
         Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
@@ -133,7 +139,7 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     const auto temp_eval = -*temp_eval_optional;
 
     // undo the move
-    current_position.UndoMove(legal_move_ref, irreversible_data);
+    current_position.UndoMove(*legal_move, irreversible_data);
 
     if (temp_eval > alpha) {
       if (temp_eval >= beta) {
@@ -142,6 +148,10 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
 
       alpha = temp_eval;
     }
+  }
+
+  if (!found_legal_move) {
+    return kMateValue + Eval(kMaxSearchPly);
   }
 
   return alpha;
