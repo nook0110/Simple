@@ -41,13 +41,11 @@ struct Node {
       : move(m), score(s), depth(d), bound(b), is_pv_node(pv) {}
 };
 
-constexpr std::uint8_t kGenerationSizeInBits = 5;
-
 #pragma pack(push, 1)
 struct TableEntry {
   ShortHash short_hash{0};
   Depth depth_stored{0};
-  Generation generation : kGenerationSizeInBits{};
+  Generation generation : 5{};
   Bound bound : 2 {};
   bool is_pv : 1 {};
   Move move{};
@@ -186,10 +184,7 @@ inline void TableEntry::Save(Hash key, Eval score_value, bool is_pv_node,
 
 inline std::uint8_t TableEntry::RelativeAge(
     Generation current_generation) const {
-  constexpr std::uint8_t kMaxGeneration = (1 << kGenerationSizeInBits) - 1;
-  constexpr std::uint8_t kGenerationRange = 1 << kGenerationSizeInBits;
-  current_generation &= kMaxGeneration;
-  return (kGenerationRange + current_generation - generation) & kMaxGeneration;
+  return (32 + current_generation - generation) & 0x1F;
 }
 
 }  // namespace SimpleChessEngine

@@ -80,7 +80,7 @@ struct SearchNode {
   SearchResult QuiescenceSearch();
   Eval GetEndGameScore() const;
 
-  void SetBestMove(LegalMove move);
+  void SetBestMove(Move move);
   void SetTTEntry(const Bound bound);
   template <bool is_first_move>
   void UpdateQuietMove(const Move &move);
@@ -88,9 +88,9 @@ struct SearchNode {
   Position &GetCurrentPosition();
 
   template <NodeType expected_node_type>
-  SearchResult ProbeMove(LegalMove move);
+  SearchResult ProbeMove(const Move &move);
   template <NodeType expected_node_type>
-  std::optional<bool> CheckFirstMove(LegalMove move);
+  std::optional<bool> CheckFirstMove(const Move &move);
 
   [[nodiscard]] bool CanRFP() const;
 
@@ -206,8 +206,6 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
         return entry_score;
       }
     }
-  } else if constexpr (kIsPrincipalVariation) {
-    searcher_.debug_info_.tt_pv_misses += remaining_depth > 1;
   }
   else {
     searcher_.debug_info_.tt_other_misses += remaining_depth > 1;
@@ -263,8 +261,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   auto const &move_generator = searcher_.move_generator_;
 
   move_picker_.InitPicker(
-      move_generator.GenerateMoves<MoveGenerator::Type::kLegal>(
-          current_position),
+      move_generator.GenerateMoves<MoveGenerator::Type::kLegal>(current_position),
       searcher_);
 
   // check if there are no possible moves
@@ -286,6 +283,10 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
       SetTTEntry(Bound::kLower);
       return beta;
     }
+  } else {
+    // skip the first move
+    assert(iteration_status_.best_move);
+    move_picker_.SkipMove(*iteration_status_.best_move);
   }
 
   return PVSearch();
@@ -312,7 +313,8 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 Eval SearchNode<node_type, ExitCondition>::GetEndGameScore() const {
   if (position_info_.is_under_check) {
-    return kMateValue + Eval(state_.max_depth - state_.remaining_depth);
+    return kMateValue +
+           Eval(state_.max_depth - state_.remaining_depth);
   }
 
   return kDrawValue;
@@ -320,7 +322,7 @@ Eval SearchNode<node_type, ExitCondition>::GetEndGameScore() const {
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-void SearchNode<node_type, ExitCondition>::SetBestMove(LegalMove move) {
+void SearchNode<node_type, ExitCondition>::SetBestMove(Move move) {
   if (state_.remaining_depth == state_.max_depth) {
     searcher_.best_move_ = move;
   }
@@ -332,20 +334,20 @@ template <NodeType node_type, class ExitCondition>
 void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
   assert(iteration_status_.best_move);
   auto result = searcher_.best_moves_.Probe(GetCurrentPosition().GetHash());
-  result.entry.get().Save(GetCurrentPosition().GetHash(),
-                          iteration_status_.best_eval +
-                              IsMateScore(iteration_status_.best_eval) *
-                                  (state_.max_depth - state_.remaining_depth),
-                          kIsPrincipalVariation, bound, state_.remaining_depth,
-                          *iteration_status_.best_move,
-                          iteration_status_.best_eval,
-                          searcher_.best_moves_.GetGeneration());
+  result.entry.get().Save(
+      GetCurrentPosition().GetHash(),
+      iteration_status_.best_eval +
+          IsMateScore(iteration_status_.best_eval) *
+              (state_.max_depth - state_.remaining_depth),
+      kIsPrincipalVariation, bound, state_.remaining_depth,
+      *iteration_status_.best_move, iteration_status_.best_eval,
+      searcher_.best_moves_.GetGeneration());
 }
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <NodeType expected_node_type>
-SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(LegalMove move) {
+SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
   auto &current_position = GetCurrentPosition();
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
 
@@ -369,7 +371,7 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <NodeType expected_node_type>
 std::optional<bool> SearchNode<node_type, ExitCondition>::CheckFirstMove(
-    LegalMove move) {
+    const Move &move) {
   static_assert(expected_node_type == kFirstChildNodeExpectedType);
   static_assert(expected_node_type != NodeType::kPV ||
                 expected_node_type == node_type);
@@ -439,8 +441,8 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     }
 
     auto temp_eval_optional = StartSubsearch<kZWSNodeType>(
-        {max_depth, static_cast<Depth>(remaining_depth - 1 - R),
-         -alpha - Eval(1), -alpha});
+        {max_depth, static_cast<Depth>(remaining_depth - 1 - R), -alpha - Eval(1),
+         -alpha});
 
     if (!temp_eval_optional) {
       current_position.UndoMove(move, position_info_.irreversible_data);
@@ -609,13 +611,12 @@ SearchNode<node_type, ExitCondition>::CheckTranspositionTable() {
     auto [hash_move, entry_score, entry_depth, entry_bound, is_pv] =
         *iteration_status_.tt_info;
 
-    GetCurrentPosition().ComputePins(GetCurrentPosition().GetSideToMove());
-    auto legal_move = MoveCast<LegalMove>(hash_move, GetCurrentPosition());
-    if (!legal_move) {
-      return std::nullopt;
-    }
+    if(!hash_move || !GetCurrentPosition().PseudoLegal(hash_move) || 
+        !GetCurrentPosition().Legal(hash_move)) {
+          return entry_score;
+        }
     auto has_cutoff_opt =
-        CheckFirstMove<kFirstChildNodeExpectedType>(*legal_move);
+        CheckFirstMove<kFirstChildNodeExpectedType>(hash_move);
     if (!has_cutoff_opt) {
       return SearchResult{std::nullopt};
     }

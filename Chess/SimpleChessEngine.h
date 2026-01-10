@@ -33,11 +33,11 @@ struct NodePerSecondInfo {
 
 struct PrincipalVariationInfo {
   size_t current_depth = 0;
-  MoveList<LegalTag> moves;
+  MoveGenerator::Moves moves;
 };
 
 struct BestMoveInfo {
-  LegalMove move;
+  const Move& move;
   std::optional<Move> ponder;
 };
 
@@ -92,7 +92,7 @@ class ChessEngine {
 
   void ComputeBestMove(SearchCondition auto& conditions);
 
-  [[nodiscard]] LegalMove GetCurrentBestMove() const;
+  [[nodiscard]] const Move& GetCurrentBestMove() const;
 
   void PrintBestMove() {
     o_stream_ << BestMoveInfo{GetCurrentBestMove(), std::nullopt};
@@ -204,8 +204,8 @@ class ChessEngine {
   Searcher searcher_;
   Position position_;
 
-  LegalMove best_move_;
-  std::optional<LegalMove> ponder_move_;
+  Move best_move_;
+  std::optional<Move> ponder_move_;
 };
 }  // namespace SimpleChessEngine
 
@@ -253,7 +253,6 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
                      std::chrono::system_clock::now() - start_time)
                      .count()
               << "\n";
-    o_stream_ << "info hashfull " << searcher_.HashFull() << "\n";
 
     if (auto two_move_pv = searcher_.GetPrincipalVariation(2, position_);
         two_move_pv.size() > 1) {
@@ -270,7 +269,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   PrintBestMove(BestMoveInfo{best_move_, ponder_move_});
 }
 
-inline LegalMove ChessEngine::GetCurrentBestMove() const {
+inline const Move& ChessEngine::GetCurrentBestMove() const {
   return searcher_.GetCurrentBestMove();
 }
 

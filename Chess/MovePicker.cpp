@@ -47,7 +47,7 @@ MovePicker::Stage& operator++(MovePicker::Stage& stage) {
   return stage;
 }
 
-MovePicker::Moves::const_iterator MovePicker::SelectNextMove(
+MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
     const Searcher& searcher, const Depth ply) {
   const auto& position = searcher.GetPosition();
   const auto compare_captures = [this, &position](size_t lhs, size_t rhs) {
@@ -128,10 +128,11 @@ MovePicker::Moves::const_iterator MovePicker::SelectNextMove(
   }
 
   assert(false);
-  __builtin_unreachable();
+  std::unreachable();
 }
 
-void MovePicker::InitPicker(Moves&& moves, const Searcher& searcher) {
+void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
+                            const Searcher& searcher) {
   moves_ = std::move(moves);
   data_.resize(moves_.size());
   history_.resize(moves_.size());
@@ -139,7 +140,7 @@ void MovePicker::InitPicker(Moves&& moves, const Searcher& searcher) {
     const auto& move = moves_[i];
     const auto from = move.From();
     const auto to = move.To();
-
+    
     // Determine captured piece
     Piece capture = Piece::kNone;
     if (move.IsEnPassant()) {
@@ -147,7 +148,7 @@ void MovePicker::InitPicker(Moves&& moves, const Searcher& searcher) {
     } else if (!move.IsCastling()) {
       capture = searcher.GetPosition().GetPieceAt(to);
     }
-
+    
     data_[i] = {from, to, capture,
                 capture != Piece::kNone
                     ? searcher.GetPosition().StaticExchangeEvaluation(
@@ -159,14 +160,10 @@ void MovePicker::InitPicker(Moves&& moves, const Searcher& searcher) {
   current_move_ = moves_.begin();
 }
 
-bool MovePicker::SkipMove(Move move) {
-  const auto it = std::find(current_move_, moves_.end(), move);
-  if (it == moves_.end()) {
-    return false;
-  }
-  Swap(current_move_ - moves_.begin(), it - moves_.begin());
+void MovePicker::SkipMove(const Move& move) {
+  Swap(current_move_ - moves_.begin(),
+       std::find(current_move_, moves_.end(), move) - moves_.begin());
   ++current_move_;
-  return true;
 }
 
 bool MovePicker::Done() const { return current_move_ == moves_.end(); }

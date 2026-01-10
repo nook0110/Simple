@@ -1,5 +1,4 @@
 #include "Attacks.h"
-
 #include <utility>
 
 #include "BitBoard.h"
@@ -30,7 +29,8 @@ Bitboard SimpleChessEngine::GenerateAttackMask(const BitIndex square,
 
   for (auto direction : GetStepDelta<sliding_piece>()) {
     Bitboard step;
-    for (BitIndex temp = square; (occupancy & SingleSquare(temp)).None();) {
+    for (BitIndex temp = square;
+         (occupancy & SingleSquare(temp)).None();) {
       step = DoShiftIfValid(temp, direction).value_or(kEmptyBoard);
       result |= step;
       if (step.None()) break;

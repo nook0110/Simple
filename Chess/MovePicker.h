@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "Eval.h"
+#include "Evaluation.h"
 #include "Move.h"
 #include "Piece.h"
 #include "Utility.h"
@@ -14,7 +14,7 @@ class Searcher;
 
 class MovePicker {
  public:
-  using Moves = MoveList<LegalTag>;
+  using Moves = std::vector<Move>;
   enum class Stage : std::uint8_t {
     kGoodCaptures,
     kKillers,
@@ -24,6 +24,8 @@ class MovePicker {
   };
 
   MovePicker();
+  MovePicker(const Move&) = delete;
+  MovePicker(Move&&) = delete;
   void InitPicker(Moves&& moves, const Searcher& searcher);
   ~MovePicker() = default;
 
@@ -33,16 +35,14 @@ class MovePicker {
   Moves::const_iterator SelectNextMove(const Searcher& searcher,
                                        const Depth ply);
 
-  [[nodiscard]] bool SkipMove(Move move);
+  void SkipMove(const Move& move);
 
   [[nodiscard]] bool Done() const;
 
   [[nodiscard]] Stage GetCurrentStage() const;
 
   [[nodiscard]] Moves::const_iterator begin() const { return moves_.begin(); }
-  [[nodiscard]] Moves::const_iterator begin_quiet() const {
-    return begin_quiet_;
-  }
+  [[nodiscard]] Moves::const_iterator begin_quiet() const { return begin_quiet_; }
   [[nodiscard]] Moves::const_iterator current() const { return current_move_; }
   [[nodiscard]] Moves::const_iterator end() const { return moves_.end(); }
 

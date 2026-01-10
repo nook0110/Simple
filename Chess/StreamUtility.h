@@ -49,7 +49,7 @@ inline std::ostream& PrintCoordinates(const Coordinates coordinates,
   return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, Move move) {
+inline std::ostream& operator<<(std::ostream& stream, const Move& move) {
   const auto from = GetCoordinates(move.From());
   const auto to = GetCoordinates(move.To());
 

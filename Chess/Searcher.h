@@ -65,7 +65,7 @@ class Searcher {
    *
    * \return The current best move.
    */
-  [[nodiscard]] LegalMove GetCurrentBestMove() const;
+  [[nodiscard]] const Move &GetCurrentBestMove() const;
 
   /**
    * \brief Performs the alpha-beta search algorithm.
@@ -88,13 +88,12 @@ class Searcher {
   [[nodiscard]] const auto &GetKillers() const { return killers_; }
   [[nodiscard]] const auto &GetHistory() const { return history_; }
 
-  [[nodiscard]] MoveList<LegalTag> GetPrincipalVariation(Depth max_depth,
-                                                         Position position);
-  [[nodiscard]] int HashFull() const { return best_moves_.HashFull(); }
+  [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(Depth max_depth,
+                                                           Position position);
 
  private:
   Age age_{};
-  LegalMove best_move_{};
+  Move best_move_{};
   Position current_position_;     //!< Current position.
   MoveGenerator move_generator_;  //!< Move generator.
   SearcherTranspositionTable
@@ -124,24 +123,18 @@ inline const Position &Searcher::GetPosition() const {
   return current_position_;
 }
 
-inline LegalMove Searcher::GetCurrentBestMove() const { return best_move_; }
+inline const Move &Searcher::GetCurrentBestMove() const { return best_move_; }
 
-inline MoveList<LegalTag> Searcher::GetPrincipalVariation(Depth max_depth,
-                                                          Position position) {
-  MoveList<LegalTag> answer;
+inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
+                                                            Position position) {
+  MoveGenerator::Moves answer;
   for (Depth i = 0; i < max_depth; ++i) {
     const auto result = best_moves_.Probe(position.GetHash());
-    if (!result.found) break;
-
-    const auto pseudo_legal =
-        MoveCast<PseudoLegalMove>(result.data.move, position);
-    if (!pseudo_legal) break;
-
-    const auto legal = MoveCast<LegalMove>(*pseudo_legal, position);
-    if (!legal) break;
-
-    position.DoMove(*legal);
-    answer.push_back(*legal);
+    if (!result.found || !position.PseudoLegal(result.data.move) ||
+        !position.Legal(result.data.move))
+      break;
+    position.DoMove(result.data.move);
+    answer.push_back(result.data.move);
   }
   return answer;
 }
@@ -153,7 +146,6 @@ inline void Searcher::InitStartOfSearch() {
       history_[color][from].fill(0LL);
     }
   }
-  best_moves_.NewSearch();
 }
 
 template <NodeType node_type, class ExitCondition>

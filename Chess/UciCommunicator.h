@@ -9,7 +9,6 @@
 #include <utility>
 #include <variant>
 
-#include "Move.h"
 #include "MoveFactory.h"
 #include "Perft.h"
 #include "Position.h"
@@ -330,16 +329,7 @@ inline void UciChessEngine::ParseMoves(std::stringstream command) {
   std::string move;
   while (!command.eof()) {
     command >> move;
-    const auto parsed_move = MoveFactory{}(info_.position, move);
-    if (auto legal_move = MoveCast<LegalMove>(parsed_move, info_.position)) {
-      info_.position.DoMove(*legal_move);
-    } else {
-      Send("Illegal move: " + move + " PseudoLegal: " +
-           std::to_string(info_.position.PseudoLegal(parsed_move)) +
-           " Legal: " + std::to_string(info_.position.Legal(parsed_move)));
-      info_.position.DoMove(UnsafeMoveCast<LegalMove>(parsed_move));
-    }
-    info_.position.ComputePins(info_.position.GetSideToMove());
+    info_.position.DoMove(MoveFactory{}(info_.position, move));
   }
 }
 

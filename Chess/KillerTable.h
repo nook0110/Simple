@@ -8,7 +8,7 @@ template <size_t MaxKillerCount>
 class KillerTable {
  public:
   void Clear() { killer_total_count_.fill(0); }
-  void TryAdd(const Depth ply, Move move) {
+  void TryAdd(const Depth ply, const Move& move) {
     if (!Contains(ply, move)) {
       table_[ply][killer_total_count_[ply]++ % MaxKillerCount] = move;
     }
@@ -16,13 +16,13 @@ class KillerTable {
   size_t AvailableKillerCount(const Depth ply) const {
     return std::min(killer_total_count_[ply], MaxKillerCount);
   }
-  Move Get(const Depth ply, const size_t index) const {
+  const Move& Get(const Depth ply, const size_t index) const {
     assert(index < killer_total_count_[ply] && index < MaxKillerCount);
     return table_[ply][index];
   }
 
  private:
-  bool Contains(const Depth ply, Move move) {
+  bool Contains(const Depth ply, const Move& move) {
     for (size_t i = 0; i < std::min(killer_total_count_[ply], MaxKillerCount);
          ++i) {
       if (move == table_[ply][i]) return true;

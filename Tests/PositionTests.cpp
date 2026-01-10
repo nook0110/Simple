@@ -29,17 +29,17 @@ TEST(SomeMoves, DifferentHash) {
   std::vector<std::string> moves = {"b1c3", "d7d5", "a1b1"};
   std::set<Hash> hashes = {pos.GetHash()};
   for (const auto &move_str : moves) {
-    auto move = MoveCast<LegalMove>(MoveFactory{}(pos, move_str), pos);
-    ASSERT_TRUE(move);
-    pos.DoMove(*move);
+    auto move = MoveFactory{}(pos, move_str);
+    pos.DoMove(move);
     ASSERT_TRUE(hashes.insert(pos.GetHash()).second);
   }
 }
 
 Position DoMoves(Position pos, const std::vector<std::string> &moves) {
   for (const auto &move_str : moves) {
-    auto move = MoveCast<LegalMove>(MoveFactory{}(pos, move_str), pos);
-    pos.DoMove(*move);
+    auto move = MoveFactory{}(pos, move_str);
+
+    pos.DoMove(move);
   }
   return pos;
 }

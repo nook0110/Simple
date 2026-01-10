@@ -3,8 +3,6 @@
 #include <algorithm>
 
 #include "ExitCondition.h"
-#include "Move.h"
-#include "Position.h"
 
 namespace SimpleChessEngine {
 template class Quiescence<TimeCondition>;
@@ -72,13 +70,10 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
       continue;
     }
 
-    const auto legal_move = MoveCast<LegalMove>(move, current_position);
-    if (!legal_move) continue;
-
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree
-    current_position.DoMove(*legal_move);
+    current_position.DoMove(move);
     const auto temp_eval_optional =
         Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
@@ -87,7 +82,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     const auto temp_eval = -*temp_eval_optional;
 
     // undo the move
-    current_position.UndoMove(*legal_move, irreversible_data);
+    current_position.UndoMove(move, irreversible_data);
 
     if (temp_eval > alpha) {
       if (temp_eval >= beta) {
@@ -106,7 +101,7 @@ template <class ExitCondition>
 SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     Position& current_position, Eval alpha, Eval beta,
     const Depth current_depth) {
-  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kEvasions>(
+  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kLegal>(
       current_position);
 
   bool found_legal_move = false;
@@ -125,12 +120,8 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
   for (const auto& move : moves) {
     const auto irreversible_data = current_position.GetIrreversibleData();
 
-    const auto legal_move = MoveCast<LegalMove>(move, current_position);
-    if (!legal_move) {
-      continue;
-    }
-    found_legal_move = true;
-    current_position.DoMove(*legal_move);
+    // make the move and search the tree
+    current_position.DoMove(move);
     const auto temp_eval_optional =
         Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
@@ -139,7 +130,7 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     const auto temp_eval = -*temp_eval_optional;
 
     // undo the move
-    current_position.UndoMove(*legal_move, irreversible_data);
+    current_position.UndoMove(move, irreversible_data);
 
     if (temp_eval > alpha) {
       if (temp_eval >= beta) {
