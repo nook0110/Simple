@@ -35,7 +35,7 @@ class MovePicker {
   Moves::const_iterator SelectNextMove(const Searcher& searcher,
                                        const Depth ply);
 
-  void SkipMove(const Move& move);
+  bool SkipMove(const Move& move);
 
   [[nodiscard]] bool Done() const;
 

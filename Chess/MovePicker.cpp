@@ -140,7 +140,7 @@ void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
     const auto& move = moves_[i];
     const auto from = move.From();
     const auto to = move.To();
-    
+
     // Determine captured piece
     Piece capture = Piece::kNone;
     if (move.IsEnPassant()) {
@@ -148,7 +148,7 @@ void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
     } else if (!move.IsCastling()) {
       capture = searcher.GetPosition().GetPieceAt(to);
     }
-    
+
     data_[i] = {from, to, capture,
                 capture != Piece::kNone
                     ? searcher.GetPosition().StaticExchangeEvaluation(
@@ -160,10 +160,14 @@ void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
   current_move_ = moves_.begin();
 }
 
-void MovePicker::SkipMove(const Move& move) {
-  Swap(current_move_ - moves_.begin(),
-       std::find(current_move_, moves_.end(), move) - moves_.begin());
+bool MovePicker::SkipMove(const Move& move) {
+  const auto it = std::find(current_move_, moves_.end(), move);
+  if (it == moves_.end()) {
+    return false;
+  }
+  Swap(current_move_ - moves_.begin(), it - moves_.begin());
   ++current_move_;
+  return true;
 }
 
 bool MovePicker::Done() const { return current_move_ == moves_.end(); }
