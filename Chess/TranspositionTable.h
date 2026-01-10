@@ -138,9 +138,9 @@ inline ProbeResult TranspositionTable::Probe(Hash key) {
 
   auto replace = first_entry;
   for (size_t i = 1; i < kClusterSize; ++i) {
-    const int replace_value =
+    const auto replace_value =
         replace->depth_stored - replace->RelativeAge(generation_);
-    const int candidate_value =
+    const auto candidate_value =
         first_entry[i].depth_stored - first_entry[i].RelativeAge(generation_);
 
     if (replace_value > candidate_value) {
@@ -167,10 +167,10 @@ inline void TableEntry::Save(Hash key, Eval score_value, bool is_pv_node,
                              Bound bound_value, Depth depth_value,
                              Move move_value, Eval static_eval_value,
                              Generation gen) {
-  const bool should_replace =
-      !this->move || bound_value == Bound::kExact ||
-      (!this->is_pv && depth_value + 2 * is_pv_node > depth_stored - 4) ||
-      RelativeAge(gen) > 0;
+  const bool should_replace = !IsOccupied() || bound_value == Bound::kExact ||
+                              (!(this->bound == Bound::kExact) &&
+                               depth_value + 4 > this->depth_stored) ||
+                              RelativeAge(gen) > 0;
 
   if (should_replace) {
     this->short_hash = static_cast<ShortHash>(key);
