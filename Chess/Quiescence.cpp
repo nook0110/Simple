@@ -3,6 +3,8 @@
 #include <algorithm>
 
 #include "ExitCondition.h"
+#include "Move.h"
+#include "Position.h"
 
 namespace SimpleChessEngine {
 template class Quiescence<TimeCondition>;
@@ -54,7 +56,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   }
 
   // get all the attacks moves
-  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
+  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kCaptures>(
       current_position);
 
   /*
@@ -66,14 +68,17 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
 
   for (const auto& move : moves) {
     if (!current_position.StaticExchangeEvaluation(
-            move, std::max(1, alpha - stand_pat - kSEEMargin))) {
+            move, std::max<Eval>(1, alpha - stand_pat - kSEEMargin))) {
       continue;
     }
+
+    const auto legal_move = MoveCast<LegalMove>(move, current_position);
+    if (!legal_move) continue;
 
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree
-    current_position.DoMove(move);
+    current_position.DoMove(*legal_move);
     const auto temp_eval_optional =
         Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
@@ -82,7 +87,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     const auto temp_eval = -*temp_eval_optional;
 
     // undo the move
-    current_position.UndoMove(move, irreversible_data);
+    current_position.UndoMove(*legal_move, irreversible_data);
 
     if (temp_eval > alpha) {
       if (temp_eval >= beta) {
@@ -101,12 +106,13 @@ template <class ExitCondition>
 SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     Position& current_position, Eval alpha, Eval beta,
     const Depth current_depth) {
-  MoveGenerator::Moves moves =
-      move_generator_.GenerateMoves<MoveGenerator::Type::kAll>(
-          current_position);
+  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kEvasions>(
+      current_position);
+
+  bool found_legal_move = false;
 
   if (moves.empty()) {
-    return kMateValue + kMaxSearchPly;
+    return kMateValue + Eval(kMaxSearchPly);
   }
 
   /*
@@ -119,8 +125,12 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
   for (const auto& move : moves) {
     const auto irreversible_data = current_position.GetIrreversibleData();
 
-    // make the move and search the tree
-    current_position.DoMove(move);
+    const auto legal_move = MoveCast<LegalMove>(move, current_position);
+    if (!legal_move) {
+      continue;
+    }
+    found_legal_move = true;
+    current_position.DoMove(*legal_move);
     const auto temp_eval_optional =
         Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
@@ -129,7 +139,7 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     const auto temp_eval = -*temp_eval_optional;
 
     // undo the move
-    current_position.UndoMove(move, irreversible_data);
+    current_position.UndoMove(*legal_move, irreversible_data);
 
     if (temp_eval > alpha) {
       if (temp_eval >= beta) {
@@ -138,6 +148,10 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
 
       alpha = temp_eval;
     }
+  }
+
+  if (!found_legal_move) {
+    return kMateValue + Eval(kMaxSearchPly);
   }
 
   return alpha;

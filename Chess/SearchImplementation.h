@@ -80,7 +80,7 @@ struct SearchNode {
   SearchResult QuiescenceSearch();
   Eval GetEndGameScore() const;
 
-  void SetBestMove(Move move);
+  void SetBestMove(LegalMove move);
   void SetTTEntry(const Bound bound);
   template <bool is_first_move>
   void UpdateQuietMove(const Move &move);
@@ -88,9 +88,9 @@ struct SearchNode {
   Position &GetCurrentPosition();
 
   template <NodeType expected_node_type>
-  SearchResult ProbeMove(const Move &move);
+  SearchResult ProbeMove(LegalMove move);
   template <NodeType expected_node_type>
-  std::optional<bool> CheckFirstMove(const Move &move);
+  std::optional<bool> CheckFirstMove(LegalMove move);
 
   [[nodiscard]] bool CanRFP() const;
 
@@ -176,7 +176,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   if (ProbeTranspositionTable()) {
     searcher_.debug_info_.tt_hits++;
-    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+    auto [hash_move, entry_score, entry_depth, entry_bound, is_pv] =
         *iteration_status_.tt_info;
     entry_score -= IsMateScore(entry_score) * (max_depth - remaining_depth);
 
@@ -206,6 +206,11 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
         return entry_score;
       }
     }
+  } else if constexpr (kIsPrincipalVariation) {
+    searcher_.debug_info_.tt_pv_misses += remaining_depth > 1;
+  }
+  else {
+    searcher_.debug_info_.tt_other_misses += remaining_depth > 1;
   }
 
   if (CanRFP()) {
@@ -225,7 +230,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
          static_cast<Depth>(
              remaining_depth -
              Settings::PruneParameters::NMPSettings::kNullMoveReduction),
-         -beta, -beta + 1, true});
+         -beta, -beta + Eval(1), true});
 
     current_position.UndoMove(NullMove{}, position_info_.irreversible_data);
 
@@ -258,7 +263,8 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   auto const &move_generator = searcher_.move_generator_;
 
   move_picker_.InitPicker(
-      move_generator.GenerateMoves<MoveGenerator::Type::kAll>(current_position),
+      move_generator.GenerateMoves<MoveGenerator::Type::kLegal>(
+          current_position),
       searcher_);
 
   // check if there are no possible moves
@@ -266,7 +272,11 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     return GetEndGameScore();
   }
 
-  if (!iteration_status_.best_move) {
+  if (!iteration_status_.best_move ||
+      !move_picker_.SkipMove(*iteration_status_.best_move)) {
+    if (iteration_status_.best_move) {
+      searcher_.debug_info_.tt_wrong_moves++;
+    }
     auto has_cutoff_opt = CheckFirstMove<kFirstChildNodeExpectedType>(
         *move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth));
     if (!has_cutoff_opt) {
@@ -276,10 +286,6 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
       SetTTEntry(Bound::kLower);
       return beta;
     }
-  } else {
-    // skip the first move
-    assert(iteration_status_.best_move);
-    move_picker_.SkipMove(*iteration_status_.best_move);
   }
 
   return PVSearch();
@@ -306,8 +312,7 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 Eval SearchNode<node_type, ExitCondition>::GetEndGameScore() const {
   if (position_info_.is_under_check) {
-    return kMateValue +
-           static_cast<Eval>(state_.max_depth - state_.remaining_depth);
+    return kMateValue + Eval(state_.max_depth - state_.remaining_depth);
   }
 
   return kDrawValue;
@@ -315,7 +320,7 @@ Eval SearchNode<node_type, ExitCondition>::GetEndGameScore() const {
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-void SearchNode<node_type, ExitCondition>::SetBestMove(Move move) {
+void SearchNode<node_type, ExitCondition>::SetBestMove(LegalMove move) {
   if (state_.remaining_depth == state_.max_depth) {
     searcher_.best_move_ = move;
   }
@@ -326,18 +331,21 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
   assert(iteration_status_.best_move);
-  searcher_.best_moves_.SetEntry(
-      GetCurrentPosition(), *iteration_status_.best_move,
-      iteration_status_.best_eval +
-          IsMateScore(iteration_status_.best_eval) *
-              (state_.max_depth - state_.remaining_depth),
-      state_.remaining_depth, bound, searcher_.age_);
+  auto result = searcher_.best_moves_.Probe(GetCurrentPosition().GetHash());
+  result.entry.get().Save(GetCurrentPosition().GetHash(),
+                          iteration_status_.best_eval +
+                              IsMateScore(iteration_status_.best_eval) *
+                                  (state_.max_depth - state_.remaining_depth),
+                          kIsPrincipalVariation, bound, state_.remaining_depth,
+                          *iteration_status_.best_move,
+                          iteration_status_.best_eval,
+                          searcher_.best_moves_.GetGeneration());
 }
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <NodeType expected_node_type>
-SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
+SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(LegalMove move) {
   auto &current_position = GetCurrentPosition();
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
 
@@ -361,7 +369,7 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <NodeType expected_node_type>
 std::optional<bool> SearchNode<node_type, ExitCondition>::CheckFirstMove(
-    const Move &move) {
+    LegalMove move) {
   static_assert(expected_node_type == kFirstChildNodeExpectedType);
   static_assert(expected_node_type != NodeType::kPV ||
                 expected_node_type == node_type);
@@ -431,8 +439,8 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     }
 
     auto temp_eval_optional = StartSubsearch<kZWSNodeType>(
-        {max_depth, static_cast<Depth>(remaining_depth - 1 - R), -alpha - 1,
-         -alpha});  // Reduced ZWS
+        {max_depth, static_cast<Depth>(remaining_depth - 1 - R),
+         -alpha - Eval(1), -alpha});
 
     if (!temp_eval_optional) {
       current_position.UndoMove(move, position_info_.irreversible_data);
@@ -444,7 +452,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
         temp_eval >
             alpha) { /* research at full depth, but still with zero window */
       temp_eval_optional = StartSubsearch<kZWSNodeType>(
-          {max_depth, static_cast<Depth>(remaining_depth - 1), -alpha - 1,
+          {max_depth, static_cast<Depth>(remaining_depth - 1), -alpha - Eval(1),
            -alpha});
 
       if (!temp_eval_optional) {
@@ -583,9 +591,9 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool SearchNode<node_type, ExitCondition>::ProbeTranspositionTable() {
-  if (auto node = searcher_.best_moves_.GetNode(searcher_.current_position_);
-      node.true_hash == GetCurrentPosition().GetHash()) {
-    iteration_status_.tt_info = std::move(node);
+  auto result = searcher_.best_moves_.Probe(GetCurrentPosition().GetHash());
+  if (result.found) {
+    iteration_status_.tt_info = std::move(result.data);
     return true;
   }
 
@@ -598,11 +606,16 @@ std::optional<SearchResult>
 SearchNode<node_type, ExitCondition>::CheckTranspositionTable() {
   if (iteration_status_.tt_info) {
     auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
-    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+    auto [hash_move, entry_score, entry_depth, entry_bound, is_pv] =
         *iteration_status_.tt_info;
 
+    GetCurrentPosition().ComputePins(GetCurrentPosition().GetSideToMove());
+    auto legal_move = MoveCast<LegalMove>(hash_move, GetCurrentPosition());
+    if (!legal_move) {
+      return std::nullopt;
+    }
     auto has_cutoff_opt =
-        CheckFirstMove<kFirstChildNodeExpectedType>(hash_move);
+        CheckFirstMove<kFirstChildNodeExpectedType>(*legal_move);
     if (!has_cutoff_opt) {
       return SearchResult{std::nullopt};
     }

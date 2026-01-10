@@ -13,6 +13,9 @@ struct DebugInfo {
   std::size_t nmp_cuts{};
 
   std::size_t tt_hits{};
+  std::size_t tt_pv_misses{};
+  std::size_t tt_other_misses{};
+  std::size_t tt_wrong_moves{};
   std::size_t tt_cuts{};
 
   DebugInfo &operator+=(const DebugInfo &other) {
@@ -23,6 +26,9 @@ struct DebugInfo {
     nmp_tries += other.nmp_tries;
     nmp_cuts += other.nmp_cuts;
     tt_hits += other.tt_hits;
+    tt_pv_misses += other.tt_pv_misses;
+    tt_other_misses += other.tt_other_misses;
+    tt_wrong_moves += other.tt_wrong_moves;
     tt_cuts += other.tt_cuts;
     return *this;
   }

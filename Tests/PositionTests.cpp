@@ -13,7 +13,7 @@ TEST(DoMove, DoAndUndoEqualZero) {
   Position pos = start_pos;
 
   for (const auto moves =
-           MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(pos);
+           MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kLegal>(pos);
        const auto &move : moves) {
     const auto irreversible_data = pos.GetIrreversibleData();
     pos.DoMove(move);
@@ -29,17 +29,17 @@ TEST(SomeMoves, DifferentHash) {
   std::vector<std::string> moves = {"b1c3", "d7d5", "a1b1"};
   std::set<Hash> hashes = {pos.GetHash()};
   for (const auto &move_str : moves) {
-    auto move = MoveFactory{}(pos, move_str);
-    pos.DoMove(move);
+    auto move = MoveCast<LegalMove>(MoveFactory{}(pos, move_str), pos);
+    ASSERT_TRUE(move);
+    pos.DoMove(*move);
     ASSERT_TRUE(hashes.insert(pos.GetHash()).second);
   }
 }
 
 Position DoMoves(Position pos, const std::vector<std::string> &moves) {
   for (const auto &move_str : moves) {
-    auto move = MoveFactory{}(pos, move_str);
-
-    pos.DoMove(move);
+    auto move = MoveCast<LegalMove>(MoveFactory{}(pos, move_str), pos);
+    pos.DoMove(*move);
   }
   return pos;
 }

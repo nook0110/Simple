@@ -13,7 +13,7 @@ size_t Perft(std::ostream& o_stream, Position& position, const Depth depth) {
   static auto move_generator = MoveGenerator{};
 
   const auto moves =
-      move_generator.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      move_generator.GenerateMoves<MoveGenerator::Type::kLegal>(position);
 
   size_t answer{};
 
@@ -50,16 +50,16 @@ size_t Perft(std::ostream& o_stream, Position& position, const Depth depth) {
 
 PerftResult PerftBench(Position& position, Depth depth) {
   const auto start_time = std::chrono::high_resolution_clock::now();
-  
+
   std::ostringstream dummy_stream;
   const auto nodes = Perft<false>(dummy_stream, position, depth);
-  
+
   const auto time = std::chrono::duration<double>(
                         std::chrono::high_resolution_clock::now() - start_time)
                         .count();
-  
+
   const auto nps = static_cast<size_t>(nodes / time);
-  
+
   return PerftResult{nodes, nps};
 }
 

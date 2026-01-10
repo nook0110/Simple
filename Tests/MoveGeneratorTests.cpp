@@ -33,7 +33,7 @@ struct GameInfo {
   static auto move_generator = MoveGenerator{};
 
   const auto moves =
-      move_generator.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      move_generator.GenerateMoves<MoveGenerator::Type::kLegal>(position);
 
   if (depth == 1) {
     for (const auto &move : moves) {
@@ -66,6 +66,10 @@ struct GenTestCase {
 
   std::vector<GameInfo> infos;
 };
+
+std::ostream &operator<<(std::ostream &os, const GenTestCase &test_case) {
+  return os << "FEN: " << test_case.fen;
+}
 
 class GenerateMovesTest : public testing::TestWithParam<GenTestCase> {
  protected:
@@ -104,10 +108,15 @@ TEST_P(GenerateMovesTest, Perft) {
 
     EXPECT_EQ(position, GetPosition());
     EXPECT_EQ(position.GetHash(), GetPosition().GetHash());
-    if (possible_games_answer)
+    if (possible_games_answer) {
       EXPECT_EQ(*possible_games, *possible_games_answer);
-    if (en_croissants_answer) EXPECT_EQ(*en_croissants, *en_croissants_answer);
-    if (castlings_answer) EXPECT_EQ(*castlings, *castlings_answer);
+    }
+    if (en_croissants_answer) {
+      EXPECT_EQ(*en_croissants, *en_croissants_answer);
+    }
+    if (castlings_answer) {
+      EXPECT_EQ(*castlings, *castlings_answer);
+    }
   }
 }
 
