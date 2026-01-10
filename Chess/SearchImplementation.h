@@ -274,6 +274,9 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   if (!iteration_status_.best_move ||
       !move_picker_.SkipMove(*iteration_status_.best_move)) {
+    if (iteration_status_.best_move) {
+      searcher_.debug_info_.tt_wrong_moves++;
+    }
     auto has_cutoff_opt = CheckFirstMove<kFirstChildNodeExpectedType>(
         *move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth));
     if (!has_cutoff_opt) {

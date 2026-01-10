@@ -146,6 +146,7 @@ class ChessEngine {
     o_stream_ << "info tt_hits " << info.tt_hits << "\n";
     o_stream_ << "info tt_pv_misses " << info.tt_pv_misses << "\n";
     o_stream_ << "info tt_other_misses " << info.tt_other_misses << "\n";
+    o_stream_ << "info tt_wrong_moves " << info.tt_wrong_moves << "\n";
     o_stream_ << "info tt_cuts " << info.tt_cuts << "\n";
     o_stream_ << "info rfp_cuts " << info.rfp_cuts << "\n";
     o_stream_ << "info nmp_tries " << info.nmp_tries << "\n";

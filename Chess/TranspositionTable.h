@@ -167,16 +167,17 @@ inline void TableEntry::Save(Hash key, Eval score_value, bool is_pv_node,
                              Bound bound_value, Depth depth_value,
                              Move move_value, Eval static_eval_value,
                              Generation gen) {
-  const bool should_replace = !this->move || bound_value == Bound::kExact ||
-                              depth_value + 2 * is_pv_node > depth_stored - 4 ||
-                              RelativeAge(gen) > 0;
+  const bool should_replace =
+      !this->move || bound_value == Bound::kExact ||
+      (!this->is_pv && depth_value + 2 * is_pv_node > depth_stored - 4) ||
+      RelativeAge(gen) > 0;
 
   if (should_replace) {
-    short_hash = static_cast<ShortHash>(key);
-    depth_stored = static_cast<std::uint8_t>(depth_value);
-    generation = gen;
-    bound = bound_value;
-    is_pv = is_pv_node;
+    this->short_hash = static_cast<ShortHash>(key);
+    this->depth_stored = static_cast<std::uint8_t>(depth_value);
+    this->generation = gen;
+    this->bound = bound_value;
+    this->is_pv = is_pv_node;
     this->score = score_value;
     this->static_eval = static_eval_value;
     this->move = move_value;
@@ -187,7 +188,7 @@ inline std::uint8_t TableEntry::RelativeAge(
     Generation current_generation) const {
   constexpr std::uint8_t kMaxGeneration = (1 << kGenerationSizeInBits) - 1;
   constexpr std::uint8_t kGenerationRange = 1 << kGenerationSizeInBits;
-
+  current_generation &= kMaxGeneration;
   return (kGenerationRange + current_generation - generation) & kMaxGeneration;
 }
 

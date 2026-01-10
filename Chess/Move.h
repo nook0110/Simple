@@ -91,12 +91,6 @@ class Move {
   constexpr explicit operator bool() const { return data_ != 0; }
   constexpr std::uint16_t Raw() const { return data_; }
 
-  struct Hash {
-    std::size_t operator()(const Move& move) const {
-      return move.data_ * 6364136223846793005ULL + 1442695040888963407ULL;
-    }
-  };
-
  private:
   std::uint16_t data_ = {};
 };
