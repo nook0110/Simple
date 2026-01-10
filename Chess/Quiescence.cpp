@@ -101,7 +101,7 @@ template <class ExitCondition>
 SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     Position& current_position, Eval alpha, Eval beta,
     const Depth current_depth) {
-  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kLegal>(
+  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kEvasions>(
       current_position);
 
   bool found_legal_move = false;
@@ -121,6 +121,10 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree
+    if (!current_position.Legal(move)) {
+      continue;
+    }
+    found_legal_move = true;
     current_position.DoMove(move);
     const auto temp_eval_optional =
         Search<false>(current_position, -beta, -alpha, current_depth + 1);

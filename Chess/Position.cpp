@@ -722,6 +722,10 @@ bool Position::PseudoLegal(const Move &move) const {
         return false;
       }
 
+      if (to == checkers.GetFirstBit()) {
+        return true;
+      }
+
       if (!Between(GetKingSquare(us), checkers.GetFirstBit()).Test(to)) {
         return false;
       }
