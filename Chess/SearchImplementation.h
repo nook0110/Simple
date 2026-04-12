@@ -611,9 +611,10 @@ SearchNode<node_type, ExitCondition>::CheckTranspositionTable() {
     auto [hash_move, entry_score, entry_depth, entry_bound, is_pv] =
         *iteration_status_.tt_info;
 
-    if(!hash_move || !GetCurrentPosition().PseudoLegal(hash_move) || 
+    if(!hash_move || !GetCurrentPosition().PseudoLegal(hash_move) ||
         !GetCurrentPosition().Legal(hash_move)) {
-          return entry_score;
+          iteration_status_.tt_info.reset();
+          return std::nullopt;
         }
     auto has_cutoff_opt =
         CheckFirstMove<kFirstChildNodeExpectedType>(hash_move);
