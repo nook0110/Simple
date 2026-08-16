@@ -224,7 +224,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
         {max_depth,
          static_cast<Depth>(
              remaining_depth -
-             Settings::PruneParameters::NMPSettings::kNullMoveReduction),
+             Settings::PruneParameters::NMPSettings::kNullMoveReduction - 1),
          -beta, -beta + 1, true});
 
     current_position.UndoMove(NullMove{}, position_info_.irreversible_data);
@@ -517,6 +517,8 @@ bool SearchNode<node_type, ExitCondition>::CanNullMove() const {
     return false;
   }
 
+  if (state_.was_previous_move_a_null) return false;
+
   const auto remaining_depth = state_.remaining_depth;
 
   if (remaining_depth <=
@@ -524,6 +526,8 @@ bool SearchNode<node_type, ExitCondition>::CanNullMove() const {
     return false;
 
   if (position_info_.is_under_check) return false;
+
+  if (position_info_.static_eval < state_.beta) return false;
 
   const auto &current_position = searcher_.GetPosition();
   const auto side_to_move = current_position.GetSideToMove();
