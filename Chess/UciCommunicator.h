@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <optional>
@@ -8,6 +9,7 @@
 #include <thread>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "MoveFactory.h"
 #include "Perft.h"
@@ -50,11 +52,16 @@ class SearchThread {
   }
   void GoPonder() {
     StopThread();
-    pondering_ = Pondering{};
+    stop_signal_ = std::make_shared<std::atomic_bool>(false);
+    pondering_.emplace(stop_signal_);
     thread_ = std::thread([this] { engine_.GoPonder(*pondering_); });
   }
 
   void Stop();
+  void SetThreadCount(std::size_t thread_count) {
+    StopThread();
+    thread_count_ = std::max<std::size_t>(1, thread_count);
+  }
 
  private:
   Condition GetCondition(const Info& info) {
@@ -72,14 +79,14 @@ class SearchThread {
           left_time / kAverageGameLength + inc_time;
       time_for_move = std::min(left_time / 2, time_for_move);
 
-      return TimeCondition{time_for_move};
+      return TimeCondition{time_for_move, stop_signal_};
     }
     if (const auto time_per_move =
             std::get_if<TimePerMove>(&info.time_control)) {
-      return TimeCondition{time_per_move->movetime};
+      return TimeCondition{time_per_move->movetime, stop_signal_};
     }
     if (const auto max_depth = std::get_if<MaxDepth>(&info.time_control)) {
-      return DepthCondition{max_depth->depth};
+      return DepthCondition{max_depth->depth, stop_signal_};
     }
     assert(false);
     std::unreachable();
@@ -87,10 +94,16 @@ class SearchThread {
 
   void StopThread();
 
+  ChessEngine::SharedTranspositionTable transposition_table_ =
+      std::make_shared<Searcher::SearcherTranspositionTable>();
   ChessEngine engine_;
 
   std::optional<Pondering> pondering_;
   std::optional<std::thread> thread_;
+  std::vector<std::unique_ptr<ChessEngine>> helper_engines_;
+  std::vector<std::thread> helper_threads_;
+  StopSignal stop_signal_;
+  std::size_t thread_count_ = 1;
 };
 
 struct OptionBase {
@@ -109,9 +122,32 @@ struct OptionBase {
 };
 
 struct SpinOption : public OptionBase {
-  SpinOption(std::string name) : OptionBase(std::move(name)) {}
+  SpinOption(std::string name, int default_value, int min_value, int max_value)
+      : OptionBase(std::move(name)),
+        value_(default_value),
+        default_(default_value),
+        min_(min_value),
+        max_(max_value) {}
 
-  int value_ = 0;
+  bool SetValue(const std::string& value) override {
+    const int parsed = std::stoi(value);
+    if (parsed < min_ || parsed > max_) return false;
+    value_ = parsed;
+    return true;
+  }
+
+  std::string GetOptionDescription() const override {
+    return "type spin default " + std::to_string(default_) + " min " +
+           std::to_string(min_) + " max " + std::to_string(max_);
+  }
+
+  [[nodiscard]] int GetValue() const { return value_; }
+
+ private:
+  int value_;
+  int default_;
+  int min_;
+  int max_;
 };
 
 template <bool default_value>
@@ -142,7 +178,9 @@ struct BooleanOption : public OptionBase {
 using PonderOption = BooleanOption<false>;
 struct EngineOptions {
   EngineOptions() {
-    options.emplace_back(std::make_unique<PonderOption>("Ponder"));
+    auto threads = std::make_unique<SpinOption>("Threads", 1, 1, 256);
+    threads_ = threads.get();
+    options.emplace_back(std::move(threads));
   }
   std::vector<std::unique_ptr<OptionBase>> options;
   bool ParseSetoption(std::stringstream command) {
@@ -174,6 +212,13 @@ struct EngineOptions {
           << option->GetOptionDescription() << '\n';
     }
   }
+
+  [[nodiscard]] std::size_t GetThreadCount() const {
+    return static_cast<std::size_t>(threads_->GetValue());
+  }
+
+ private:
+  SpinOption* threads_ = nullptr;
 };
 
 class UciChessEngine {
@@ -296,7 +341,7 @@ inline void UciChessEngine::ParseUci(std::stringstream) {
   Send("id name " + name);
   Send("id author " + author);
 
-  // options_.PrintOptionsNames(o_stream_);
+  options_.PrintOptionsNames(o_stream_);
 
   Send("uciok");
 }
@@ -308,7 +353,9 @@ inline void UciChessEngine::ParseSetOption(std::stringstream command) {
     Send("Maybe you meant 'name'?");
     return;
   }
-  options_.ParseSetoption(std::move(command));
+  if (options_.ParseSetoption(std::move(command))) {
+    search_thread_.SetThreadCount(options_.GetThreadCount());
+  }
 }
 inline void UciChessEngine::ParseIsReady(std::stringstream) const {
   // ReSharper disable once StringLiteralTypo
@@ -481,16 +528,37 @@ inline void UciChessEngine::ParseDebug(std::stringstream) {
 }
 
 inline SearchThread::SearchThread(Position position, std::ostream& o_stream)
-    : engine_(std::move(position), o_stream) {}
+    : engine_(std::move(position), o_stream, transposition_table_) {}
 
 inline SearchThread::SearchThread(std::ostream& o_stream)
-    : engine_(PositionFactory{}(), o_stream) {}
+    : engine_(PositionFactory{}(), o_stream, transposition_table_) {}
 
 inline void SearchThread::Start(const Info& info) {
   StopThread();
   engine_.SetPosition(info.position);
+  stop_signal_ = std::make_shared<std::atomic_bool>(false);
 
-  thread_ = std::thread([this, &info] {
+  helper_engines_.clear();
+  helper_threads_.clear();
+  helper_engines_.reserve(thread_count_ - 1);
+  helper_threads_.reserve(thread_count_ - 1);
+
+  for (std::size_t worker = 1; worker < thread_count_; ++worker) {
+    helper_engines_.push_back(std::make_unique<ChessEngine>(
+        info.position, std::cout, transposition_table_, false,
+        static_cast<Depth>(1 + worker % 2)));
+    auto& helper = *helper_engines_.back();
+    helper_threads_.emplace_back([this, info, &helper] {
+      auto condition = GetCondition(info);
+      std::visit(
+          [&helper](auto& unwrapped_condition) {
+            helper.ComputeBestMove(unwrapped_condition);
+          },
+          condition);
+    });
+  }
+
+  thread_ = std::thread([this, info] {
     auto condition = GetCondition(info);
     std::visit(
         [this](auto& unwrapped_condition) {
@@ -501,18 +569,22 @@ inline void SearchThread::Start(const Info& info) {
 }
 
 inline void SearchThread::Stop() {
-  if (!pondering_) engine_.PrintBestMove();
   StopThread();
 }
 
 inline void SearchThread::StopThread() {
+  if (stop_signal_) {
+    stop_signal_->store(true, std::memory_order_relaxed);
+  }
   if (thread_) {
-    if (pondering_) {
-      pondering_->pondermiss = true;
-    }
     thread_->join();
     thread_ = std::nullopt;
-    pondering_ = std::nullopt;
   }
+  for (auto& helper_thread : helper_threads_) {
+    if (helper_thread.joinable()) helper_thread.join();
+  }
+  helper_threads_.clear();
+  helper_engines_.clear();
+  pondering_ = std::nullopt;
 }
 }  // namespace SimpleChessEngine

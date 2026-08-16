@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -71,9 +72,19 @@ std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info);
  */
 class ChessEngine {
  public:
-  explicit ChessEngine(Position position = PositionFactory{}(),
-                       std::ostream& o_stream = std::cout)
-      : o_stream_(o_stream) {
+  using SharedTranspositionTable =
+      std::shared_ptr<Searcher::SearcherTranspositionTable>;
+
+  explicit ChessEngine(
+      Position position = PositionFactory{}(),
+      std::ostream& o_stream = std::cout,
+      SharedTranspositionTable transposition_table =
+          std::make_shared<Searcher::SearcherTranspositionTable>(),
+      bool reporting = true, Depth initial_depth = 1)
+      : o_stream_(o_stream),
+        searcher_(position, std::move(transposition_table)),
+        reporting_(reporting),
+        initial_depth_(initial_depth) {
     SetPosition(std::move(position));
   }
 
@@ -95,10 +106,13 @@ class ChessEngine {
   [[nodiscard]] const Move& GetCurrentBestMove() const;
 
   void PrintBestMove() {
+    if (!reporting_) return;
     o_stream_ << BestMoveInfo{GetCurrentBestMove(), std::nullopt};
   }
 
-  void PrintBestMove(const BestMoveInfo& bm_info) { o_stream_ << bm_info; }
+  void PrintBestMove(const BestMoveInfo& bm_info) {
+    if (reporting_) o_stream_ << bm_info;
+  }
 
  private:
   class EBFsInfo {
@@ -134,6 +148,7 @@ class ChessEngine {
 
   void PrintInfo(const DebugInfo& info, Eval eval, Depth current_depth,
                  std::chrono::duration<double> search_time) {
+    if (!reporting_) return;
     PrintInfo(ScoreInfo{eval});
     PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
                                                  current_depth, position_)};
@@ -201,8 +216,10 @@ class ChessEngine {
   Searcher searcher_;
   Position position_;
 
-  Move best_move_;
+  Move best_move_{Move::None()};
   std::optional<Move> ponder_move_;
+  bool reporting_;
+  Depth initial_depth_;
 };
 }  // namespace SimpleChessEngine
 
@@ -212,13 +229,22 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   const TimePoint start_time = std::chrono::system_clock::now();
   searcher_.InitStartOfSearch();
 
+  const auto legal_moves =
+      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position_);
+  if (legal_moves.empty()) {
+    PrintBestMove(BestMoveInfo{Move::None(), std::nullopt});
+    return;
+  }
+  best_move_ = legal_moves.front();
+  ponder_move_.reset();
+
   DebugInfo info;
-  Eval eval;
+  Eval eval = position_.Evaluate();
   EBFsInfo ebfs;
   Window window{};
-  Depth current_depth = 1;
+  Depth current_depth = initial_depth_;
 
-  for (current_depth = 1;
+  for (current_depth = initial_depth_;
        condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
@@ -245,17 +271,29 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
               std::chrono::duration<double>{std::chrono::system_clock::now() -
                                             start_time});
     PrintInfo(ebfs.GetInfo());
-    o_stream_ << "info time "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                     std::chrono::system_clock::now() - start_time)
-                     .count()
-              << "\n";
-
-    if (auto two_move_pv = searcher_.GetPrincipalVariation(2, position_);
-        two_move_pv.size() > 1) {
-      ponder_move_ = two_move_pv[1];
+    if (reporting_) {
+      o_stream_ << "info time "
+                << std::chrono::duration_cast<std::chrono::milliseconds>(
+                       std::chrono::system_clock::now() - start_time)
+                       .count()
+                << "\n";
     }
+
     best_move_ = searcher_.GetCurrentBestMove();
+    ponder_move_.reset();
+    Position ponder_position = position_;
+    const auto legal_root_moves =
+        MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(
+            ponder_position);
+    if (std::ranges::find(legal_root_moves, best_move_) !=
+        legal_root_moves.end()) {
+      ponder_position.DoMove(best_move_);
+      if (auto ponder_pv =
+              searcher_.GetPrincipalVariation(1, std::move(ponder_position));
+          !ponder_pv.empty()) {
+        ponder_move_ = ponder_pv.front();
+      }
+    }
     window.SetNewEval(eval);
   }
 
@@ -273,8 +311,10 @@ inline const Move& ChessEngine::GetCurrentBestMove() const {
 inline std::optional<Eval> ChessEngine::MakeIteration(
     const Window window, const Depth current_depth,
     const StopSearchCondition auto& condition) {
-  o_stream_ << "info window " << window.GetLowerBound() << " "
-            << window.GetUpperBound() << "\n";
+  if (reporting_) {
+    o_stream_ << "info window " << window.GetLowerBound() << " "
+              << window.GetUpperBound() << "\n";
+  }
   return searcher_.Search<NodeType::kPV>(condition, current_depth,
                                          current_depth, window.GetLowerBound(),
                                          window.GetUpperBound());
@@ -282,7 +322,7 @@ inline std::optional<Eval> ChessEngine::MakeIteration(
 
 template <class Info>
 void ChessEngine::PrintInfo(const Info& info) {
-  o_stream_ << info;
+  if (reporting_) o_stream_ << info;
 }
 
 inline std::ostream& operator<<(std::ostream& out,

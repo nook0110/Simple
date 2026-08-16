@@ -67,6 +67,13 @@ if(BUILD_TESTS)
     include(GoogleTest)
     gtest_discover_tests(SCE_tests)
 
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+    add_test(
+        NAME LazySmpUciLifecycle
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/uci_lazy_smp_test.py
+                --engine $<TARGET_FILE:SimpleChessEngine>
+    )
+
     # Копирование тестовых данных
     file(GLOB TEST_DATA_FILES ${CMAKE_SOURCE_DIR}/Tests/*.test)
     file(COPY ${TEST_DATA_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
