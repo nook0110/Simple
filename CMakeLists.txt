@@ -3,10 +3,12 @@ project(SimpleChessEngine)
 
 # Добавляем опцию для включения/выключения тестов
 option(BUILD_TESTS "Build tests" OFF)
+set(SCE_TT_SIZE_MB 640 CACHE STRING "Shared transposition table size in MiB")
 
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+add_compile_definitions(SCE_TT_SIZE_MB=${SCE_TT_SIZE_MB})
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -41,6 +43,7 @@ if(BUILD_TESTS)
 
     FILE(GLOB CHESS_TEST_SOURCES Tests/*.cpp)
     add_executable(SCE_tests ${CHESS_TEST_SOURCES})
+    add_dependencies(SCE_tests ${PROJECT_NAME})
     target_link_libraries(SCE_tests 
         PRIVATE 
         gtest_main 
@@ -66,6 +69,13 @@ if(BUILD_TESTS)
     enable_testing()
     include(GoogleTest)
     gtest_discover_tests(SCE_tests)
+
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+    add_test(
+        NAME LazySmpUciLifecycle
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/uci_lazy_smp_test.py
+                --engine $<TARGET_FILE:SimpleChessEngine>
+    )
 
     # Копирование тестовых данных
     file(GLOB TEST_DATA_FILES ${CMAKE_SOURCE_DIR}/Tests/*.test)

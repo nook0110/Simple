@@ -241,6 +241,8 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   // Internal Iterative Reduction
   if constexpr (node_type == NodeType::kPV || node_type == NodeType::kCut) {
     if (!iteration_status_.tt_info &&
+        remaining_depth >
+            Settings::PruneParameters::IIRSettings::kReduction &&
         remaining_depth >=
             Settings::PruneParameters::IIRSettings::kBaseLimit +
                 (node_type == NodeType::kCut
@@ -326,7 +328,7 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
   assert(iteration_status_.best_move);
-  searcher_.best_moves_.SetEntry(
+  searcher_.best_moves_->SetEntry(
       GetCurrentPosition(), *iteration_status_.best_move,
       iteration_status_.best_eval +
           IsMateScore(iteration_status_.best_eval) *
@@ -587,8 +589,8 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool SearchNode<node_type, ExitCondition>::ProbeTranspositionTable() {
-  if (auto node = searcher_.best_moves_.GetNode(searcher_.current_position_);
-      node.true_hash == GetCurrentPosition().GetHash()) {
+  if (auto node = searcher_.best_moves_->GetNode(searcher_.current_position_);
+      node.IsOccupied() && node.true_hash == GetCurrentPosition().GetHash()) {
     iteration_status_.tt_info = std::move(node);
     return true;
   }

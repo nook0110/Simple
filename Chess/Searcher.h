@@ -1,6 +1,8 @@
 #pragma once
+#include <algorithm>
 #include <array>
 #include <cstddef>
+#include <memory>
 
 #include "Concepts.h"
 #include "DebugInfo.h"
@@ -36,7 +38,7 @@ class Searcher {
   template <NodeType node_type, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
   friend struct SearchNode;
-  constexpr static size_t kTTSizeInMb = 640;
+  constexpr static size_t kTTSizeInMb = SCE_TT_SIZE_MB;
   using SearcherTranspositionTable = TranspositionTable<kTTSizeInMb>;
 
   /**
@@ -44,8 +46,12 @@ class Searcher {
    *
    * \param position The initial position.
    */
-  explicit Searcher(Position position = PositionFactory{}())
-      : current_position_(std::move(position)) {}
+  explicit Searcher(
+      Position position = PositionFactory{}(),
+      std::shared_ptr<SearcherTranspositionTable> transposition_table =
+          std::make_shared<SearcherTranspositionTable>())
+      : current_position_(std::move(position)),
+        best_moves_(std::move(transposition_table)) {}
 
   /**
    * \brief Sets the current position.
@@ -97,8 +103,8 @@ class Searcher {
   Move best_move_{};
   Position current_position_;     //!< Current position.
   MoveGenerator move_generator_;  //!< Move generator.
-  SearcherTranspositionTable
-      best_moves_;  //!< Transposition-table to store the best moves.
+  std::shared_ptr<SearcherTranspositionTable>
+      best_moves_;  //!< Shared transposition table used by Lazy SMP workers.
   std::array<
       std::array<std::array<std::int64_t, kBoardArea + 1>, kBoardArea + 1>,
       kColors>
@@ -128,8 +134,14 @@ inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
                                                      Position position) const {
   MoveGenerator::Moves answer;
   for (Depth i = 0; i < max_depth; ++i) {
-    const auto &hashed_node = best_moves_.GetNode(position);
-    if (hashed_node.true_hash != position.GetHash()) break;
+    const auto hashed_node = best_moves_->GetNode(position);
+    if (!hashed_node.IsOccupied() ||
+        hashed_node.true_hash != position.GetHash())
+      break;
+    const auto legal_moves =
+        MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+    if (std::ranges::find(legal_moves, hashed_node.move) == legal_moves.end())
+      break;
     position.DoMove(hashed_node.move);
     answer.push_back(hashed_node.move);
   }
