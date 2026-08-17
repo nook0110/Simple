@@ -43,6 +43,7 @@ if(BUILD_TESTS)
 
     FILE(GLOB CHESS_TEST_SOURCES Tests/*.cpp)
     add_executable(SCE_tests ${CHESS_TEST_SOURCES})
+    add_dependencies(SCE_tests ${PROJECT_NAME})
     target_link_libraries(SCE_tests 
         PRIVATE 
         gtest_main 
