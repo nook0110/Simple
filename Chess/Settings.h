@@ -9,23 +9,23 @@ struct Settings {
   struct PruneParameters {
     struct RFPSettings {
       static constexpr bool kEnabled = true;
-      static constexpr Depth kDepthLimit = 5;
-      static constexpr Eval kThreshold = 75;
+      inline static Depth kDepthLimit = 5;
+      inline static Eval kThreshold = 100;
     };
     struct NMPSettings {
       static constexpr bool kEnabled = true;
-      static constexpr size_t kNullMoveReduction = 3;
+      inline static size_t kNullMoveReduction = 3;
     };
     struct IIRSettings {
-      static constexpr Depth kBaseLimit = 2;
-      static constexpr Depth kCutNodePenalty = 0;
-      static constexpr Depth kReduction = 1;
+      inline static Depth kBaseLimit = 2;
+      inline static Depth kCutNodePenalty = 1;
+      inline static Depth kReduction = 1;
     };
     struct LMRSettings {
       static constexpr bool kEnabled = true;
-      static constexpr size_t kDepthLimit = 4;
-      static constexpr int kUnderCheckReductionPenalty = 1;
-      static constexpr int kDoingCheckReductionPenalty = 1;
+      inline static size_t kDepthLimit = 3;
+      inline static int kUnderCheckReductionPenalty = 1;
+      inline static int kDoingCheckReductionPenalty = 2;
     };
     static constexpr RFPSettings kRFPSettings = {};
     static constexpr NMPSettings kNMPSettings = {};
