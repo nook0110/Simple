@@ -122,17 +122,22 @@ struct OptionBase {
 };
 
 struct SpinOption : public OptionBase {
-  SpinOption(std::string name, int default_value, int min_value, int max_value)
+  using Setter = void (*)(int);
+
+  SpinOption(std::string name, int default_value, int min_value, int max_value,
+             Setter setter = nullptr)
       : OptionBase(std::move(name)),
         value_(default_value),
         default_(default_value),
         min_(min_value),
-        max_(max_value) {}
+        max_(max_value),
+        setter_(setter) {}
 
   bool SetValue(const std::string& value) override {
     const int parsed = std::stoi(value);
     if (parsed < min_ || parsed > max_) return false;
     value_ = parsed;
+    if (setter_ != nullptr) setter_(parsed);
     return true;
   }
 
@@ -148,6 +153,7 @@ struct SpinOption : public OptionBase {
   int default_;
   int min_;
   int max_;
+  Setter setter_;
 };
 
 template <bool default_value>
@@ -181,6 +187,48 @@ struct EngineOptions {
     auto threads = std::make_unique<SpinOption>("Threads", 1, 1, 256);
     threads_ = threads.get();
     options.emplace_back(std::move(threads));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "RFPDepth", 5, 1, 8, [](const int value) {
+          Settings::PruneParameters::RFPSettings::kDepthLimit =
+              static_cast<Depth>(value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "RFPThreshold", 100, 25, 200, [](const int value) {
+          Settings::PruneParameters::RFPSettings::kThreshold = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "NMPReduction", 3, 2, 5, [](const int value) {
+          Settings::PruneParameters::NMPSettings::kNullMoveReduction = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "IIRBaseDepth", 2, 1, 8, [](const int value) {
+          Settings::PruneParameters::IIRSettings::kBaseLimit =
+              static_cast<Depth>(value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "IIRCutPenalty", 1, 0, 4, [](const int value) {
+          Settings::PruneParameters::IIRSettings::kCutNodePenalty =
+              static_cast<Depth>(value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "IIRReduction", 1, 1, 3, [](const int value) {
+          Settings::PruneParameters::IIRSettings::kReduction =
+              static_cast<Depth>(value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "LMRDepth", 3, 2, 8, [](const int value) {
+          Settings::PruneParameters::LMRSettings::kDepthLimit = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "LMRInCheckPenalty", 1, 0, 3, [](const int value) {
+          Settings::PruneParameters::LMRSettings::kUnderCheckReductionPenalty =
+              value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "LMRGivesCheckPenalty", 2, 0, 3, [](const int value) {
+          Settings::PruneParameters::LMRSettings::kDoingCheckReductionPenalty =
+              value;
+        }));
   }
   std::vector<std::unique_ptr<OptionBase>> options;
   bool ParseSetoption(std::stringstream command) {

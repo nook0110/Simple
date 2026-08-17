@@ -241,6 +241,8 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   // Internal Iterative Reduction
   if constexpr (node_type == NodeType::kPV || node_type == NodeType::kCut) {
     if (!iteration_status_.tt_info &&
+        remaining_depth >
+            Settings::PruneParameters::IIRSettings::kReduction &&
         remaining_depth >=
             Settings::PruneParameters::IIRSettings::kBaseLimit +
                 (node_type == NodeType::kCut

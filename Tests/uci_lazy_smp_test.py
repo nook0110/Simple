@@ -53,6 +53,34 @@ def main() -> int:
     wait_for(lambda line: line == "uciok", "uciok")
     if "option name Threads type spin default 1 min 1 max 256" not in lines:
         raise RuntimeError("Threads UCI option was not advertised")
+    expected_tuning_options = {
+        "option name RFPDepth type spin default 5 min 1 max 8",
+        "option name RFPThreshold type spin default 100 min 25 max 200",
+        "option name NMPReduction type spin default 3 min 2 max 5",
+        "option name IIRBaseDepth type spin default 2 min 1 max 8",
+        "option name IIRCutPenalty type spin default 1 min 0 max 4",
+        "option name IIRReduction type spin default 1 min 1 max 3",
+        "option name LMRDepth type spin default 3 min 2 max 8",
+        "option name LMRInCheckPenalty type spin default 1 min 0 max 3",
+        "option name LMRGivesCheckPenalty type spin default 2 min 0 max 3",
+    }
+    missing_options = expected_tuning_options.difference(lines)
+    if missing_options:
+        raise RuntimeError(f"missing tuning options: {sorted(missing_options)}")
+
+    tuning_values = {
+        "RFPDepth": 6,
+        "RFPThreshold": 100,
+        "NMPReduction": 4,
+        "IIRBaseDepth": 3,
+        "IIRCutPenalty": 1,
+        "IIRReduction": 2,
+        "LMRDepth": 5,
+        "LMRInCheckPenalty": 2,
+        "LMRGivesCheckPenalty": 2,
+    }
+    for name, value in tuning_values.items():
+        send(f"setoption name {name} value {value}")
 
     send("setoption name Threads value 4")
     send("isready")
