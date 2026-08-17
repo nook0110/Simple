@@ -10,9 +10,11 @@
 namespace SimpleChessEngine::TranspositionTableTests {
 TEST(SharedClusterTable, ConcurrentEntriesStayConsistent) {
   using Table = TranspositionTable<640>;
+  using MaxTable = TranspositionTable<256 * 1024>;
   static_assert(Table::kClusterSize == 4);
-  static_assert(Table::kEntryCount == 1ULL << 25);
-  static_assert(Table::kMemoryBytes == 512ULL * 1024 * 1024);
+  static_assert(Table::kEntryCount == 40ULL * 1024 * 1024);
+  static_assert(Table::kMemoryBytes == 640ULL * 1024 * 1024);
+  static_assert(MaxTable::kMemoryBytes == 256ULL * 1024 * 1024 * 1024);
 
   Table table;
   const Position position = PositionFactory{}();

@@ -3,10 +3,12 @@ project(SimpleChessEngine)
 
 # Добавляем опцию для включения/выключения тестов
 option(BUILD_TESTS "Build tests" OFF)
+set(SCE_TT_SIZE_MB 640 CACHE STRING "Shared transposition table size in MiB")
 
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+add_compile_definitions(SCE_TT_SIZE_MB=${SCE_TT_SIZE_MB})
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")

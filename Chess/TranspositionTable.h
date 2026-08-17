@@ -2,10 +2,11 @@
 
 #include <array>
 #include <atomic>
-#include <bit>
+#include <cstdlib>
 #include <cstdint>
-#include <limits>
 #include <memory>
+#include <new>
+#include <sys/mman.h>
 
 #include "Hasher.h"
 #include "Move.h"
@@ -35,15 +36,45 @@ struct Node {
 
 template <size_t TableSizeMB>
 class TranspositionTable {
+ private:
+  struct AtomicEntry {
+    mutable std::uint64_t verification;
+    mutable std::uint64_t payload;
+
+    [[nodiscard]] Node Load() const {
+      const auto stored_verification =
+          std::atomic_ref{verification}.load(std::memory_order_acquire);
+      const auto stored_payload =
+          std::atomic_ref{payload}.load(std::memory_order_relaxed);
+      if (stored_payload == 0) return {};
+      return Unpack(stored_verification ^ stored_payload, stored_payload);
+    }
+
+    void Store(const Node& node) {
+      const auto packed = Pack(node);
+      std::atomic_ref{payload}.store(packed, std::memory_order_relaxed);
+      std::atomic_ref{verification}.store(node.true_hash ^ packed,
+                                          std::memory_order_release);
+    }
+  };
+
+  struct alignas(64) Cluster {
+    std::array<AtomicEntry, 4> entries;
+  };
+
  public:
   static constexpr size_t kClusterSize = 4;
-  static constexpr size_t kClusterCount = 1ULL << 23;
+  static constexpr size_t kMemoryBytes = TableSizeMB * 1024ULL * 1024ULL;
+  static constexpr size_t kClusterCount = kMemoryBytes / sizeof(Cluster);
   static constexpr size_t kEntryCount = kClusterCount * kClusterSize;
-  static constexpr size_t kMemoryBytes = kClusterCount * 64;
 
-  static_assert(TableSizeMB >= kMemoryBytes / (1024 * 1024));
+  static_assert(TableSizeMB > 0);
+  static_assert(sizeof(AtomicEntry) == 16);
+  static_assert(sizeof(Cluster) == 64);
+  static_assert(std::atomic_ref<std::uint64_t>::is_always_lock_free);
+  static_assert(kMemoryBytes % sizeof(Cluster) == 0);
 
-  TranspositionTable() : table_(std::make_unique<Cluster[]>(kClusterCount)) {}
+  TranspositionTable() : table_(Allocate()) {}
 
   [[nodiscard]] bool Contains(const Position& position) const {
     const Node node = GetNode(position);
@@ -102,34 +133,6 @@ class TranspositionTable {
     return {};
   }
 
- private:
-  struct AtomicEntry {
-    std::atomic<std::uint64_t> verification{0};
-    std::atomic<std::uint64_t> payload{0};
-
-    [[nodiscard]] Node Load() const {
-      const auto stored_verification =
-          verification.load(std::memory_order_acquire);
-      const auto stored_payload = payload.load(std::memory_order_relaxed);
-      if (stored_payload == 0) return {};
-      return Unpack(stored_verification ^ stored_payload, stored_payload);
-    }
-
-    void Store(const Node& node) {
-      const auto packed = Pack(node);
-      payload.store(packed, std::memory_order_relaxed);
-      verification.store(node.true_hash ^ packed, std::memory_order_release);
-    }
-  };
-
-  struct alignas(64) Cluster {
-    std::array<AtomicEntry, kClusterSize> entries{};
-  };
-
-  static_assert(sizeof(AtomicEntry) == 16);
-  static_assert(sizeof(Cluster) == 64);
-  static_assert(kMemoryBytes == 512ULL * 1024 * 1024);
-
   static constexpr std::uint64_t Pack(const Node& node) {
     const auto score = static_cast<std::uint32_t>(node.score);
     return static_cast<std::uint64_t>(node.move.Raw()) |
@@ -161,6 +164,24 @@ class TranspositionTable {
                                64);
   }
 
-  std::unique_ptr<Cluster[]> table_;
+  struct MappingDeleter {
+    void operator()(Cluster* table) const {
+      if (table != nullptr) munmap(table, kMemoryBytes);
+    }
+  };
+
+  static std::unique_ptr<Cluster[], MappingDeleter> Allocate() {
+    void* mapping = mmap(nullptr, kMemoryBytes, PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+    if (mapping == MAP_FAILED) std::abort();
+    if (madvise(mapping, kMemoryBytes, MADV_HUGEPAGE) != 0) {
+      munmap(mapping, kMemoryBytes);
+      std::abort();
+    }
+    return std::unique_ptr<Cluster[], MappingDeleter>{
+        ::new (mapping) Cluster[kClusterCount]};
+  }
+
+  std::unique_ptr<Cluster[], MappingDeleter> table_;
 };
 }  // namespace SimpleChessEngine
