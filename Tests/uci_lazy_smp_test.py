@@ -85,6 +85,14 @@ def main() -> int:
         "option name PassedPawn6EG type spin default 70 min 0 max 200",
         "option name PassedPawn7MG type spin default 90 min 0 max 200",
         "option name PassedPawn7EG type spin default 120 min 0 max 200",
+        "option name KnightMobilityMG type spin default 0 min 0 max 12",
+        "option name KnightMobilityEG type spin default 0 min 0 max 12",
+        "option name BishopMobilityMG type spin default 0 min 0 max 12",
+        "option name BishopMobilityEG type spin default 0 min 0 max 12",
+        "option name RookMobilityMG type spin default 0 min 0 max 10",
+        "option name RookMobilityEG type spin default 0 min 0 max 10",
+        "option name QueenMobilityMG type spin default 0 min 0 max 8",
+        "option name QueenMobilityEG type spin default 0 min 0 max 8",
     }
     psqt_defaults = {
         6: {
@@ -108,6 +116,18 @@ def main() -> int:
                 f"option name PawnPSQT{file_name}{rank}EG "
                 f"type spin default {endgame} min -250 max 250"
             )
+    for piece_name in ("Knight", "Bishop", "Rook", "Queen", "King"):
+        for rank in range(1, 9):
+            for file_index in range(4):
+                square = f"{chr(ord('A') + file_index)}{rank}"
+                expected_tuning_options.add(
+                    f"option name {piece_name}PSQT{square}MG "
+                    "type spin default 0 min -100 max 100"
+                )
+                expected_tuning_options.add(
+                    f"option name {piece_name}PSQT{square}EG "
+                    "type spin default 0 min -100 max 100"
+                )
     missing_options = expected_tuning_options.difference(lines)
     if missing_options:
         raise RuntimeError(f"missing tuning options: {sorted(missing_options)}")

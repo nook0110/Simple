@@ -7,6 +7,10 @@
 namespace SimpleChessEngine {
 struct Settings {
   struct EvaluationParameters {
+    inline static std::array<TaperedEval, kPieceTypes> mobility{};
+    inline static std::array<
+        std::array<std::array<TaperedEval, 4>, 8>, kPieceTypes>
+        psqt_adjustment{};
     inline static TaperedEval doubled_pawn{{-15, -15}};
     inline static TaperedEval isolated_pawn{{-10, -10}};
     inline static std::array<TaperedEval, 8> passed_pawn = [] {
@@ -44,6 +48,8 @@ struct Settings {
     }();
     inline static bool pawns_enabled = true;
     inline static bool material_enabled = true;
+    inline static bool mobility_enabled = false;
+    inline static bool psqt_adjustment_enabled = false;
     inline static size_t revision = 0;
 
     static void SetDoubledPawn(GamePhase phase, Eval value) {
@@ -73,6 +79,30 @@ struct Settings {
       material_value[static_cast<size_t>(piece)]
           .eval[static_cast<size_t>(phase)] = value;
       material_enabled = material_value != kPieceValues;
+    }
+
+    static void SetMobility(Piece piece, GamePhase phase, Eval value) {
+      mobility[static_cast<size_t>(piece)]
+          .eval[static_cast<size_t>(phase)] = value;
+      mobility_enabled = false;
+      for (const auto& weight : mobility) {
+        mobility_enabled |= weight != TaperedEval{};
+      }
+    }
+
+    static void SetPsqtAdjustment(Piece piece, size_t relative_rank,
+                                  size_t mirrored_file, GamePhase phase,
+                                  Eval value) {
+      psqt_adjustment[static_cast<size_t>(piece)][relative_rank][mirrored_file]
+          .eval[static_cast<size_t>(phase)] = value;
+      psqt_adjustment_enabled = false;
+      for (const auto& piece_values : psqt_adjustment) {
+        for (const auto& rank : piece_values) {
+          for (const auto& square : rank) {
+            psqt_adjustment_enabled |= square != TaperedEval{};
+          }
+        }
+      }
     }
 
    private:

@@ -4,6 +4,7 @@
 #include <bit>
 #include <cstdint>
 
+#include "Attacks.h"
 #include "Settings.h"
 
 namespace SimpleChessEngine {
@@ -89,6 +90,63 @@ thread_local PawnHashTable pawn_hash_table;
   entry = PawnHashEntry{white_pawns, black_pawns, score};
   return score;
 }
+
+template <Piece piece>
+void AddMobility(const Position& position, const Player side,
+                 TaperedEval& result) {
+  const Bitboard occupied = position.GetAllPieces();
+  const Bitboard own_pieces = position.GetPieces(side);
+  Bitboard pieces = position.GetPiecesByType<piece>(side);
+  size_t mobility = 0;
+  while (pieces.Any()) {
+    const BitIndex square = pieces.PopFirstBit();
+    mobility +=
+        (AttackTable<piece>::GetAttackMap(square, occupied) & ~own_pieces)
+            .Count();
+  }
+  const auto& weight =
+      Settings::EvaluationParameters::mobility[static_cast<size_t>(piece)];
+  result.eval[0] += static_cast<Eval>(mobility) * weight.eval[0];
+  result.eval[1] += static_cast<Eval>(mobility) * weight.eval[1];
+}
+
+[[nodiscard]] TaperedEval EvaluateMobility(const Position& position,
+                                           const Player side) {
+  TaperedEval result{};
+  AddMobility<Piece::kKnight>(position, side, result);
+  AddMobility<Piece::kBishop>(position, side, result);
+  AddMobility<Piece::kRook>(position, side, result);
+  AddMobility<Piece::kQueen>(position, side, result);
+  return result;
+}
+
+template <Piece piece>
+void AddPsqtAdjustment(const Position& position, const Player side,
+                       TaperedEval& result) {
+  Bitboard pieces = position.GetPiecesByType<piece>(side);
+  while (pieces.Any()) {
+    const BitIndex square = pieces.PopFirstBit();
+    const auto [file_coordinate, rank_coordinate] = GetCoordinates(square);
+    const size_t file = static_cast<size_t>(file_coordinate);
+    const size_t rank = static_cast<size_t>(rank_coordinate);
+    const size_t relative_rank =
+        side == Player::kWhite ? rank : static_cast<size_t>(7 - rank);
+    const size_t mirrored_file = std::min(file, static_cast<size_t>(7 - file));
+    result += Settings::EvaluationParameters::psqt_adjustment
+        [static_cast<size_t>(piece)][relative_rank][mirrored_file];
+  }
+}
+
+[[nodiscard]] TaperedEval EvaluatePsqtAdjustments(const Position& position,
+                                                  const Player side) {
+  TaperedEval result{};
+  AddPsqtAdjustment<Piece::kKnight>(position, side, result);
+  AddPsqtAdjustment<Piece::kBishop>(position, side, result);
+  AddPsqtAdjustment<Piece::kRook>(position, side, result);
+  AddPsqtAdjustment<Piece::kQueen>(position, side, result);
+  AddPsqtAdjustment<Piece::kKing>(position, side, result);
+  return result;
+}
 }  // namespace
 
 [[nodiscard]] Eval TaperedEval::operator()(PhaseValue pv) const {
@@ -128,6 +186,19 @@ thread_local PawnHashTable pawn_hash_table;
   if (Settings::EvaluationParameters::pawns_enabled) {
     const TaperedEval pawn_score = EvaluatePawnStructure(*this);
     result += us == Player::kWhite ? pawn_score : TaperedEval{} - pawn_score;
+  }
+  if (Settings::EvaluationParameters::mobility_enabled) {
+    const TaperedEval mobility =
+        EvaluateMobility(*this, Player::kWhite) -
+        EvaluateMobility(*this, Player::kBlack);
+    result += us == Player::kWhite ? mobility : TaperedEval{} - mobility;
+  }
+  if (Settings::EvaluationParameters::psqt_adjustment_enabled) {
+    const TaperedEval adjustment =
+        EvaluatePsqtAdjustments(*this, Player::kWhite) -
+        EvaluatePsqtAdjustments(*this, Player::kBlack);
+    result += us == Player::kWhite ? adjustment
+                                   : TaperedEval{} - adjustment;
   }
 
   const Eval tapered = result(evaluation_data_.non_pawn_material);

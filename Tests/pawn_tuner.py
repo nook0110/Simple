@@ -92,6 +92,31 @@ MATERIAL_PARAMETERS = {
 }
 PARAMETERS.update(MATERIAL_PARAMETERS)
 
+MOBILITY_PARAMETERS = {
+    "KnightMobilityMG": Parameter(0, 0, 12, 1),
+    "KnightMobilityEG": Parameter(0, 0, 12, 1),
+    "BishopMobilityMG": Parameter(0, 0, 12, 1),
+    "BishopMobilityEG": Parameter(0, 0, 12, 1),
+    "RookMobilityMG": Parameter(0, 0, 10, 1),
+    "RookMobilityEG": Parameter(0, 0, 10, 1),
+    "QueenMobilityMG": Parameter(0, 0, 8, 1),
+    "QueenMobilityEG": Parameter(0, 0, 8, 1),
+}
+PARAMETERS.update(MOBILITY_PARAMETERS)
+
+PSQT_ADJUSTMENT_PARAMETERS = {}
+for piece_name in ("Knight", "Bishop", "Rook", "Queen", "King"):
+    for rank in range(1, 9):
+        for file_index in range(4):
+            square = f"{chr(ord('A') + file_index)}{rank}"
+            PSQT_ADJUSTMENT_PARAMETERS[f"{piece_name}PSQT{square}MG"] = (
+                Parameter(0, -100, 100, 1)
+            )
+            PSQT_ADJUSTMENT_PARAMETERS[f"{piece_name}PSQT{square}EG"] = (
+                Parameter(0, -100, 100, 1)
+            )
+PARAMETERS.update(PSQT_ADJUSTMENT_PARAMETERS)
+
 BASELINE_PARAMETERS = {
     name: (BASELINE_MATERIAL_VALUES[name] if name in MATERIAL_PARAMETERS else 0)
     for name, parameter in PARAMETERS.items()
