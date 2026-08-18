@@ -39,6 +39,10 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   }
   searched_nodes_++;
 
+  if (current_position.IsInsufficientMaterial()) {
+    return kDrawValue;
+  }
+
   if (current_position.IsUnderCheck()) {
     return SearchUnderCheck(current_position, alpha, beta, current_depth);
   }

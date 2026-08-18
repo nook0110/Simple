@@ -361,6 +361,36 @@ Bitboard Position::GetAllPieces() const {
          pieces_by_color_[static_cast<size_t>(Player::kBlack)];
 }
 
+bool Position::IsInsufficientMaterial() const {
+  if (pieces_by_type_[static_cast<size_t>(Piece::kPawn)].Any() ||
+      pieces_by_type_[static_cast<size_t>(Piece::kRook)].Any() ||
+      pieces_by_type_[static_cast<size_t>(Piece::kQueen)].Any()) {
+    return false;
+  }
+
+  const auto knights =
+      pieces_by_type_[static_cast<size_t>(Piece::kKnight)];
+  auto bishops = pieces_by_type_[static_cast<size_t>(Piece::kBishop)];
+
+  if (bishops.None()) {
+    return knights.Count() <= 1;
+  }
+  if (knights.Any()) {
+    return false;
+  }
+
+  const auto first_square = bishops.PopFirstBit();
+  const auto [first_file, first_rank] = GetCoordinates(first_square);
+  const auto first_square_color = (first_file + first_rank) % 2;
+  while (bishops.Any()) {
+    const auto [file, rank] = GetCoordinates(bishops.PopFirstBit());
+    if ((file + rank) % 2 != first_square_color) {
+      return false;
+    }
+  }
+  return true;
+}
+
 const Bitboard &Position::GetPieces(const Player player) const {
   return pieces_by_color_[static_cast<size_t>(player)];
 }

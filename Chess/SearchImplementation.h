@@ -162,7 +162,10 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
   assert(kIsPrincipalVariation || beta - alpha == 1);
 
-  if (GetCurrentPosition().DetectRepetition(max_depth - remaining_depth)) {
+  const auto current_depth = max_depth - remaining_depth;
+  if (GetCurrentPosition().DetectRepetition(current_depth) ||
+      (current_depth > 0 &&
+       GetCurrentPosition().IsInsufficientMaterial())) {
     return kDrawValue;
   }
 

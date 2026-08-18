@@ -214,6 +214,8 @@ class Position {
     return history_stack_.Count(hash_, depth) >= 3;
   }
 
+  [[nodiscard]] bool IsInsufficientMaterial() const;
+
   [[nodiscard]] bool StaticExchangeEvaluation(const Move &move,
                                               Eval threshold) const;
 
