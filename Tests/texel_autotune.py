@@ -3,6 +3,7 @@
 import argparse
 import json
 import math
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -101,7 +102,7 @@ def main() -> int:
     }
     write_state(state_path, state)
 
-    models = []
+    model_processes = []
     for l2_text in args.l2_values.split(","):
         output = root / f"autotune-l2-{l2_text}.json"
         command = [
@@ -110,8 +111,21 @@ def main() -> int:
             "--strides", "16,8,4,2,1", "--passes-per-stride", "20",
             "--l2", l2_text,
         ]
-        subprocess.run(command, cwd=root, stdout=subprocess.DEVNULL,
-                       check=False)
+        environment = os.environ.copy()
+        environment["OPENBLAS_NUM_THREADS"] = "32"
+        process = subprocess.Popen(
+            command, cwd=root, stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT, env=environment,
+        )
+        model_processes.append((l2_text, output, process))
+
+    models = []
+    for l2_text, output, process in model_processes:
+        return_code = process.wait()
+        if return_code not in (0, 2):
+            raise RuntimeError(
+                f"optimizer failed for l2={l2_text}: {return_code}"
+            )
         model = json.loads(output.read_text())
         models.append((model["tuned_mse"]["validation"], output, model))
     models.sort(key=lambda item: item[0])
