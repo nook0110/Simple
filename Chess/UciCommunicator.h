@@ -128,11 +128,8 @@ struct SpinOption : public OptionBase {
 
   SpinOption(std::string name, int default_value, int min_value, int max_value,
              Setter setter = {})
-      : OptionBase(std::move(name)),
-        value_(default_value),
-        default_(default_value),
-        min_(min_value),
-        max_(max_value),
+      : OptionBase(std::move(name)), value_(default_value),
+        default_(default_value), min_(min_value), max_(max_value),
         setter_(setter) {}
 
   bool SetValue(const std::string& value) override {
@@ -189,8 +186,8 @@ struct EngineOptions {
     auto threads = std::make_unique<SpinOption>("Threads", 1, 1, 256);
     threads_ = threads.get();
     options.emplace_back(std::move(threads));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "RFPDepth", 5, 1, 8, [](const int value) {
+    options.emplace_back(
+        std::make_unique<SpinOption>("RFPDepth", 5, 1, 8, [](const int value) {
           Settings::PruneParameters::RFPSettings::kDepthLimit =
               static_cast<Depth>(value);
         }));
@@ -217,8 +214,8 @@ struct EngineOptions {
           Settings::PruneParameters::IIRSettings::kReduction =
               static_cast<Depth>(value);
         }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "LMRDepth", 3, 2, 8, [](const int value) {
+    options.emplace_back(
+        std::make_unique<SpinOption>("LMRDepth", 3, 2, 8, [](const int value) {
           Settings::PruneParameters::LMRSettings::kDepthLimit = value;
         }));
     options.emplace_back(std::make_unique<SpinOption>(
@@ -235,6 +232,7 @@ struct EngineOptions {
     AddPawnOptions();
     AddMobilityOptions();
     AddPsqtAdjustmentOptions();
+    AddKingSafetyOptions();
   }
   std::vector<std::unique_ptr<OptionBase>> options;
   bool ParseSetoption(std::stringstream command) {
@@ -273,8 +271,8 @@ struct EngineOptions {
 
  private:
   void AddPsqtAdjustmentOptions() {
-    constexpr std::array piece_names = {
-        "Knight", "Bishop", "Rook", "Queen", "King"};
+    constexpr std::array piece_names = {"Knight", "Bishop", "Rook", "Queen",
+                                        "King"};
     for (size_t piece_offset = 0; piece_offset < piece_names.size();
          ++piece_offset) {
       const auto piece = static_cast<Piece>(
@@ -287,16 +285,18 @@ struct EngineOptions {
           const auto piece_index = static_cast<size_t>(piece);
           options.emplace_back(std::make_unique<SpinOption>(
               std::string{piece_names[piece_offset]} + "PSQT" + square + "MG",
-              Settings::EvaluationParameters::
-                  psqt_adjustment[piece_index][rank][file].eval[0],
+              Settings::EvaluationParameters::psqt_adjustment[piece_index][rank]
+                                                             [file]
+                                                                 .eval[0],
               -100, 100, [piece, rank, file](const int value) {
                 Settings::EvaluationParameters::SetPsqtAdjustment(
                     piece, rank, file, GamePhase::kMiddleGame, value);
               }));
           options.emplace_back(std::make_unique<SpinOption>(
               std::string{piece_names[piece_offset]} + "PSQT" + square + "EG",
-              Settings::EvaluationParameters::
-                  psqt_adjustment[piece_index][rank][file].eval[1],
+              Settings::EvaluationParameters::psqt_adjustment[piece_index][rank]
+                                                             [file]
+                                                                 .eval[1],
               -100, 100, [piece, rank, file](const int value) {
                 Settings::EvaluationParameters::SetPsqtAdjustment(
                     piece, rank, file, GamePhase::kEndGame, value);
@@ -314,20 +314,20 @@ struct EngineOptions {
   }
 
   template <Piece piece>
-  void AddMobilityOptions(const std::string& piece_name,
-                          const int minimum, const int maximum) {
+  void AddMobilityOptions(const std::string& piece_name, const int minimum,
+                          const int maximum) {
     constexpr auto piece_index = static_cast<size_t>(piece);
     options.emplace_back(std::make_unique<SpinOption>(
         piece_name + "MobilityMG",
-        Settings::EvaluationParameters::mobility[piece_index].eval[0],
-        minimum, maximum, [](const int value) {
+        Settings::EvaluationParameters::mobility[piece_index].eval[0], minimum,
+        maximum, [](const int value) {
           Settings::EvaluationParameters::SetMobility(
               piece, GamePhase::kMiddleGame, value);
         }));
     options.emplace_back(std::make_unique<SpinOption>(
         piece_name + "MobilityEG",
-        Settings::EvaluationParameters::mobility[piece_index].eval[1],
-        minimum, maximum, [](const int value) {
+        Settings::EvaluationParameters::mobility[piece_index].eval[1], minimum,
+        maximum, [](const int value) {
           Settings::EvaluationParameters::SetMobility(
               piece, GamePhase::kEndGame, value);
         }));
@@ -342,8 +342,8 @@ struct EngineOptions {
   }
 
   template <Piece piece>
-  void AddMaterialValueOptions(const std::string& piece_name,
-                               const int minimum, const int maximum) {
+  void AddMaterialValueOptions(const std::string& piece_name, const int minimum,
+                               const int maximum) {
     constexpr auto piece_index = static_cast<size_t>(piece);
     options.emplace_back(std::make_unique<SpinOption>(
         piece_name + "ValueMG",
@@ -367,14 +367,14 @@ struct EngineOptions {
     options.emplace_back(std::make_unique<SpinOption>(
         "DoubledPawnMG", Settings::EvaluationParameters::doubled_pawn.eval[0],
         -50, 0, [](const int value) {
-          Settings::EvaluationParameters::SetDoubledPawn(
-              GamePhase::kMiddleGame, value);
+          Settings::EvaluationParameters::SetDoubledPawn(GamePhase::kMiddleGame,
+                                                         value);
         }));
     options.emplace_back(std::make_unique<SpinOption>(
         "DoubledPawnEG", Settings::EvaluationParameters::doubled_pawn.eval[1],
         -50, 0, [](const int value) {
-          Settings::EvaluationParameters::SetDoubledPawn(
-              GamePhase::kEndGame, value);
+          Settings::EvaluationParameters::SetDoubledPawn(GamePhase::kEndGame,
+                                                         value);
         }));
     options.emplace_back(std::make_unique<SpinOption>(
         "IsolatedPawnMG", Settings::EvaluationParameters::isolated_pawn.eval[0],
@@ -385,8 +385,8 @@ struct EngineOptions {
     options.emplace_back(std::make_unique<SpinOption>(
         "IsolatedPawnEG", Settings::EvaluationParameters::isolated_pawn.eval[1],
         -50, 0, [](const int value) {
-          Settings::EvaluationParameters::SetIsolatedPawn(
-              GamePhase::kEndGame, value);
+          Settings::EvaluationParameters::SetIsolatedPawn(GamePhase::kEndGame,
+                                                          value);
         }));
     AddPassedPawnOptions<3>("4");
     AddPassedPawnOptions<4>("5");
@@ -400,15 +400,15 @@ struct EngineOptions {
   void AddPassedPawnOptions(const std::string& rank_name) {
     options.emplace_back(std::make_unique<SpinOption>(
         "PassedPawn" + rank_name + "MG",
-        Settings::EvaluationParameters::passed_pawn[relative_rank].eval[0],
-        0, 200, [](const int value) {
+        Settings::EvaluationParameters::passed_pawn[relative_rank].eval[0], 0,
+        200, [](const int value) {
           Settings::EvaluationParameters::SetPassedPawn(
               relative_rank, GamePhase::kMiddleGame, value);
         }));
     options.emplace_back(std::make_unique<SpinOption>(
         "PassedPawn" + rank_name + "EG",
-        Settings::EvaluationParameters::passed_pawn[relative_rank].eval[1],
-        0, 200, [](const int value) {
+        Settings::EvaluationParameters::passed_pawn[relative_rank].eval[1], 0,
+        200, [](const int value) {
           Settings::EvaluationParameters::SetPassedPawn(
               relative_rank, GamePhase::kEndGame, value);
         }));
@@ -418,19 +418,19 @@ struct EngineOptions {
   void AddPawnPsqtSquareOptions(const std::string& square_name) {
     options.emplace_back(std::make_unique<SpinOption>(
         "PawnPSQT" + square_name + "MG",
-        Settings::EvaluationParameters::
-            pawn_psqt_adjustment[relative_rank][file].eval[0],
-        -250, 250,
-        [](const int value) {
+        Settings::EvaluationParameters::pawn_psqt_adjustment[relative_rank]
+                                                            [file]
+                                                                .eval[0],
+        -250, 250, [](const int value) {
           Settings::EvaluationParameters::SetPawnPsqtAdjustment(
               relative_rank, file, GamePhase::kMiddleGame, value);
         }));
     options.emplace_back(std::make_unique<SpinOption>(
         "PawnPSQT" + square_name + "EG",
-        Settings::EvaluationParameters::
-            pawn_psqt_adjustment[relative_rank][file].eval[1],
-        -250, 250,
-        [](const int value) {
+        Settings::EvaluationParameters::pawn_psqt_adjustment[relative_rank]
+                                                            [file]
+                                                                .eval[1],
+        -250, 250, [](const int value) {
           Settings::EvaluationParameters::SetPawnPsqtAdjustment(
               relative_rank, file, GamePhase::kEndGame, value);
         }));
@@ -446,6 +446,44 @@ struct EngineOptions {
     AddPawnPsqtSquareOptions<relative_rank, 5>("F" + rank_name);
     AddPawnPsqtSquareOptions<relative_rank, 6>("G" + rank_name);
     AddPawnPsqtSquareOptions<relative_rank, 7>("H" + rank_name);
+  }
+
+  void AddKingSafetyOptions() {
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingShieldNearMG", Settings::EvaluationParameters::king_shield_near, 0,
+        50, Settings::EvaluationParameters::SetKingShieldNear));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingShieldFarMG", Settings::EvaluationParameters::king_shield_far, 0,
+        50, Settings::EvaluationParameters::SetKingShieldFar));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingSemiOpenFileMG",
+        Settings::EvaluationParameters::king_semi_open_file, -50, 0,
+        Settings::EvaluationParameters::SetKingSemiOpenFile));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingOpenFileMG", Settings::EvaluationParameters::king_open_file, -50,
+        0, Settings::EvaluationParameters::SetKingOpenFile));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingPawnStormNearMG",
+        Settings::EvaluationParameters::king_pawn_storm_near, -50, 0,
+        Settings::EvaluationParameters::SetKingPawnStormNear));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingPawnStormFarMG",
+        Settings::EvaluationParameters::king_pawn_storm_far, -50, 0,
+        Settings::EvaluationParameters::SetKingPawnStormFar));
+    AddKingAttackOption<Piece::kKnight>("Knight");
+    AddKingAttackOption<Piece::kBishop>("Bishop");
+    AddKingAttackOption<Piece::kRook>("Rook");
+    AddKingAttackOption<Piece::kQueen>("Queen");
+  }
+
+  template <Piece piece>
+  void AddKingAttackOption(const std::string& piece_name) {
+    options.emplace_back(std::make_unique<SpinOption>(
+        piece_name + "KingAttackMG",
+        Settings::EvaluationParameters::king_attack[static_cast<size_t>(piece)],
+        0, 50, [](const int value) {
+          Settings::EvaluationParameters::SetKingAttack<piece>(value);
+        }));
   }
 
   SpinOption* threads_ = nullptr;
@@ -662,8 +700,8 @@ inline void UciChessEngine::ParseQuiescenceEvaluate() const {
   Position position = info_.position;
   const DepthCondition condition{kMaxSearchPly};
   Quiescence quiescence{condition};
-  const auto score = quiescence.Search<true>(
-      position, kMateValue, -kMateValue, 0);
+  const auto score =
+      quiescence.Search<true>(position, kMateValue, -kMateValue, 0);
   if (!score) {
     o_stream_ << "qeval unavailable" << std::endl;
     return;
@@ -820,9 +858,7 @@ inline void SearchThread::Start(const Info& info) {
   });
 }
 
-inline void SearchThread::Stop() {
-  StopThread();
-}
+inline void SearchThread::Stop() { StopThread(); }
 
 inline void SearchThread::StopThread() {
   if (stop_signal_) {

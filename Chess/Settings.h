@@ -8,8 +8,8 @@ namespace SimpleChessEngine {
 struct Settings {
   struct EvaluationParameters {
     inline static std::array<TaperedEval, kPieceTypes> mobility{};
-    inline static std::array<
-        std::array<std::array<TaperedEval, 4>, 8>, kPieceTypes>
+    inline static std::array<std::array<std::array<TaperedEval, 4>, 8>,
+                             kPieceTypes>
         psqt_adjustment{};
     inline static TaperedEval doubled_pawn{{-15, -15}};
     inline static TaperedEval isolated_pawn{{-10, -10}};
@@ -46,10 +46,27 @@ struct Settings {
           .eval[static_cast<size_t>(GamePhase::kMiddleGame)] = 375;
       return values;
     }();
+    inline static Eval king_shield_near = 12;
+    inline static Eval king_shield_far = 10;
+    inline static Eval king_semi_open_file = -14;
+    inline static Eval king_open_file = -14;
+    inline static Eval king_pawn_storm_near = -12;
+    inline static Eval king_pawn_storm_far = -8;
+    inline static std::array<Eval, kPieceTypes> king_attack = [] {
+      std::array<Eval, kPieceTypes> values{};
+      values[static_cast<size_t>(Piece::kKnight)] = 8;
+      values[static_cast<size_t>(Piece::kBishop)] = 10;
+      values[static_cast<size_t>(Piece::kRook)] = 18;
+      values[static_cast<size_t>(Piece::kQueen)] = 20;
+      return values;
+    }();
     inline static bool pawns_enabled = true;
     inline static bool material_enabled = true;
     inline static bool mobility_enabled = false;
     inline static bool psqt_adjustment_enabled = false;
+    inline static bool king_pawns_enabled = true;
+    inline static bool king_attacks_enabled = true;
+    inline static bool king_safety_enabled = true;
     inline static size_t revision = 0;
 
     static void SetDoubledPawn(GamePhase phase, Eval value) {
@@ -82,8 +99,8 @@ struct Settings {
     }
 
     static void SetMobility(Piece piece, GamePhase phase, Eval value) {
-      mobility[static_cast<size_t>(piece)]
-          .eval[static_cast<size_t>(phase)] = value;
+      mobility[static_cast<size_t>(piece)].eval[static_cast<size_t>(phase)] =
+          value;
       mobility_enabled = false;
       for (const auto& weight : mobility) {
         mobility_enabled |= weight != TaperedEval{};
@@ -105,11 +122,62 @@ struct Settings {
       }
     }
 
+    static void SetKingShieldNear(Eval value) {
+      king_shield_near = value;
+      RefreshKingSafetyEnabled();
+    }
+
+    static void SetKingShieldFar(Eval value) {
+      king_shield_far = value;
+      RefreshKingSafetyEnabled();
+    }
+
+    static void SetKingSemiOpenFile(Eval value) {
+      king_semi_open_file = value;
+      RefreshKingSafetyEnabled();
+    }
+
+    static void SetKingOpenFile(Eval value) {
+      king_open_file = value;
+      RefreshKingSafetyEnabled();
+    }
+
+    static void SetKingPawnStormNear(Eval value) {
+      king_pawn_storm_near = value;
+      RefreshKingSafetyEnabled();
+    }
+
+    static void SetKingPawnStormFar(Eval value) {
+      king_pawn_storm_far = value;
+      RefreshKingSafetyEnabled();
+    }
+
+    template <Piece piece>
+    static void SetKingAttack(Eval value) {
+      static_assert(piece == Piece::kKnight || piece == Piece::kBishop ||
+                    piece == Piece::kRook || piece == Piece::kQueen);
+      king_attack[static_cast<size_t>(piece)] = value;
+      RefreshKingSafetyEnabled();
+    }
+
    private:
+    static void RefreshKingSafetyEnabled() {
+      ++revision;
+      king_pawns_enabled = king_shield_near != 0 || king_shield_far != 0 ||
+                           king_semi_open_file != 0 || king_open_file != 0 ||
+                           king_pawn_storm_near != 0 ||
+                           king_pawn_storm_far != 0;
+      king_attacks_enabled = false;
+      for (const auto weight : king_attack) {
+        king_attacks_enabled |= weight != 0;
+      }
+      king_safety_enabled = king_pawns_enabled || king_attacks_enabled;
+    }
+
     static void RefreshPawnsEnabled() {
       ++revision;
-      pawns_enabled = doubled_pawn != TaperedEval{} ||
-                      isolated_pawn != TaperedEval{};
+      pawns_enabled =
+          doubled_pawn != TaperedEval{} || isolated_pawn != TaperedEval{};
       for (const auto& bonus : passed_pawn) {
         pawns_enabled |= bonus != TaperedEval{};
       }

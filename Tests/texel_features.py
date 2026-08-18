@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import importlib
 import json
 import multiprocessing
 import re
@@ -9,23 +10,20 @@ from pathlib import Path
 
 import numpy as np
 
-from pawn_tuner import PARAMETERS
-
-
 EVAL_RE = re.compile(r"eval: (-?\d+) cp")
 QEVAL_RE = re.compile(r"qeval white_cp (-?\d+) nodes (\d+)")
 SPLITS = {"train": 0, "validation": 1, "holdout": 2}
 
 
 class Engine:
-    def __init__(self, executable: Path) -> None:
+    def __init__(self, executable: Path, parameters) -> None:
         self.process = subprocess.Popen(
             [str(executable)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, text=True, bufsize=1,
         )
         self.send("uci")
         self.read("uciok")
-        for name, parameter in PARAMETERS.items():
+        for name, parameter in parameters.items():
             self.set_option(name, parameter.default)
         self.send("isready")
         self.read("readyok")
@@ -75,9 +73,10 @@ class Engine:
 
 
 def score_chunk(arguments):
-    engine_path, records, include_tactical = arguments
-    engine = Engine(Path(engine_path))
-    names = tuple(PARAMETERS)
+    engine_path, records, include_tactical, parameters_module = arguments
+    parameters = importlib.import_module(parameters_module).PARAMETERS
+    engine = Engine(Path(engine_path), parameters)
+    names = tuple(parameters)
     rows = []
     try:
         for record in records:
@@ -96,7 +95,7 @@ def score_chunk(arguments):
                 )
             features = []
             for name in names:
-                parameter = PARAMETERS[name]
+                parameter = parameters[name]
                 direction = 1
                 mutated = parameter.default + 1
                 if mutated > parameter.maximum:
@@ -126,8 +125,10 @@ def main() -> int:
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--max-positions", type=int, default=0)
     parser.add_argument("--include-tactical", action="store_true")
+    parser.add_argument("--parameters-module", default="pawn_tuner")
     args = parser.parse_args()
 
+    parameters = importlib.import_module(args.parameters_module).PARAMETERS
     records = [json.loads(line) for line in args.dataset.read_text().splitlines()]
     if args.max_positions:
         records = records[:args.max_positions]
@@ -135,17 +136,18 @@ def main() -> int:
     with multiprocessing.Pool(args.workers) as pool:
         nested_rows = pool.map(
             score_chunk,
-            [(str(args.engine.resolve()), chunk, args.include_tactical)
+            [(str(args.engine.resolve()), chunk, args.include_tactical,
+              args.parameters_module)
              for chunk in chunks],
         )
     rows = [row for chunk in nested_rows for row in chunk]
     if not rows:
         raise RuntimeError("no quiet Texel positions were extracted")
-    names = np.array(tuple(PARAMETERS))
-    defaults = np.array([PARAMETERS[name].default for name in names])
+    names = np.array(tuple(parameters))
+    defaults = np.array([parameters[name].default for name in names])
     steps = np.ones(len(names), dtype=np.int64)
-    minimums = np.array([PARAMETERS[name].minimum for name in names])
-    maximums = np.array([PARAMETERS[name].maximum for name in names])
+    minimums = np.array([parameters[name].minimum for name in names])
+    maximums = np.array([parameters[name].maximum for name in names])
     args.output.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
         args.output,
