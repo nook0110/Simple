@@ -14,6 +14,7 @@
 #include "MoveFactory.h"
 #include "Perft.h"
 #include "Position.h"
+#include "Quiescence.h"
 #include "SimpleChessEngine.h"
 
 namespace SimpleChessEngine {
@@ -412,6 +413,7 @@ class UciChessEngine {
   void ParsePosition(std::stringstream command);
   void ParsePerft(std::stringstream command);
   void ParseEvaluate() const;
+  void ParseQuiescenceEvaluate() const;
   void ParseGo(std::stringstream command);
   void ParsePonderhit(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
@@ -592,6 +594,22 @@ inline void UciChessEngine::ParseEvaluate() const {
   o_stream_ << "eval: " << info_.position.Evaluate() << " cp" << std::endl;
 }
 
+inline void UciChessEngine::ParseQuiescenceEvaluate() const {
+  Position position = info_.position;
+  const DepthCondition condition{kMaxSearchPly};
+  Quiescence quiescence{condition};
+  const auto score = quiescence.Search<true>(
+      position, kMateValue, -kMateValue, 0);
+  if (!score) {
+    o_stream_ << "qeval unavailable" << std::endl;
+    return;
+  }
+  const Eval white_score =
+      info_.position.GetSideToMove() == Player::kWhite ? *score : -*score;
+  o_stream_ << "qeval white_cp " << white_score << " nodes "
+            << quiescence.GetSearchedNodes() << std::endl;
+}
+
 inline void UciChessEngine::ParseGo(std::stringstream command) {
   std::string token;
   auto startpos = command.tellg();
@@ -606,6 +624,11 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
 
   if (token == "evaluate") {
     ParseEvaluate();
+    return;
+  }
+
+  if (token == "qeval") {
+    ParseQuiescenceEvaluate();
     return;
   }
 

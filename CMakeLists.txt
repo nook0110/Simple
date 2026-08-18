@@ -76,6 +76,11 @@ if(BUILD_TESTS)
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/uci_lazy_smp_test.py
                 --engine $<TARGET_FILE:SimpleChessEngine>
     )
+    add_test(
+        NAME TexelDeterministicQScore
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/texel_qscore_test.py
+                --engine $<TARGET_FILE:SimpleChessEngine>
+    )
 
     # Копирование тестовых данных
     file(GLOB TEST_DATA_FILES ${CMAKE_SOURCE_DIR}/Tests/*.test)
