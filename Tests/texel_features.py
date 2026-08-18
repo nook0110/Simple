@@ -75,7 +75,7 @@ class Engine:
 
 
 def score_chunk(arguments):
-    engine_path, records = arguments
+    engine_path, records, include_tactical = arguments
     engine = Engine(Path(engine_path))
     names = tuple(PARAMETERS)
     rows = []
@@ -84,13 +84,15 @@ def score_chunk(arguments):
             fen = record["fen"]
             engine.set_position(fen)
             qscore, nodes = engine.qeval()
-            if nodes != 1 or abs(qscore) >= 2000:
+            if abs(qscore) >= 2000:
                 continue
             white_to_move = fen.split()[1] == "w"
-            baseline = engine.evaluate(white_to_move)
-            if baseline != qscore:
+            baseline = qscore
+            if not include_tactical and nodes != 1:
+                continue
+            if not include_tactical and engine.evaluate(white_to_move) != qscore:
                 raise RuntimeError(
-                    f"quiet qscore mismatch for {fen}: {qscore} != {baseline}"
+                    f"quiet qscore mismatch for {fen}"
                 )
             features = []
             for name in names:
@@ -101,7 +103,10 @@ def score_chunk(arguments):
                     direction = -1
                     mutated = parameter.default - 1
                 engine.set_option(name, mutated)
-                changed = engine.evaluate(white_to_move)
+                changed = (
+                    engine.qeval()[0]
+                    if include_tactical else engine.evaluate(white_to_move)
+                )
                 engine.set_option(name, parameter.default)
                 features.append(direction * (changed - baseline))
             rows.append((
@@ -120,6 +125,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--max-positions", type=int, default=0)
+    parser.add_argument("--include-tactical", action="store_true")
     args = parser.parse_args()
 
     records = [json.loads(line) for line in args.dataset.read_text().splitlines()]
@@ -129,7 +135,8 @@ def main() -> int:
     with multiprocessing.Pool(args.workers) as pool:
         nested_rows = pool.map(
             score_chunk,
-            [(str(args.engine.resolve()), chunk) for chunk in chunks],
+            [(str(args.engine.resolve()), chunk, args.include_tactical)
+             for chunk in chunks],
         )
     rows = [row for chunk in nested_rows for row in chunk]
     if not rows:
@@ -158,7 +165,8 @@ def main() -> int:
               for name, value in SPLITS.items()}
     print(json.dumps({
         "input_positions": len(records),
-        "quiet_positions": len(rows),
+        "scored_positions": len(rows),
+        "include_tactical": args.include_tactical,
         "parameters": len(names),
         "splits": counts,
     }, sort_keys=True))
