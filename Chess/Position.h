@@ -41,6 +41,8 @@ class Position {
         material{};  //!< Material value for each color.
     std::array<TaperedEval, kColors>
         psqt{};  //!< Piece-square table scores for each color.
+    std::array<std::array<std::uint8_t, kPieceTypes>, kColors>
+        piece_counts{};
   };
 
   /**

@@ -229,6 +229,8 @@ struct EngineOptions {
           Settings::PruneParameters::LMRSettings::kDoingCheckReductionPenalty =
               value;
         }));
+    AddMaterialOptions();
+    AddPawnOptions();
   }
   std::vector<std::unique_ptr<OptionBase>> options;
   bool ParseSetoption(std::stringstream command) {
@@ -266,6 +268,121 @@ struct EngineOptions {
   }
 
  private:
+  void AddMaterialOptions() {
+    AddMaterialValueOptions<Piece::kPawn>("Pawn", 40, 160);
+    AddMaterialValueOptions<Piece::kKnight>("Knight", 200, 500);
+    AddMaterialValueOptions<Piece::kBishop>("Bishop", 200, 500);
+    AddMaterialValueOptions<Piece::kRook>("Rook", 350, 700);
+    AddMaterialValueOptions<Piece::kQueen>("Queen", 700, 1300);
+  }
+
+  template <Piece piece>
+  void AddMaterialValueOptions(const std::string& piece_name,
+                               const int minimum, const int maximum) {
+    constexpr auto piece_index = static_cast<size_t>(piece);
+    options.emplace_back(std::make_unique<SpinOption>(
+        piece_name + "ValueMG",
+        Settings::EvaluationParameters::material_value[piece_index]
+            .eval[static_cast<size_t>(GamePhase::kMiddleGame)],
+        minimum, maximum, [](const int value) {
+          Settings::EvaluationParameters::SetMaterialValue(
+              piece, GamePhase::kMiddleGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        piece_name + "ValueEG",
+        Settings::EvaluationParameters::material_value[piece_index]
+            .eval[static_cast<size_t>(GamePhase::kEndGame)],
+        minimum, maximum, [](const int value) {
+          Settings::EvaluationParameters::SetMaterialValue(
+              piece, GamePhase::kEndGame, value);
+        }));
+  }
+
+  void AddPawnOptions() {
+    options.emplace_back(std::make_unique<SpinOption>(
+        "DoubledPawnMG", Settings::EvaluationParameters::doubled_pawn.eval[0],
+        -50, 0, [](const int value) {
+          Settings::EvaluationParameters::SetDoubledPawn(
+              GamePhase::kMiddleGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "DoubledPawnEG", Settings::EvaluationParameters::doubled_pawn.eval[1],
+        -50, 0, [](const int value) {
+          Settings::EvaluationParameters::SetDoubledPawn(
+              GamePhase::kEndGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "IsolatedPawnMG", Settings::EvaluationParameters::isolated_pawn.eval[0],
+        -50, 0, [](const int value) {
+          Settings::EvaluationParameters::SetIsolatedPawn(
+              GamePhase::kMiddleGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "IsolatedPawnEG", Settings::EvaluationParameters::isolated_pawn.eval[1],
+        -50, 0, [](const int value) {
+          Settings::EvaluationParameters::SetIsolatedPawn(
+              GamePhase::kEndGame, value);
+        }));
+    AddPassedPawnOptions<3>("4");
+    AddPassedPawnOptions<4>("5");
+    AddPassedPawnOptions<5>("6");
+    AddPassedPawnOptions<6>("7");
+    AddPawnPsqtRankOptions<5>("6");
+    AddPawnPsqtRankOptions<6>("7");
+  }
+
+  template <size_t relative_rank>
+  void AddPassedPawnOptions(const std::string& rank_name) {
+    options.emplace_back(std::make_unique<SpinOption>(
+        "PassedPawn" + rank_name + "MG",
+        Settings::EvaluationParameters::passed_pawn[relative_rank].eval[0],
+        0, 200, [](const int value) {
+          Settings::EvaluationParameters::SetPassedPawn(
+              relative_rank, GamePhase::kMiddleGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "PassedPawn" + rank_name + "EG",
+        Settings::EvaluationParameters::passed_pawn[relative_rank].eval[1],
+        0, 200, [](const int value) {
+          Settings::EvaluationParameters::SetPassedPawn(
+              relative_rank, GamePhase::kEndGame, value);
+        }));
+  }
+
+  template <size_t relative_rank, size_t file>
+  void AddPawnPsqtSquareOptions(const std::string& square_name) {
+    options.emplace_back(std::make_unique<SpinOption>(
+        "PawnPSQT" + square_name + "MG",
+        Settings::EvaluationParameters::
+            pawn_psqt_adjustment[relative_rank][file].eval[0],
+        -250, 250,
+        [](const int value) {
+          Settings::EvaluationParameters::SetPawnPsqtAdjustment(
+              relative_rank, file, GamePhase::kMiddleGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "PawnPSQT" + square_name + "EG",
+        Settings::EvaluationParameters::
+            pawn_psqt_adjustment[relative_rank][file].eval[1],
+        -250, 250,
+        [](const int value) {
+          Settings::EvaluationParameters::SetPawnPsqtAdjustment(
+              relative_rank, file, GamePhase::kEndGame, value);
+        }));
+  }
+
+  template <size_t relative_rank>
+  void AddPawnPsqtRankOptions(const std::string& rank_name) {
+    AddPawnPsqtSquareOptions<relative_rank, 0>("A" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 1>("B" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 2>("C" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 3>("D" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 4>("E" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 5>("F" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 6>("G" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 7>("H" + rank_name);
+  }
+
   SpinOption* threads_ = nullptr;
 };
 

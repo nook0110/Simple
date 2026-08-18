@@ -38,6 +38,7 @@ void Position::PlacePiece(const BitIndex square, const Piece piece,
   board_[square] = piece;
   pieces_by_type_[piece_idx].Set(square);
   pieces_by_color_[color_idx].Set(square);
+  ++evaluation_data_.piece_counts[color_idx][piece_idx];
   evaluation_data_.material[color_idx] += kPieceValues[piece_idx];
   evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][square];
   if (piece != Piece::kPawn)
@@ -61,6 +62,7 @@ void Position::RemovePiece(const BitIndex square, const Player color) {
   const auto color_idx = static_cast<size_t>(color);
   pieces_by_type_[piece_idx].Reset(square);
   pieces_by_color_[color_idx].Reset(square);
+  --evaluation_data_.piece_counts[color_idx][piece_idx];
   board_[square] = Piece::kNone;
   evaluation_data_.material[color_idx] -= kPieceValues[piece_idx];
   evaluation_data_.psqt[color_idx] -= kPSQT[color_idx][piece_idx][square];

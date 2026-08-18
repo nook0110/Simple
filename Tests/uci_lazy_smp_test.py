@@ -63,7 +63,51 @@ def main() -> int:
         "option name LMRDepth type spin default 3 min 2 max 8",
         "option name LMRInCheckPenalty type spin default 1 min 0 max 3",
         "option name LMRGivesCheckPenalty type spin default 2 min 0 max 3",
+        "option name PawnValueMG type spin default 82 min 40 max 160",
+        "option name PawnValueEG type spin default 94 min 40 max 160",
+        "option name KnightValueMG type spin default 337 min 200 max 500",
+        "option name KnightValueEG type spin default 291 min 200 max 500",
+        "option name BishopValueMG type spin default 375 min 200 max 500",
+        "option name BishopValueEG type spin default 297 min 200 max 500",
+        "option name RookValueMG type spin default 477 min 350 max 700",
+        "option name RookValueEG type spin default 512 min 350 max 700",
+        "option name QueenValueMG type spin default 1025 min 700 max 1300",
+        "option name QueenValueEG type spin default 936 min 700 max 1300",
+        "option name DoubledPawnMG type spin default -15 min -50 max 0",
+        "option name DoubledPawnEG type spin default -15 min -50 max 0",
+        "option name IsolatedPawnMG type spin default -10 min -50 max 0",
+        "option name IsolatedPawnEG type spin default -10 min -50 max 0",
+        "option name PassedPawn4MG type spin default 5 min 0 max 200",
+        "option name PassedPawn4EG type spin default 10 min 0 max 200",
+        "option name PassedPawn5MG type spin default 30 min 0 max 200",
+        "option name PassedPawn5EG type spin default 40 min 0 max 200",
+        "option name PassedPawn6MG type spin default 25 min 0 max 200",
+        "option name PassedPawn6EG type spin default 70 min 0 max 200",
+        "option name PassedPawn7MG type spin default 90 min 0 max 200",
+        "option name PassedPawn7EG type spin default 120 min 0 max 200",
     }
+    psqt_defaults = {
+        6: {
+            "A": (6, -59), "B": (-2, -60), "C": (-11, -50),
+            "D": (-11, -37), "E": (-40, -26), "F": (-31, -23),
+            "G": (-10, -47), "H": (20, -49),
+        },
+        7: {
+            "A": (-83, -128), "B": (-109, -118), "C": (-41, -108),
+            "D": (-70, -89), "E": (-48, -102), "F": (-101, -87),
+            "G": (-19, -115), "H": (21, -132),
+        },
+    }
+    for rank, files in psqt_defaults.items():
+        for file_name, (middlegame, endgame) in files.items():
+            expected_tuning_options.add(
+                f"option name PawnPSQT{file_name}{rank}MG "
+                f"type spin default {middlegame} min -250 max 250"
+            )
+            expected_tuning_options.add(
+                f"option name PawnPSQT{file_name}{rank}EG "
+                f"type spin default {endgame} min -250 max 250"
+            )
     missing_options = expected_tuning_options.difference(lines)
     if missing_options:
         raise RuntimeError(f"missing tuning options: {sorted(missing_options)}")
