@@ -11,7 +11,7 @@ struct Settings {
     inline static TaperedEval isolated_pawn{{-10, -10}};
     inline static std::array<TaperedEval, 8> passed_pawn = [] {
       std::array<TaperedEval, 8> values{};
-      values[3] = TaperedEval{{5, 10}};
+      values[3] = TaperedEval{{5, 18}};
       values[4] = TaperedEval{{30, 40}};
       values[5] = TaperedEval{{25, 70}};
       values[6] = TaperedEval{{90, 120}};
@@ -37,7 +37,7 @@ struct Settings {
     inline static std::array<TaperedEval, kPieceTypes> material_value = [] {
       auto values = kPieceValues;
       values[static_cast<size_t>(Piece::kKnight)]
-          .eval[static_cast<size_t>(GamePhase::kEndGame)] = 291;
+          .eval[static_cast<size_t>(GamePhase::kEndGame)] = 275;
       values[static_cast<size_t>(Piece::kBishop)]
           .eval[static_cast<size_t>(GamePhase::kMiddleGame)] = 375;
       return values;
