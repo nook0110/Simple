@@ -124,19 +124,20 @@ struct PawnEvaluation {
 
 template <Piece piece>
 void AddMobility(const Position& position, const Player side,
+                 const Bitboard occupied, const Bitboard mobility_area,
                  TaperedEval& result) {
-  const Bitboard occupied = position.GetAllPieces();
-  const Bitboard own_pieces = position.GetPieces(side);
+  const auto& weight =
+      Settings::EvaluationParameters::mobility[static_cast<size_t>(piece)];
+  if (weight == TaperedEval{}) return;
+
   Bitboard pieces = position.GetPiecesByType<piece>(side);
   size_t mobility = 0;
   while (pieces.Any()) {
     const BitIndex square = pieces.PopFirstBit();
     mobility +=
-        (AttackTable<piece>::GetAttackMap(square, occupied) & ~own_pieces)
+        (AttackTable<piece>::GetAttackMap(square, occupied) & mobility_area)
             .Count();
   }
-  const auto& weight =
-      Settings::EvaluationParameters::mobility[static_cast<size_t>(piece)];
   result.eval[0] += static_cast<Eval>(mobility) * weight.eval[0];
   result.eval[1] += static_cast<Eval>(mobility) * weight.eval[1];
 }
@@ -144,10 +145,16 @@ void AddMobility(const Position& position, const Player side,
 [[nodiscard]] TaperedEval EvaluateMobility(const Position& position,
                                            const Player side) {
   TaperedEval result{};
-  AddMobility<Piece::kKnight>(position, side, result);
-  AddMobility<Piece::kBishop>(position, side, result);
-  AddMobility<Piece::kRook>(position, side, result);
-  AddMobility<Piece::kQueen>(position, side, result);
+  const Bitboard occupied = position.GetAllPieces();
+  const Bitboard mobility_area = ~position.GetPieces(side);
+  const Bitboard minor_mobility_area =
+      mobility_area & ~position.GetAllPawnAttacks(Flip(side));
+  AddMobility<Piece::kKnight>(position, side, occupied, minor_mobility_area,
+                              result);
+  AddMobility<Piece::kBishop>(position, side, occupied, minor_mobility_area,
+                              result);
+  AddMobility<Piece::kRook>(position, side, occupied, mobility_area, result);
+  AddMobility<Piece::kQueen>(position, side, occupied, mobility_area, result);
   return result;
 }
 

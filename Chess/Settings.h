@@ -7,7 +7,14 @@
 namespace SimpleChessEngine {
 struct Settings {
   struct EvaluationParameters {
-    inline static std::array<TaperedEval, kPieceTypes> mobility{};
+    inline static std::array<TaperedEval, kPieceTypes> mobility = [] {
+      std::array<TaperedEval, kPieceTypes> values{};
+      values[static_cast<size_t>(Piece::kKnight)] = TaperedEval{{4, 2}};
+      values[static_cast<size_t>(Piece::kBishop)] = TaperedEval{{7, 3}};
+      values[static_cast<size_t>(Piece::kRook)] = TaperedEval{{2, 4}};
+      values[static_cast<size_t>(Piece::kQueen)] = TaperedEval{{2, 2}};
+      return values;
+    }();
     inline static std::array<std::array<std::array<TaperedEval, 4>, 8>,
                              kPieceTypes>
         psqt_adjustment{};
@@ -62,7 +69,7 @@ struct Settings {
     }();
     inline static bool pawns_enabled = true;
     inline static bool material_enabled = true;
-    inline static bool mobility_enabled = false;
+    inline static bool mobility_enabled = true;
     inline static bool psqt_adjustment_enabled = false;
     inline static bool king_pawns_enabled = true;
     inline static bool king_attacks_enabled = true;

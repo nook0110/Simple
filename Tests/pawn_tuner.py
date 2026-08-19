@@ -93,14 +93,14 @@ MATERIAL_PARAMETERS = {
 PARAMETERS.update(MATERIAL_PARAMETERS)
 
 MOBILITY_PARAMETERS = {
-    "KnightMobilityMG": Parameter(0, 0, 12, 1),
-    "KnightMobilityEG": Parameter(0, 0, 12, 1),
-    "BishopMobilityMG": Parameter(0, 0, 12, 1),
-    "BishopMobilityEG": Parameter(0, 0, 12, 1),
-    "RookMobilityMG": Parameter(0, 0, 10, 1),
-    "RookMobilityEG": Parameter(0, 0, 10, 1),
-    "QueenMobilityMG": Parameter(0, 0, 8, 1),
-    "QueenMobilityEG": Parameter(0, 0, 8, 1),
+    "KnightMobilityMG": Parameter(4, 0, 12, 1),
+    "KnightMobilityEG": Parameter(2, 0, 12, 1),
+    "BishopMobilityMG": Parameter(7, 0, 12, 1),
+    "BishopMobilityEG": Parameter(3, 0, 12, 1),
+    "RookMobilityMG": Parameter(2, 0, 10, 1),
+    "RookMobilityEG": Parameter(4, 0, 10, 1),
+    "QueenMobilityMG": Parameter(2, 0, 8, 1),
+    "QueenMobilityEG": Parameter(2, 0, 8, 1),
 }
 PARAMETERS.update(MOBILITY_PARAMETERS)
 

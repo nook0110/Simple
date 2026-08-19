@@ -160,6 +160,74 @@ TEST(Material, RawPawnEndgameValue) {
       Piece::kPawn, GamePhase::kEndGame, original);
 }
 
+TEST(Mobility, KnightExcludesSquaresAttackedByEnemyPawns) {
+  const auto position = PositionFactory{}("7k/8/4p3/8/3N4/8/8/K7 w - - 0 1");
+  const auto piece = static_cast<size_t>(Piece::kKnight);
+  const TaperedEval original = Settings::EvaluationParameters::mobility[piece];
+  const Eval baseline = position.Evaluate();
+
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kKnight, GamePhase::kMiddleGame, original.eval[0] + 1);
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kKnight, GamePhase::kEndGame, original.eval[1] + 1);
+  EXPECT_EQ(position.Evaluate(), baseline + 7);
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kKnight, GamePhase::kMiddleGame, original.eval[0]);
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kKnight, GamePhase::kEndGame, original.eval[1]);
+}
+
+TEST(Mobility, BishopExcludesSquaresAttackedByEnemyPawns) {
+  const auto position = PositionFactory{}("k7/8/1p6/8/3B4/8/8/7K w - - 0 1");
+  const auto piece = static_cast<size_t>(Piece::kBishop);
+  const TaperedEval original = Settings::EvaluationParameters::mobility[piece];
+  const Eval baseline = position.Evaluate();
+
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kBishop, GamePhase::kMiddleGame, original.eval[0] + 1);
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kBishop, GamePhase::kEndGame, original.eval[1] + 1);
+  EXPECT_EQ(position.Evaluate(), baseline + 11);
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kBishop, GamePhase::kMiddleGame, original.eval[0]);
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kBishop, GamePhase::kEndGame, original.eval[1]);
+}
+
+TEST(Mobility, RookKeepsSquaresAttackedByEnemyPawns) {
+  const auto position = PositionFactory{}("7k/8/4p3/8/3R4/8/8/K7 w - - 0 1");
+  const auto piece = static_cast<size_t>(Piece::kRook);
+  const TaperedEval original = Settings::EvaluationParameters::mobility[piece];
+  const Eval baseline = position.Evaluate();
+
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kRook, GamePhase::kMiddleGame, original.eval[0] + 1);
+  Settings::EvaluationParameters::SetMobility(Piece::kRook, GamePhase::kEndGame,
+                                              original.eval[1] + 1);
+  EXPECT_EQ(position.Evaluate(), baseline + 14);
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kRook, GamePhase::kMiddleGame, original.eval[0]);
+  Settings::EvaluationParameters::SetMobility(Piece::kRook, GamePhase::kEndGame,
+                                              original.eval[1]);
+}
+
+TEST(Mobility, QueenKeepsSquaresAttackedByEnemyPawns) {
+  const auto position = PositionFactory{}("7k/8/4p3/8/3Q4/8/8/K7 w - - 0 1");
+  const auto piece = static_cast<size_t>(Piece::kQueen);
+  const TaperedEval original = Settings::EvaluationParameters::mobility[piece];
+  const Eval baseline = position.Evaluate();
+
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kQueen, GamePhase::kMiddleGame, original.eval[0] + 1);
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kQueen, GamePhase::kEndGame, original.eval[1] + 1);
+  EXPECT_EQ(position.Evaluate(), baseline + 26);
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kQueen, GamePhase::kMiddleGame, original.eval[0]);
+  Settings::EvaluationParameters::SetMobility(
+      Piece::kQueen, GamePhase::kEndGame, original.eval[1]);
+}
+
 TEST(KingSafety, NearShieldRewardsPawnsInFrontOfKing) {
   const auto position = PositionFactory{}(
       "rnbq1bnr/pppppp1p/6k1/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 0 1");
