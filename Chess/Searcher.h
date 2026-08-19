@@ -12,6 +12,7 @@
 #include "MoveGenerator.h"
 #include "NodeType.h"
 #include "PositionFactory.h"
+#include "TablebaseFile.h"
 #include "TranspositionTable.h"
 
 namespace SimpleChessEngine {
@@ -49,9 +50,11 @@ class Searcher {
   explicit Searcher(
       Position position = PositionFactory{}(),
       std::shared_ptr<SearcherTranspositionTable> transposition_table =
-          std::make_shared<SearcherTranspositionTable>())
+          std::make_shared<SearcherTranspositionTable>(),
+      std::shared_ptr<const Tablebase::MappedFile> tablebase = {})
       : current_position_(std::move(position)),
-        best_moves_(std::move(transposition_table)) {}
+        best_moves_(std::move(transposition_table)),
+        tablebase_(std::move(tablebase)) {}
 
   /**
    * \brief Sets the current position.
@@ -66,6 +69,10 @@ class Searcher {
    * \return The current position.
    */
   [[nodiscard]] const Position &GetPosition() const;
+  void SetTablebase(std::shared_ptr<const Tablebase::MappedFile> tablebase) {
+    tablebase_ = std::move(tablebase);
+  }
+  [[nodiscard]] const auto& GetTablebase() const { return tablebase_; }
 
   /**
    * \brief Returns the best move for the current position.
@@ -105,6 +112,7 @@ class Searcher {
   MoveGenerator move_generator_;  //!< Move generator.
   std::shared_ptr<SearcherTranspositionTable>
       best_moves_;  //!< Shared transposition table used by Lazy SMP workers.
+  std::shared_ptr<const Tablebase::MappedFile> tablebase_;
   std::array<
       std::array<std::array<std::int64_t, kBoardArea + 1>, kBoardArea + 1>,
       kColors>

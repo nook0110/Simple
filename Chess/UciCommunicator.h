@@ -64,6 +64,7 @@ class SearchThread {
     StopThread();
     thread_count_ = std::max<std::size_t>(1, thread_count);
   }
+  [[nodiscard]] bool SetTablebasePath(const std::string& path);
 
  private:
   Condition GetCondition(const Info& info) {
@@ -106,6 +107,8 @@ class SearchThread {
   std::vector<std::thread> helper_threads_;
   StopSignal stop_signal_;
   std::size_t thread_count_ = 1;
+  std::string tablebase_path_ = "<empty>";
+  std::shared_ptr<const Tablebase::MappedFile> tablebase_;
 };
 
 struct OptionBase {
@@ -155,6 +158,28 @@ struct SpinOption : public OptionBase {
   Setter setter_;
 };
 
+struct StringOption : public OptionBase {
+  StringOption(std::string name, std::string default_value)
+      : OptionBase(std::move(name)),
+        value_(std::move(default_value)),
+        default_(value_) {}
+
+  bool SetValue(const std::string& value) override {
+    value_ = value;
+    return true;
+  }
+
+  std::string GetOptionDescription() const override {
+    return "type string default " + default_;
+  }
+
+  [[nodiscard]] const std::string& GetValue() const { return value_; }
+
+ private:
+  std::string value_;
+  std::string default_;
+};
+
 template <bool default_value>
 struct BooleanOption : public OptionBase {
   BooleanOption(std::string name) : OptionBase(std::move(name)) {}
@@ -186,6 +211,10 @@ struct EngineOptions {
     auto threads = std::make_unique<SpinOption>("Threads", 1, 1, 256);
     threads_ = threads.get();
     options.emplace_back(std::move(threads));
+    auto tablebase_path =
+        std::make_unique<StringOption>("SceTablebasePath", "sce-4.scetb");
+    tablebase_path_ = tablebase_path.get();
+    options.emplace_back(std::move(tablebase_path));
     options.emplace_back(
         std::make_unique<SpinOption>("RFPDepth", 5, 1, 8, [](const int value) {
           Settings::PruneParameters::RFPSettings::kDepthLimit =
@@ -268,8 +297,12 @@ struct EngineOptions {
   [[nodiscard]] std::size_t GetThreadCount() const {
     return static_cast<std::size_t>(threads_->GetValue());
   }
+  [[nodiscard]] const std::string& GetTablebasePath() const {
+    return tablebase_path_->GetValue();
+  }
 
  private:
+  StringOption* tablebase_path_{};
   void AddPsqtAdjustmentOptions() {
     constexpr std::array piece_names = {"Knight", "Bishop", "Rook", "Queen",
                                         "King"};
@@ -493,7 +526,9 @@ class UciChessEngine {
  public:
   explicit UciChessEngine(std::istream& i_stream = std::cin,
                           std::ostream& o_stream = std::cout)
-      : i_stream_(i_stream), o_stream_(o_stream), search_thread_(o_stream) {}
+      : i_stream_(i_stream), o_stream_(o_stream), search_thread_(o_stream) {
+    (void)search_thread_.SetTablebasePath(options_.GetTablebasePath());
+  }
 
   ~UciChessEngine();
 
@@ -624,6 +659,9 @@ inline void UciChessEngine::ParseSetOption(std::stringstream command) {
   }
   if (options_.ParseSetoption(std::move(command))) {
     search_thread_.SetThreadCount(options_.GetThreadCount());
+    if (!search_thread_.SetTablebasePath(options_.GetTablebasePath())) {
+      Send("info string failed to load SCE tablebase");
+    }
   }
 }
 inline void UciChessEngine::ParseIsReady(std::stringstream) const {
@@ -661,8 +699,8 @@ inline void UciChessEngine::ParsePosition(std::stringstream command) {
     std::string en_croissant;
     std::string rule50;
     std::string move_number;
-    command >> board >> side_to_move >> castling_rights >> rule50 >>
-        en_croissant >> move_number;
+    command >> board >> side_to_move >> castling_rights >> en_croissant >>
+        rule50 >> move_number;
     const auto fen = board + " " + side_to_move + " " + castling_rights + " " +
                      en_croissant + " " + rule50 + " " + move_number;
     ParseFen(fen);
@@ -823,6 +861,25 @@ inline SearchThread::SearchThread(Position position, std::ostream& o_stream)
 inline SearchThread::SearchThread(std::ostream& o_stream)
     : engine_(PositionFactory{}(), o_stream, transposition_table_) {}
 
+inline bool SearchThread::SetTablebasePath(const std::string& path) {
+  if (path == tablebase_path_) return true;
+  StopThread();
+  if (path.empty() || path == "<empty>") {
+    tablebase_.reset();
+    tablebase_path_ = "<empty>";
+    engine_.SetTablebase({});
+    return true;
+  }
+  auto mapped = Tablebase::MappedFile::Open(path);
+  if (!mapped || !mapped->VerifyChecksums()) return false;
+  auto tablebase =
+      std::make_shared<Tablebase::MappedFile>(std::move(*mapped));
+  tablebase_ = std::move(tablebase);
+  tablebase_path_ = path;
+  engine_.SetTablebase(tablebase_);
+  return true;
+}
+
 inline void SearchThread::Start(const Info& info) {
   StopThread();
   engine_.SetPosition(info.position);
@@ -836,7 +893,7 @@ inline void SearchThread::Start(const Info& info) {
   for (std::size_t worker = 1; worker < thread_count_; ++worker) {
     helper_engines_.push_back(std::make_unique<ChessEngine>(
         info.position, std::cout, transposition_table_, false,
-        static_cast<Depth>(1 + worker % 2)));
+        static_cast<Depth>(1 + worker % 2), tablebase_));
     auto& helper = *helper_engines_.back();
     helper_threads_.emplace_back([this, info, &helper] {
       auto condition = GetCondition(info);
