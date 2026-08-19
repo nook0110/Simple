@@ -178,6 +178,20 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     return kDrawValue;
   }
 
+  if (current_depth > 0 && searcher_.tablebase_ &&
+      GetCurrentPosition().GetAllPieces().Count() <= 4) {
+    if (const auto wdl =
+            searcher_.tablebase_->ProbeWdl(GetCurrentPosition())) {
+      if (*wdl == Tablebase::Wdl::kWin) {
+        return kTablebaseWinValue - current_depth;
+      }
+      if (*wdl == Tablebase::Wdl::kLoss) {
+        return -kTablebaseWinValue + current_depth;
+      }
+      return kDrawValue;
+    }
+  }
+
   searcher_.debug_info_.searched_nodes++;
 
   if (ProbeTranspositionTable()) {

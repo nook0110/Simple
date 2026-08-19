@@ -17,7 +17,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_link_options(-flto)
 endif()
 
-FILE(GLOB CHESS_SOURCES Chess/*.cpp)
+FILE(GLOB CHESS_SOURCES CONFIGURE_DEPENDS Chess/*.cpp)
 list(REMOVE_ITEM CHESS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Chess/main.cpp)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Chess)
@@ -26,10 +26,22 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Chess)
 add_library(chess_lib STATIC ${CHESS_SOURCES})
 
 add_executable(${PROJECT_NAME}
-    ${CHESS_SOURCES} Chess/main.cpp
+    Chess/main.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE chess_lib)
+
+add_executable(SCE_tbgen Tools/TablebaseGenerator.cpp)
+target_link_libraries(SCE_tbgen PRIVATE chess_lib)
+
+add_executable(SCE_tbprobe Tools/TablebaseProbe.cpp)
+target_link_libraries(SCE_tbprobe PRIVATE chess_lib)
+
+add_executable(SCE_tbverify Tools/TablebaseVerifier.cpp)
+target_link_libraries(SCE_tbverify PRIVATE chess_lib)
+
+add_executable(SCE_tbbench Tools/TablebaseBenchmark.cpp)
+target_link_libraries(SCE_tbbench PRIVATE chess_lib)
 
 # Тесты включаются только если BUILD_TESTS=ON
 if(BUILD_TESTS)
@@ -41,9 +53,13 @@ if(BUILD_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
 
-    FILE(GLOB CHESS_TEST_SOURCES Tests/*.cpp)
+    FILE(GLOB CHESS_TEST_SOURCES CONFIGURE_DEPENDS Tests/*.cpp)
     add_executable(SCE_tests ${CHESS_TEST_SOURCES})
     add_dependencies(SCE_tests ${PROJECT_NAME})
+    add_dependencies(SCE_tests SCE_tbgen)
+    add_dependencies(SCE_tests SCE_tbprobe)
+    add_dependencies(SCE_tests SCE_tbverify)
+    add_dependencies(SCE_tests SCE_tbbench)
     target_link_libraries(SCE_tests 
         PRIVATE 
         gtest_main 
@@ -51,7 +67,8 @@ if(BUILD_TESTS)
     )
 
     # Настройки покрытия только для тестов
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    if(CMAKE_BUILD_TYPE STREQUAL "Coverage" AND
+       CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(SCE_tests PRIVATE --coverage -g)
         target_link_options(SCE_tests PRIVATE --coverage)
     endif()
@@ -80,6 +97,13 @@ if(BUILD_TESTS)
         NAME TexelDeterministicQScore
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/texel_qscore_test.py
                 --engine $<TARGET_FILE:SimpleChessEngine>
+    )
+    add_test(
+        NAME SceTablebaseUciLifecycle
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/Tests/tablebase_uci_test.py
+                --engine $<TARGET_FILE:SimpleChessEngine>
+                --generator $<TARGET_FILE:SCE_tbgen>
     )
 
     # Копирование тестовых данных

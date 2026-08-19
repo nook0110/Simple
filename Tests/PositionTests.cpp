@@ -64,6 +64,38 @@ TEST(TwoSimiliarPositions, DifferentHash) {
   ASSERT_NE(first_position.GetHash(), second_position.GetHash());
 }
 
+TEST(FenFactory, PreservesEnPassantSquare) {
+  const std::string fen = "7k/8/8/8/3pP3/8/8/K7 b - e3 37 42";
+  const auto position = PositionFactory{}(fen);
+
+  EXPECT_EQ(position.GetEnCroissantSquare(), GetSquareIndex(4, 2));
+  EXPECT_EQ(position.GetHalfMoveClock(), 37);
+  EXPECT_EQ(position.GetFullMoveNumber(), 42);
+  EXPECT_EQ(FenFactory{}(position), fen);
+}
+
+TEST(FenFactory, UpdatesCountersFromInitialFenState) {
+  auto position = PositionFactory{}(
+      "7k/8/8/8/8/8/8/K7 b - - 37 42");
+  position.DoMove(MoveFactory{}(position, "h8g7"));
+  EXPECT_EQ(position.GetHalfMoveClock(), 38);
+  EXPECT_EQ(position.GetFullMoveNumber(), 43);
+  position.DoMove(MoveFactory{}(position, "a1b1"));
+  EXPECT_EQ(position.GetHalfMoveClock(), 39);
+  EXPECT_EQ(position.GetFullMoveNumber(), 43);
+}
+
+TEST(FiftyMoveClock, QuietPromotionResetsCounter) {
+  auto position = PositionFactory{}(
+      "7k/P7/8/8/8/8/8/K7 w - - 99 42");
+  position.DoMove(MoveFactory{}(position, "a7a8q"));
+  EXPECT_EQ(position.GetHalfMoveClock(), 0);
+  EXPECT_EQ(position.GetFullMoveNumber(), 42);
+  position.DoMove(MoveFactory{}(position, "h8g7"));
+  EXPECT_EQ(position.GetHalfMoveClock(), 1);
+  EXPECT_EQ(position.GetFullMoveNumber(), 43);
+}
+
 TEST(InsufficientMaterial, DetectsDeadPositions) {
   const std::array dead_positions = {
       "7k/8/8/8/8/8/8/K7 w - - 0 1",

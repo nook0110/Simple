@@ -74,15 +74,17 @@ class ChessEngine {
  public:
   using SharedTranspositionTable =
       std::shared_ptr<Searcher::SearcherTranspositionTable>;
+  using SharedTablebase = std::shared_ptr<const Tablebase::MappedFile>;
 
   explicit ChessEngine(
       Position position = PositionFactory{}(),
       std::ostream& o_stream = std::cout,
       SharedTranspositionTable transposition_table =
           std::make_shared<Searcher::SearcherTranspositionTable>(),
-      bool reporting = true, Depth initial_depth = 1)
+      bool reporting = true, Depth initial_depth = 1,
+      SharedTablebase tablebase = {})
       : o_stream_(o_stream),
-        searcher_(position, std::move(transposition_table)),
+        searcher_(position, std::move(transposition_table), std::move(tablebase)),
         reporting_(reporting),
         initial_depth_(initial_depth) {
     SetPosition(std::move(position));
@@ -91,6 +93,10 @@ class ChessEngine {
   void SetPosition(Position position) {
     position_ = position;
     searcher_.SetPosition(std::move(position));
+  }
+
+  void SetTablebase(SharedTablebase tablebase) {
+    searcher_.SetTablebase(std::move(tablebase));
   }
 
   void GoPonder(Pondering& conditions) {
@@ -238,6 +244,14 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   best_move_ = legal_moves.front();
   ponder_move_.reset();
 
+  if (const auto& tablebase = searcher_.GetTablebase(); tablebase) {
+    if (const auto tablebase_move = tablebase->RootMove(position_)) {
+      best_move_ = *tablebase_move;
+      PrintBestMove(BestMoveInfo{best_move_, std::nullopt});
+      return;
+    }
+  }
+
   DebugInfo info;
   Eval eval = position_.Evaluate();
   EBFsInfo ebfs;
@@ -305,7 +319,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
 }
 
 inline const Move& ChessEngine::GetCurrentBestMove() const {
-  return searcher_.GetCurrentBestMove();
+  return best_move_;
 }
 
 inline std::optional<Eval> ChessEngine::MakeIteration(

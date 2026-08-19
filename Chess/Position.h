@@ -13,6 +13,9 @@
 #include "Utility.h"
 
 namespace SimpleChessEngine {
+namespace Tablebase {
+class PositionBuilder;
+}
 /**
  * \brief Class that represents a chess position.
  *
@@ -27,6 +30,7 @@ namespace SimpleChessEngine {
 class Position {
  public:
   friend struct PositionFactory;
+  friend class Tablebase::PositionBuilder;
   /**
    * \brief Struct to hold evaluation data for the position.
    *
@@ -105,7 +109,13 @@ class Position {
         last_reset{};  //!< Indices where the history was last reset.
   };
 
-  void Init() { history_stack_.Push(hash_, true); }
+  void Init(const size_t halfmove_clock = 0,
+            const size_t fullmove_number = 1) {
+    initial_halfmove_clock_ = halfmove_clock;
+    initial_fullmove_number_ = fullmove_number;
+    initial_side_to_move_ = side_to_move_;
+    history_stack_.Push(hash_, true);
+  }
 
   [[nodiscard]] Eval Evaluate() const;
 
@@ -176,7 +186,11 @@ class Position {
    *
    * \param player Player whose's side to move.
    */
-  void SetSideToMove(const Player player) { side_to_move_ = player; }
+  void SetSideToMove(const Player player) {
+    if (side_to_move_ == player) return;
+    side_to_move_ = player;
+    hash_ ^= hasher_.stm_hash;
+  }
 
   [[nodiscard]] Bitboard GetAllPawnAttacks(Player player) const;
 
@@ -230,13 +244,16 @@ class Position {
   [[nodiscard]] IrreversibleData GetIrreversibleData() const;
 
   size_t GetHalfMoveClock() const {
-    return std::max<size_t>(1, history_stack_.history.size() -
-                                   history_stack_.last_reset.back()) -
-           1;
+    const auto last_reset = history_stack_.last_reset.back();
+    const auto elapsed = history_stack_.history.size() - last_reset - 1;
+    return last_reset == 0 ? initial_halfmove_clock_ + elapsed : elapsed;
   }
 
   size_t GetFullMoveNumber() const {
-    return history_stack_.history.size() / 2 + 1;
+    const auto elapsed = history_stack_.history.size() - 1;
+    const auto starts_with_black =
+        initial_side_to_move_ == Player::kBlack ? 1 : 0;
+    return initial_fullmove_number_ + (elapsed + starts_with_black) / 2;
   }
 
   /**
@@ -248,9 +265,13 @@ class Position {
    */
   bool operator==(const Position &other) const {
     return std::tie(hash_, side_to_move_, pieces_by_type_, pieces_by_color_,
-                    irreversible_data_) ==
+                    irreversible_data_, initial_halfmove_clock_,
+                    initial_fullmove_number_, initial_side_to_move_) ==
            std::tie(other.hash_, other.side_to_move_, other.pieces_by_type_,
-                    other.pieces_by_color_, other.irreversible_data_);
+                    other.pieces_by_color_, other.irreversible_data_,
+                    other.initial_halfmove_clock_,
+                    other.initial_fullmove_number_,
+                    other.initial_side_to_move_);
   }
 
  private:
@@ -278,6 +299,8 @@ class Position {
 
   void SetCastlingRights(const std::array<std::bitset<2>, 2> &castling_rights);
 
+  void SetEnCroissantSquare(std::optional<BitIndex> square);
+
   void SetKingPositions(const std::array<BitIndex, 2> &king_position);
 
   void SetRookPositions(
@@ -292,6 +315,9 @@ class Position {
   EvaluationData evaluation_data_;
   IrreversibleData irreversible_data_;
   GameHistory history_stack_ = {};
+  size_t initial_halfmove_clock_{};
+  size_t initial_fullmove_number_{1};
+  Player initial_side_to_move_{Player::kWhite};
 
   Player side_to_move_{};  //!< Whose side to move.
 

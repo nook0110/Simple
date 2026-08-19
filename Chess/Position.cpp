@@ -108,6 +108,7 @@ void Position::DoMove(const Move &move) {
   const auto to = move.To();
   const auto us = side_to_move_;
   const auto them = Flip(us);
+  const auto moving_piece = board_[from];
   
   // Store captured piece for undo
   irreversible_data_.captured_piece = board_[to];
@@ -202,7 +203,7 @@ void Position::DoMove(const Move &move) {
 
   // 50-move rule: reset counter if it's a pawn move or a capture
   const bool resets_fifty_move =
-      (board_[to] == Piece::kPawn) ||  // Moving piece is a pawn
+      (moving_piece == Piece::kPawn) ||  // Moving piece is a pawn
       (irreversible_data_.captured_piece != Piece::kNone);  // Any capture
   history_stack_.Push(hash_, resets_fifty_move);
 }
@@ -338,6 +339,17 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
 void Position::SetCastlingRights(
     const std::array<std::bitset<2>, 2> &castling_rights) {
   irreversible_data_.castling_rights = castling_rights;
+}
+
+void Position::SetEnCroissantSquare(const std::optional<BitIndex> square) {
+  if (irreversible_data_.en_croissant_square.has_value()) {
+    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(
+        *irreversible_data_.en_croissant_square).first];
+  }
+  irreversible_data_.en_croissant_square = square;
+  if (square.has_value()) {
+    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(*square).first];
+  }
 }
 
 void Position::SetKingPositions(const std::array<BitIndex, 2> &king_position) {
