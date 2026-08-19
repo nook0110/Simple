@@ -12,7 +12,7 @@
 #include "MoveGenerator.h"
 #include "NodeType.h"
 #include "PositionFactory.h"
-#include "TablebaseFile.h"
+#include "SyzygyTablebase.h"
 #include "TranspositionTable.h"
 
 namespace SimpleChessEngine {
@@ -51,7 +51,7 @@ class Searcher {
       Position position = PositionFactory{}(),
       std::shared_ptr<SearcherTranspositionTable> transposition_table =
           std::make_shared<SearcherTranspositionTable>(),
-      std::shared_ptr<const Tablebase::MappedFile> tablebase = {})
+      std::shared_ptr<const Tablebase::Syzygy> tablebase = {})
       : current_position_(std::move(position)),
         best_moves_(std::move(transposition_table)),
         tablebase_(std::move(tablebase)) {}
@@ -69,7 +69,7 @@ class Searcher {
    * \return The current position.
    */
   [[nodiscard]] const Position &GetPosition() const;
-  void SetTablebase(std::shared_ptr<const Tablebase::MappedFile> tablebase) {
+  void SetTablebase(std::shared_ptr<const Tablebase::Syzygy> tablebase) {
     tablebase_ = std::move(tablebase);
   }
   [[nodiscard]] const auto& GetTablebase() const { return tablebase_; }
@@ -112,7 +112,7 @@ class Searcher {
   MoveGenerator move_generator_;  //!< Move generator.
   std::shared_ptr<SearcherTranspositionTable>
       best_moves_;  //!< Shared transposition table used by Lazy SMP workers.
-  std::shared_ptr<const Tablebase::MappedFile> tablebase_;
+  std::shared_ptr<const Tablebase::Syzygy> tablebase_;
   std::array<
       std::array<std::array<std::int64_t, kBoardArea + 1>, kBoardArea + 1>,
       kColors>

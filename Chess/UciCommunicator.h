@@ -108,7 +108,7 @@ class SearchThread {
   StopSignal stop_signal_;
   std::size_t thread_count_ = 1;
   std::string tablebase_path_ = "<empty>";
-  std::shared_ptr<const Tablebase::MappedFile> tablebase_;
+  std::shared_ptr<const Tablebase::Syzygy> tablebase_;
 };
 
 struct OptionBase {
@@ -212,7 +212,7 @@ struct EngineOptions {
     threads_ = threads.get();
     options.emplace_back(std::move(threads));
     auto tablebase_path =
-        std::make_unique<StringOption>("SceTablebasePath", "sce-4.scetb");
+        std::make_unique<StringOption>("SyzygyPath", "syzygy");
     tablebase_path_ = tablebase_path.get();
     options.emplace_back(std::move(tablebase_path));
     options.emplace_back(
@@ -660,7 +660,7 @@ inline void UciChessEngine::ParseSetOption(std::stringstream command) {
   if (options_.ParseSetoption(std::move(command))) {
     search_thread_.SetThreadCount(options_.GetThreadCount());
     if (!search_thread_.SetTablebasePath(options_.GetTablebasePath())) {
-      Send("info string failed to load SCE tablebase");
+      Send("info string failed to load Syzygy tablebases");
     }
   }
 }
@@ -862,18 +862,17 @@ inline SearchThread::SearchThread(std::ostream& o_stream)
     : engine_(PositionFactory{}(), o_stream, transposition_table_) {}
 
 inline bool SearchThread::SetTablebasePath(const std::string& path) {
-  if (path == tablebase_path_) return true;
+  if (path == tablebase_path_ && tablebase_) return true;
   StopThread();
+  engine_.SetTablebase({});
+  tablebase_.reset();
+  tablebase_path_ = "<empty>";
   if (path.empty() || path == "<empty>") {
-    tablebase_.reset();
-    tablebase_path_ = "<empty>";
-    engine_.SetTablebase({});
+    Tablebase::Syzygy::Disable();
     return true;
   }
-  auto mapped = Tablebase::MappedFile::Open(path);
-  if (!mapped || !mapped->VerifyChecksums()) return false;
-  auto tablebase =
-      std::make_shared<Tablebase::MappedFile>(std::move(*mapped));
+  auto tablebase = Tablebase::Syzygy::Open(path);
+  if (!tablebase) return false;
   tablebase_ = std::move(tablebase);
   tablebase_path_ = path;
   engine_.SetTablebase(tablebase_);
