@@ -179,7 +179,8 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   }
 
   if (current_depth > 0 && searcher_.tablebase_ &&
-      GetCurrentPosition().GetAllPieces().Count() <= 4) {
+      GetCurrentPosition().GetAllPieces().Count() <=
+          searcher_.tablebase_->MaxPieces()) {
     if (const auto wdl =
             searcher_.tablebase_->ProbeWdl(GetCurrentPosition())) {
       if (*wdl == Tablebase::Wdl::kWin) {

@@ -74,7 +74,7 @@ class ChessEngine {
  public:
   using SharedTranspositionTable =
       std::shared_ptr<Searcher::SearcherTranspositionTable>;
-  using SharedTablebase = std::shared_ptr<const Tablebase::MappedFile>;
+  using SharedTablebase = std::shared_ptr<const Tablebase::Syzygy>;
 
   explicit ChessEngine(
       Position position = PositionFactory{}(),

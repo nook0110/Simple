@@ -54,7 +54,7 @@ def main() -> int:
     if "option name Threads type spin default 1 min 1 max 256" not in lines:
         raise RuntimeError("Threads UCI option was not advertised")
     expected_tuning_options = {
-        "option name SceTablebasePath type string default sce-4.scetb",
+        "option name SyzygyPath type string default syzygy",
         "option name RFPDepth type spin default 5 min 1 max 8",
         "option name RFPThreshold type spin default 100 min 25 max 200",
         "option name NMPReduction type spin default 3 min 2 max 5",
