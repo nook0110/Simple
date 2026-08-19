@@ -362,6 +362,9 @@ Bitboard Position::GetAllPieces() const {
 }
 
 bool Position::IsInsufficientMaterial() const {
+  constexpr Bitboard kDarkSquares{0xAA55AA55AA55AA55ULL};
+  constexpr Bitboard kLightSquares{0x55AA55AA55AA55AAULL};
+
   if (pieces_by_type_[static_cast<size_t>(Piece::kPawn)].Any() ||
       pieces_by_type_[static_cast<size_t>(Piece::kRook)].Any() ||
       pieces_by_type_[static_cast<size_t>(Piece::kQueen)].Any()) {
@@ -370,25 +373,14 @@ bool Position::IsInsufficientMaterial() const {
 
   const auto knights =
       pieces_by_type_[static_cast<size_t>(Piece::kKnight)];
-  auto bishops = pieces_by_type_[static_cast<size_t>(Piece::kBishop)];
+  const auto bishops = pieces_by_type_[static_cast<size_t>(Piece::kBishop)];
 
-  if (bishops.None()) {
-    return knights.Count() <= 1;
-  }
   if (knights.Any()) {
-    return false;
+    return bishops.None() && !knights.MoreThanOne();
   }
 
-  const auto first_square = bishops.PopFirstBit();
-  const auto [first_file, first_rank] = GetCoordinates(first_square);
-  const auto first_square_color = (first_file + first_rank) % 2;
-  while (bishops.Any()) {
-    const auto [file, rank] = GetCoordinates(bishops.PopFirstBit());
-    if ((file + rank) % 2 != first_square_color) {
-      return false;
-    }
-  }
-  return true;
+  return bishops.None() || (bishops & kDarkSquares).None() ||
+         (bishops & kLightSquares).None();
 }
 
 const Bitboard &Position::GetPieces(const Player player) const {

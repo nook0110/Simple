@@ -163,9 +163,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   assert(kIsPrincipalVariation || beta - alpha == 1);
 
   const auto current_depth = max_depth - remaining_depth;
-  if (GetCurrentPosition().DetectRepetition(current_depth) ||
-      (current_depth > 0 &&
-       GetCurrentPosition().IsInsufficientMaterial())) {
+  if (GetCurrentPosition().DetectRepetition(current_depth)) {
     return kDrawValue;
   }
 
@@ -173,6 +171,11 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   // the end of the search tree
   if (remaining_depth <= 0) {
     return QuiescenceSearch();
+  }
+
+  if (current_depth > 0 &&
+      GetCurrentPosition().IsInsufficientMaterial()) {
+    return kDrawValue;
   }
 
   searcher_.debug_info_.searched_nodes++;
