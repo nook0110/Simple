@@ -77,6 +77,7 @@ constexpr Eval kTempoBonus = 20;
 
 constexpr Eval kMateValue = -100'000;
 constexpr Eval kDrawValue = 0;
+constexpr Eval kTablebaseWinValue = 50'000;
 
 // returns zero if the score is not mate value
 // otherwise returns 1 if it is winning (positive), -1 if losing (negative)

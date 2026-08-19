@@ -38,6 +38,7 @@ void Position::PlacePiece(const BitIndex square, const Piece piece,
   board_[square] = piece;
   pieces_by_type_[piece_idx].Set(square);
   pieces_by_color_[color_idx].Set(square);
+  ++evaluation_data_.piece_counts[color_idx][piece_idx];
   evaluation_data_.material[color_idx] += kPieceValues[piece_idx];
   evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][square];
   if (piece != Piece::kPawn)
@@ -61,6 +62,7 @@ void Position::RemovePiece(const BitIndex square, const Player color) {
   const auto color_idx = static_cast<size_t>(color);
   pieces_by_type_[piece_idx].Reset(square);
   pieces_by_color_[color_idx].Reset(square);
+  --evaluation_data_.piece_counts[color_idx][piece_idx];
   board_[square] = Piece::kNone;
   evaluation_data_.material[color_idx] -= kPieceValues[piece_idx];
   evaluation_data_.psqt[color_idx] -= kPSQT[color_idx][piece_idx][square];
@@ -106,6 +108,7 @@ void Position::DoMove(const Move &move) {
   const auto to = move.To();
   const auto us = side_to_move_;
   const auto them = Flip(us);
+  const auto moving_piece = board_[from];
   
   // Store captured piece for undo
   irreversible_data_.captured_piece = board_[to];
@@ -200,7 +203,7 @@ void Position::DoMove(const Move &move) {
 
   // 50-move rule: reset counter if it's a pawn move or a capture
   const bool resets_fifty_move =
-      (board_[to] == Piece::kPawn) ||  // Moving piece is a pawn
+      (moving_piece == Piece::kPawn) ||  // Moving piece is a pawn
       (irreversible_data_.captured_piece != Piece::kNone);  // Any capture
   history_stack_.Push(hash_, resets_fifty_move);
 }
@@ -338,6 +341,17 @@ void Position::SetCastlingRights(
   irreversible_data_.castling_rights = castling_rights;
 }
 
+void Position::SetEnCroissantSquare(const std::optional<BitIndex> square) {
+  if (irreversible_data_.en_croissant_square.has_value()) {
+    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(
+        *irreversible_data_.en_croissant_square).first];
+  }
+  irreversible_data_.en_croissant_square = square;
+  if (square.has_value()) {
+    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(*square).first];
+  }
+}
+
 void Position::SetKingPositions(const std::array<BitIndex, 2> &king_position) {
   king_position_ = king_position;
 }
@@ -357,6 +371,28 @@ void Position::SetCastlingSquares(
 Bitboard Position::GetAllPieces() const {
   return pieces_by_color_[static_cast<size_t>(Player::kWhite)] |
          pieces_by_color_[static_cast<size_t>(Player::kBlack)];
+}
+
+bool Position::IsInsufficientMaterial() const {
+  constexpr Bitboard kDarkSquares{0xAA55AA55AA55AA55ULL};
+  constexpr Bitboard kLightSquares{0x55AA55AA55AA55AAULL};
+
+  if (pieces_by_type_[static_cast<size_t>(Piece::kPawn)].Any() ||
+      pieces_by_type_[static_cast<size_t>(Piece::kRook)].Any() ||
+      pieces_by_type_[static_cast<size_t>(Piece::kQueen)].Any()) {
+    return false;
+  }
+
+  const auto knights =
+      pieces_by_type_[static_cast<size_t>(Piece::kKnight)];
+  const auto bishops = pieces_by_type_[static_cast<size_t>(Piece::kBishop)];
+
+  if (knights.Any()) {
+    return bishops.None() && !knights.MoreThanOne();
+  }
+
+  return bishops.None() || (bishops & kDarkSquares).None() ||
+         (bishops & kLightSquares).None();
 }
 
 const Bitboard &Position::GetPieces(const Player player) const {

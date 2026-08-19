@@ -54,6 +54,7 @@ def main() -> int:
     if "option name Threads type spin default 1 min 1 max 256" not in lines:
         raise RuntimeError("Threads UCI option was not advertised")
     expected_tuning_options = {
+        "option name SceTablebasePath type string default sce-4.scetb",
         "option name RFPDepth type spin default 5 min 1 max 8",
         "option name RFPThreshold type spin default 100 min 25 max 200",
         "option name NMPReduction type spin default 3 min 2 max 5",
@@ -63,7 +64,81 @@ def main() -> int:
         "option name LMRDepth type spin default 3 min 2 max 8",
         "option name LMRInCheckPenalty type spin default 1 min 0 max 3",
         "option name LMRGivesCheckPenalty type spin default 2 min 0 max 3",
+        "option name PawnValueMG type spin default 82 min 40 max 160",
+        "option name PawnValueEG type spin default 94 min 40 max 160",
+        "option name KnightValueMG type spin default 337 min 200 max 500",
+        "option name KnightValueEG type spin default 275 min 200 max 500",
+        "option name BishopValueMG type spin default 375 min 200 max 500",
+        "option name BishopValueEG type spin default 297 min 200 max 500",
+        "option name RookValueMG type spin default 477 min 350 max 700",
+        "option name RookValueEG type spin default 512 min 350 max 700",
+        "option name QueenValueMG type spin default 1025 min 700 max 1300",
+        "option name QueenValueEG type spin default 936 min 700 max 1300",
+        "option name DoubledPawnMG type spin default -15 min -50 max 0",
+        "option name DoubledPawnEG type spin default -15 min -50 max 0",
+        "option name IsolatedPawnMG type spin default -10 min -50 max 0",
+        "option name IsolatedPawnEG type spin default -10 min -50 max 0",
+        "option name PassedPawn4MG type spin default 5 min 0 max 200",
+        "option name PassedPawn4EG type spin default 18 min 0 max 200",
+        "option name PassedPawn5MG type spin default 30 min 0 max 200",
+        "option name PassedPawn5EG type spin default 40 min 0 max 200",
+        "option name PassedPawn6MG type spin default 25 min 0 max 200",
+        "option name PassedPawn6EG type spin default 70 min 0 max 200",
+        "option name PassedPawn7MG type spin default 90 min 0 max 200",
+        "option name PassedPawn7EG type spin default 120 min 0 max 200",
+        "option name KnightMobilityMG type spin default 0 min 0 max 12",
+        "option name KnightMobilityEG type spin default 0 min 0 max 12",
+        "option name BishopMobilityMG type spin default 0 min 0 max 12",
+        "option name BishopMobilityEG type spin default 0 min 0 max 12",
+        "option name RookMobilityMG type spin default 0 min 0 max 10",
+        "option name RookMobilityEG type spin default 0 min 0 max 10",
+        "option name QueenMobilityMG type spin default 0 min 0 max 8",
+        "option name QueenMobilityEG type spin default 0 min 0 max 8",
+        "option name KingShieldNearMG type spin default 12 min 0 max 50",
+        "option name KingShieldFarMG type spin default 10 min 0 max 50",
+        "option name KingSemiOpenFileMG type spin default -14 min -50 max 0",
+        "option name KingOpenFileMG type spin default -14 min -50 max 0",
+        "option name KingPawnStormNearMG type spin default -12 min -50 max 0",
+        "option name KingPawnStormFarMG type spin default -8 min -50 max 0",
+        "option name KnightKingAttackMG type spin default 8 min 0 max 50",
+        "option name BishopKingAttackMG type spin default 10 min 0 max 50",
+        "option name RookKingAttackMG type spin default 18 min 0 max 50",
+        "option name QueenKingAttackMG type spin default 20 min 0 max 50",
     }
+    psqt_defaults = {
+        6: {
+            "A": (6, -59), "B": (-2, -60), "C": (-11, -50),
+            "D": (-11, -37), "E": (-40, -26), "F": (-31, -23),
+            "G": (-10, -47), "H": (20, -49),
+        },
+        7: {
+            "A": (-83, -128), "B": (-109, -118), "C": (-41, -108),
+            "D": (-70, -89), "E": (-48, -102), "F": (-101, -87),
+            "G": (-19, -115), "H": (21, -132),
+        },
+    }
+    for rank, files in psqt_defaults.items():
+        for file_name, (middlegame, endgame) in files.items():
+            expected_tuning_options.add(
+                f"option name PawnPSQT{file_name}{rank}MG "
+                f"type spin default {middlegame} min -250 max 250"
+            )
+            expected_tuning_options.add(
+                f"option name PawnPSQT{file_name}{rank}EG "
+                f"type spin default {endgame} min -250 max 250"
+            )
+    for piece_name in ("Knight", "Bishop", "Rook", "Queen", "King"):
+        for rank in range(1, 9):
+            for file_index in range(4):
+                square = f"{chr(ord('A') + file_index)}{rank}"
+                expected_tuning_options.add(
+                    f"option name {piece_name}PSQT{square}MG "
+                    "type spin default 0 min -100 max 100"
+                )
+                expected_tuning_options.add(
+                    f"option name {piece_name}PSQT{square}EG "
+                    "type spin default 0 min -100 max 100"
+                )
     missing_options = expected_tuning_options.difference(lines)
     if missing_options:
         raise RuntimeError(f"missing tuning options: {sorted(missing_options)}")
@@ -78,6 +153,9 @@ def main() -> int:
         "LMRDepth": 5,
         "LMRInCheckPenalty": 2,
         "LMRGivesCheckPenalty": 2,
+        "KingShieldNearMG": 14,
+        "KingPawnStormNearMG": -14,
+        "QueenKingAttackMG": 18,
     }
     for name, value in tuning_values.items():
         send(f"setoption name {name} value {value}")

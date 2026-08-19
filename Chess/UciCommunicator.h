@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include <iostream>
 #include <optional>
 #include <sstream>
@@ -14,6 +15,7 @@
 #include "MoveFactory.h"
 #include "Perft.h"
 #include "Position.h"
+#include "Quiescence.h"
 #include "SimpleChessEngine.h"
 
 namespace SimpleChessEngine {
@@ -62,6 +64,7 @@ class SearchThread {
     StopThread();
     thread_count_ = std::max<std::size_t>(1, thread_count);
   }
+  [[nodiscard]] bool SetTablebasePath(const std::string& path);
 
  private:
   Condition GetCondition(const Info& info) {
@@ -104,6 +107,8 @@ class SearchThread {
   std::vector<std::thread> helper_threads_;
   StopSignal stop_signal_;
   std::size_t thread_count_ = 1;
+  std::string tablebase_path_ = "<empty>";
+  std::shared_ptr<const Tablebase::MappedFile> tablebase_;
 };
 
 struct OptionBase {
@@ -122,22 +127,19 @@ struct OptionBase {
 };
 
 struct SpinOption : public OptionBase {
-  using Setter = void (*)(int);
+  using Setter = std::function<void(int)>;
 
   SpinOption(std::string name, int default_value, int min_value, int max_value,
-             Setter setter = nullptr)
-      : OptionBase(std::move(name)),
-        value_(default_value),
-        default_(default_value),
-        min_(min_value),
-        max_(max_value),
+             Setter setter = {})
+      : OptionBase(std::move(name)), value_(default_value),
+        default_(default_value), min_(min_value), max_(max_value),
         setter_(setter) {}
 
   bool SetValue(const std::string& value) override {
     const int parsed = std::stoi(value);
     if (parsed < min_ || parsed > max_) return false;
     value_ = parsed;
-    if (setter_ != nullptr) setter_(parsed);
+    if (setter_) setter_(parsed);
     return true;
   }
 
@@ -154,6 +156,28 @@ struct SpinOption : public OptionBase {
   int min_;
   int max_;
   Setter setter_;
+};
+
+struct StringOption : public OptionBase {
+  StringOption(std::string name, std::string default_value)
+      : OptionBase(std::move(name)),
+        value_(std::move(default_value)),
+        default_(value_) {}
+
+  bool SetValue(const std::string& value) override {
+    value_ = value;
+    return true;
+  }
+
+  std::string GetOptionDescription() const override {
+    return "type string default " + default_;
+  }
+
+  [[nodiscard]] const std::string& GetValue() const { return value_; }
+
+ private:
+  std::string value_;
+  std::string default_;
 };
 
 template <bool default_value>
@@ -187,8 +211,12 @@ struct EngineOptions {
     auto threads = std::make_unique<SpinOption>("Threads", 1, 1, 256);
     threads_ = threads.get();
     options.emplace_back(std::move(threads));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "RFPDepth", 5, 1, 8, [](const int value) {
+    auto tablebase_path =
+        std::make_unique<StringOption>("SceTablebasePath", "sce-4.scetb");
+    tablebase_path_ = tablebase_path.get();
+    options.emplace_back(std::move(tablebase_path));
+    options.emplace_back(
+        std::make_unique<SpinOption>("RFPDepth", 5, 1, 8, [](const int value) {
           Settings::PruneParameters::RFPSettings::kDepthLimit =
               static_cast<Depth>(value);
         }));
@@ -215,8 +243,8 @@ struct EngineOptions {
           Settings::PruneParameters::IIRSettings::kReduction =
               static_cast<Depth>(value);
         }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "LMRDepth", 3, 2, 8, [](const int value) {
+    options.emplace_back(
+        std::make_unique<SpinOption>("LMRDepth", 3, 2, 8, [](const int value) {
           Settings::PruneParameters::LMRSettings::kDepthLimit = value;
         }));
     options.emplace_back(std::make_unique<SpinOption>(
@@ -229,6 +257,11 @@ struct EngineOptions {
           Settings::PruneParameters::LMRSettings::kDoingCheckReductionPenalty =
               value;
         }));
+    AddMaterialOptions();
+    AddPawnOptions();
+    AddMobilityOptions();
+    AddPsqtAdjustmentOptions();
+    AddKingSafetyOptions();
   }
   std::vector<std::unique_ptr<OptionBase>> options;
   bool ParseSetoption(std::stringstream command) {
@@ -264,8 +297,228 @@ struct EngineOptions {
   [[nodiscard]] std::size_t GetThreadCount() const {
     return static_cast<std::size_t>(threads_->GetValue());
   }
+  [[nodiscard]] const std::string& GetTablebasePath() const {
+    return tablebase_path_->GetValue();
+  }
 
  private:
+  StringOption* tablebase_path_{};
+  void AddPsqtAdjustmentOptions() {
+    constexpr std::array piece_names = {"Knight", "Bishop", "Rook", "Queen",
+                                        "King"};
+    for (size_t piece_offset = 0; piece_offset < piece_names.size();
+         ++piece_offset) {
+      const auto piece = static_cast<Piece>(
+          static_cast<size_t>(Piece::kKnight) + piece_offset);
+      for (size_t rank = 0; rank < 8; ++rank) {
+        for (size_t file = 0; file < 4; ++file) {
+          const std::string square =
+              std::string{static_cast<char>('A' + file)} +
+              std::to_string(rank + 1);
+          const auto piece_index = static_cast<size_t>(piece);
+          options.emplace_back(std::make_unique<SpinOption>(
+              std::string{piece_names[piece_offset]} + "PSQT" + square + "MG",
+              Settings::EvaluationParameters::psqt_adjustment[piece_index][rank]
+                                                             [file]
+                                                                 .eval[0],
+              -100, 100, [piece, rank, file](const int value) {
+                Settings::EvaluationParameters::SetPsqtAdjustment(
+                    piece, rank, file, GamePhase::kMiddleGame, value);
+              }));
+          options.emplace_back(std::make_unique<SpinOption>(
+              std::string{piece_names[piece_offset]} + "PSQT" + square + "EG",
+              Settings::EvaluationParameters::psqt_adjustment[piece_index][rank]
+                                                             [file]
+                                                                 .eval[1],
+              -100, 100, [piece, rank, file](const int value) {
+                Settings::EvaluationParameters::SetPsqtAdjustment(
+                    piece, rank, file, GamePhase::kEndGame, value);
+              }));
+        }
+      }
+    }
+  }
+
+  void AddMobilityOptions() {
+    AddMobilityOptions<Piece::kKnight>("Knight", 0, 12);
+    AddMobilityOptions<Piece::kBishop>("Bishop", 0, 12);
+    AddMobilityOptions<Piece::kRook>("Rook", 0, 10);
+    AddMobilityOptions<Piece::kQueen>("Queen", 0, 8);
+  }
+
+  template <Piece piece>
+  void AddMobilityOptions(const std::string& piece_name, const int minimum,
+                          const int maximum) {
+    constexpr auto piece_index = static_cast<size_t>(piece);
+    options.emplace_back(std::make_unique<SpinOption>(
+        piece_name + "MobilityMG",
+        Settings::EvaluationParameters::mobility[piece_index].eval[0], minimum,
+        maximum, [](const int value) {
+          Settings::EvaluationParameters::SetMobility(
+              piece, GamePhase::kMiddleGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        piece_name + "MobilityEG",
+        Settings::EvaluationParameters::mobility[piece_index].eval[1], minimum,
+        maximum, [](const int value) {
+          Settings::EvaluationParameters::SetMobility(
+              piece, GamePhase::kEndGame, value);
+        }));
+  }
+
+  void AddMaterialOptions() {
+    AddMaterialValueOptions<Piece::kPawn>("Pawn", 40, 160);
+    AddMaterialValueOptions<Piece::kKnight>("Knight", 200, 500);
+    AddMaterialValueOptions<Piece::kBishop>("Bishop", 200, 500);
+    AddMaterialValueOptions<Piece::kRook>("Rook", 350, 700);
+    AddMaterialValueOptions<Piece::kQueen>("Queen", 700, 1300);
+  }
+
+  template <Piece piece>
+  void AddMaterialValueOptions(const std::string& piece_name, const int minimum,
+                               const int maximum) {
+    constexpr auto piece_index = static_cast<size_t>(piece);
+    options.emplace_back(std::make_unique<SpinOption>(
+        piece_name + "ValueMG",
+        Settings::EvaluationParameters::material_value[piece_index]
+            .eval[static_cast<size_t>(GamePhase::kMiddleGame)],
+        minimum, maximum, [](const int value) {
+          Settings::EvaluationParameters::SetMaterialValue(
+              piece, GamePhase::kMiddleGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        piece_name + "ValueEG",
+        Settings::EvaluationParameters::material_value[piece_index]
+            .eval[static_cast<size_t>(GamePhase::kEndGame)],
+        minimum, maximum, [](const int value) {
+          Settings::EvaluationParameters::SetMaterialValue(
+              piece, GamePhase::kEndGame, value);
+        }));
+  }
+
+  void AddPawnOptions() {
+    options.emplace_back(std::make_unique<SpinOption>(
+        "DoubledPawnMG", Settings::EvaluationParameters::doubled_pawn.eval[0],
+        -50, 0, [](const int value) {
+          Settings::EvaluationParameters::SetDoubledPawn(GamePhase::kMiddleGame,
+                                                         value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "DoubledPawnEG", Settings::EvaluationParameters::doubled_pawn.eval[1],
+        -50, 0, [](const int value) {
+          Settings::EvaluationParameters::SetDoubledPawn(GamePhase::kEndGame,
+                                                         value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "IsolatedPawnMG", Settings::EvaluationParameters::isolated_pawn.eval[0],
+        -50, 0, [](const int value) {
+          Settings::EvaluationParameters::SetIsolatedPawn(
+              GamePhase::kMiddleGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "IsolatedPawnEG", Settings::EvaluationParameters::isolated_pawn.eval[1],
+        -50, 0, [](const int value) {
+          Settings::EvaluationParameters::SetIsolatedPawn(GamePhase::kEndGame,
+                                                          value);
+        }));
+    AddPassedPawnOptions<3>("4");
+    AddPassedPawnOptions<4>("5");
+    AddPassedPawnOptions<5>("6");
+    AddPassedPawnOptions<6>("7");
+    AddPawnPsqtRankOptions<5>("6");
+    AddPawnPsqtRankOptions<6>("7");
+  }
+
+  template <size_t relative_rank>
+  void AddPassedPawnOptions(const std::string& rank_name) {
+    options.emplace_back(std::make_unique<SpinOption>(
+        "PassedPawn" + rank_name + "MG",
+        Settings::EvaluationParameters::passed_pawn[relative_rank].eval[0], 0,
+        200, [](const int value) {
+          Settings::EvaluationParameters::SetPassedPawn(
+              relative_rank, GamePhase::kMiddleGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "PassedPawn" + rank_name + "EG",
+        Settings::EvaluationParameters::passed_pawn[relative_rank].eval[1], 0,
+        200, [](const int value) {
+          Settings::EvaluationParameters::SetPassedPawn(
+              relative_rank, GamePhase::kEndGame, value);
+        }));
+  }
+
+  template <size_t relative_rank, size_t file>
+  void AddPawnPsqtSquareOptions(const std::string& square_name) {
+    options.emplace_back(std::make_unique<SpinOption>(
+        "PawnPSQT" + square_name + "MG",
+        Settings::EvaluationParameters::pawn_psqt_adjustment[relative_rank]
+                                                            [file]
+                                                                .eval[0],
+        -250, 250, [](const int value) {
+          Settings::EvaluationParameters::SetPawnPsqtAdjustment(
+              relative_rank, file, GamePhase::kMiddleGame, value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "PawnPSQT" + square_name + "EG",
+        Settings::EvaluationParameters::pawn_psqt_adjustment[relative_rank]
+                                                            [file]
+                                                                .eval[1],
+        -250, 250, [](const int value) {
+          Settings::EvaluationParameters::SetPawnPsqtAdjustment(
+              relative_rank, file, GamePhase::kEndGame, value);
+        }));
+  }
+
+  template <size_t relative_rank>
+  void AddPawnPsqtRankOptions(const std::string& rank_name) {
+    AddPawnPsqtSquareOptions<relative_rank, 0>("A" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 1>("B" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 2>("C" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 3>("D" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 4>("E" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 5>("F" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 6>("G" + rank_name);
+    AddPawnPsqtSquareOptions<relative_rank, 7>("H" + rank_name);
+  }
+
+  void AddKingSafetyOptions() {
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingShieldNearMG", Settings::EvaluationParameters::king_shield_near, 0,
+        50, Settings::EvaluationParameters::SetKingShieldNear));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingShieldFarMG", Settings::EvaluationParameters::king_shield_far, 0,
+        50, Settings::EvaluationParameters::SetKingShieldFar));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingSemiOpenFileMG",
+        Settings::EvaluationParameters::king_semi_open_file, -50, 0,
+        Settings::EvaluationParameters::SetKingSemiOpenFile));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingOpenFileMG", Settings::EvaluationParameters::king_open_file, -50,
+        0, Settings::EvaluationParameters::SetKingOpenFile));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingPawnStormNearMG",
+        Settings::EvaluationParameters::king_pawn_storm_near, -50, 0,
+        Settings::EvaluationParameters::SetKingPawnStormNear));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingPawnStormFarMG",
+        Settings::EvaluationParameters::king_pawn_storm_far, -50, 0,
+        Settings::EvaluationParameters::SetKingPawnStormFar));
+    AddKingAttackOption<Piece::kKnight>("Knight");
+    AddKingAttackOption<Piece::kBishop>("Bishop");
+    AddKingAttackOption<Piece::kRook>("Rook");
+    AddKingAttackOption<Piece::kQueen>("Queen");
+  }
+
+  template <Piece piece>
+  void AddKingAttackOption(const std::string& piece_name) {
+    options.emplace_back(std::make_unique<SpinOption>(
+        piece_name + "KingAttackMG",
+        Settings::EvaluationParameters::king_attack[static_cast<size_t>(piece)],
+        0, 50, [](const int value) {
+          Settings::EvaluationParameters::SetKingAttack<piece>(value);
+        }));
+  }
+
   SpinOption* threads_ = nullptr;
 };
 
@@ -273,7 +526,9 @@ class UciChessEngine {
  public:
   explicit UciChessEngine(std::istream& i_stream = std::cin,
                           std::ostream& o_stream = std::cout)
-      : i_stream_(i_stream), o_stream_(o_stream), search_thread_(o_stream) {}
+      : i_stream_(i_stream), o_stream_(o_stream), search_thread_(o_stream) {
+    (void)search_thread_.SetTablebasePath(options_.GetTablebasePath());
+  }
 
   ~UciChessEngine();
 
@@ -295,6 +550,7 @@ class UciChessEngine {
   void ParsePosition(std::stringstream command);
   void ParsePerft(std::stringstream command);
   void ParseEvaluate() const;
+  void ParseQuiescenceEvaluate() const;
   void ParseGo(std::stringstream command);
   void ParsePonderhit(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
@@ -403,6 +659,9 @@ inline void UciChessEngine::ParseSetOption(std::stringstream command) {
   }
   if (options_.ParseSetoption(std::move(command))) {
     search_thread_.SetThreadCount(options_.GetThreadCount());
+    if (!search_thread_.SetTablebasePath(options_.GetTablebasePath())) {
+      Send("info string failed to load SCE tablebase");
+    }
   }
 }
 inline void UciChessEngine::ParseIsReady(std::stringstream) const {
@@ -440,8 +699,8 @@ inline void UciChessEngine::ParsePosition(std::stringstream command) {
     std::string en_croissant;
     std::string rule50;
     std::string move_number;
-    command >> board >> side_to_move >> castling_rights >> rule50 >>
-        en_croissant >> move_number;
+    command >> board >> side_to_move >> castling_rights >> en_croissant >>
+        rule50 >> move_number;
     const auto fen = board + " " + side_to_move + " " + castling_rights + " " +
                      en_croissant + " " + rule50 + " " + move_number;
     ParseFen(fen);
@@ -475,6 +734,22 @@ inline void UciChessEngine::ParseEvaluate() const {
   o_stream_ << "eval: " << info_.position.Evaluate() << " cp" << std::endl;
 }
 
+inline void UciChessEngine::ParseQuiescenceEvaluate() const {
+  Position position = info_.position;
+  const DepthCondition condition{kMaxSearchPly};
+  Quiescence quiescence{condition};
+  const auto score =
+      quiescence.Search<true>(position, kMateValue, -kMateValue, 0);
+  if (!score) {
+    o_stream_ << "qeval unavailable" << std::endl;
+    return;
+  }
+  const Eval white_score =
+      info_.position.GetSideToMove() == Player::kWhite ? *score : -*score;
+  o_stream_ << "qeval white_cp " << white_score << " nodes "
+            << quiescence.GetSearchedNodes() << std::endl;
+}
+
 inline void UciChessEngine::ParseGo(std::stringstream command) {
   std::string token;
   auto startpos = command.tellg();
@@ -489,6 +764,11 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
 
   if (token == "evaluate") {
     ParseEvaluate();
+    return;
+  }
+
+  if (token == "qeval") {
+    ParseQuiescenceEvaluate();
     return;
   }
 
@@ -581,6 +861,25 @@ inline SearchThread::SearchThread(Position position, std::ostream& o_stream)
 inline SearchThread::SearchThread(std::ostream& o_stream)
     : engine_(PositionFactory{}(), o_stream, transposition_table_) {}
 
+inline bool SearchThread::SetTablebasePath(const std::string& path) {
+  if (path == tablebase_path_) return true;
+  StopThread();
+  if (path.empty() || path == "<empty>") {
+    tablebase_.reset();
+    tablebase_path_ = "<empty>";
+    engine_.SetTablebase({});
+    return true;
+  }
+  auto mapped = Tablebase::MappedFile::Open(path);
+  if (!mapped || !mapped->VerifyChecksums()) return false;
+  auto tablebase =
+      std::make_shared<Tablebase::MappedFile>(std::move(*mapped));
+  tablebase_ = std::move(tablebase);
+  tablebase_path_ = path;
+  engine_.SetTablebase(tablebase_);
+  return true;
+}
+
 inline void SearchThread::Start(const Info& info) {
   StopThread();
   engine_.SetPosition(info.position);
@@ -594,7 +893,7 @@ inline void SearchThread::Start(const Info& info) {
   for (std::size_t worker = 1; worker < thread_count_; ++worker) {
     helper_engines_.push_back(std::make_unique<ChessEngine>(
         info.position, std::cout, transposition_table_, false,
-        static_cast<Depth>(1 + worker % 2)));
+        static_cast<Depth>(1 + worker % 2), tablebase_));
     auto& helper = *helper_engines_.back();
     helper_threads_.emplace_back([this, info, &helper] {
       auto condition = GetCondition(info);
@@ -616,9 +915,7 @@ inline void SearchThread::Start(const Info& info) {
   });
 }
 
-inline void SearchThread::Stop() {
-  StopThread();
-}
+inline void SearchThread::Stop() { StopThread(); }
 
 inline void SearchThread::StopThread() {
   if (stop_signal_) {

@@ -162,7 +162,8 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   auto &[max_depth, remaining_depth, alpha, beta, _] = state_;
   assert(kIsPrincipalVariation || beta - alpha == 1);
 
-  if (GetCurrentPosition().DetectRepetition(max_depth - remaining_depth)) {
+  const auto current_depth = max_depth - remaining_depth;
+  if (GetCurrentPosition().DetectRepetition(current_depth)) {
     return kDrawValue;
   }
 
@@ -170,6 +171,25 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   // the end of the search tree
   if (remaining_depth <= 0) {
     return QuiescenceSearch();
+  }
+
+  if (current_depth > 0 &&
+      GetCurrentPosition().IsInsufficientMaterial()) {
+    return kDrawValue;
+  }
+
+  if (current_depth > 0 && searcher_.tablebase_ &&
+      GetCurrentPosition().GetAllPieces().Count() <= 4) {
+    if (const auto wdl =
+            searcher_.tablebase_->ProbeWdl(GetCurrentPosition())) {
+      if (*wdl == Tablebase::Wdl::kWin) {
+        return kTablebaseWinValue - current_depth;
+      }
+      if (*wdl == Tablebase::Wdl::kLoss) {
+        return -kTablebaseWinValue + current_depth;
+      }
+      return kDrawValue;
+    }
   }
 
   searcher_.debug_info_.searched_nodes++;
