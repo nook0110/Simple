@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -140,6 +141,16 @@ class Searcher {
   void SetPlayedNullMove(Depth ply);
   void UpdateQuietHistory(const Move &move, Depth ply, std::int64_t bonus);
 
+  static constexpr size_t kCorrectionSize = 16384;
+  static constexpr int kCorrectionLimit = 1024;
+  static constexpr int kCorrectionScale = 40960;
+
+  [[nodiscard]] size_t CorrectionIndex() const;
+  [[nodiscard]] Eval CorrectEval(Eval raw_eval) const;
+  void UpdateCorrection(Eval best_eval, Eval static_eval, Depth depth);
+
+  std::vector<std::int16_t> correction_history_ =
+      std::vector<std::int16_t>(kColors * kCorrectionSize);
   std::vector<std::int32_t> continuation_history_ =
       std::vector<std::int32_t>(kPieceToSize * kPieceToSize);
   std::array<PieceTo, kMaxSearchPly + 1> move_stack_{};
@@ -236,6 +247,43 @@ inline void Searcher::UpdateQuietHistory(const Move &move, const Depth ply,
     if (previous.piece == Piece::kNone) continue;
     apply(continuation_history_[ContinuationIndex(previous, current)]);
   }
+}
+
+inline size_t Searcher::CorrectionIndex() const {
+  std::uint64_t hash =
+      static_cast<std::uint64_t>(
+          current_position_.GetPiecesByType<Piece::kPawn>(Player::kWhite)) ^
+      std::rotl(
+          static_cast<std::uint64_t>(
+              current_position_.GetPiecesByType<Piece::kPawn>(Player::kBlack)),
+          32);
+  hash ^= hash >> 30;
+  hash *= 0xbf58476d1ce4e5b9ULL;
+  hash ^= hash >> 27;
+  hash *= 0x94d049bb133111ebULL;
+  hash ^= hash >> 31;
+  const auto side = static_cast<size_t>(current_position_.GetSideToMove());
+  return side * kCorrectionSize + (hash & (kCorrectionSize - 1));
+}
+
+inline Eval Searcher::CorrectEval(const Eval raw_eval) const {
+  const int correction = correction_history_[CorrectionIndex()];
+  constexpr Eval kLimit =
+      kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly) - 1;
+  return std::clamp(
+      raw_eval + correction * std::abs(correction) / kCorrectionScale, -kLimit,
+      kLimit);
+}
+
+inline void Searcher::UpdateCorrection(const Eval best_eval,
+                                       const Eval static_eval,
+                                       const Depth depth) {
+  const int bonus =
+      std::clamp((best_eval - static_eval) * static_cast<int>(depth) / 8,
+                 -kCorrectionLimit / 4, kCorrectionLimit / 4);
+  auto &entry = correction_history_[CorrectionIndex()];
+  entry = static_cast<std::int16_t>(entry + bonus -
+                                    entry * std::abs(bonus) / kCorrectionLimit);
 }
 
 inline void Searcher::InitStartOfSearch() {

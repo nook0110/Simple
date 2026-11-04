@@ -76,6 +76,7 @@ struct SearchNode {
   /* Local variables for search */
   IterationStatus iteration_status_;
   PositionInfo position_info_;
+  Eval static_eval_ = 0;
   MovePicker move_picker_;
   std::array<Move, 64> searched_quiets_{};
   size_t searched_quiet_count_ = 0;
@@ -85,6 +86,7 @@ struct SearchNode {
 
   void SetBestMove(Move move);
   void SetTTEntry(const Bound bound);
+  void UpdateCorrectionHistory(Bound bound);
   template <bool is_first_move>
   void UpdateQuietMove(const Move &move);
   void RecordSearchedQuiet(const Move &move);
@@ -132,6 +134,9 @@ SearchNode<node_type, ExitCondition>::SearchNode(
     : state_(state), exit_condition_(exit_condition),
       position_info_(searcher.GetPosition()), searcher_(searcher) {
   assert(IsValidNodeType<kFirstChildNodeExpectedType>());
+  static_eval_ = position_info_.is_under_check
+                     ? position_info_.static_eval
+                     : searcher_.CorrectEval(position_info_.static_eval);
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -174,7 +179,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   }
 
   if (ply >= kMaxSearchPly - 1) {
-    return position_info_.static_eval;
+    return static_eval_;
   }
 
   if (position_info_.is_under_check && ply < 2 * max_depth) {
@@ -244,7 +249,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   if (CanRFP()) {
     searcher_.debug_info_.rfp_cuts++;
-    return position_info_.static_eval;
+    return static_eval_;
   }
 
   auto &current_position = GetCurrentPosition();
@@ -360,8 +365,32 @@ void SearchNode<node_type, ExitCondition>::SetBestMove(Move move) {
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
+void SearchNode<node_type, ExitCondition>::UpdateCorrectionHistory(
+    const Bound bound) {
+  if (position_info_.is_under_check) return;
+  const auto &position = GetCurrentPosition();
+  const auto &best_move = *iteration_status_.best_move;
+  if (best_move.IsEnPassant() ||
+      (!best_move.IsCastling() &&
+       position.GetPieceAt(best_move.To()) != Piece::kNone)) {
+    return;
+  }
+  const Eval best_eval = iteration_status_.best_eval;
+  if (IsMateScore(best_eval) ||
+      std::abs(best_eval) >=
+          kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+    return;
+  }
+  if (bound == Bound::kLower && best_eval <= static_eval_) return;
+  if (bound == Bound::kUpper && best_eval >= static_eval_) return;
+  searcher_.UpdateCorrection(best_eval, static_eval_, state_.remaining_depth);
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
 void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
   assert(iteration_status_.best_move);
+  UpdateCorrectionHistory(bound);
   searcher_.best_moves_->SetEntry(
       GetCurrentPosition(), *iteration_status_.best_move,
       iteration_status_.best_eval +
@@ -599,7 +628,7 @@ bool SearchNode<node_type, ExitCondition>::CanNullMove() const {
 
   if (position_info_.is_under_check) return false;
 
-  if (position_info_.static_eval < state_.beta) return false;
+  if (static_eval_ < state_.beta) return false;
 
   const auto &current_position = searcher_.GetPosition();
   const auto side_to_move = current_position.GetSideToMove();
@@ -652,7 +681,7 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
   return !position_info_.is_under_check &&
          state_.remaining_depth <=
              Settings::PruneParameters::RFPSettings::kDepthLimit &&
-         position_info_.static_eval >
+         static_eval_ >
              state_.beta + Settings::PruneParameters::RFPSettings::kThreshold *
                                state_.remaining_depth;
 }
@@ -679,7 +708,7 @@ bool SearchNode<node_type, ExitCondition>::CanFutilityPrune() const {
   const Eval depth = state_.remaining_depth;
   if (depth > FutilitySettings::kDepthLimit) return false;
 
-  return position_info_.static_eval + FutilitySettings::kBaseMargin +
+  return static_eval_ + FutilitySettings::kBaseMargin +
              FutilitySettings::kDepthMargin * depth <=
          state_.alpha;
 }
