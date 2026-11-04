@@ -173,41 +173,53 @@ class ChessEngine {
   void PrintInfo(const Info& info);
 
   struct Window {
+    using AspirationSettings =
+        Settings::SearchParameters::AspirationWindowSettings;
+
     static constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
     static constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
 
-    Eval GetLowerBound() const {
-      if constexpr (Settings::SearchParameters::AspirationWindowSettings::
-                        kEnabled) {
-        return lower_bound;
-      }
-      return neg_inf;
-    }
-    Eval GetUpperBound() const {
-      if constexpr (Settings::SearchParameters::AspirationWindowSettings::
-                        kEnabled) {
-        return upper_bound;
-      }
-      return pos_inf;
-    }
+    Eval GetLowerBound() const { return lower_bound; }
+    Eval GetUpperBound() const { return upper_bound; }
 
     void FailedUpper() {
-      upper_bound +=
-          Settings::SearchParameters::AspirationWindowSettings::kDelta / 3;
+      Grow();
+      upper_bound = delta > AspirationSettings::kMaxDelta
+                        ? pos_inf
+                        : upper_bound + delta;
     }
     void FailedLower() {
-      lower_bound -=
-          Settings::SearchParameters::AspirationWindowSettings::kDelta / 3;
+      Grow();
+      lower_bound = delta > AspirationSettings::kMaxDelta
+                        ? neg_inf
+                        : lower_bound - delta;
     }
 
-    void SetNewEval(Eval eval) {
-      lower_bound =
-          eval - Settings::SearchParameters::AspirationWindowSettings::kDelta;
-      upper_bound =
-          eval + Settings::SearchParameters::AspirationWindowSettings::kDelta;
+    void SetNewEval(Eval eval, Depth next_depth) {
+      if (!AspirationSettings::kEnabled ||
+          next_depth < AspirationSettings::kMinDepth || IsMateScore(eval) ||
+          std::abs(eval) >=
+              kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+        lower_bound = neg_inf;
+        upper_bound = pos_inf;
+        return;
+      }
+      delta = AspirationSettings::kDelta;
+      lower_bound = eval - delta;
+      upper_bound = eval + delta;
     }
 
    private:
+    void Grow() {
+      if constexpr (AspirationSettings::kStrategy ==
+                    AspirationSettings::Strategy::Exponential) {
+        delta *= 2;
+      } else {
+        delta += AspirationSettings::kDelta;
+      }
+    }
+
+    Eval delta = AspirationSettings::kDelta;
     Eval lower_bound = neg_inf;
     Eval upper_bound = pos_inf;
   };
@@ -266,6 +278,8 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     }
     eval = *eval_optional;
     if (eval >= window.GetUpperBound()) {
+      best_move_ = searcher_.GetCurrentBestMove();
+      ponder_move_.reset();
       window.FailedUpper();
       --current_depth;
       continue;
@@ -306,7 +320,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
         ponder_move_ = ponder_pv.front();
       }
     }
-    window.SetNewEval(eval);
+    window.SetNewEval(eval, current_depth + 1);
   }
 
   PrintInfo(info, eval, current_depth,

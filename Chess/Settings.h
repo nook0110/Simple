@@ -245,12 +245,14 @@ struct Settings {
   struct SearchParameters {
     struct AspirationWindowSettings {
       enum class Strategy { Linear, Exponential };
-      static constexpr bool kEnabled = false;
+      static constexpr bool kEnabled = true;
       static constexpr Eval kPawnValue =
           kPieceValues[static_cast<size_t>(Piece::kPawn)]
               .eval[static_cast<size_t>(GamePhase::kMiddleGame)];
-      static constexpr Eval kDelta = kPawnValue * 3 / 4;
-      static constexpr Strategy kStrategy = Strategy::Linear;
+      static constexpr Eval kDelta = 50;
+      static constexpr Eval kMaxDelta = kPawnValue * 8;
+      static constexpr Depth kMinDepth = 6;
+      static constexpr Strategy kStrategy = Strategy::Exponential;
     };
     static constexpr AspirationWindowSettings kAspirationWindowSettings = {};
   };
