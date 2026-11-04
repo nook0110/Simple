@@ -246,4 +246,23 @@ TEST(Quiescence, StopRestoresPosition) {
   EXPECT_TRUE(stopped);
   EXPECT_GT(quiescence.GetSearchedNodes(), 1u);
 }
+TEST(TranspositionTable, IllegalStoredMoveIsIgnored) {
+  auto position = PositionFactory{}();
+  auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
+  table->SetEntry(position, MoveFactory{}(position, "a1a8"), 0, 20,
+                  Bound::kExact, Age{});
+  Searcher searcher(position, table);
+  searcher.InitStartOfSearch();
+  DepthCondition condition{3};
+
+  const auto result = searcher.Search<NodeType::kPV>(
+      condition, 3, 3, std::numeric_limits<Eval>::min() / 2,
+      std::numeric_limits<Eval>::max() / 2);
+
+  ASSERT_TRUE(result.has_value());
+  const auto legal_moves =
+      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+  EXPECT_NE(std::ranges::find(legal_moves, searcher.GetCurrentBestMove()),
+            legal_moves.end());
+}
 }  // namespace PositionTests

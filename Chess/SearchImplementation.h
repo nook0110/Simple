@@ -99,7 +99,8 @@ struct SearchNode {
   [[nodiscard]] bool PassesSEEPruning(const Move &move, bool is_quiet) const;
 
   bool ProbeTranspositionTable();
-  std::optional<SearchResult> CheckTranspositionTable();
+  std::optional<SearchResult> CheckTranspositionTable(
+      const MoveGenerator::Moves &moves);
 
   SearchResult PVSearch();
 
@@ -292,16 +293,15 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     }
   }
 
-  if (auto result = CheckTranspositionTable()) {
+  auto moves = searcher_.move_generator_
+                   .GenerateMoves<MoveGenerator::Type::kAll>(current_position);
+
+  if (auto result = CheckTranspositionTable(moves)) {
     searcher_.debug_info_.tt_cuts++;
     return *result;
   }
 
-  auto const &move_generator = searcher_.move_generator_;
-
-  move_picker_.InitPicker(
-      move_generator.GenerateMoves<MoveGenerator::Type::kAll>(current_position),
-      searcher_);
+  move_picker_.InitPicker(std::move(moves), searcher_);
 
   // check if there are no possible moves
   if (move_picker_.Done()) {
@@ -709,8 +709,11 @@ bool SearchNode<node_type, ExitCondition>::ProbeTranspositionTable() {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 std::optional<SearchResult>
-SearchNode<node_type, ExitCondition>::CheckTranspositionTable() {
-  if (iteration_status_.tt_info) {
+SearchNode<node_type, ExitCondition>::CheckTranspositionTable(
+    const MoveGenerator::Moves &moves) {
+  if (iteration_status_.tt_info &&
+      std::ranges::find(moves, iteration_status_.tt_info->move) !=
+          moves.end()) {
     auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
     auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
         *iteration_status_.tt_info;

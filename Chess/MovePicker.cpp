@@ -161,8 +161,9 @@ void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
 }
 
 void MovePicker::SkipMove(const Move& move) {
-  Swap(current_move_ - moves_.begin(),
-       std::find(current_move_, moves_.end(), move) - moves_.begin());
+  const auto found = std::find(current_move_, moves_.end(), move);
+  if (found == moves_.end()) return;
+  Swap(current_move_ - moves_.begin(), found - moves_.begin());
   ++current_move_;
 }
 
