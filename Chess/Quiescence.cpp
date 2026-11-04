@@ -98,12 +98,12 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     const auto temp_eval_optional =
         Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
+    // undo the move
+    current_position.UndoMove(move, irreversible_data);
+
     if (!temp_eval_optional) return std::nullopt;
 
     const auto temp_eval = -*temp_eval_optional;
-
-    // undo the move
-    current_position.UndoMove(move, irreversible_data);
 
     if (temp_eval > alpha) {
       if (temp_eval >= beta) {
@@ -145,12 +145,12 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     const auto temp_eval_optional =
         Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
+    // undo the move
+    current_position.UndoMove(move, irreversible_data);
+
     if (!temp_eval_optional) return std::nullopt;
 
     const auto temp_eval = -*temp_eval_optional;
-
-    // undo the move
-    current_position.UndoMove(move, irreversible_data);
 
     if (temp_eval > alpha) {
       if (temp_eval >= beta) {

@@ -206,9 +206,11 @@ TEST(Quiescence, ScoresStalemateAsDraw) {
   EXPECT_EQ(*result, kDrawValue);
 }
 
-TEST(Quiescence, StopsWhenSignalled) {
+TEST(Quiescence, StopRestoresPosition) {
   auto position = PositionFactory{}(
-      "r1bq1rk1/pp2bppp/2n1pn2/3p4/2PP4/2N1PN2/PP1B1PPP/R2QKB1R w KQ - 0 9");
+      "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+  const auto original_fen = FenFactory{}(position);
+  const auto original_hash = position.GetHash();
   auto stop = std::make_shared<std::atomic_bool>(true);
   DepthCondition condition{1, stop};
   Quiescence quiescence{condition};
@@ -218,7 +220,10 @@ TEST(Quiescence, StopsWhenSignalled) {
                    .Search<false>(position, std::numeric_limits<Eval>::min() / 2,
                                   std::numeric_limits<Eval>::max() / 2, 0)
                    .has_value();
+    ASSERT_EQ(FenFactory{}(position), original_fen);
+    ASSERT_EQ(position.GetHash(), original_hash);
   }
   EXPECT_TRUE(stopped);
+  EXPECT_GT(quiescence.GetSearchedNodes(), 1u);
 }
 }  // namespace PositionTests
