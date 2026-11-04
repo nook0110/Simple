@@ -1,10 +1,34 @@
 #include "Quiescence.h"
 
 #include <algorithm>
+#include <functional>
 
 #include "ExitCondition.h"
 
 namespace SimpleChessEngine {
+namespace {
+[[nodiscard]] int MvvLvaScore(const Position& position, const Move& move) {
+  Piece victim = Piece::kNone;
+  if (move.IsEnPassant()) {
+    victim = Piece::kPawn;
+  } else if (!move.IsCastling()) {
+    victim = position.GetPieceAt(move.To());
+  }
+  int score = 8 * static_cast<int>(victim) -
+              static_cast<int>(position.GetPieceAt(move.From()));
+  if (move.IsPromotion()) {
+    score += 8 * static_cast<int>(move.PromotionPiece());
+  }
+  return score;
+}
+
+void OrderByMvvLva(const Position& position, MoveGenerator::Moves& moves) {
+  std::ranges::stable_sort(
+      moves, std::greater{},
+      [&position](const Move& move) { return MvvLvaScore(position, move); });
+}
+}  // namespace
+
 template class Quiescence<TimeCondition>;
 template class Quiescence<DepthCondition>;
 template class Quiescence<Pondering>;
@@ -60,6 +84,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   // get all the attacks moves
   auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
       current_position);
+  OrderByMvvLva(current_position, moves);
 
   /*
   std::ranges::sort(moves,
@@ -112,6 +137,7 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
   if (moves.empty()) {
     return kMateValue + kMaxSearchPly;
   }
+  OrderByMvvLva(current_position, moves);
 
   /*
   std::ranges::sort(moves,
