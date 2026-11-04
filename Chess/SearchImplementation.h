@@ -166,7 +166,15 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
   assert(kIsPrincipalVariation || beta - alpha == 1);
 
-  if (GetCurrentPosition().DetectRepetition(ply)) {
+  if (ply > 0 && GetCurrentPosition().DetectRepetition(ply)) {
+    return kDrawValue;
+  }
+
+  if (ply > 0 && GetCurrentPosition().GetHalfMoveClock() >= 100 &&
+      (!position_info_.is_under_check ||
+       !searcher_.move_generator_
+            .GenerateMoves<MoveGenerator::Type::kAll>(GetCurrentPosition())
+            .empty())) {
     return kDrawValue;
   }
 
