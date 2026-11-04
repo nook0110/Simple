@@ -162,16 +162,11 @@ class ChessEngine {
     PrintInfo(NodesInfo{info.searched_nodes});
     PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
         (info.searched_nodes + info.quiescence_nodes) / search_time.count())});
-    o_stream_ << "info quiescence_nodes " << info.quiescence_nodes << "\n";
-    o_stream_ << "info zws_researches " << info.zws_researches << "\n";
-    o_stream_ << "info tt_hits " << info.tt_hits << "\n";
-    o_stream_ << "info tt_cuts " << info.tt_cuts << "\n";
-    o_stream_ << "info rfp_cuts " << info.rfp_cuts << "\n";
-    o_stream_ << "info nmp_tries " << info.nmp_tries << "\n";
-    o_stream_ << "info nmp_cuts " << info.nmp_cuts << "\n";
-    o_stream_ << "info lmp_prunes " << info.lmp_prunes << "\n";
-    o_stream_ << "info see_prunes " << info.see_prunes << "\n";
-    o_stream_ << "info futility_prunes " << info.futility_prunes << "\n";
+    for (const auto& [name, counter] : kDebugCounters) {
+      if (counter != &DebugInfo::searched_nodes) {
+        o_stream_ << "info " << name << " " << info.*counter << "\n";
+      }
+    }
   }
 
   template <class Info>
