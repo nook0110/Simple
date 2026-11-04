@@ -205,6 +205,9 @@ struct Settings {
     struct NMPSettings {
       static constexpr bool kEnabled = true;
       inline static size_t kNullMoveReduction = 3;
+      inline static int kDepthDivisor = 3;
+      inline static int kEvalDivisor = 80;
+      inline static int kMaxEvalReduction = 3;
     };
     struct IIRSettings {
       inline static Depth kBaseLimit = 2;

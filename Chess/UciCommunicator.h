@@ -235,6 +235,14 @@ struct EngineOptions {
           Settings::PruneParameters::NMPSettings::kNullMoveReduction = value;
         }));
     options.emplace_back(std::make_unique<SpinOption>(
+        "NMPDepthDivisor", 3, 1, 10, [](const int value) {
+          Settings::PruneParameters::NMPSettings::kDepthDivisor = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "NMPEvalDivisor", 80, 20, 400, [](const int value) {
+          Settings::PruneParameters::NMPSettings::kEvalDivisor = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
         "IIRBaseDepth", 2, 1, 8, [](const int value) {
           Settings::PruneParameters::IIRSettings::kBaseLimit =
               static_cast<Depth>(value);

@@ -260,15 +260,21 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   if (CanNullMove()) {
     searcher_.debug_info_.nmp_tries++;
 
+    using NMPSettings = Settings::PruneParameters::NMPSettings;
+    const int reduction = static_cast<int>(NMPSettings::kNullMoveReduction) +
+                          1 + remaining_depth / NMPSettings::kDepthDivisor +
+                          std::min((position_info_.static_eval - beta) /
+                                       NMPSettings::kEvalDivisor,
+                                   NMPSettings::kMaxEvalReduction);
+    const auto null_depth = static_cast<Depth>(
+        std::max(0, static_cast<int>(remaining_depth) - reduction));
+
     searcher_.SetPlayedNullMove(ply);
     current_position.DoMove(NullMove{});
 
-    const auto eval_optional = StartSubsearch<NodeType::kAll>(
-        {max_depth,
-         static_cast<Depth>(
-             remaining_depth -
-             Settings::PruneParameters::NMPSettings::kNullMoveReduction - 1),
-         -beta, -beta + 1, static_cast<Depth>(ply + 1), true});
+    const auto eval_optional =
+        StartSubsearch<NodeType::kAll>({max_depth, null_depth, -beta, -beta + 1,
+                                        static_cast<Depth>(ply + 1), true});
 
     current_position.UndoMove(NullMove{}, position_info_.irreversible_data);
 
