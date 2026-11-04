@@ -170,6 +170,14 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     return kDrawValue;
   }
 
+  if (ply >= kMaxSearchPly - 1) {
+    return position_info_.static_eval;
+  }
+
+  if (position_info_.is_under_check && ply < 2 * max_depth) {
+    ++remaining_depth;
+  }
+
   // return the evaluation of the current position if we have reached
   // the end of the search tree
   if (remaining_depth <= 0) {
