@@ -34,6 +34,7 @@ inline Position PositionFactory::operator()(const std::string &fen) const {
 
   std::array<BitIndex, kColors> kings{};
   std::array<std::array<BitIndex, 2>, kColors> rooks{};
+  std::array<std::array<bool, kBoardSize>, kColors> back_rank_rooks{};
 
   for (int row = kBoardSize - 1; row >= 0; --row) {
     size_t column = 0;
@@ -56,8 +57,9 @@ inline Position PositionFactory::operator()(const std::string &fen) const {
         kings[us] = square;
       }
 
-      if (piece == Piece::kRook) {
-        rooks[us][!kings[us]] = square;
+      const auto back_rank = color == Player::kWhite ? 0 : kBoardSize - 1;
+      if (piece == Piece::kRook && static_cast<size_t>(row) == back_rank) {
+        back_rank_rooks[us][column] = true;
       }
 
       assert(piece != Piece::kNone);
@@ -121,6 +123,26 @@ inline Position PositionFactory::operator()(const std::string &fen) const {
   size_t halfmove_clock = 0;
   size_t fullmove_number = 1;
   fen_stream >> halfmove_clock >> fullmove_number;
+
+  for (size_t us = 0; us < kColors; ++us) {
+    const auto back_rank =
+        us == static_cast<size_t>(Player::kWhite) ? 0 : kBoardSize - 1;
+    const auto king_file = static_cast<size_t>(kings[us]) % kBoardSize;
+    for (size_t file = 0; file < king_file; ++file) {
+      if (back_rank_rooks[us][file]) {
+        rooks[us][static_cast<size_t>(CastlingSide::k000)] =
+            static_cast<BitIndex>(back_rank * kBoardSize + file);
+        break;
+      }
+    }
+    for (size_t file = kBoardSize - 1; file > king_file; --file) {
+      if (back_rank_rooks[us][file]) {
+        rooks[us][static_cast<size_t>(CastlingSide::k00)] =
+            static_cast<BitIndex>(back_rank * kBoardSize + file);
+        break;
+      }
+    }
+  }
 
   position.SetKingPositions(kings);
   position.SetRookPositions(rooks);
