@@ -102,6 +102,24 @@ TEST(FenFactory, CastlingUsesCornerRookWhenAnotherRookShares) {
   EXPECT_EQ(FenFactory{}(position), "2kr3r/2r5/8/8/8/8/8/R4RK1 w - - 3 3");
 }
 
+TEST(Hash, IncludesCastlingRightsFromFen) {
+  const auto with_rights =
+      PositionFactory{}("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+  const auto without_rights =
+      PositionFactory{}("r3k2r/8/8/8/8/8/8/R3K2R w - - 0 1");
+  EXPECT_NE(with_rights.GetHash(), without_rights.GetHash());
+}
+
+TEST(Hash, LostCastlingRightsMatchFenWithoutThem) {
+  auto position = PositionFactory{}("4k3/8/8/8/8/8/8/4K2R w K - 0 1");
+  position.DoMove(MoveFactory{}(position, "h1g1"));
+  position.DoMove(MoveFactory{}(position, "e8d8"));
+  position.DoMove(MoveFactory{}(position, "g1h1"));
+  position.DoMove(MoveFactory{}(position, "d8e8"));
+  const auto expected = PositionFactory{}("4k3/8/8/8/8/8/8/4K2R w - - 4 3");
+  EXPECT_EQ(position.GetHash(), expected.GetHash());
+}
+
 TEST(FiftyMoveClock, QuietPromotionResetsCounter) {
   auto position = PositionFactory{}(
       "7k/P7/8/8/8/8/8/K7 w - - 99 42");
