@@ -127,7 +127,8 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
           current_position);
 
   if (moves.empty()) {
-    return kMateValue + kMaxSearchPly;
+    return kMateValue +
+           static_cast<Eval>(std::min<size_t>(current_depth, kMaxSearchPly));
   }
 
   /*

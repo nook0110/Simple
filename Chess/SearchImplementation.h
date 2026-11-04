@@ -336,7 +336,7 @@ SearchResult SearchNode<node_type, ExitCondition>::QuiescenceSearch() {
   const auto eval =
       quiescence_searcher
           .template Search</* start of the quiescence search */ true>(
-              current_position, state_.alpha, state_.beta, 0);
+              current_position, state_.alpha, state_.beta, state_.ply);
 
   searcher_.debug_info_.quiescence_nodes +=
       quiescence_searcher.GetSearchedNodes();
