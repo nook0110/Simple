@@ -269,84 +269,94 @@ void AddPsqtAdjustment(const Position& position, const Player side,
   return entry.king_score;
 }
 
-consteval std::array<std::array<Bitboard, 2>, kBoardArea>
-MakeKingTropismMasks() {
-  std::array<std::array<Bitboard, 2>, kBoardArea> masks{};
-  for (size_t king = 0; king < kBoardArea; ++king) {
-    const int king_file = static_cast<int>(king % kLineSize);
-    const int king_rank = static_cast<int>(king / kLineSize);
-    std::array<std::uint64_t, 2> values{};
-    for (size_t target = 0; target < kBoardArea; ++target) {
-      const int file = static_cast<int>(target % kLineSize);
-      const int rank = static_cast<int>(target / kLineSize);
-      const int file_distance =
-          file > king_file ? file - king_file : king_file - file;
-      const int rank_distance =
-          rank > king_rank ? rank - king_rank : king_rank - rank;
-      const int distance = std::max(file_distance, rank_distance);
-      for (size_t ring = 0; ring < values.size(); ++ring) {
-        const int radius = ring == 0 ? 2 : 4;
-        if (distance <= radius) {
-          values[ring] |= std::uint64_t{1} << target;
-        }
-      }
-    }
-    for (size_t ring = 0; ring < values.size(); ++ring) {
-      masks[king][ring] = Bitboard{values[ring]};
-    }
-  }
-  return masks;
-}
-
-inline constexpr auto kKingTropismMasks = MakeKingTropismMasks();
+struct KingDanger {
+  Eval attacker_count = 0;
+  Eval attacker_weight = 0;
+  Eval ring_attacks = 0;
+  Eval safe_checks = 0;
+};
 
 template <Piece piece>
-void AddKingTropism(const Position& position, const Player attacker,
-                    const BitIndex king_square, size_t& attacker_count,
-                    Eval& attack_units) {
-  const Bitboard pieces = position.GetPiecesByType<piece>(attacker);
-  const auto& masks = kKingTropismMasks[king_square];
-  const size_t outer = (pieces & masks[1]).Count();
-  attacker_count += outer;
-  const size_t tropism = outer + (pieces & masks[0]).Count();
-  attack_units +=
-      static_cast<Eval>(tropism) *
-      Settings::EvaluationParameters::king_attack[static_cast<size_t>(piece)];
+void AddKingDanger(const Position& position, const Player attacker,
+                   const BitIndex king_square, const Bitboard occupied,
+                   const Bitboard king_ring, const Bitboard king_zone,
+                   const Bitboard safe, KingDanger& danger) {
+  Bitboard pieces = position.GetPiecesByType<piece>(attacker);
+  if (pieces.None()) return;
+  const Bitboard check_squares =
+      AttackTable<piece>::GetAttackMap(king_square, occupied) & safe;
+  bool has_safe_check = false;
+  while (pieces.Any()) {
+    const BitIndex square = pieces.PopFirstBit();
+    const Bitboard attacks = AttackTable<piece>::GetAttackMap(square, occupied);
+    if ((attacks & king_zone).Any()) {
+      ++danger.attacker_count;
+      danger.attacker_weight +=
+          Settings::EvaluationParameters::king_attack[static_cast<size_t>(
+              piece)];
+      danger.ring_attacks += static_cast<Eval>((attacks & king_ring).Count());
+    }
+    has_safe_check |= (attacks & check_squares).Any();
+  }
+  if (has_safe_check) {
+    danger.safe_checks +=
+        Settings::EvaluationParameters::king_safe_check[static_cast<size_t>(
+            piece)];
+  }
 }
 
-[[nodiscard]] Eval EvaluateKingAttack(const Position& position,
-                                      const Player defender) {
-  static constexpr std::array<int, 8> kAttackerWeight = {0,  0,  50, 75,
-                                                         88, 94, 97, 99};
+[[nodiscard]] TaperedEval EvaluateKingAttack(const Position& position,
+                                             const Player defender) {
+  static constexpr Eval kMinimumDanger = 100;
+  static constexpr Eval kMaximumDanger = 2500;
+  static constexpr Eval kMiddleGameScale = 6400;
+  static constexpr Eval kEndGameScale = 25;
+
   const Player attacker = Flip(defender);
   const BitIndex king_square = position.GetKingSquare(defender);
-  size_t attacker_count = 0;
-  Eval attack_units = 0;
-  AddKingTropism<Piece::kKnight>(position, attacker, king_square,
-                                 attacker_count, attack_units);
-  AddKingTropism<Piece::kBishop>(position, attacker, king_square,
-                                 attacker_count, attack_units);
-  AddKingTropism<Piece::kRook>(position, attacker, king_square, attacker_count,
-                               attack_units);
-  AddKingTropism<Piece::kQueen>(position, attacker, king_square, attacker_count,
-                                attack_units);
-  const size_t weight_index =
-      std::min(attacker_count, kAttackerWeight.size() - 1);
-  return attack_units * kAttackerWeight[weight_index] / 100;
+  const Bitboard occupied = position.GetAllPieces();
+  const Bitboard king_ring =
+      AttackTable<Piece::kKing>::GetAttackMap(king_square, occupied);
+  const Compass forward =
+      defender == Player::kWhite ? Compass::kNorth : Compass::kSouth;
+  const Bitboard king_zone =
+      king_ring | SingleSquare(king_square) | Shift(king_ring, forward);
+  const Bitboard safe =
+      ~position.GetPieces(attacker) & ~position.GetAllPawnAttacks(defender);
+
+  KingDanger danger;
+  AddKingDanger<Piece::kKnight>(position, attacker, king_square, occupied,
+                                king_ring, king_zone, safe, danger);
+  AddKingDanger<Piece::kBishop>(position, attacker, king_square, occupied,
+                                king_ring, king_zone, safe, danger);
+  AddKingDanger<Piece::kRook>(position, attacker, king_square, occupied,
+                              king_ring, king_zone, safe, danger);
+  AddKingDanger<Piece::kQueen>(position, attacker, king_square, occupied,
+                               king_ring, king_zone, safe, danger);
+
+  const Eval units = std::min(
+      kMaximumDanger,
+      danger.attacker_count * danger.attacker_weight +
+          Settings::EvaluationParameters::king_ring_attack *
+              danger.ring_attacks +
+          danger.safe_checks +
+          Settings::EvaluationParameters::king_danger_offset);
+  if (units <= kMinimumDanger) return {};
+  return TaperedEval{{units * units / kMiddleGameScale, units / kEndGameScale}};
 }
 
 [[nodiscard]] TaperedEval EvaluateKingSafety(const Position& position,
                                              const Player side,
                                              const Eval king_pawn_score) {
   if (position.GetPiecesByType<Piece::kQueen>(Flip(side)).None()) return {};
-  Eval middlegame = 0;
+  TaperedEval result{};
   if (Settings::EvaluationParameters::king_pawns_enabled) {
-    middlegame += king_pawn_score;
+    result.eval[static_cast<size_t>(GamePhase::kMiddleGame)] += king_pawn_score;
   }
   if (Settings::EvaluationParameters::king_attacks_enabled) {
-    middlegame -= EvaluateKingAttack(position, side);
+    result -= EvaluateKingAttack(position, side);
   }
-  return TaperedEval{{middlegame, 0}};
+  return result;
 }
 }  // namespace
 

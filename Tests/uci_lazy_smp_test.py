@@ -100,10 +100,10 @@ def main() -> int:
         "option name KingOpenFileMG type spin default -14 min -50 max 0",
         "option name KingPawnStormNearMG type spin default -12 min -50 max 0",
         "option name KingPawnStormFarMG type spin default -8 min -50 max 0",
-        "option name KnightKingAttackMG type spin default 8 min 0 max 50",
-        "option name BishopKingAttackMG type spin default 10 min 0 max 50",
-        "option name RookKingAttackMG type spin default 18 min 0 max 50",
-        "option name QueenKingAttackMG type spin default 20 min 0 max 50",
+        "option name KnightKingAttackMG type spin default 81 min 0 max 200",
+        "option name BishopKingAttackMG type spin default 52 min 0 max 200",
+        "option name RookKingAttackMG type spin default 44 min 0 max 200",
+        "option name QueenKingAttackMG type spin default 10 min 0 max 200",
     }
     psqt_defaults = {
         6: {
@@ -155,7 +155,7 @@ def main() -> int:
         "LMRGivesCheckPenalty": 2,
         "KingShieldNearMG": 14,
         "KingPawnStormNearMG": -14,
-        "QueenKingAttackMG": 18,
+        "QueenKingAttackMG": 12,
     }
     for name, value in tuning_values.items():
         send(f"setoption name {name} value {value}")

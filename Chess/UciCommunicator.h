@@ -548,6 +548,16 @@ struct EngineOptions {
     AddKingAttackOption<Piece::kBishop>("Bishop");
     AddKingAttackOption<Piece::kRook>("Rook");
     AddKingAttackOption<Piece::kQueen>("Queen");
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingRingAttack", Settings::EvaluationParameters::king_ring_attack, 0,
+        300, [](const int value) {
+          Settings::EvaluationParameters::king_ring_attack = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "KingDangerOffset", Settings::EvaluationParameters::king_danger_offset,
+        -500, 500, [](const int value) {
+          Settings::EvaluationParameters::king_danger_offset = value;
+        }));
   }
 
   template <Piece piece>
@@ -555,8 +565,15 @@ struct EngineOptions {
     options.emplace_back(std::make_unique<SpinOption>(
         piece_name + "KingAttackMG",
         Settings::EvaluationParameters::king_attack[static_cast<size_t>(piece)],
-        0, 50, [](const int value) {
+        0, 200, [](const int value) {
           Settings::EvaluationParameters::SetKingAttack<piece>(value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        piece_name + "SafeCheck",
+        Settings::EvaluationParameters::king_safe_check[static_cast<size_t>(
+            piece)],
+        0, 2000, [](const int value) {
+          Settings::EvaluationParameters::SetKingSafeCheck<piece>(value);
         }));
   }
 

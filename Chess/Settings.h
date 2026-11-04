@@ -61,12 +61,22 @@ struct Settings {
     inline static Eval king_pawn_storm_far = -8;
     inline static std::array<Eval, kPieceTypes> king_attack = [] {
       std::array<Eval, kPieceTypes> values{};
-      values[static_cast<size_t>(Piece::kKnight)] = 8;
-      values[static_cast<size_t>(Piece::kBishop)] = 10;
-      values[static_cast<size_t>(Piece::kRook)] = 18;
-      values[static_cast<size_t>(Piece::kQueen)] = 20;
+      values[static_cast<size_t>(Piece::kKnight)] = 81;
+      values[static_cast<size_t>(Piece::kBishop)] = 52;
+      values[static_cast<size_t>(Piece::kRook)] = 44;
+      values[static_cast<size_t>(Piece::kQueen)] = 10;
       return values;
     }();
+    inline static std::array<Eval, kPieceTypes> king_safe_check = [] {
+      std::array<Eval, kPieceTypes> values{};
+      values[static_cast<size_t>(Piece::kKnight)] = 790;
+      values[static_cast<size_t>(Piece::kBishop)] = 635;
+      values[static_cast<size_t>(Piece::kRook)] = 1080;
+      values[static_cast<size_t>(Piece::kQueen)] = 780;
+      return values;
+    }();
+    inline static Eval king_ring_attack = 69;
+    inline static Eval king_danger_offset = 37;
     inline static bool pawns_enabled = true;
     inline static bool material_enabled = true;
     inline static bool mobility_enabled = true;
@@ -157,6 +167,13 @@ struct Settings {
     static void SetKingPawnStormFar(Eval value) {
       king_pawn_storm_far = value;
       RefreshKingSafetyEnabled();
+    }
+
+    template <Piece piece>
+    static void SetKingSafeCheck(Eval value) {
+      static_assert(piece == Piece::kKnight || piece == Piece::kBishop ||
+                    piece == Piece::kRook || piece == Piece::kQueen);
+      king_safe_check[static_cast<size_t>(piece)] = value;
     }
 
     template <Piece piece>
