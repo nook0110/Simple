@@ -25,21 +25,35 @@ concept SearchCondition =
 struct TimeCondition {
   explicit TimeCondition(std::chrono::milliseconds time_for_move,
                          StopSignal stop_signal = {})
-      : time_for_move_(std::move(time_for_move)),
+      : TimeCondition(time_for_move, time_for_move, std::move(stop_signal)) {}
+
+  TimeCondition(std::chrono::milliseconds soft_limit,
+                std::chrono::milliseconds hard_limit,
+                StopSignal stop_signal = {})
+      : soft_limit_(soft_limit), hard_limit_(hard_limit),
         stop_signal_(std::move(stop_signal)) {}
 
-  bool ShouldContinueIteration() const { return !IsTimeToExit(); }
-
-  bool IsTimeToExit() const {
-    return (stop_signal_ && stop_signal_->load(std::memory_order_relaxed)) ||
-           time_for_move_ < (std::chrono::system_clock::now() - start_time_);
+  bool ShouldContinueIteration() const {
+    return !IsStopped() && Elapsed() < soft_limit_;
   }
+
+  bool IsTimeToExit() const { return IsStopped() || Elapsed() > hard_limit_; }
 
   void Update(const IterationInfo&) const {}
 
-  std::chrono::milliseconds time_for_move_;
+  std::chrono::milliseconds soft_limit_;
+  std::chrono::milliseconds hard_limit_;
   TimePoint start_time_ = std::chrono::system_clock::now();
   StopSignal stop_signal_;
+
+ private:
+  bool IsStopped() const {
+    return stop_signal_ && stop_signal_->load(std::memory_order_relaxed);
+  }
+
+  std::chrono::system_clock::duration Elapsed() const {
+    return std::chrono::system_clock::now() - start_time_;
+  }
 };
 static_assert(SearchCondition<TimeCondition>);
 
@@ -66,7 +80,17 @@ struct Pondering {
   explicit Pondering(StopSignal signal = {})
       : stop_signal(std::move(signal)) {}
 
-  bool ShouldContinueIteration() const { return !IsTimeToExit(); }
+  bool ShouldContinueIteration() const {
+    if (stop_signal && stop_signal->load(std::memory_order_relaxed)) {
+      return false;
+    }
+    if (!condition) return true;
+    return std::visit(
+        [](const auto& unwrapped_control) -> bool {
+          return unwrapped_control.ShouldContinueIteration();
+        },
+        *condition);
+  }
 
   bool IsTimeToExit() const {
     if (stop_signal && stop_signal->load(std::memory_order_relaxed)) return true;
