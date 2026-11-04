@@ -26,7 +26,7 @@ class MovePicker {
   MovePicker();
   MovePicker(const Move&) = delete;
   MovePicker(Move&&) = delete;
-  void InitPicker(Moves&& moves, const Searcher& searcher);
+  void InitPicker(Moves&& moves, const Searcher& searcher, Depth ply);
   ~MovePicker() = default;
 
   MovePicker& operator=(MovePicker&&) = delete;
