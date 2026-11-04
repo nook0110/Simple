@@ -10,6 +10,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <syncstream>
 #include <thread>
 #include <utility>
 #include <variant>
@@ -622,7 +623,7 @@ class UciChessEngine {
   void ParseDebug(std::stringstream command);
 
   void Send(const std::string& message) const {
-    o_stream_ << message << std::endl;
+    std::osyncstream(o_stream_) << message << std::endl;
   }
 
   std::istream& i_stream_;
@@ -692,7 +693,8 @@ inline void UciChessEngine::ParseCommand(std::stringstream command) {
   if (command_name == "bench") {
     ParsePosition(std::stringstream{std::string{"startpos"}});
     const auto result = PerftBench(info_.position, 6);
-    o_stream_ << result.nodes << " nodes " << result.nps << " nps" << std::endl;
+    std::osyncstream(o_stream_)
+        << result.nodes << " nodes " << result.nps << " nps" << std::endl;
     std::exit(0);
   }
 
@@ -790,12 +792,14 @@ inline void UciChessEngine::ParsePerft(std::stringstream command) {
   const auto time = std::chrono::duration<double>(
                         std::chrono::high_resolution_clock::now() - start_time)
                         .count();
-  o_stream_ << "Time: " << time << " seconds" << std::endl;
-  o_stream_ << NodePerSecondInfo{static_cast<size_t>(nodes / time)};
+  std::osyncstream(o_stream_) << "Time: " << time << " seconds" << std::endl;
+  std::osyncstream(o_stream_)
+      << NodePerSecondInfo{static_cast<size_t>(nodes / time)};
 }
 
 inline void UciChessEngine::ParseEvaluate() const {
-  o_stream_ << "eval: " << info_.position.Evaluate() << " cp" << std::endl;
+  std::osyncstream(o_stream_)
+      << "eval: " << info_.position.Evaluate() << " cp" << std::endl;
 }
 
 inline void UciChessEngine::ParseQuiescenceEvaluate() const {
@@ -805,13 +809,13 @@ inline void UciChessEngine::ParseQuiescenceEvaluate() const {
   const auto score =
       quiescence.Search<true>(position, kMateValue, -kMateValue, 0);
   if (!score) {
-    o_stream_ << "qeval unavailable" << std::endl;
+    std::osyncstream(o_stream_) << "qeval unavailable" << std::endl;
     return;
   }
   const Eval white_score =
       info_.position.GetSideToMove() == Player::kWhite ? *score : -*score;
-  o_stream_ << "qeval white_cp " << white_score << " nodes "
-            << quiescence.GetSearchedNodes() << std::endl;
+  std::osyncstream(o_stream_) << "qeval white_cp " << white_score << " nodes "
+                              << quiescence.GetSearchedNodes() << std::endl;
 }
 
 inline void UciChessEngine::ParseGo(std::stringstream command) {
@@ -838,7 +842,8 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
   }
 
   if (token == "hash") {
-    o_stream_ << "hash: " << info_.position.GetHash() << std::endl;
+    std::osyncstream(o_stream_)
+        << "hash: " << info_.position.GetHash() << std::endl;
     return;
   }
 
@@ -922,7 +927,7 @@ inline void UciChessEngine::ParseQuit(std::stringstream) {
 }
 
 inline void UciChessEngine::ParseDebug(std::stringstream) {
-  o_stream_ << FenFactory{}(info_.position) << std::endl;
+  std::osyncstream(o_stream_) << FenFactory{}(info_.position) << std::endl;
 }
 
 inline SearchThread::SearchThread(Position position, std::ostream& o_stream)

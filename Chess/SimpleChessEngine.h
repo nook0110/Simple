@@ -6,6 +6,7 @@
 #include <limits>
 #include <numeric>
 #include <optional>
+#include <syncstream>
 
 #include "Evaluation.h"
 #include "ExitCondition.h"
@@ -107,11 +108,11 @@ class ChessEngine {
 
   void PrintBestMove() {
     if (!reporting_) return;
-    o_stream_ << BestMoveInfo{GetCurrentBestMove(), std::nullopt};
+    Output() << BestMoveInfo{GetCurrentBestMove(), std::nullopt};
   }
 
   void PrintBestMove(const BestMoveInfo& bm_info) {
-    if (reporting_) o_stream_ << bm_info;
+    if (reporting_) Output() << bm_info;
   }
 
  private:
@@ -158,7 +159,7 @@ class ChessEngine {
         (info.searched_nodes + info.quiescence_nodes) / search_time.count())});
     for (const auto& [name, counter] : kDebugCounters) {
       if (counter != &DebugInfo::searched_nodes) {
-        o_stream_ << "info " << name << " " << info.*counter << "\n";
+        Output() << "info " << name << " " << info.*counter << "\n";
       }
     }
   }
@@ -208,6 +209,10 @@ class ChessEngine {
 
   std::optional<Eval> MakeIteration(Window window, Depth depth,
                                     const StopSearchCondition auto& end);
+
+  [[nodiscard]] std::osyncstream Output() const {
+    return std::osyncstream(o_stream_);
+  }
 
   std::ostream& o_stream_;
 
@@ -287,11 +292,11 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
                                             start_time});
     PrintInfo(ebfs.GetInfo());
     if (reporting_) {
-      o_stream_ << "info time "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(
-                       std::chrono::system_clock::now() - start_time)
-                       .count()
-                << "\n";
+      Output() << "info time "
+               << std::chrono::duration_cast<std::chrono::milliseconds>(
+                      std::chrono::system_clock::now() - start_time)
+                      .count()
+               << "\n";
     }
 
     if (std::ranges::find(legal_moves, searcher_.GetCurrentBestMove()) !=
@@ -330,8 +335,8 @@ inline std::optional<Eval> ChessEngine::MakeIteration(
     const Window window, const Depth current_depth,
     const StopSearchCondition auto& condition) {
   if (reporting_) {
-    o_stream_ << "info window " << window.GetLowerBound() << " "
-              << window.GetUpperBound() << "\n";
+    Output() << "info window " << window.GetLowerBound() << " "
+             << window.GetUpperBound() << "\n";
   }
   return searcher_.Search<NodeType::kPV>(condition, current_depth,
                                          current_depth, window.GetLowerBound(),
@@ -340,7 +345,7 @@ inline std::optional<Eval> ChessEngine::MakeIteration(
 
 template <class Info>
 void ChessEngine::PrintInfo(const Info& info) {
-  if (reporting_) o_stream_ << info;
+  if (reporting_) Output() << info;
 }
 
 inline std::ostream& operator<<(std::ostream& out,
