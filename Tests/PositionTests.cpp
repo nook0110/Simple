@@ -120,6 +120,26 @@ TEST(Hash, LostCastlingRightsMatchFenWithoutThem) {
   EXPECT_EQ(position.GetHash(), expected.GetHash());
 }
 
+TEST(Repetition, IgnoresEnPassantSquareNobodyCanCapture) {
+  auto position = PositionFactory{}();
+  for (const auto *move : {"e2e4", "g8f6", "g1f3", "f6g8", "f3g1", "g8f6",
+                           "g1f3", "f6g8", "f3g1"}) {
+    position.DoMove(MoveFactory{}(position, move));
+  }
+  EXPECT_TRUE(position.DetectRepetition(0));
+}
+
+TEST(Hash, KeepsCapturableEnPassantSquare) {
+  auto position = PositionFactory{}("4k3/8/8/8/3p4/8/4P3/4K3 w - - 0 1");
+  position.DoMove(MoveFactory{}(position, "e2e4"));
+  const auto with_square =
+      PositionFactory{}("4k3/8/8/8/3pP3/8/8/4K3 b - e3 0 1");
+  const auto without_square =
+      PositionFactory{}("4k3/8/8/8/3pP3/8/8/4K3 b - - 0 1");
+  EXPECT_EQ(position.GetHash(), with_square.GetHash());
+  EXPECT_NE(position.GetHash(), without_square.GetHash());
+}
+
 TEST(FiftyMoveClock, QuietPromotionResetsCounter) {
   auto position = PositionFactory{}(
       "7k/P7/8/8/8/8/8/K7 w - - 99 42");
