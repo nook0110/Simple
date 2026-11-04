@@ -75,7 +75,7 @@ inline Position PositionFactory::operator()(const std::string &fen) const {
   std::string side_to_move;
   fen_stream >> side_to_move;
 
-  if (side_to_move == "w")
+  if (side_to_move != "b")
     position.SetSideToMove(Player::kWhite);
   else
     position.SetSideToMove(Player::kBlack);
@@ -113,7 +113,7 @@ inline Position PositionFactory::operator()(const std::string &fen) const {
 
   std::string en_croissant_square;
   fen_stream >> en_croissant_square;
-  if (en_croissant_square != "-") {
+  if (!en_croissant_square.empty() && en_croissant_square != "-") {
     assert(en_croissant_square.size() == 2);
     const auto file = static_cast<File>(en_croissant_square[0] - 'a');
     const auto rank = static_cast<Rank>(en_croissant_square[1] - '1');
@@ -123,6 +123,7 @@ inline Position PositionFactory::operator()(const std::string &fen) const {
   size_t halfmove_clock = 0;
   size_t fullmove_number = 1;
   fen_stream >> halfmove_clock >> fullmove_number;
+  if (fullmove_number == 0) fullmove_number = 1;
 
   for (size_t us = 0; us < kColors; ++us) {
     const auto back_rank =
