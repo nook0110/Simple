@@ -141,7 +141,7 @@ class ChessEngine {
     }
 
    private:
-    float odd_even_average_;
+    float odd_even_average_ = 0;
     std::vector<float> ebfs_;
     size_t previous_nodes_ = 0;
   };
@@ -227,10 +227,17 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   const TimePoint start_time = std::chrono::system_clock::now();
   searcher_.InitStartOfSearch();
 
+  const auto finish = [this, &condition](const BestMoveInfo& bm_info) {
+    if constexpr (requires { condition.WaitForPonderEnd(); }) {
+      condition.WaitForPonderEnd();
+    }
+    PrintBestMove(bm_info);
+  };
+
   const auto legal_moves =
       MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position_);
   if (legal_moves.empty()) {
-    PrintBestMove(BestMoveInfo{Move::None(), std::nullopt});
+    finish(BestMoveInfo{Move::None(), std::nullopt});
     return;
   }
   best_move_ = legal_moves.front();
@@ -239,7 +246,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   if (const auto& tablebase = searcher_.GetTablebase(); tablebase) {
     if (const auto tablebase_move = tablebase->RootMove(position_)) {
       best_move_ = *tablebase_move;
-      PrintBestMove(BestMoveInfo{best_move_, std::nullopt});
+      finish(BestMoveInfo{best_move_, std::nullopt});
       return;
     }
   }
@@ -251,7 +258,9 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   Depth current_depth = initial_depth_;
 
   for (current_depth = initial_depth_;
-       condition.ShouldContinueIteration() && current_depth < kMaxSearchPly;
+       (current_depth == initial_depth_ ||
+        condition.ShouldContinueIteration()) &&
+       current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
     const auto eval_optional = MakeIteration(window, current_depth, condition);
@@ -310,7 +319,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
             std::chrono::duration<double>{std::chrono::system_clock::now() -
                                           start_time});
 
-  PrintBestMove(BestMoveInfo{best_move_, ponder_move_});
+  finish(BestMoveInfo{best_move_, ponder_move_});
 }
 
 inline const Move& ChessEngine::GetCurrentBestMove() const {
@@ -377,7 +386,12 @@ inline std::ostream& operator<<(std::ostream& out,
 
 inline std::ostream& operator<<(std::ostream& out,
                                 const BestMoveInfo& bm_info) {
-  out << "bestmove " << bm_info.move;
+  out << "bestmove ";
+  if (bm_info.move.IsValid()) {
+    out << bm_info.move;
+  } else {
+    out << "0000";
+  }
   if (bm_info.ponder) {
     out << " ponder " << *bm_info.ponder;
   }

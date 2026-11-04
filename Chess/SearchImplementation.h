@@ -152,7 +152,8 @@ SearchResult SearchNode<node_type, ExitCondition>::StartSubsearch(
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool SearchNode<node_type, ExitCondition>::IsTimeToExit() const {
-  return searcher_.debug_info_.searched_nodes % kEnoughNodesToCheckTime == 0 &&
+  const auto searched_nodes = searcher_.debug_info_.searched_nodes;
+  return searched_nodes != 0 && searched_nodes % kEnoughNodesToCheckTime == 0 &&
          exit_condition_.IsTimeToExit();
 }
 
