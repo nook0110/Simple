@@ -77,6 +77,8 @@ struct SearchNode {
   IterationStatus iteration_status_;
   PositionInfo position_info_;
   MovePicker move_picker_;
+  std::array<Move, 64> searched_quiets_{};
+  size_t searched_quiet_count_ = 0;
 
   SearchResult QuiescenceSearch();
   Eval GetEndGameScore() const;
@@ -85,6 +87,7 @@ struct SearchNode {
   void SetTTEntry(const Bound bound);
   template <bool is_first_move>
   void UpdateQuietMove(const Move &move);
+  void RecordSearchedQuiet(const Move &move);
 
   Position &GetCurrentPosition();
 
@@ -249,6 +252,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   if (CanNullMove()) {
     searcher_.debug_info_.nmp_tries++;
 
+    searcher_.SetPlayedNullMove(ply);
     current_position.DoMove(NullMove{});
 
     const auto eval_optional = StartSubsearch<NodeType::kAll>(
@@ -292,7 +296,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   move_picker_.InitPicker(
       move_generator.GenerateMoves<MoveGenerator::Type::kAll>(current_position),
-      searcher_);
+      searcher_, ply);
 
   // check if there are no possible moves
   if (move_picker_.Done()) {
@@ -371,6 +375,11 @@ template <NodeType expected_node_type>
 SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
   auto &current_position = GetCurrentPosition();
   auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
+
+  if (move.IsQuiet(current_position)) {
+    RecordSearchedQuiet(move);
+  }
+  searcher_.SetPlayedMove(ply, move);
 
   // make the move and search the tree
   current_position.DoMove(move);
@@ -460,6 +469,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
       continue;
     }
 
+    searcher_.SetPlayedMove(ply, move);
     current_position.DoMove(move);  // make the move and search the tree
 
     if (can_prune && is_quiet && !current_position.IsUnderCheck() &&
@@ -467,6 +477,10 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
       current_position.UndoMove(move, position_info_.irreversible_data);
       searcher_.debug_info_.futility_prunes++;
       continue;
+    }
+
+    if (is_quiet) {
+      RecordSearchedQuiet(move);
     }
 
     // Late Move Reduction
@@ -600,25 +614,26 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <bool is_first_move>
 void SearchNode<node_type, ExitCondition>::UpdateQuietMove(const Move &move) {
-  // history malus
+  const auto bonus = Searcher::HistoryBonus(state_.remaining_depth);
   if constexpr (!is_first_move) {
-    for (auto it = move_picker_.begin_quiet(); it != move_picker_.current();
-         ++it) {
-      const auto from = it->From();
-      const auto to = it->To();
-      searcher_.history_[position_info_.side_to_move_idx][from][to] -=
-          state_.remaining_depth * state_.remaining_depth;
+    for (size_t i = 0; i < searched_quiet_count_; ++i) {
+      if (searched_quiets_[i] != move) {
+        searcher_.UpdateQuietHistory(searched_quiets_[i], state_.ply, -bonus);
+      }
     }
   }
+  searcher_.UpdateQuietHistory(move, state_.ply, bonus);
 
-  // history bonus
-  const auto from = move.From();
-  const auto to = move.To();
-  searcher_.history_[position_info_.side_to_move_idx][from][to] +=
-      state_.remaining_depth * state_.remaining_depth;
-
-  // killer heuristic
   searcher_.killers_.TryAdd(state_.ply, move);
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+void SearchNode<node_type, ExitCondition>::RecordSearchedQuiet(
+    const Move &move) {
+  if (searched_quiet_count_ < searched_quiets_.size()) {
+    searched_quiets_[searched_quiet_count_++] = move;
+  }
 }
 
 template <NodeType node_type, class ExitCondition>

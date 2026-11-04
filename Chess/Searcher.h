@@ -2,7 +2,11 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
+#include <cstdlib>
 #include <memory>
+#include <type_traits>
+#include <vector>
 
 #include "Concepts.h"
 #include "DebugInfo.h"
@@ -101,6 +105,7 @@ class Searcher {
   [[nodiscard]] const DebugInfo &GetInfo() const { return debug_info_; }
   [[nodiscard]] const auto &GetKillers() const { return killers_; }
   [[nodiscard]] const auto &GetHistory() const { return history_; }
+  [[nodiscard]] std::int64_t GetQuietScore(const Move &move, Depth ply) const;
 
   [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
       Depth max_depth, Position position) const;
@@ -118,6 +123,26 @@ class Searcher {
       kColors>
       history_ = {};
   KillerTable<2> killers_;
+
+  struct PieceTo {
+    Piece piece = Piece::kNone;
+    BitIndex to = 0;
+  };
+  static constexpr std::int64_t kHistoryMax = 16384;
+  static constexpr size_t kPieceToSize = kPieceTypes * (kBoardArea + 1);
+  static constexpr std::array<Depth, 2> kContinuationOffsets = {1, 2};
+
+  [[nodiscard]] static std::int64_t HistoryBonus(Depth depth);
+  [[nodiscard]] static size_t ContinuationIndex(PieceTo previous,
+                                                PieceTo current);
+  [[nodiscard]] PieceTo GetPieceTo(const Move &move) const;
+  void SetPlayedMove(Depth ply, const Move &move);
+  void SetPlayedNullMove(Depth ply);
+  void UpdateQuietHistory(const Move &move, Depth ply, std::int64_t bonus);
+
+  std::vector<std::int32_t> continuation_history_ =
+      std::vector<std::int32_t>(kPieceToSize * kPieceToSize);
+  std::array<PieceTo, kMaxSearchPly + 1> move_stack_{};
 
   DebugInfo debug_info_;
 };
@@ -156,8 +181,67 @@ inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
   return answer;
 }
 
+inline std::int64_t Searcher::HistoryBonus(const Depth depth) {
+  return std::clamp<std::int64_t>(250 * static_cast<std::int64_t>(depth) - 200,
+                                  50, 1500);
+}
+
+inline size_t Searcher::ContinuationIndex(const PieceTo previous,
+                                          const PieceTo current) {
+  const auto flatten = [](const PieceTo piece_to) {
+    return static_cast<size_t>(piece_to.piece) * (kBoardArea + 1) +
+           static_cast<size_t>(piece_to.to);
+  };
+  return flatten(previous) * kPieceToSize + flatten(current);
+}
+
+inline Searcher::PieceTo Searcher::GetPieceTo(const Move &move) const {
+  return {current_position_.GetPieceAt(move.From()), move.To()};
+}
+
+inline void Searcher::SetPlayedMove(const Depth ply, const Move &move) {
+  move_stack_[ply] = GetPieceTo(move);
+}
+
+inline void Searcher::SetPlayedNullMove(const Depth ply) {
+  move_stack_[ply] = {};
+}
+
+inline std::int64_t Searcher::GetQuietScore(const Move &move,
+                                            const Depth ply) const {
+  const auto side = static_cast<size_t>(current_position_.GetSideToMove());
+  std::int64_t score = history_[side][move.From()][move.To()];
+  const auto current = GetPieceTo(move);
+  for (const auto offset : kContinuationOffsets) {
+    if (ply < offset) break;
+    const auto previous = move_stack_[ply - offset];
+    if (previous.piece == Piece::kNone) continue;
+    score += continuation_history_[ContinuationIndex(previous, current)];
+  }
+  return score;
+}
+
+inline void Searcher::UpdateQuietHistory(const Move &move, const Depth ply,
+                                         const std::int64_t bonus) {
+  const auto apply = [bonus](auto &entry) {
+    entry += static_cast<std::remove_reference_t<decltype(entry)>>(
+        bonus - entry * std::abs(bonus) / kHistoryMax);
+  };
+  const auto side = static_cast<size_t>(current_position_.GetSideToMove());
+  apply(history_[side][move.From()][move.To()]);
+  const auto current = GetPieceTo(move);
+  for (const auto offset : kContinuationOffsets) {
+    if (ply < offset) break;
+    const auto previous = move_stack_[ply - offset];
+    if (previous.piece == Piece::kNone) continue;
+    apply(continuation_history_[ContinuationIndex(previous, current)]);
+  }
+}
+
 inline void Searcher::InitStartOfSearch() {
   killers_.Clear();
+  std::ranges::fill(continuation_history_, 0);
+  move_stack_ = {};
   for (size_t color = 0; color < kColors; ++color) {
     for (BitIndex from = 0; from <= static_cast<BitIndex>(kBoardArea); ++from) {
       history_[color][from].fill(0LL);
