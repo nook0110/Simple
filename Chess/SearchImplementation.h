@@ -93,6 +93,9 @@ struct SearchNode {
   std::optional<bool> CheckFirstMove(const Move &move);
 
   [[nodiscard]] bool CanRFP() const;
+  [[nodiscard]] bool CanLateMovePrune() const;
+  [[nodiscard]] bool CanFutilityPrune() const;
+  [[nodiscard]] bool PassesSEEPruning(const Move &move, bool is_quiet) const;
 
   bool ProbeTranspositionTable();
   std::optional<SearchResult> CheckTranspositionTable();
@@ -427,13 +430,39 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
       !kIsPrincipalVariation &&
       remaining_depth >= Settings::PruneParameters::LMRSettings::kDepthLimit;
 
+  const bool move_pruning_allowed =
+      remaining_depth != max_depth && !position_info_.is_under_check;
+
   for (auto it =
            move_picker_.SelectNextMove(searcher_, max_depth - remaining_depth);
        it != move_picker_.end(); it = move_picker_.SelectNextMove(
                                      searcher_, max_depth - remaining_depth)) {
     const auto &move = *it;
 
+    const bool is_quiet = move.IsQuiet(current_position);
+    const bool can_prune =
+        move_pruning_allowed &&
+        iteration_status_.best_eval >
+            -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly);
+
+    if (can_prune && is_quiet && CanLateMovePrune()) {
+      searcher_.debug_info_.lmp_prunes++;
+      continue;
+    }
+
+    if (can_prune && !PassesSEEPruning(move, is_quiet)) {
+      searcher_.debug_info_.see_prunes++;
+      continue;
+    }
+
     current_position.DoMove(move);  // make the move and search the tree
+
+    if (can_prune && is_quiet && !current_position.IsUnderCheck() &&
+        CanFutilityPrune()) {
+      current_position.UndoMove(move, position_info_.irreversible_data);
+      searcher_.debug_info_.futility_prunes++;
+      continue;
+    }
 
     // Late Move Reduction
     int R = 0;
@@ -605,6 +634,49 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
          position_info_.static_eval >
              state_.beta + Settings::PruneParameters::RFPSettings::kThreshold *
                                state_.remaining_depth;
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+bool SearchNode<node_type, ExitCondition>::CanLateMovePrune() const {
+  using LMPSettings = Settings::PruneParameters::LMPSettings;
+  if constexpr (!LMPSettings::kEnabled) return false;
+
+  const int depth = state_.remaining_depth;
+  if (depth > LMPSettings::kDepthLimit) return false;
+
+  const auto move_count = move_picker_.current() - move_picker_.begin();
+  return move_count >= LMPSettings::kBaseCount + depth * depth;
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+bool SearchNode<node_type, ExitCondition>::CanFutilityPrune() const {
+  using FutilitySettings = Settings::PruneParameters::FutilitySettings;
+  if constexpr (!FutilitySettings::kEnabled) return false;
+
+  const Eval depth = state_.remaining_depth;
+  if (depth > FutilitySettings::kDepthLimit) return false;
+
+  return position_info_.static_eval + FutilitySettings::kBaseMargin +
+             FutilitySettings::kDepthMargin * depth <=
+         state_.alpha;
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+bool SearchNode<node_type, ExitCondition>::PassesSEEPruning(
+    const Move &move, const bool is_quiet) const {
+  using SEEPruningSettings = Settings::PruneParameters::SEEPruningSettings;
+  if constexpr (!SEEPruningSettings::kEnabled) return true;
+
+  const Eval depth = state_.remaining_depth;
+  if (depth > SEEPruningSettings::kDepthLimit) return true;
+
+  const Eval threshold =
+      is_quiet ? -SEEPruningSettings::kQuietMargin * depth
+               : -SEEPruningSettings::kNoisyMargin * depth * depth;
+  return searcher_.GetPosition().StaticExchangeEvaluation(move, threshold);
 }
 
 template <NodeType node_type, class ExitCondition>

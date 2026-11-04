@@ -169,6 +169,9 @@ class ChessEngine {
     o_stream_ << "info rfp_cuts " << info.rfp_cuts << "\n";
     o_stream_ << "info nmp_tries " << info.nmp_tries << "\n";
     o_stream_ << "info nmp_cuts " << info.nmp_cuts << "\n";
+    o_stream_ << "info lmp_prunes " << info.lmp_prunes << "\n";
+    o_stream_ << "info see_prunes " << info.see_prunes << "\n";
+    o_stream_ << "info futility_prunes " << info.futility_prunes << "\n";
   }
 
   template <class Info>

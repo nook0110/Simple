@@ -12,6 +12,10 @@ struct DebugInfo {
   std::size_t nmp_tries{};
   std::size_t nmp_cuts{};
 
+  std::size_t lmp_prunes{};
+  std::size_t see_prunes{};
+  std::size_t futility_prunes{};
+
   std::size_t tt_hits{};
   std::size_t tt_cuts{};
 
@@ -22,6 +26,9 @@ struct DebugInfo {
     rfp_cuts += other.rfp_cuts;
     nmp_tries += other.nmp_tries;
     nmp_cuts += other.nmp_cuts;
+    lmp_prunes += other.lmp_prunes;
+    see_prunes += other.see_prunes;
+    futility_prunes += other.futility_prunes;
     tt_hits += other.tt_hits;
     tt_cuts += other.tt_cuts;
     return *this;
