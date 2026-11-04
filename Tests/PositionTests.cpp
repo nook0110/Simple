@@ -226,4 +226,19 @@ TEST(Quiescence, StopRestoresPosition) {
   EXPECT_TRUE(stopped);
   EXPECT_GT(quiescence.GetSearchedNodes(), 1u);
 }
+TEST(Quiescence, UsesTranspositionTableBounds) {
+  auto position = PositionFactory{}(
+      "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+  auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
+  table->SetEntry(position, MoveFactory{}(position, "e2a6"), 500, 5,
+                  Bound::kLower, Age{});
+  DepthCondition condition{1};
+  Quiescence quiescence{condition, table.get()};
+
+  const auto result = quiescence.Search<true>(position, 0, 100, 0);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(*result, 100);
+  EXPECT_EQ(quiescence.GetSearchedNodes(), 1u);
+}
 }  // namespace PositionTests

@@ -51,6 +51,10 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     return current_position.Evaluate();
   }
 
+  if (const auto table_score = ProbeTable(current_position, alpha, beta)) {
+    return *table_score;
+  }
+
   if (current_position.IsUnderCheck()) {
     return SearchUnderCheck(current_position, alpha, beta, current_depth);
   }
@@ -162,6 +166,23 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
   }
 
   return alpha;
+}
+
+template <class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+std::optional<Eval> Quiescence<ExitCondition>::ProbeTable(
+    const Position& position, const Eval alpha, const Eval beta) const {
+  if (!table_) return std::nullopt;
+  const auto node = table_->GetNode(position);
+  if (!node.IsOccupied() || IsMateScore(node.score) ||
+      std::abs(node.score) >=
+          kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+    return std::nullopt;
+  }
+  if ((node.bound & Bound::kLower) && node.score >= beta) return beta;
+  if ((node.bound & Bound::kUpper) && node.score <= alpha) return alpha;
+  if (node.bound == Bound::kExact) return node.score;
+  return std::nullopt;
 }
 
 template <class ExitCondition>

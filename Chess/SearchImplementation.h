@@ -334,7 +334,8 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 SearchResult SearchNode<node_type, ExitCondition>::QuiescenceSearch() {
   auto &current_position = GetCurrentPosition();
-  auto quiescence_searcher = Quiescence{exit_condition_};
+  auto quiescence_searcher =
+      Quiescence{exit_condition_, searcher_.best_moves_.get()};
 
   const auto eval =
       quiescence_searcher

@@ -2,6 +2,7 @@
 #include "Concepts.h"
 #include "Evaluation.h"
 #include "MoveGenerator.h"
+#include "TranspositionTable.h"
 
 namespace SimpleChessEngine {
 class Position;
@@ -18,8 +19,10 @@ class Quiescence {
    * \brief Constructor.
    *
    */
-  Quiescence(const ExitCondition& exit_condition)
-      : exit_condition_(exit_condition) {};
+  using Table = TranspositionTable<SCE_TT_SIZE_MB>;
+
+  Quiescence(const ExitCondition& exit_condition, const Table* table = nullptr)
+      : exit_condition_(exit_condition), table_(table){};
 
   /**
    * \brief Performs the alpha-beta search algorithm.
@@ -42,9 +45,12 @@ class Quiescence {
 
  private:
   bool IsTimeToExit();
+  [[nodiscard]] std::optional<Eval> ProbeTable(const Position& position,
+                                               Eval alpha, Eval beta) const;
 
   MoveGenerator move_generator_;  //!< Move generator.
   const ExitCondition& exit_condition_;
+  const Table* table_;
   std::size_t searched_nodes_{};
 };
 
