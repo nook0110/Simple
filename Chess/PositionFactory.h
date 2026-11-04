@@ -109,6 +109,19 @@ inline Position PositionFactory::operator()(const std::string &fen) const {
 
   position.SetCastlingRights(castling_rights);
 
+  std::string en_croissant_square;
+  fen_stream >> en_croissant_square;
+  if (en_croissant_square != "-") {
+    assert(en_croissant_square.size() == 2);
+    const auto file = static_cast<File>(en_croissant_square[0] - 'a');
+    const auto rank = static_cast<Rank>(en_croissant_square[1] - '1');
+    position.SetEnCroissantSquare(GetSquareIndex(file, rank));
+  }
+
+  size_t halfmove_clock = 0;
+  size_t fullmove_number = 1;
+  fen_stream >> halfmove_clock >> fullmove_number;
+
   position.SetKingPositions(kings);
   position.SetRookPositions(rooks);
   std::array<std::array<Bitboard, 2>, kColors> cs_king = {
@@ -123,7 +136,7 @@ inline Position PositionFactory::operator()(const std::string &fen) const {
         rook_between[rooks[1][1]][kRookCastlingDestination[1][1]]}}};
   position.SetCastlingSquares(cs_king, cs_rook);
 
-  position.Init();
+  position.Init(halfmove_clock, fullmove_number);
   return position;
 }
 
@@ -139,7 +152,10 @@ inline std::string SimpleChessEngine::FenFactory::operator()(
         continue;
       }
 
-      if (empty) ss << empty;
+      if (empty) {
+        ss << empty;
+        empty = 0;
+      }
       const auto piece_type = position.GetPieceAt(GetSquareIndex(file, rank));
       const auto is_white = (position.GetPieces(Player::kWhite) &
                              SingleSquare(GetSquareIndex(file, rank)))
@@ -148,7 +164,7 @@ inline std::string SimpleChessEngine::FenFactory::operator()(
                          is_white ? Player::kWhite : Player::kBlack);
     }
     if (empty) ss << empty;
-    if (rank > 1) ss << '/';
+    if (rank > 0) ss << '/';
   }
 
   ss << (position.GetSideToMove() == Player::kWhite ? " w " : " b ");

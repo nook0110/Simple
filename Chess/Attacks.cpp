@@ -66,6 +66,10 @@ void SimpleChessEngine::InitBetween() {
 
 template void SimpleChessEngine::InitBetween<Piece::kBishop>();
 template void SimpleChessEngine::InitBetween<Piece::kRook>();
+template Bitboard SimpleChessEngine::GenerateAttackMask<Piece::kBishop>(
+    BitIndex, Bitboard);
+template Bitboard SimpleChessEngine::GenerateAttackMask<Piece::kRook>(
+    BitIndex, Bitboard);
 
 template <Piece sliding_piece>
 const std::unique_ptr<AttackTable<sliding_piece>>
@@ -354,3 +358,9 @@ AttackTable<sliding_piece>::AttackTable() {
     } while (mask_subset.Any());
   }
 }
+
+template class SimpleChessEngine::AttackTable<Piece::kKnight>;
+template class SimpleChessEngine::AttackTable<Piece::kBishop>;
+template class SimpleChessEngine::AttackTable<Piece::kRook>;
+template class SimpleChessEngine::AttackTable<Piece::kQueen>;
+template class SimpleChessEngine::AttackTable<Piece::kKing>;

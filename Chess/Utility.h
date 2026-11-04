@@ -146,6 +146,58 @@ constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
     {{Compass::kNorthWest, Compass::kNorthEast},
      {Compass::kSouthWest, Compass::kSouthEast}}};
 
+struct PawnSpanTables {
+  std::array<std::array<Bitboard, kBoardArea>, kColors> front{};
+  std::array<std::array<Bitboard, kBoardArea>, kColors> rear{};
+  std::array<std::array<Bitboard, kBoardArea>, kColors> passed{};
+  std::array<Bitboard, kBoardArea> adjacent_files{};
+};
+
+consteval PawnSpanTables MakePawnSpanTables() {
+  PawnSpanTables tables{};
+  for (size_t side = 0; side < kColors; ++side) {
+    const int forward =
+        side == static_cast<size_t>(Player::kWhite) ? 1 : -1;
+    for (size_t square = 0; square < kBoardArea; ++square) {
+      const int file = static_cast<int>(square % kLineSize);
+      const int rank = static_cast<int>(square / kLineSize);
+      std::uint64_t front = 0;
+      std::uint64_t rear = 0;
+      std::uint64_t passed = 0;
+      std::uint64_t adjacent_files = 0;
+
+      for (int target_rank = 0; target_rank < kLineSize; ++target_rank) {
+        const bool is_front = (target_rank - rank) * forward > 0;
+        const bool is_rear = (target_rank - rank) * forward < 0;
+        for (int target_file = 0; target_file < kLineSize; ++target_file) {
+          const int file_difference = target_file > file
+                                          ? target_file - file
+                                          : file - target_file;
+          const auto target = static_cast<size_t>(target_rank * kLineSize +
+                                                  target_file);
+          const auto target_bit = std::uint64_t{1} << target;
+          if (target_file == file && is_front) front |= target_bit;
+          if (target_file == file && is_rear) rear |= target_bit;
+          if (file_difference <= 1 && is_front) {
+            passed |= target_bit;
+          }
+          if (file_difference == 1) adjacent_files |= target_bit;
+        }
+      }
+
+      tables.front[side][square] = Bitboard{front};
+      tables.rear[side][square] = Bitboard{rear};
+      tables.passed[side][square] = Bitboard{passed};
+      if (side == 0) {
+        tables.adjacent_files[square] = Bitboard{adjacent_files};
+      }
+    }
+  }
+  return tables;
+}
+
+inline constexpr PawnSpanTables kPawnSpans = MakePawnSpanTables();
+
 [[nodiscard]] inline bool IsOk(const BitIndex square) {
   return 0 <= square && square < static_cast<BitIndex>(kBoardArea);
 }

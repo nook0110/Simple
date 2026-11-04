@@ -205,11 +205,11 @@ Bitboard AttackTable<piece>::GetAttackMap(const BitIndex square,
   std::unreachable();
 }
 
-template class AttackTable<Piece::kKnight>;
-template class AttackTable<Piece::kBishop>;
-template class AttackTable<Piece::kRook>;
-template class AttackTable<Piece::kQueen>;
-template class AttackTable<Piece::kKing>;
+extern template class AttackTable<Piece::kKnight>;
+extern template class AttackTable<Piece::kBishop>;
+extern template class AttackTable<Piece::kRook>;
+extern template class AttackTable<Piece::kQueen>;
+extern template class AttackTable<Piece::kKing>;
 
 template <Piece sliding_piece>
 void InitBetween();
