@@ -71,6 +71,8 @@ class SearchThread {
     if (const auto tournament =
             std::get_if<TournamentTime>(&info.time_control)) {
       constexpr size_t kAverageGameLength = 40;
+      constexpr int kSoftLimitPercent = 60;
+      constexpr int kHardLimitPercent = 300;
       auto left_time =
           tournament
               ->player_time[static_cast<size_t>(info.position.GetSideToMove())];
@@ -78,11 +80,14 @@ class SearchThread {
       auto inc_time =
           tournament
               ->player_inc[static_cast<size_t>(info.position.GetSideToMove())];
-      std::chrono::milliseconds time_for_move =
+      const std::chrono::milliseconds average_time =
           left_time / kAverageGameLength + inc_time;
-      time_for_move = std::min(left_time / 2, time_for_move);
+      const auto base_time = std::min(left_time / 2, average_time);
+      const auto soft_limit = base_time * kSoftLimitPercent / 100;
+      const auto hard_limit =
+          std::min(left_time / 2, base_time * kHardLimitPercent / 100);
 
-      return TimeCondition{time_for_move, stop_signal_};
+      return TimeCondition{soft_limit, hard_limit, stop_signal_};
     }
     if (const auto time_per_move =
             std::get_if<TimePerMove>(&info.time_control)) {
