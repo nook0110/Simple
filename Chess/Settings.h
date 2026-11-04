@@ -216,6 +216,8 @@ struct Settings {
       inline static size_t kDepthLimit = 3;
       inline static int kUnderCheckReductionPenalty = 1;
       inline static int kDoingCheckReductionPenalty = 2;
+      inline static int kCutNodeReduction = 2;
+      inline static int kHistoryDivisor = 13000;
     };
     struct FutilitySettings {
       static constexpr bool kEnabled = true;
