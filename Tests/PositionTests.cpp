@@ -192,4 +192,33 @@ TEST(InsufficientMaterial, QuiescenceReturnsDraw) {
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(*result, kDrawValue);
 }
+
+TEST(Quiescence, ScoresStalemateAsDraw) {
+  auto position = PositionFactory{}("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1");
+  DepthCondition condition{1};
+  Quiescence quiescence{condition};
+
+  const auto result = quiescence.Search<true>(
+      position, std::numeric_limits<Eval>::min() / 2,
+      std::numeric_limits<Eval>::max() / 2, 0);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(*result, kDrawValue);
+}
+
+TEST(Quiescence, StopsWhenSignalled) {
+  auto position = PositionFactory{}(
+      "r1bq1rk1/pp2bppp/2n1pn2/3p4/2PP4/2N1PN2/PP1B1PPP/R2QKB1R w KQ - 0 9");
+  auto stop = std::make_shared<std::atomic_bool>(true);
+  DepthCondition condition{1, stop};
+  Quiescence quiescence{condition};
+  bool stopped = false;
+  for (int i = 0; i < 4096 && !stopped; ++i) {
+    stopped = !quiescence
+                   .Search<false>(position, std::numeric_limits<Eval>::min() / 2,
+                                  std::numeric_limits<Eval>::max() / 2, 0)
+                   .has_value();
+  }
+  EXPECT_TRUE(stopped);
+}
 }  // namespace PositionTests
