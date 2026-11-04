@@ -84,7 +84,7 @@ struct Pondering {
     if (stop_signal && stop_signal->load(std::memory_order_relaxed)) {
       return false;
     }
-    if (!condition) return true;
+    if (!HasCondition()) return true;
     return std::visit(
         [](const auto& unwrapped_control) -> bool {
           return unwrapped_control.ShouldContinueIteration();
@@ -94,7 +94,7 @@ struct Pondering {
 
   bool IsTimeToExit() const {
     if (stop_signal && stop_signal->load(std::memory_order_relaxed)) return true;
-    if (!condition) return false;
+    if (!HasCondition()) return false;
     return std::visit(
         [](const auto& unwrapped_control) -> bool {
           return unwrapped_control.IsTimeToExit();
@@ -102,7 +102,7 @@ struct Pondering {
         *condition);
   }
   void Update(const IterationInfo& info) {
-    if (!condition) return;
+    if (!HasCondition()) return;
     std::visit(
         [&info](auto& unwrapped_condition) {
           unwrapped_condition.Update(info);
@@ -110,9 +110,20 @@ struct Pondering {
         *condition);
   }
 
+  void SetCondition(Condition new_condition) {
+    condition = std::move(new_condition);
+    has_condition.store(true, std::memory_order_release);
+  }
+
   std::optional<Condition> condition;
+  std::atomic_bool has_condition{false};
 
   StopSignal stop_signal;
+
+ private:
+  bool HasCondition() const {
+    return has_condition.load(std::memory_order_acquire);
+  }
 };
 static_assert(SearchCondition<Pondering>);
 }  // namespace SimpleChessEngine
