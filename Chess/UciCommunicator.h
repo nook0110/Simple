@@ -53,11 +53,12 @@ class SearchThread {
 
   void Start(const Info& info);
   void PonderHit(const Info& info) {
-    assert(pondering_);
-    pondering_->condition = GetCondition(info);
+    if (!pondering_) return;
+    pondering_->SetCondition(GetCondition(info));
   }
-  void GoPonder() {
+  void GoPonder(const Info& info) {
     StopThread();
+    engine_.SetPosition(info.position);
     stop_signal_ = std::make_shared<std::atomic_bool>(false);
     pondering_.emplace(stop_signal_);
     thread_ = std::thread([this] { engine_.GoPonder(*pondering_); });
@@ -671,7 +672,7 @@ inline UciChessEngine::~UciChessEngine() { StopSearch(); }
 
 inline void UciChessEngine::StartSearch(bool ponder) {
   if (ponder) {
-    return search_thread_.GoPonder();
+    return search_thread_.GoPonder(info_);
   }
   search_thread_.Start(info_);
 }
@@ -776,8 +777,7 @@ inline void UciChessEngine::ParseStartPos() {
 
 inline void UciChessEngine::ParseMoves(std::stringstream command) {
   std::string move;
-  while (!command.eof()) {
-    command >> move;
+  while (command >> move) {
     info_.position.DoMove(MoveFactory{}(info_.position, move));
   }
 }
@@ -851,6 +851,7 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
   command >> token;
 
   bool ponder = false;
+  info_.time_control = MaxDepth{static_cast<Depth>(kMaxSearchPly - 1)};
 
   if (token == "perft") {
     ParsePerft(std::move(command));

@@ -2,12 +2,14 @@
 
 #include <cstddef>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <vector>
 #include <ostream>
 
 #include "Move.h"
 #include "MoveFactory.h"
+#include "MoveGenerator.h"
 #include "SimpleChessEngine.h"
 
 using namespace SimpleChessEngine;
@@ -35,6 +37,46 @@ class BestMoveTest : public testing::TestWithParam<BestMoveTestCase> {
     return PositionFactory{}(GetParam().fen);
   }
 };
+
+TEST(RootRepetition, SearchStillReturnsLegalMove) {
+  auto position = PositionFactory{}();
+  for (const auto *move :
+       {"g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8"}) {
+    position.DoMove(MoveFactory{}(position, move));
+  }
+  std::stringstream ss;
+  ChessEngine engine(position, ss);
+  DepthCondition condition{2};
+  engine.ComputeBestMove(condition);
+  const auto legal_moves =
+      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+  EXPECT_NE(std::ranges::find(legal_moves, engine.GetCurrentBestMove()),
+            legal_moves.end());
+}
+
+TEST(FiftyMoveRule, SearchScoresExpiredClockAsDraw) {
+  auto position = PositionFactory{}("7k/8/8/8/8/8/8/KQ6 w - - 100 51");
+  Searcher searcher(position);
+  searcher.InitStartOfSearch();
+  DepthCondition condition{2};
+  const auto result = searcher.Search<NodeType::kPV>(
+      condition, 2, 2, std::numeric_limits<Eval>::min() / 2,
+      std::numeric_limits<Eval>::max() / 2);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(*result, kDrawValue);
+}
+
+TEST(FiftyMoveRule, MateOnTheLastMoveStillCounts) {
+  auto position = PositionFactory{}("7k/8/6K1/8/8/8/8/1Q6 w - - 99 51");
+  Searcher searcher(position);
+  searcher.InitStartOfSearch();
+  DepthCondition condition{2};
+  const auto result = searcher.Search<NodeType::kPV>(
+      condition, 2, 2, std::numeric_limits<Eval>::min() / 2,
+      std::numeric_limits<Eval>::max() / 2);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_GT(*result, kTablebaseWinValue);
+}
 
 TEST_P(BestMoveTest, FindBestMove) {
   auto position = GetPosition();

@@ -39,12 +39,29 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   }
   searched_nodes_++;
 
+  if (IsTimeToExit()) {
+    return std::nullopt;
+  }
+
   if (current_position.IsInsufficientMaterial()) {
     return kDrawValue;
   }
 
+  if (current_depth >= kMaxDepth) {
+    return current_position.Evaluate();
+  }
+
   if (current_position.IsUnderCheck()) {
     return SearchUnderCheck(current_position, alpha, beta, current_depth);
+  }
+
+  const auto side = current_position.GetSideToMove();
+  if (current_position.GetPieces(side) ==
+          (current_position.GetPiecesByType<Piece::kKing>(side) |
+           current_position.GetPiecesByType<Piece::kPawn>(side)) &&
+      move_generator_.GenerateMoves<MoveGenerator::Type::kAll>(current_position)
+          .empty()) {
+    return kDrawValue;
   }
 
   const auto stand_pat = current_position.Evaluate();
@@ -81,12 +98,12 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     const auto temp_eval_optional =
         Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
+    // undo the move
+    current_position.UndoMove(move, irreversible_data);
+
     if (!temp_eval_optional) return std::nullopt;
 
     const auto temp_eval = -*temp_eval_optional;
-
-    // undo the move
-    current_position.UndoMove(move, irreversible_data);
 
     if (temp_eval > alpha) {
       if (temp_eval >= beta) {
@@ -128,12 +145,12 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     const auto temp_eval_optional =
         Search<false>(current_position, -beta, -alpha, current_depth + 1);
 
+    // undo the move
+    current_position.UndoMove(move, irreversible_data);
+
     if (!temp_eval_optional) return std::nullopt;
 
     const auto temp_eval = -*temp_eval_optional;
-
-    // undo the move
-    current_position.UndoMove(move, irreversible_data);
 
     if (temp_eval > alpha) {
       if (temp_eval >= beta) {

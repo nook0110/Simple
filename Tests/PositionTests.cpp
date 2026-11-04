@@ -102,6 +102,24 @@ TEST(FenFactory, CastlingUsesCornerRookWhenAnotherRookShares) {
   EXPECT_EQ(FenFactory{}(position), "2kr3r/2r5/8/8/8/8/8/R4RK1 w - - 3 3");
 }
 
+TEST(Hash, IncludesCastlingRightsFromFen) {
+  const auto with_rights =
+      PositionFactory{}("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+  const auto without_rights =
+      PositionFactory{}("r3k2r/8/8/8/8/8/8/R3K2R w - - 0 1");
+  EXPECT_NE(with_rights.GetHash(), without_rights.GetHash());
+}
+
+TEST(Hash, LostCastlingRightsMatchFenWithoutThem) {
+  auto position = PositionFactory{}("4k3/8/8/8/8/8/8/4K2R w K - 0 1");
+  position.DoMove(MoveFactory{}(position, "h1g1"));
+  position.DoMove(MoveFactory{}(position, "e8d8"));
+  position.DoMove(MoveFactory{}(position, "g1h1"));
+  position.DoMove(MoveFactory{}(position, "d8e8"));
+  const auto expected = PositionFactory{}("4k3/8/8/8/8/8/8/4K2R w - - 4 3");
+  EXPECT_EQ(position.GetHash(), expected.GetHash());
+}
+
 TEST(FiftyMoveClock, QuietPromotionResetsCounter) {
   auto position = PositionFactory{}(
       "7k/P7/8/8/8/8/8/K7 w - - 99 42");
@@ -173,5 +191,39 @@ TEST(InsufficientMaterial, QuiescenceReturnsDraw) {
 
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(*result, kDrawValue);
+}
+
+TEST(Quiescence, ScoresStalemateAsDraw) {
+  auto position = PositionFactory{}("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1");
+  DepthCondition condition{1};
+  Quiescence quiescence{condition};
+
+  const auto result = quiescence.Search<true>(
+      position, std::numeric_limits<Eval>::min() / 2,
+      std::numeric_limits<Eval>::max() / 2, 0);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(*result, kDrawValue);
+}
+
+TEST(Quiescence, StopRestoresPosition) {
+  auto position = PositionFactory{}(
+      "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+  const auto original_fen = FenFactory{}(position);
+  const auto original_hash = position.GetHash();
+  auto stop = std::make_shared<std::atomic_bool>(true);
+  DepthCondition condition{1, stop};
+  Quiescence quiescence{condition};
+  bool stopped = false;
+  for (int i = 0; i < 4096 && !stopped; ++i) {
+    stopped = !quiescence
+                   .Search<false>(position, std::numeric_limits<Eval>::min() / 2,
+                                  std::numeric_limits<Eval>::max() / 2, 0)
+                   .has_value();
+    ASSERT_EQ(FenFactory{}(position), original_fen);
+    ASSERT_EQ(position.GetHash(), original_hash);
+  }
+  EXPECT_TRUE(stopped);
+  EXPECT_GT(quiescence.GetSearchedNodes(), 1u);
 }
 }  // namespace PositionTests
