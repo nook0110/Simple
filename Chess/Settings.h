@@ -217,10 +217,30 @@ struct Settings {
       inline static int kUnderCheckReductionPenalty = 1;
       inline static int kDoingCheckReductionPenalty = 2;
     };
+    struct FutilitySettings {
+      static constexpr bool kEnabled = true;
+      inline static Depth kDepthLimit = 6;
+      inline static Eval kBaseMargin = 90;
+      inline static Eval kDepthMargin = 60;
+    };
+    struct LMPSettings {
+      static constexpr bool kEnabled = true;
+      inline static Depth kDepthLimit = 8;
+      inline static int kBaseCount = 3;
+    };
+    struct SEEPruningSettings {
+      static constexpr bool kEnabled = true;
+      inline static Depth kDepthLimit = 8;
+      inline static Eval kQuietMargin = 60;
+      inline static Eval kNoisyMargin = 20;
+    };
     static constexpr RFPSettings kRFPSettings = {};
     static constexpr NMPSettings kNMPSettings = {};
     static constexpr IIRSettings kIIRSettings = {};
     static constexpr LMRSettings kLMRSettings = {};
+    static constexpr FutilitySettings kFutilitySettings = {};
+    static constexpr LMPSettings kLMPSettings = {};
+    static constexpr SEEPruningSettings kSEEPruningSettings = {};
   };
   struct SearchParameters {
     struct AspirationWindowSettings {

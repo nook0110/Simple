@@ -257,6 +257,41 @@ struct EngineOptions {
           Settings::PruneParameters::LMRSettings::kDoingCheckReductionPenalty =
               value;
         }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "FutilityDepth", 6, 0, 10, [](const int value) {
+          Settings::PruneParameters::FutilitySettings::kDepthLimit =
+              static_cast<Depth>(value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "FutilityBase", 90, 0, 400, [](const int value) {
+          Settings::PruneParameters::FutilitySettings::kBaseMargin = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "FutilityMargin", 60, 10, 300, [](const int value) {
+          Settings::PruneParameters::FutilitySettings::kDepthMargin = value;
+        }));
+    options.emplace_back(
+        std::make_unique<SpinOption>("LMPDepth", 8, 0, 12, [](const int value) {
+          Settings::PruneParameters::LMPSettings::kDepthLimit =
+              static_cast<Depth>(value);
+        }));
+    options.emplace_back(
+        std::make_unique<SpinOption>("LMPBase", 3, 1, 20, [](const int value) {
+          Settings::PruneParameters::LMPSettings::kBaseCount = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "SEEPruneDepth", 8, 0, 12, [](const int value) {
+          Settings::PruneParameters::SEEPruningSettings::kDepthLimit =
+              static_cast<Depth>(value);
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "SEEQuietMargin", 60, 0, 200, [](const int value) {
+          Settings::PruneParameters::SEEPruningSettings::kQuietMargin = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "SEENoisyMargin", 20, 0, 200, [](const int value) {
+          Settings::PruneParameters::SEEPruningSettings::kNoisyMargin = value;
+        }));
     AddMaterialOptions();
     AddPawnOptions();
     AddMobilityOptions();
