@@ -99,13 +99,7 @@ class ChessEngine {
     searcher_.SetTablebase(std::move(tablebase));
   }
 
-  void GoPonder(Pondering& conditions) {
-    position_.DoMove(best_move_);
-    position_.DoMove(*ponder_move_);
-    searcher_.SetPosition(position_);
-
-    ComputeBestMove(conditions);
-  }
+  void GoPonder(Pondering& conditions) { ComputeBestMove(conditions); }
 
   void ComputeBestMove(SearchCondition auto& conditions);
 
@@ -291,7 +285,10 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
                 << "\n";
     }
 
-    best_move_ = searcher_.GetCurrentBestMove();
+    if (std::ranges::find(legal_moves, searcher_.GetCurrentBestMove()) !=
+        legal_moves.end()) {
+      best_move_ = searcher_.GetCurrentBestMove();
+    }
     ponder_move_.reset();
     Position ponder_position = position_;
     const auto legal_root_moves =

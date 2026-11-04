@@ -338,6 +338,11 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
 
 void Position::SetCastlingRights(
     const std::array<std::bitset<2>, 2> &castling_rights) {
+  for (size_t color = 0; color < kColors; ++color) {
+    hash_ ^= hasher_.cr_hash[color][irreversible_data_.castling_rights[color]
+                                        .to_ulong()];
+    hash_ ^= hasher_.cr_hash[color][castling_rights[color].to_ulong()];
+  }
   irreversible_data_.castling_rights = castling_rights;
 }
 
