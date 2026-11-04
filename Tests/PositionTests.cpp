@@ -85,6 +85,23 @@ TEST(FenFactory, UpdatesCountersFromInitialFenState) {
   EXPECT_EQ(position.GetFullMoveNumber(), 43);
 }
 
+TEST(FenFactory, CastlingIgnoresRooksOffTheBackRank) {
+  auto position =
+      PositionFactory{}("3qk2r/prp1pppp/1p1p4/8/8/8/1R2PPPP/4K2R w Kk - 0 1");
+  position.DoMove(MoveFactory{}(position, "e1g1"));
+  position.DoMove(MoveFactory{}(position, "e8g8"));
+  EXPECT_EQ(FenFactory{}(position),
+            "3q1rk1/prp1pppp/1p1p4/8/8/8/1R2PPPP/5RK1 w - - 2 2");
+}
+
+TEST(FenFactory, CastlingUsesCornerRookWhenAnotherRookShares) {
+  auto position = PositionFactory{}("r1r1k2r/8/8/8/8/8/8/R3K2R b Kq - 0 1");
+  position.DoMove(MoveFactory{}(position, "c8c7"));
+  position.DoMove(MoveFactory{}(position, "e1g1"));
+  position.DoMove(MoveFactory{}(position, "e8c8"));
+  EXPECT_EQ(FenFactory{}(position), "2kr3r/2r5/8/8/8/8/8/R4RK1 w - - 3 3");
+}
+
 TEST(FiftyMoveClock, QuietPromotionResetsCounter) {
   auto position = PositionFactory{}(
       "7k/P7/8/8/8/8/8/K7 w - - 99 42");
