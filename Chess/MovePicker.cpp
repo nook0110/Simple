@@ -132,7 +132,7 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
 }
 
 void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
-                            const Searcher& searcher) {
+                            const Searcher& searcher, const Depth ply) {
   moves_ = std::move(moves);
   data_.resize(moves_.size());
   history_.resize(moves_.size());
@@ -154,8 +154,8 @@ void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
                     ? searcher.GetPosition().StaticExchangeEvaluation(
                           move, kGoodCaptureThreshold)
                     : false};
-    history_[i] = searcher.GetHistory()[static_cast<size_t>(
-        searcher.GetPosition().GetSideToMove())][from][to];
+    history_[i] =
+        capture == Piece::kNone ? searcher.GetQuietScore(move, ply) : 0;
   }
   current_move_ = moves_.begin();
 }
