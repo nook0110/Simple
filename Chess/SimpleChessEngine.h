@@ -277,7 +277,6 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   EBFsInfo ebfs;
   Window window{};
   Depth current_depth = initial_depth_;
-  double total_best_move_changes = 0;
   Depth last_best_move_depth = 0;
   Move last_best_move = Move::None();
   double time_reduction = 1;
@@ -315,9 +314,6 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       last_best_move = iteration_best_move;
       last_best_move_depth = current_depth;
     }
-    total_best_move_changes = total_best_move_changes / 2 +
-                              static_cast<double>(
-                                  searcher_.TakeBestMoveChanges());
     const double total_nodes = static_cast<double>(std::max<std::size_t>(
         1, info.searched_nodes + info.quiescence_nodes));
     const double nodes_effort =
@@ -339,13 +335,10 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
         0.629, 1.544);
     const double reduction =
         (1.468 + previous_time_reduction_) / (2.284 * time_reduction);
-    const double best_move_instability =
-        1.077 + 2.229 * total_best_move_changes;
     const double high_best_move_effort = std::clamp(
         Interpolate(nodes_effort, 75800.0, 104510.0, 0.969, 0.714), 0.693,
         0.838);
-    double time_scale =
-        falling_eval * reduction * best_move_instability * high_best_move_effort;
+    double time_scale = falling_eval * reduction * high_best_move_effort;
     if (legal_moves.size() == 1) {
       time_scale = std::min(time_scale, 1.0);
     }
