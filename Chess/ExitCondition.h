@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <thread>
 #include <variant>
@@ -14,6 +15,8 @@ struct IterationInfo {
   const Searcher& searcher;
   Eval iteration_result;
   size_t depth;
+  double time_scale = 1.0;
+  bool stop_now = false;
 };
 
 template <class T>
@@ -26,26 +29,40 @@ concept SearchCondition =
 struct TimeCondition {
   explicit TimeCondition(std::chrono::milliseconds time_for_move,
                          StopSignal stop_signal = {})
-      : TimeCondition(time_for_move, time_for_move, std::move(stop_signal)) {}
+      : soft_limit_(time_for_move), hard_limit_(time_for_move),
+        stop_signal_(std::move(stop_signal)) {}
 
   TimeCondition(std::chrono::milliseconds soft_limit,
                 std::chrono::milliseconds hard_limit,
                 StopSignal stop_signal = {})
       : soft_limit_(soft_limit), hard_limit_(hard_limit),
-        stop_signal_(std::move(stop_signal)) {}
+        stop_signal_(std::move(stop_signal)), managed_(true) {}
 
   bool ShouldContinueIteration() const {
-    return !IsStopped() && Elapsed() < soft_limit_;
+    if (IsStopped()) return false;
+    if (!managed_) return Elapsed() < soft_limit_;
+    const std::chrono::duration<double, std::milli> deepen_limit =
+        std::chrono::duration<double, std::milli>(soft_limit_) * time_scale_ *
+        kDeepenFraction;
+    return !stop_now_ && Elapsed() <= deepen_limit && Elapsed() < hard_limit_;
   }
 
   bool IsTimeToExit() const { return IsStopped() || Elapsed() > hard_limit_; }
 
-  void Update(const IterationInfo&) const {}
+  void Update(const IterationInfo& info) {
+    time_scale_ = info.time_scale;
+    stop_now_ = info.stop_now;
+  }
 
   std::chrono::milliseconds soft_limit_;
   std::chrono::milliseconds hard_limit_;
   TimePoint start_time_ = std::chrono::system_clock::now();
   StopSignal stop_signal_;
+  bool managed_ = false;
+  double time_scale_ = 1.0;
+  bool stop_now_ = false;
+
+  static constexpr double kDeepenFraction = 0.5;
 
  private:
   bool IsStopped() const {

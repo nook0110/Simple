@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <memory>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "Concepts.h"
@@ -106,6 +107,8 @@ class Searcher {
   [[nodiscard]] const auto &GetKillers() const { return killers_; }
   [[nodiscard]] const auto &GetHistory() const { return history_; }
   [[nodiscard]] std::int64_t GetQuietScore(const Move &move, Depth ply) const;
+  [[nodiscard]] std::uint64_t GetRootEffort(const Move &move) const;
+  [[nodiscard]] std::size_t TakeBestMoveChanges();
 
   [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
       Depth max_depth, Position position) const;
@@ -139,10 +142,14 @@ class Searcher {
   void SetPlayedMove(Depth ply, const Move &move);
   void SetPlayedNullMove(Depth ply);
   void UpdateQuietHistory(const Move &move, Depth ply, std::int64_t bonus);
+  void AddRootEffort(const Move &move, std::uint64_t nodes);
 
   std::vector<std::int32_t> continuation_history_ =
       std::vector<std::int32_t>(kPieceToSize * kPieceToSize);
   std::array<PieceTo, kMaxSearchPly + 1> move_stack_{};
+
+  std::vector<std::pair<Move, std::uint64_t>> root_effort_;
+  std::size_t best_move_changes_ = 0;
 
   DebugInfo debug_info_;
 };
@@ -238,8 +245,30 @@ inline void Searcher::UpdateQuietHistory(const Move &move, const Depth ply,
   }
 }
 
+inline std::uint64_t Searcher::GetRootEffort(const Move &move) const {
+  const auto it = std::ranges::find(root_effort_, move,
+                                    &std::pair<Move, std::uint64_t>::first);
+  return it == root_effort_.end() ? 0 : it->second;
+}
+
+inline std::size_t Searcher::TakeBestMoveChanges() {
+  return std::exchange(best_move_changes_, 0);
+}
+
+inline void Searcher::AddRootEffort(const Move &move, std::uint64_t nodes) {
+  const auto it = std::ranges::find(root_effort_, move,
+                                    &std::pair<Move, std::uint64_t>::first);
+  if (it == root_effort_.end()) {
+    root_effort_.emplace_back(move, nodes);
+    return;
+  }
+  it->second += nodes;
+}
+
 inline void Searcher::InitStartOfSearch() {
   killers_.Clear();
+  root_effort_.clear();
+  best_move_changes_ = 0;
   std::ranges::fill(continuation_history_, 0);
   move_stack_ = {};
   for (size_t color = 0; color < kColors; ++color) {
