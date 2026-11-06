@@ -279,6 +279,8 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   Depth current_depth = initial_depth_;
   Depth last_best_move_depth = 0;
   Move last_best_move = Move::None();
+  std::optional<Eval> previous_iteration_eval;
+  Move previous_iteration_best_move = Move::None();
   double time_reduction = 1;
   std::array<Eval, 4> iteration_values{};
   iteration_values.fill(previous_score_.value_or(0));
@@ -342,10 +344,16 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     if (legal_moves.size() == 1) {
       time_scale = std::min(time_scale, 1.0);
     }
-    const bool proven_result =
-        eval >= -kMateValue - 3 || eval == kMateValue + 2;
+    const bool confirmed_mate =
+        IsMateScore(eval) > 0 && previous_iteration_eval &&
+        IsMateScore(*previous_iteration_eval) > 0 &&
+        iteration_best_move == previous_iteration_best_move;
+    const bool proven_result = eval >= -kMateValue - 3 ||
+                               eval == kMateValue + 2 || confirmed_mate;
     condition.Update(IterationInfo{searcher_, eval, current_depth, time_scale,
                                    proven_result});
+    previous_iteration_eval = eval;
+    previous_iteration_best_move = iteration_best_move;
     iteration_values[iteration_index] = eval;
     iteration_index = (iteration_index + 1) % iteration_values.size();
     PrintInfo(info, eval, current_depth,

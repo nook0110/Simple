@@ -47,11 +47,21 @@ struct TimeCondition {
     return !stop_now_ && Elapsed() <= deepen_limit && Elapsed() < hard_limit_;
   }
 
-  bool IsTimeToExit() const { return IsStopped() || Elapsed() > hard_limit_; }
+  bool IsTimeToExit() const {
+    return IsStopped() || (managed_ && stop_now_) || Elapsed() > hard_limit_;
+  }
 
   void Update(const IterationInfo& info) {
     time_scale_ = info.time_scale;
     stop_now_ = info.stop_now;
+  }
+
+  void ResumeFromPonder(double time_scale, bool stop_now) {
+    if (!managed_) return;
+    time_scale_ = time_scale;
+    const std::chrono::duration<double, std::milli> budget =
+        std::chrono::duration<double, std::milli>(soft_limit_) * time_scale_;
+    stop_now_ = stop_now || Elapsed() > budget;
   }
 
   std::chrono::milliseconds soft_limit_;
@@ -120,7 +130,11 @@ struct Pondering {
         *condition);
   }
   void Update(const IterationInfo& info) {
-    if (!HasCondition()) return;
+    if (!HasCondition()) {
+      pending_time_scale.store(info.time_scale, std::memory_order_relaxed);
+      pending_stop.store(info.stop_now, std::memory_order_relaxed);
+      return;
+    }
     std::visit(
         [&info](auto& unwrapped_condition) {
           unwrapped_condition.Update(info);
@@ -136,12 +150,19 @@ struct Pondering {
   }
 
   void SetCondition(Condition new_condition) {
+    if (auto* time_condition = std::get_if<TimeCondition>(&new_condition)) {
+      time_condition->ResumeFromPonder(
+          pending_time_scale.load(std::memory_order_relaxed),
+          pending_stop.load(std::memory_order_relaxed));
+    }
     condition = std::move(new_condition);
     has_condition.store(true, std::memory_order_release);
   }
 
   std::optional<Condition> condition;
   std::atomic_bool has_condition{false};
+  std::atomic<double> pending_time_scale{1.0};
+  std::atomic_bool pending_stop{false};
 
   StopSignal stop_signal;
 
