@@ -2,12 +2,34 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <tuple>
 #include <utility>
 
 #include "Move.h"
 #include "Position.h"
 #include "Searcher.h"
 namespace SimpleChessEngine {
+
+namespace {
+constexpr bool IsUnderpromotion(const Piece promotion) {
+  return promotion != Piece::kNone && promotion != Piece::kQueen;
+}
+
+constexpr int PromotionRank(const Piece promotion) {
+  switch (promotion) {
+    case Piece::kQueen:
+      return 4;
+    case Piece::kKnight:
+      return 3;
+    case Piece::kRook:
+      return 2;
+    case Piece::kBishop:
+      return 1;
+    default:
+      return 0;
+  }
+}
+}  // namespace
 
 template <typename UnaryPredicate, typename Compare>
 size_t FindMaxIf(size_t first, size_t last, UnaryPredicate pred, Compare comp) {
@@ -50,17 +72,15 @@ MovePicker::Stage& operator++(MovePicker::Stage& stage) {
 MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
     const Searcher& searcher, const Depth ply) {
   const auto& position = searcher.GetPosition();
-  const auto compare_captures = [this, &position](size_t lhs, size_t rhs) {
-    const auto [from_lhs, to_lhs, captured_piece_lhs, _] = data_[lhs];
-    const auto [from_rhs, to_rhs, captured_piece_rhs, _] = data_[rhs];
-    const auto captured_idx_lhs = static_cast<int>(captured_piece_lhs);
-    const auto captured_idx_rhs = static_cast<int>(captured_piece_rhs);
-    const auto moving_idx_lhs =
-        -static_cast<int>(position.GetPieceAt(from_lhs));
-    const auto moving_idx_rhs =
-        -static_cast<int>(position.GetPieceAt(from_rhs));
-    return std::tie(captured_idx_lhs, moving_idx_lhs) <
-           std::tie(captured_idx_rhs, moving_idx_rhs);
+  const auto capture_key = [this, &position](size_t idx) {
+    const auto& data = data_[idx];
+    return std::tuple{!IsUnderpromotion(data.promotion),
+                      static_cast<int>(data.captured),
+                      PromotionRank(data.promotion),
+                      -static_cast<int>(position.GetPieceAt(data.from))};
+  };
+  const auto compare_captures = [&capture_key](size_t lhs, size_t rhs) {
+    return capture_key(lhs) < capture_key(rhs);
   };
   switch (stage_) {
     case Stage::kGoodCaptures: {
@@ -96,7 +116,10 @@ MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
     }
 
     case Stage::kQuiet: {
-      const auto is_quiet = [this](size_t idx) { return !data_[idx].captured; };
+      const auto is_quiet = [this](size_t idx) {
+        return data_[idx].captured == Piece::kNone &&
+               data_[idx].promotion == Piece::kNone;
+      };
       const auto compare_quiet = [this](size_t lhs, size_t rhs) {
         return history_[lhs] < history_[rhs];
       };
@@ -149,13 +172,19 @@ void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
       capture = searcher.GetPosition().GetPieceAt(to);
     }
     
+    const auto promotion =
+        move.IsPromotion() ? move.PromotionPiece() : Piece::kNone;
+    const bool tactical =
+        capture != Piece::kNone || promotion == Piece::kQueen;
     data_[i] = {from, to, capture,
-                capture != Piece::kNone
+                tactical && !IsUnderpromotion(promotion)
                     ? searcher.GetPosition().StaticExchangeEvaluation(
                           move, kGoodCaptureThreshold)
-                    : false};
-    history_[i] =
-        capture == Piece::kNone ? searcher.GetQuietScore(move, ply) : 0;
+                    : false,
+                promotion};
+    history_[i] = capture == Piece::kNone && promotion == Piece::kNone
+                      ? searcher.GetQuietScore(move, ply)
+                      : 0;
   }
   current_move_ = moves_.begin();
 }
