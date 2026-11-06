@@ -58,6 +58,7 @@ class MovePicker {
     BitIndex to = {};
     Piece captured = {};
     bool is_good_capture = false;
+    Piece promotion = Piece::kNone;
   };
 
   std::vector<MoveData> data_;
