@@ -388,6 +388,8 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
     RecordSearchedQuiet(move);
   }
   searcher_.SetPlayedMove(ply, move);
+  const auto nodes_before = searcher_.debug_info_.searched_nodes +
+                            searcher_.debug_info_.quiescence_nodes;
 
   // make the move and search the tree
   current_position.DoMove(move);
@@ -400,6 +402,11 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
 
   // undo the move
   current_position.UndoMove(move, position_info_.irreversible_data);
+  if (ply == 0) {
+    searcher_.AddRootEffort(move, searcher_.debug_info_.searched_nodes +
+                                      searcher_.debug_info_.quiescence_nodes -
+                                      nodes_before);
+  }
 
   if (!eval_optional) return std::nullopt;
 
@@ -478,6 +485,8 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     }
 
     searcher_.SetPlayedMove(ply, move);
+    const auto nodes_before = searcher_.debug_info_.searched_nodes +
+                              searcher_.debug_info_.quiescence_nodes;
     current_position.DoMove(move);  // make the move and search the tree
 
     if (can_prune && is_quiet && !current_position.IsUnderCheck() &&
@@ -557,6 +566,11 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
 
     // undo the move
     current_position.UndoMove(move, position_info_.irreversible_data);
+    if (ply == 0) {
+      searcher_.AddRootEffort(move, searcher_.debug_info_.searched_nodes +
+                                        searcher_.debug_info_.quiescence_nodes -
+                                        nodes_before);
+    }
 
     if (temp_eval > iteration_status_.best_eval) {
       SetBestMove(move);

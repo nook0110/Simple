@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <optional>
@@ -25,6 +27,8 @@ struct TournamentTime {
 
   std::array<std::chrono::milliseconds, 2> player_inc = {
       std::chrono::milliseconds{0}, std::chrono::milliseconds{0}};
+
+  std::optional<int> moves_to_go;
 };
 
 struct TimePerMove {
@@ -50,17 +54,31 @@ class SearchThread {
   void Start(const Info& info);
   void PonderHit(const Info& info) {
     if (!pondering_) return;
-    pondering_->SetCondition(GetCondition(info));
+    auto condition = GetCondition(info);
+    if (auto* time_condition = std::get_if<TimeCondition>(&condition);
+        time_condition && time_condition->managed_) {
+      time_condition->start_time_ = ponder_start_;
+    }
+    pondering_->SetCondition(std::move(condition));
   }
   void GoPonder(const Info& info) {
     StopThread();
     engine_.SetPosition(info.position);
     stop_signal_ = std::make_shared<std::atomic_bool>(false);
+    ponder_start_ = std::chrono::system_clock::now();
     pondering_.emplace(stop_signal_);
-    thread_ = std::thread([this] { engine_.GoPonder(*pondering_); });
+    StartPonderHelpers(info);
+    thread_ = std::thread([this, stop_signal = stop_signal_] {
+      engine_.GoPonder(*pondering_);
+      stop_signal->store(true, std::memory_order_relaxed);
+    });
   }
 
   void Stop();
+  void NewGame() {
+    original_time_adjust_ = -1;
+    engine_.NewGame();
+  }
   void SetThreadCount(std::size_t thread_count) {
     StopThread();
     thread_count_ = std::max<std::size_t>(1, thread_count);
@@ -71,24 +89,70 @@ class SearchThread {
   Condition GetCondition(const Info& info) {
     if (const auto tournament =
             std::get_if<TournamentTime>(&info.time_control)) {
-      constexpr size_t kAverageGameLength = 40;
-      constexpr int kSoftLimitPercent = 60;
-      constexpr int kHardLimitPercent = 300;
-      auto left_time =
-          tournament
-              ->player_time[static_cast<size_t>(info.position.GetSideToMove())];
+      constexpr int kMoveHorizon = 50;
+      constexpr double kMoveOverhead = 10;
+      constexpr double kSingleMoveTime = 500;
 
-      auto inc_time =
-          tournament
-              ->player_inc[static_cast<size_t>(info.position.GetSideToMove())];
-      const std::chrono::milliseconds average_time =
-          left_time / kAverageGameLength + inc_time;
-      const auto base_time = std::min(left_time / 2, average_time);
-      const auto soft_limit = base_time * kSoftLimitPercent / 100;
-      const auto hard_limit =
-          std::min(left_time / 2, base_time * kHardLimitPercent / 100);
+      const auto side = info.position.GetSideToMove();
+      const auto side_idx = static_cast<size_t>(side);
+      const double time =
+          static_cast<double>(tournament->player_time[side_idx].count());
+      const double inc =
+          static_cast<double>(tournament->player_inc[side_idx].count());
+      const double ply =
+          2.0 * (static_cast<double>(info.position.GetFullMoveNumber()) - 1.0) +
+          (side == Player::kBlack ? 1.0 : 0.0);
+      const double scaled_time = std::max(1.0, time);
 
-      return TimeCondition{soft_limit, hard_limit, stop_signal_};
+      int moves_to_go = tournament->moves_to_go
+                            ? std::min(*tournament->moves_to_go, kMoveHorizon)
+                            : kMoveHorizon;
+      if (scaled_time < 1000 && !tournament->moves_to_go) {
+        moves_to_go = static_cast<int>(scaled_time * 0.05);
+      }
+
+      const double time_left =
+          std::max(1.0, time + inc * (moves_to_go - 1) -
+                            kMoveOverhead * (2 + moves_to_go));
+
+      double opt_scale = 0;
+      double max_scale = 0;
+      if (!tournament->moves_to_go) {
+        if (original_time_adjust_ < 0) {
+          original_time_adjust_ = 0.3272 * std::log10(time_left) - 0.4141;
+        }
+        const double log_time_in_sec = std::log10(scaled_time / 1000.0);
+        const double opt_constant =
+            std::min(0.0029869 + 0.00033554 * log_time_in_sec, 0.004905);
+        const double max_constant =
+            std::max(3.3744 + 3.0608 * log_time_in_sec, 3.1441);
+        opt_scale =
+            std::min(0.012112 + std::pow(ply + 3.22713, 0.46866) * opt_constant,
+                     0.19404 * time / time_left) *
+            original_time_adjust_;
+        max_scale = std::min(6.873, max_constant + ply / 12.352);
+      } else {
+        opt_scale = std::min((0.88 + ply / 116.4) / moves_to_go,
+                             0.88 * time / time_left);
+        max_scale = 1.3 + 0.11 * moves_to_go;
+      }
+
+      double optimum = std::max(1.0, opt_scale * time_left);
+      const double maximum = std::max(
+          optimum,
+          std::min(0.8097 * time - kMoveOverhead, max_scale * optimum));
+
+      Position position = info.position;
+      if (MoveGenerator{}
+              .GenerateMoves<MoveGenerator::Type::kAll>(position)
+              .size() == 1) {
+        optimum = std::min(optimum, kSingleMoveTime);
+      }
+
+      return TimeCondition{
+          std::chrono::milliseconds{static_cast<std::int64_t>(optimum)},
+          std::chrono::milliseconds{static_cast<std::int64_t>(maximum)},
+          stop_signal_};
     }
     if (const auto time_per_move =
             std::get_if<TimePerMove>(&info.time_control)) {
@@ -102,15 +166,20 @@ class SearchThread {
   }
 
   void StopThread();
+  ChessEngine& AddHelperEngine(const Info& info, std::size_t worker);
+  void StartPonderHelpers(const Info& info);
 
   ChessEngine::SharedTranspositionTable transposition_table_ =
       std::make_shared<Searcher::SearcherTranspositionTable>();
   ChessEngine engine_;
 
   std::optional<Pondering> pondering_;
+  double original_time_adjust_ = -1;
   std::optional<std::thread> thread_;
   std::vector<std::unique_ptr<ChessEngine>> helper_engines_;
   std::vector<std::thread> helper_threads_;
+  std::vector<std::unique_ptr<Pondering>> helper_pondering_;
+  TimePoint ponder_start_ = std::chrono::system_clock::now();
   StopSignal stop_signal_;
   std::size_t thread_count_ = 1;
   std::string tablebase_path_ = "<empty>";
@@ -584,7 +653,7 @@ class UciChessEngine {
   void ParseUci(std::stringstream command);
   void ParseSetOption(std::stringstream command);
   void ParseIsReady(std::stringstream command) const;
-  static void ParseUciNewGame(std::stringstream command);
+  void ParseUciNewGame(std::stringstream command);
   void ParseFen(const std::string& fen);
   void ParseStartPos();
   void ParseMoves(std::stringstream command);
@@ -710,7 +779,10 @@ inline void UciChessEngine::ParseIsReady(std::stringstream) const {
   Send("readyok");
 }
 
-inline void UciChessEngine::ParseUciNewGame(std::stringstream) { /**/ }
+inline void UciChessEngine::ParseUciNewGame(std::stringstream) {
+  StopSearch();
+  search_thread_.NewGame();
+}
 
 inline void UciChessEngine::ParseFen(const std::string& fen) {
   info_.position = PositionFactory{}(fen);
@@ -825,7 +897,7 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
   }
 
   if (token == "wtime" || token == "btime" || token == "winc" ||
-      token == "binc") {
+      token == "binc" || token == "movestogo") {
     command.seekg(startpos);
     ParsePlayersTime(std::move(command));
   } else if (token == "movetime") {
@@ -872,6 +944,9 @@ inline void UciChessEngine::ParsePlayersTime(std::stringstream command) {
     if (token == "binc") {
       tournament_time.player_inc[static_cast<size_t>(kBlack)] =
           std::chrono::milliseconds{time};
+    }
+    if (token == "movestogo" && time > 0) {
+      tournament_time.moves_to_go = static_cast<int>(time);
     }
   }
 
@@ -925,18 +1000,10 @@ inline void SearchThread::Start(const Info& info) {
   engine_.SetPosition(info.position);
   stop_signal_ = std::make_shared<std::atomic_bool>(false);
 
-  helper_engines_.clear();
-  helper_threads_.clear();
-  helper_engines_.reserve(thread_count_ - 1);
-  helper_threads_.reserve(thread_count_ - 1);
-
   for (std::size_t worker = 1; worker < thread_count_; ++worker) {
-    helper_engines_.push_back(std::make_unique<ChessEngine>(
-        info.position, std::cout, transposition_table_, false,
-        static_cast<Depth>(1 + worker % 2), tablebase_));
-    auto& helper = *helper_engines_.back();
-    helper_threads_.emplace_back([this, info, &helper] {
-      auto condition = GetCondition(info);
+    auto& helper = AddHelperEngine(info, worker);
+    helper_threads_.emplace_back([condition = GetCondition(info),
+                                  &helper]() mutable {
       std::visit(
           [&helper](auto& unwrapped_condition) {
             helper.ComputeBestMove(unwrapped_condition);
@@ -945,14 +1012,33 @@ inline void SearchThread::Start(const Info& info) {
     });
   }
 
-  thread_ = std::thread([this, info] {
-    auto condition = GetCondition(info);
+  thread_ = std::thread([this, stop_signal = stop_signal_,
+                         condition = GetCondition(info)]() mutable {
     std::visit(
         [this](auto& unwrapped_condition) {
           engine_.ComputeBestMove(unwrapped_condition);
         },
         condition);
+    stop_signal->store(true, std::memory_order_relaxed);
   });
+}
+
+inline ChessEngine& SearchThread::AddHelperEngine(const Info& info,
+                                                  const std::size_t worker) {
+  helper_engines_.push_back(std::make_unique<ChessEngine>(
+      info.position, std::cout, transposition_table_, false,
+      static_cast<Depth>(1 + worker % 2), tablebase_));
+  return *helper_engines_.back();
+}
+
+inline void SearchThread::StartPonderHelpers(const Info& info) {
+  for (std::size_t worker = 1; worker < thread_count_; ++worker) {
+    auto& helper = AddHelperEngine(info, worker);
+    auto& helper_pondering = *helper_pondering_.emplace_back(
+        std::make_unique<Pondering>(stop_signal_));
+    helper_threads_.emplace_back(
+        [&helper, &helper_pondering] { helper.GoPonder(helper_pondering); });
+  }
 }
 
 inline void SearchThread::Stop() { StopThread(); }
@@ -970,6 +1056,7 @@ inline void SearchThread::StopThread() {
   }
   helper_threads_.clear();
   helper_engines_.clear();
+  helper_pondering_.clear();
   pondering_ = std::nullopt;
 }
 }  // namespace SimpleChessEngine
