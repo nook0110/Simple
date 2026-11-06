@@ -361,6 +361,9 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 void SearchNode<node_type, ExitCondition>::SetBestMove(Move move) {
   if (state_.ply == 0) {
+    if (iteration_status_.best_move && *iteration_status_.best_move != move) {
+      ++searcher_.best_move_changes_;
+    }
     searcher_.best_move_ = move;
   }
   iteration_status_.best_move = std::move(move);
@@ -388,6 +391,8 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
     RecordSearchedQuiet(move);
   }
   searcher_.SetPlayedMove(ply, move);
+  const auto nodes_before = searcher_.debug_info_.searched_nodes +
+                            searcher_.debug_info_.quiescence_nodes;
 
   // make the move and search the tree
   current_position.DoMove(move);
@@ -400,6 +405,11 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
 
   // undo the move
   current_position.UndoMove(move, position_info_.irreversible_data);
+  if (ply == 0) {
+    searcher_.AddRootEffort(move, searcher_.debug_info_.searched_nodes +
+                                      searcher_.debug_info_.quiescence_nodes -
+                                      nodes_before);
+  }
 
   if (!eval_optional) return std::nullopt;
 

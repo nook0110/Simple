@@ -54,18 +54,31 @@ class SearchThread {
   void Start(const Info& info);
   void PonderHit(const Info& info) {
     if (!pondering_) return;
-    pondering_->SetCondition(GetCondition(info));
+    auto condition = GetCondition(info);
+    if (auto* time_condition = std::get_if<TimeCondition>(&condition);
+        time_condition && time_condition->managed_) {
+      time_condition->start_time_ = ponder_start_;
+    }
+    pondering_->SetCondition(std::move(condition));
   }
   void GoPonder(const Info& info) {
     StopThread();
     engine_.SetPosition(info.position);
     stop_signal_ = std::make_shared<std::atomic_bool>(false);
+    ponder_start_ = std::chrono::system_clock::now();
     pondering_.emplace(stop_signal_);
-    thread_ = std::thread([this] { engine_.GoPonder(*pondering_); });
+    StartPonderHelpers(info);
+    thread_ = std::thread([this, stop_signal = stop_signal_] {
+      engine_.GoPonder(*pondering_);
+      stop_signal->store(true, std::memory_order_relaxed);
+    });
   }
 
   void Stop();
-  void NewGame() { original_time_adjust_ = -1; }
+  void NewGame() {
+    original_time_adjust_ = -1;
+    engine_.NewGame();
+  }
   void SetThreadCount(std::size_t thread_count) {
     StopThread();
     thread_count_ = std::max<std::size_t>(1, thread_count);
@@ -153,6 +166,8 @@ class SearchThread {
   }
 
   void StopThread();
+  ChessEngine& AddHelperEngine(const Info& info, std::size_t worker);
+  void StartPonderHelpers(const Info& info);
 
   ChessEngine::SharedTranspositionTable transposition_table_ =
       std::make_shared<Searcher::SearcherTranspositionTable>();
@@ -163,6 +178,8 @@ class SearchThread {
   std::optional<std::thread> thread_;
   std::vector<std::unique_ptr<ChessEngine>> helper_engines_;
   std::vector<std::thread> helper_threads_;
+  std::vector<std::unique_ptr<Pondering>> helper_pondering_;
+  TimePoint ponder_start_ = std::chrono::system_clock::now();
   StopSignal stop_signal_;
   std::size_t thread_count_ = 1;
   std::string tablebase_path_ = "<empty>";
@@ -983,16 +1000,8 @@ inline void SearchThread::Start(const Info& info) {
   engine_.SetPosition(info.position);
   stop_signal_ = std::make_shared<std::atomic_bool>(false);
 
-  helper_engines_.clear();
-  helper_threads_.clear();
-  helper_engines_.reserve(thread_count_ - 1);
-  helper_threads_.reserve(thread_count_ - 1);
-
   for (std::size_t worker = 1; worker < thread_count_; ++worker) {
-    helper_engines_.push_back(std::make_unique<ChessEngine>(
-        info.position, std::cout, transposition_table_, false,
-        static_cast<Depth>(1 + worker % 2), tablebase_));
-    auto& helper = *helper_engines_.back();
+    auto& helper = AddHelperEngine(info, worker);
     helper_threads_.emplace_back([condition = GetCondition(info),
                                   &helper]() mutable {
       std::visit(
@@ -1003,13 +1012,33 @@ inline void SearchThread::Start(const Info& info) {
     });
   }
 
-  thread_ = std::thread([this, condition = GetCondition(info)]() mutable {
+  thread_ = std::thread([this, stop_signal = stop_signal_,
+                         condition = GetCondition(info)]() mutable {
     std::visit(
         [this](auto& unwrapped_condition) {
           engine_.ComputeBestMove(unwrapped_condition);
         },
         condition);
+    stop_signal->store(true, std::memory_order_relaxed);
   });
+}
+
+inline ChessEngine& SearchThread::AddHelperEngine(const Info& info,
+                                                  const std::size_t worker) {
+  helper_engines_.push_back(std::make_unique<ChessEngine>(
+      info.position, std::cout, transposition_table_, false,
+      static_cast<Depth>(1 + worker % 2), tablebase_));
+  return *helper_engines_.back();
+}
+
+inline void SearchThread::StartPonderHelpers(const Info& info) {
+  for (std::size_t worker = 1; worker < thread_count_; ++worker) {
+    auto& helper = AddHelperEngine(info, worker);
+    auto& helper_pondering = *helper_pondering_.emplace_back(
+        std::make_unique<Pondering>(stop_signal_));
+    helper_threads_.emplace_back(
+        [&helper, &helper_pondering] { helper.GoPonder(helper_pondering); });
+  }
 }
 
 inline void SearchThread::Stop() { StopThread(); }
@@ -1027,6 +1056,7 @@ inline void SearchThread::StopThread() {
   }
   helper_threads_.clear();
   helper_engines_.clear();
+  helper_pondering_.clear();
   pondering_ = std::nullopt;
 }
 }  // namespace SimpleChessEngine
