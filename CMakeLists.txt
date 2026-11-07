@@ -118,6 +118,11 @@ if(BUILD_TESTS)
                 --engine $<TARGET_FILE:SimpleChessEngine>
     )
     add_test(
+        NAME UciInputHandling
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/uci_input_test.py
+                --engine $<TARGET_FILE:SimpleChessEngine>
+    )
+    add_test(
         NAME TexelDeterministicQScore
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/texel_qscore_test.py
                 --engine $<TARGET_FILE:SimpleChessEngine>
