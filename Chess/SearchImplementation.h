@@ -34,7 +34,7 @@ struct IterationStatus {
 
 struct PositionInfo {
   explicit PositionInfo(const Position &position);
-  const Eval static_eval;
+  mutable std::optional<Eval> static_eval;
   const bool is_under_check = false;
   const Position::IrreversibleData irreversible_data;
   const size_t side_to_move_idx;
@@ -82,6 +82,7 @@ struct SearchNode {
 
   SearchResult QuiescenceSearch();
   Eval GetEndGameScore() const;
+  Eval GetStaticEval() const;
 
   void SetBestMove(Move move);
   void SetTTEntry(const Bound bound);
@@ -122,7 +123,7 @@ struct SearchNode {
 
 namespace SimpleChessEngine {
 inline PositionInfo::PositionInfo(const Position &position)
-    : static_eval(position.Evaluate()), is_under_check(position.IsUnderCheck()),
+    : is_under_check(position.IsUnderCheck()),
       irreversible_data(position.GetIrreversibleData()),
       side_to_move_idx(static_cast<size_t>(position.GetSideToMove())) {}
 
@@ -184,7 +185,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   }
 
   if (ply >= kMaxSearchPly - 1) {
-    return position_info_.static_eval;
+    return GetStaticEval();
   }
 
   if (position_info_.is_under_check && ply < 2 * max_depth) {
@@ -254,7 +255,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   if (CanRFP()) {
     searcher_.debug_info_.rfp_cuts++;
-    return position_info_.static_eval;
+    return GetStaticEval();
   }
 
   auto &current_position = GetCurrentPosition();
@@ -356,6 +357,15 @@ Eval SearchNode<node_type, ExitCondition>::GetEndGameScore() const {
   }
 
   return kDrawValue;
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+Eval SearchNode<node_type, ExitCondition>::GetStaticEval() const {
+  if (!position_info_.static_eval) {
+    position_info_.static_eval = searcher_.GetPosition().Evaluate();
+  }
+  return *position_info_.static_eval;
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -486,13 +496,15 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
       continue;
     }
 
+    const bool can_futility_prune =
+        can_prune && is_quiet && CanFutilityPrune();
+
     searcher_.SetPlayedMove(ply, move);
     const auto nodes_before = searcher_.debug_info_.searched_nodes +
                               searcher_.debug_info_.quiescence_nodes;
     current_position.DoMove(move);  // make the move and search the tree
 
-    if (can_prune && is_quiet && !current_position.IsUnderCheck() &&
-        CanFutilityPrune()) {
+    if (can_futility_prune && !current_position.IsUnderCheck()) {
       current_position.UndoMove(move, position_info_.irreversible_data);
       searcher_.debug_info_.futility_prunes++;
       continue;
@@ -632,7 +644,7 @@ bool SearchNode<node_type, ExitCondition>::CanNullMove() const {
 
   if (position_info_.is_under_check) return false;
 
-  if (position_info_.static_eval < state_.beta) return false;
+  if (GetStaticEval() < state_.beta) return false;
 
   const auto &current_position = searcher_.GetPosition();
   const auto side_to_move = current_position.GetSideToMove();
@@ -685,7 +697,7 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
   return !position_info_.is_under_check &&
          state_.remaining_depth <=
              Settings::PruneParameters::RFPSettings::kDepthLimit &&
-         position_info_.static_eval >
+         GetStaticEval() >
              state_.beta + Settings::PruneParameters::RFPSettings::kThreshold *
                                state_.remaining_depth;
 }
@@ -712,7 +724,7 @@ bool SearchNode<node_type, ExitCondition>::CanFutilityPrune() const {
   const Eval depth = state_.remaining_depth;
   if (depth > FutilitySettings::kDepthLimit) return false;
 
-  return position_info_.static_eval + FutilitySettings::kBaseMargin +
+  return GetStaticEval() + FutilitySettings::kBaseMargin +
              FutilitySettings::kDepthMargin * depth <=
          state_.alpha;
 }
