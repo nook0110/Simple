@@ -69,7 +69,7 @@ class SearchThread {
     StopThread();
     engine_.SetPosition(info.position);
     stop_signal_ = std::make_shared<std::atomic_bool>(false);
-    ponder_start_ = std::chrono::system_clock::now();
+    ponder_start_ = std::chrono::steady_clock::now();
     pondering_.emplace(stop_signal_);
     StartPonderHelpers(info);
     thread_ = std::thread([this, stop_signal = stop_signal_] {
@@ -183,7 +183,7 @@ class SearchThread {
   std::vector<std::unique_ptr<ChessEngine>> helper_engines_;
   std::vector<std::thread> helper_threads_;
   std::vector<std::unique_ptr<Pondering>> helper_pondering_;
-  TimePoint ponder_start_ = std::chrono::system_clock::now();
+  TimePoint ponder_start_ = std::chrono::steady_clock::now();
   StopSignal stop_signal_;
   std::size_t thread_count_ = 1;
   std::string tablebase_path_ = "<empty>";

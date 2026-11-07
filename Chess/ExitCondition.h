@@ -48,7 +48,7 @@ struct TimeCondition {
   }
 
   bool IsTimeToExit() const {
-    return IsStopped() || (managed_ && stop_now_) || Elapsed() > hard_limit_;
+    return IsStopped() || (managed_ && stop_now_) || Elapsed() >= hard_limit_;
   }
 
   void Update(const IterationInfo& info) {
@@ -66,7 +66,7 @@ struct TimeCondition {
 
   std::chrono::milliseconds soft_limit_;
   std::chrono::milliseconds hard_limit_;
-  TimePoint start_time_ = std::chrono::system_clock::now();
+  TimePoint start_time_ = std::chrono::steady_clock::now();
   StopSignal stop_signal_;
   bool managed_ = false;
   double time_scale_ = 1.0;
@@ -79,8 +79,8 @@ struct TimeCondition {
     return stop_signal_ && stop_signal_->load(std::memory_order_relaxed);
   }
 
-  std::chrono::system_clock::duration Elapsed() const {
-    return std::chrono::system_clock::now() - start_time_;
+  std::chrono::steady_clock::duration Elapsed() const {
+    return std::chrono::steady_clock::now() - start_time_;
   }
 };
 static_assert(SearchCondition<TimeCondition>);
@@ -88,7 +88,9 @@ static_assert(SearchCondition<TimeCondition>);
 struct DepthCondition {
   explicit DepthCondition(Depth max_depth, StopSignal stop_signal = {})
       : max_depth_(max_depth), stop_signal_(std::move(stop_signal)) {}
-  bool ShouldContinueIteration() const { return cur_depth < max_depth_; }
+  bool ShouldContinueIteration() const {
+    return !IsTimeToExit() && cur_depth < max_depth_;
+  }
 
   bool IsTimeToExit() const {
     return stop_signal_ && stop_signal_->load(std::memory_order_relaxed);

@@ -10,7 +10,6 @@ template <class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 class Quiescence {
  public:
-  constexpr static size_t kEnoughNodesToCheckTime = 1 << 10;
   constexpr static Depth kMaxDepth = kMaxSearchPly + 32;
   constexpr static Eval kSEEMargin = 120;
 

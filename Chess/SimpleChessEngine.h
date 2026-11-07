@@ -245,7 +245,7 @@ class ChessEngine {
 namespace SimpleChessEngine {
 inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     SearchCondition auto& condition) {
-  const TimePoint start_time = std::chrono::system_clock::now();
+  const TimePoint start_time = std::chrono::steady_clock::now();
   searcher_.InitStartOfSearch();
 
   const auto finish = [this, &condition](const BestMoveInfo& bm_info) {
@@ -263,6 +263,10 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   }
   best_move_ = legal_moves.front();
   ponder_move_.reset();
+  if (!condition.ShouldContinueIteration()) {
+    finish(BestMoveInfo{best_move_, std::nullopt});
+    return;
+  }
 
   if (const auto& tablebase = searcher_.GetTablebase(); tablebase) {
     if (const auto tablebase_move = tablebase->RootMove(position_)) {
@@ -287,8 +291,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   std::size_t iteration_index = 0;
 
   for (current_depth = initial_depth_;
-       (current_depth == initial_depth_ ||
-        condition.ShouldContinueIteration()) &&
+       condition.ShouldContinueIteration() &&
        current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
@@ -357,13 +360,13 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     iteration_values[iteration_index] = eval;
     iteration_index = (iteration_index + 1) % iteration_values.size();
     PrintInfo(info, eval, current_depth,
-              std::chrono::duration<double>{std::chrono::system_clock::now() -
+              std::chrono::duration<double>{std::chrono::steady_clock::now() -
                                             start_time});
     PrintInfo(ebfs.GetInfo());
     if (reporting_) {
       Output() << "info time "
                << std::chrono::duration_cast<std::chrono::milliseconds>(
-                      std::chrono::system_clock::now() - start_time)
+                      std::chrono::steady_clock::now() - start_time)
                       .count()
                << "\n";
     }
@@ -390,7 +393,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   }
 
   PrintInfo(info, eval, current_depth,
-            std::chrono::duration<double>{std::chrono::system_clock::now() -
+            std::chrono::duration<double>{std::chrono::steady_clock::now() -
                                           start_time});
 
   previous_score_ = eval;

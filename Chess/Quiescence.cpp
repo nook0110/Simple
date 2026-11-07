@@ -168,7 +168,6 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
 template <class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool Quiescence<ExitCondition>::IsTimeToExit() {
-  return searched_nodes_ % kEnoughNodesToCheckTime == 0 &&
-         exit_condition_.IsTimeToExit();
+  return exit_condition_.IsTimeToExit();
 }
 }  // namespace SimpleChessEngine

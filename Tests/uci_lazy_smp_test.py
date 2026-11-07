@@ -160,7 +160,7 @@ def main() -> int:
     for name, value in tuning_values.items():
         send(f"setoption name {name} value {value}")
 
-    send("setoption name Threads value 4")
+    send("setoption name Threads value 2")
     send("isready")
     wait_for(lambda line: line == "readyok", "readyok")
     send("position startpos")

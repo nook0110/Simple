@@ -83,14 +83,38 @@ TEST(FiftyMoveRule, MateOnTheLastMoveStillCounts) {
   EXPECT_GT(*result, kTablebaseWinValue);
 }
 
-TEST(TimeManagement, CompletesFirstIterationWithoutTime) {
+TEST(TimeManagement, ReturnsLegalMoveWithoutTime) {
   auto position = PositionFactory{}(
       "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4");
   std::stringstream ss;
   ChessEngine engine(position, ss);
   TimeCondition condition{std::chrono::milliseconds{0}};
   engine.ComputeBestMove(condition);
-  EXPECT_EQ(engine.GetCurrentBestMove(), MoveFactory{}(position, "h5f7"));
+  const auto legal =
+      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+  EXPECT_NE(std::ranges::find(legal, engine.GetCurrentBestMove()), legal.end());
+  EXPECT_EQ(ss.str().find("info depth "), std::string::npos);
+}
+
+TEST(TimeManagement, StopPreventsDepthIteration) {
+  auto stop = std::make_shared<std::atomic_bool>(true);
+  DepthCondition condition{10, stop};
+  EXPECT_FALSE(condition.ShouldContinueIteration());
+}
+
+TEST(TimeManagement, SearchHonorsStopAtFirstNode) {
+  Searcher searcher(PositionFactory{}());
+  auto stop = std::make_shared<std::atomic_bool>(true);
+  DepthCondition condition{1, stop};
+  EXPECT_FALSE(searcher.Search<NodeType::kPV>(condition, 1, 1, -10000, 10000));
+}
+
+TEST(TimeManagement, QuiescenceHonorsStopAtFirstNode) {
+  auto position = PositionFactory{}();
+  auto stop = std::make_shared<std::atomic_bool>(true);
+  DepthCondition condition{1, stop};
+  Quiescence quiescence{condition};
+  EXPECT_FALSE(quiescence.Search<true>(position, -10000, 10000, 0));
 }
 
 TEST(Pondering, WaitsForPonderhitBeforeBestMove) {

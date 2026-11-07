@@ -15,7 +15,7 @@
 namespace SimpleChessEngine {
 using Depth = std::uint8_t;
 using Age = std::uint16_t;
-using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
+using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 
 constexpr size_t kBoardArea = 64;
 constexpr Bitboard kEmptyBoard = Bitboard{};
