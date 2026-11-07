@@ -451,7 +451,6 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
 
   const bool lmr_conditions_met =
       Settings::PruneParameters::LMRSettings::kEnabled &&
-      !kIsPrincipalVariation &&
       remaining_depth >= Settings::PruneParameters::LMRSettings::kDepthLimit;
 
   const bool move_pruning_allowed =
@@ -511,6 +510,9 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
                : 0);
       if constexpr (node_type == NodeType::kCut) {
         reduction += LMRSettings::kCutNodeReduction;
+      }
+      if constexpr (kIsPrincipalVariation) {
+        reduction -= 1;
       }
       reduction -= static_cast<double>(quiet_score) /
                    static_cast<double>(LMRSettings::kHistoryDivisor);
