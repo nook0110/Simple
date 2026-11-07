@@ -43,6 +43,17 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     return std::nullopt;
   }
 
+  if (current_position.DetectRepetition(current_depth)) {
+    return kDrawValue;
+  }
+
+  if (current_position.GetHalfMoveClock() >= 100 &&
+      (!current_position.IsUnderCheck() ||
+       !move_generator_.GenerateMoves<MoveGenerator::Type::kAll>(current_position)
+            .empty())) {
+    return kDrawValue;
+  }
+
   if (current_position.IsInsufficientMaterial()) {
     return kDrawValue;
   }
@@ -55,10 +66,9 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     return SearchUnderCheck(current_position, alpha, beta, current_depth);
   }
 
-  const auto side = current_position.GetSideToMove();
-  if (current_position.GetPieces(side) ==
-          (current_position.GetPiecesByType<Piece::kKing>(side) |
-           current_position.GetPiecesByType<Piece::kPawn>(side)) &&
+  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
+      current_position);
+  if (moves.empty() &&
       move_generator_.GenerateMoves<MoveGenerator::Type::kAll>(current_position)
           .empty()) {
     return kDrawValue;
@@ -73,10 +83,6 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   if (alpha < stand_pat) {
     alpha = stand_pat;
   }
-
-  // get all the attacks moves
-  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
-      current_position);
 
   /*
   std::ranges::sort(moves,

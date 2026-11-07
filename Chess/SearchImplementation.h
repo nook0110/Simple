@@ -594,6 +594,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
 
     if (temp_eval > iteration_status_.best_eval) {
       SetBestMove(move);
+      iteration_status_.best_eval = temp_eval;
 
       // check if we have found a better move
       if (temp_eval >= beta) {
@@ -608,8 +609,6 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
 
         return beta;
       }
-
-      iteration_status_.best_eval = temp_eval;
     }
   }
 
