@@ -73,6 +73,7 @@ struct Settings {
     inline static bool psqt_adjustment_enabled = false;
     inline static bool king_pawns_enabled = true;
     inline static bool king_attacks_enabled = true;
+    inline static Eval nnue_scale = 256;
     inline static bool king_safety_enabled = true;
     inline static size_t revision = 0;
 

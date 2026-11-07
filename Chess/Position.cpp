@@ -112,15 +112,21 @@ void Position::DoMove(const Move &move) {
   
   // Store captured piece for undo
   irreversible_data_.captured_piece = board_[to];
+  auto &dirty = nnue_.Push();
 
   if (move.IsEnPassant()) {
     const auto capture_square = Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
     irreversible_data_.captured_piece = Piece::kPawn;  // En passant always captures a pawn
+    dirty.Add(Piece::kPawn, us, from, to);
+    dirty.Add(Piece::kPawn, them, capture_square, Nnue::kNoSquare);
     RemovePiece(capture_square, them);
     MovePiece(from, to, us);
   } else if (move.IsPromotion()) {
     const auto promoted_to = move.PromotionPiece();
     const auto captured_piece = board_[to];
+    dirty.Add(Piece::kPawn, us, from, Nnue::kNoSquare);
+    if (!!captured_piece) dirty.Add(captured_piece, them, to, Nnue::kNoSquare);
+    dirty.Add(promoted_to, us, Nnue::kNoSquare, to);
     RemovePiece(from, us);
     if (!!captured_piece) RemovePiece(to, them);
     PlacePiece(to, promoted_to, us);
@@ -152,6 +158,10 @@ void Position::DoMove(const Move &move) {
     }
     
     const auto side_idx = static_cast<size_t>(side);
+    dirty.Add(Piece::kKing, us, king_from,
+              kKingCastlingDestination[color_idx][side_idx]);
+    dirty.Add(Piece::kRook, us, rook_from,
+              kRookCastlingDestination[color_idx][side_idx]);
     RemovePiece(king_from, us);
     RemovePiece(rook_from, us);
     PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us);
@@ -173,7 +183,11 @@ void Position::DoMove(const Move &move) {
       }
     }
     
-    if (!!captured_piece) RemovePiece(to, them);
+    dirty.Add(piece_to_move, us, from, to);
+    if (!!captured_piece) {
+      dirty.Add(captured_piece, them, to, Nnue::kNoSquare);
+      RemovePiece(to, them);
+    }
     MovePiece(from, to, us);
     
     if (piece_to_move == Piece::kKing) {
@@ -218,6 +232,7 @@ void SimpleChessEngine::Position::DoMove(NullMove) {
   }
   side_to_move_ = Flip(side_to_move_);
   hash_ ^= hasher_.stm_hash;
+  nnue_.Push();
 
   history_stack_.Push(hash_, false);
 }
@@ -293,6 +308,7 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
     }
   }
 
+  nnue_.Pop();
   history_stack_.Pop();
 }
 
@@ -305,6 +321,7 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
   }
   hash_ ^= hasher_.stm_hash;
   side_to_move_ = Flip(side_to_move_);
+  nnue_.Pop();
 
   history_stack_.Pop();
 }

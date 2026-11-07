@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "MoveFactory.h"
+#include "Nnue/Nnue.h"
 #include "Perft.h"
 #include "Position.h"
 #include "Quiescence.h"
@@ -310,6 +311,15 @@ struct EngineOptions {
         std::make_unique<StringOption>("SyzygyPath", "syzygy");
     tablebase_path_ = tablebase_path.get();
     options.emplace_back(std::move(tablebase_path));
+    auto eval_file =
+        std::make_unique<StringOption>("EvalFile", Nnue::kDefaultEvalFile);
+    eval_file_ = eval_file.get();
+    options.emplace_back(std::move(eval_file));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "NnueScale", Settings::EvaluationParameters::nnue_scale, 1, 4096,
+        [](const int value) {
+          Settings::EvaluationParameters::nnue_scale = value;
+        }));
     options.emplace_back(
         std::make_unique<SpinOption>("RFPDepth", 5, 1, 8, [](const int value) {
           Settings::PruneParameters::RFPSettings::kDepthLimit =
@@ -438,9 +448,13 @@ struct EngineOptions {
   [[nodiscard]] const std::string& GetTablebasePath() const {
     return tablebase_path_->GetValue();
   }
+  [[nodiscard]] const std::string& GetEvalFile() const {
+    return eval_file_->GetValue();
+  }
 
  private:
   StringOption* tablebase_path_{};
+  StringOption* eval_file_{};
   void AddPsqtAdjustmentOptions() {
     constexpr std::array piece_names = {"Knight", "Bishop", "Rook", "Queen",
                                         "King"};
@@ -688,7 +702,9 @@ class UciChessEngine {
   void ParsePosition(std::stringstream command);
   void ParsePerft(std::stringstream command);
   void ParseEvaluate() const;
+  void ParseNnueEvaluate() const;
   void ParseQuiescenceEvaluate() const;
+  void LoadEvalFile() const;
   void ParseGo(std::stringstream command);
   void ParsePonderhit(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
@@ -809,6 +825,25 @@ inline void UciChessEngine::ParseSetOption(std::stringstream command) {
       !search_thread_.SetTablebasePath(options_.GetTablebasePath())) {
     Send("info string failed to load Syzygy tablebases");
   }
+  if (option->GetName() == "EvalFile") {
+    LoadEvalFile();
+  }
+}
+
+inline void UciChessEngine::LoadEvalFile() const {
+  const auto& path = options_.GetEvalFile();
+  if (path.empty() || path == "<empty>" || EqualsIgnoreCase(path, "none")) {
+    Nnue::Unload();
+    Send("info string NNUE disabled, using handcrafted evaluation");
+    return;
+  }
+  if (Nnue::Load(path)) {
+    Send("info string NNUE evaluation using " + Nnue::Description());
+    return;
+  }
+  Send("info string failed to load NNUE file " + path +
+       (Nnue::IsLoaded() ? ", keeping " + Nnue::Description()
+                         : ", using handcrafted evaluation"));
 }
 inline void UciChessEngine::ParseIsReady(std::stringstream) const {
   // ReSharper disable once StringLiteralTypo
@@ -881,6 +916,20 @@ inline void UciChessEngine::ParseEvaluate() const {
       << "eval: " << info_.position.Evaluate() << " cp" << std::endl;
 }
 
+inline void UciChessEngine::ParseNnueEvaluate() const {
+  if (!Nnue::IsLoaded()) {
+    Send("nnue not loaded");
+    return;
+  }
+  const auto incremental = info_.position.EvaluateNetwork();
+  const auto scratch = Nnue::EvaluateFromScratch(info_.position);
+  std::osyncstream(o_stream_)
+      << "nnue psqt " << incremental.psqt << " positional "
+      << incremental.positional << " scratch_psqt " << scratch.psqt
+      << " scratch_positional " << scratch.positional << " eval "
+      << info_.position.Evaluate() << std::endl;
+}
+
 inline void UciChessEngine::ParseQuiescenceEvaluate() const {
   Position position = info_.position;
   const DepthCondition condition{kMaxSearchPly};
@@ -917,6 +966,11 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
 
   if (token == "qeval") {
     ParseQuiescenceEvaluate();
+    return;
+  }
+
+  if (token == "nnue") {
+    ParseNnueEvaluate();
     return;
   }
 

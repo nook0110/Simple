@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "Attacks.h"
+#include "Nnue/Nnue.h"
 #include "Position.h"
 #include "Settings.h"
 
@@ -361,7 +362,21 @@ void AddKingTropism(const Position& position, const Player attacker,
          kLimitsDifference;
 }
 
+[[nodiscard]] Nnue::NetworkOutput Position::EvaluateNetwork() const {
+  return Nnue::Evaluate(*this, nnue_);
+}
+
+[[nodiscard]] Eval Position::EvaluateNnue() const {
+  const auto [psqt, positional] = Nnue::Evaluate(*this, nnue_);
+  const Eval raw = psqt + positional;
+  const Eval scaled =
+      raw * Settings::EvaluationParameters::nnue_scale / kNnueScaleDenominator;
+  return std::clamp(scaled, -kNnueEvalLimit, kNnueEvalLimit);
+}
+
 [[nodiscard]] Eval Position::Evaluate() const {
+  if (Nnue::IsLoaded()) return EvaluateNnue();
+
   const auto us = side_to_move_;
   const auto them = Flip(us);
   const auto us_idx = static_cast<size_t>(us);

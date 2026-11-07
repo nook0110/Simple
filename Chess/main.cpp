@@ -1,6 +1,7 @@
 #include <cstddef>
 
 #include "Attacks.h"
+#include "Nnue/Nnue.h"
 #include "PSQT.h"
 #include "Settings.h"
 #include "UciCommunicator.h"
@@ -22,6 +23,11 @@ std::string program_info() {
   ss << "\tKiller moves\n";
   ss << "\tTapered Evaluation\n";
 
+  ss << "\tNNUE: "
+     << (Nnue::IsLoaded() ? Nnue::Description()
+                          : std::string("not loaded, handcrafted evaluation"))
+     << "\n";
+
   ss << std::boolalpha;
   ss << Settings::kPruneParameters;
   ss << Settings::kSearchParameters;
@@ -33,6 +39,8 @@ int main(int argc, char **argv) {
   SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kRook>();
   SimpleChessEngine::InitPawnAttacks();
   SimpleChessEngine::InitPSQT();
+  static_cast<void>(
+      SimpleChessEngine::Nnue::Load(SimpleChessEngine::Nnue::kDefaultEvalFile));
 
   std::cout << program_info() << std::endl;
 
