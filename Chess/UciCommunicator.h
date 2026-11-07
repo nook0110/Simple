@@ -316,7 +316,7 @@ struct EngineOptions {
     eval_file_ = eval_file.get();
     options.emplace_back(std::move(eval_file));
     options.emplace_back(std::make_unique<SpinOption>(
-        "NnueScale", Settings::EvaluationParameters::nnue_scale, 1, 4096,
+        "NnueScale", Settings::EvaluationParameters::nnue_scale, 0, 4096,
         [](const int value) {
           Settings::EvaluationParameters::nnue_scale = value;
         }));

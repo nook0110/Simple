@@ -24,6 +24,7 @@ struct NetworkOutput {
 void Unload();
 [[nodiscard]] bool IsLoaded();
 [[nodiscard]] std::string Description();
+[[nodiscard]] int DefaultScale();
 
 [[nodiscard]] NetworkOutput Evaluate(const Position& position,
                                      AccumulatorStack& stack);

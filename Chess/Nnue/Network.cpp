@@ -218,6 +218,9 @@ class Network {
   std::unique_ptr<Architecture[]> stacks_;
 };
 
+constexpr int kSmallDefaultScale = 362;
+constexpr int kBigDefaultScale = 311;
+
 using SmallNetwork = Network<kSmallDimensions, kSmallL2, kSmallL3>;
 using BigNetwork = Network<kBigDimensions, kBigL2, kBigL3>;
 
@@ -268,6 +271,7 @@ bool Load(const std::string& path) {
 
     if (hash == SmallNetwork::kHash) {
       if (!ReadNetwork(stream, registry.small)) return false;
+      registry.big.reset();
       registry.type = NetworkType::kSmall;
       registry.description = candidate.string() + " (HalfKAv2_hm, 22528->" +
                              std::to_string(kSmallDimensions) + "x2->" +
@@ -275,6 +279,7 @@ bool Load(const std::string& path) {
                              std::to_string(kSmallL3) + "->1)";
     } else if (hash == BigNetwork::kHash) {
       if (!ReadNetwork(stream, registry.big)) return false;
+      registry.small.reset();
       registry.type = NetworkType::kBig;
       registry.description = candidate.string() + " (HalfKAv2_hm, 22528->" +
                              std::to_string(kBigDimensions) + "x2->" +
@@ -298,6 +303,11 @@ void Unload() {
 bool IsLoaded() { return registry.type != NetworkType::kNone; }
 
 std::string Description() { return registry.description; }
+
+int DefaultScale() {
+  return registry.type == NetworkType::kBig ? kBigDefaultScale
+                                            : kSmallDefaultScale;
+}
 
 NetworkOutput Evaluate(const Position& position, AccumulatorStack& stack) {
   stack.Synchronize(registry.generation);
