@@ -1,12 +1,17 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <chrono>
+#include <memory>
+#include <atomic>
+#include <thread>
 #include <fstream>
 #include <limits>
 #include <sstream>
 #include <vector>
 #include <ostream>
 
+#include "ExitCondition.h"
 #include "Move.h"
 #include "MoveFactory.h"
 #include "MoveGenerator.h"
@@ -76,6 +81,39 @@ TEST(FiftyMoveRule, MateOnTheLastMoveStillCounts) {
       std::numeric_limits<Eval>::max() / 2);
   ASSERT_TRUE(result.has_value());
   EXPECT_GT(*result, kTablebaseWinValue);
+}
+
+TEST(TimeManagement, CompletesFirstIterationWithoutTime) {
+  auto position = PositionFactory{}(
+      "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4");
+  std::stringstream ss;
+  ChessEngine engine(position, ss);
+  TimeCondition condition{std::chrono::milliseconds{0}};
+  engine.ComputeBestMove(condition);
+  EXPECT_EQ(engine.GetCurrentBestMove(), MoveFactory{}(position, "h5f7"));
+}
+
+TEST(Pondering, WaitsForPonderhitBeforeBestMove) {
+  auto position = PositionFactory{}("7k/8/8/p1p1p1p1/P1P1P1P1/8/8/6K1 b - - 0 1");
+  std::stringstream ss;
+  ChessEngine engine(position, ss);
+  auto stop = std::make_shared<std::atomic_bool>(false);
+  Pondering pondering{stop};
+  std::thread search([&] { engine.ComputeBestMove(pondering); });
+  std::this_thread::sleep_for(std::chrono::milliseconds{300});
+  EXPECT_EQ(ss.str().find("bestmove"), std::string::npos);
+  pondering.SetCondition(TimeCondition{std::chrono::milliseconds{0}});
+  search.join();
+  EXPECT_NE(ss.str().find("bestmove"), std::string::npos);
+}
+
+TEST(BestMove, PrintsNullMoveWithoutLegalMoves) {
+  auto position = PositionFactory{}("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1");
+  std::stringstream ss;
+  ChessEngine engine(position, ss);
+  DepthCondition condition{3};
+  engine.ComputeBestMove(condition);
+  EXPECT_NE(ss.str().find("bestmove 0000"), std::string::npos);
 }
 
 TEST_P(BestMoveTest, FindBestMove) {

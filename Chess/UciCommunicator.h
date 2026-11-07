@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cctype>
+#include <charconv>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -9,6 +11,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <syncstream>
 #include <thread>
 #include <utility>
 #include <variant>
@@ -186,6 +189,23 @@ class SearchThread {
   std::shared_ptr<const Tablebase::Syzygy> tablebase_;
 };
 
+template <class T>
+[[nodiscard]] std::optional<T> ParseNumber(const std::string& text) {
+  T value{};
+  const auto* end = text.data() + text.size();
+  const auto [ptr, error] = std::from_chars(text.data(), end, value);
+  if (error != std::errc{} || ptr != end) return std::nullopt;
+  return value;
+}
+
+[[nodiscard]] inline bool EqualsIgnoreCase(const std::string& lhs,
+                                           const std::string& rhs) {
+  return std::ranges::equal(lhs, rhs, [](const char a, const char b) {
+    return std::tolower(static_cast<unsigned char>(a)) ==
+           std::tolower(static_cast<unsigned char>(b));
+  });
+}
+
 struct OptionBase {
   OptionBase(std::string name) : name_(std::move(name)) {}
 
@@ -211,10 +231,10 @@ struct SpinOption : public OptionBase {
         setter_(setter) {}
 
   bool SetValue(const std::string& value) override {
-    const int parsed = std::stoi(value);
-    if (parsed < min_ || parsed > max_) return false;
-    value_ = parsed;
-    if (setter_) setter_(parsed);
+    const auto parsed = ParseNumber<int>(value);
+    if (!parsed || *parsed < min_ || *parsed > max_) return false;
+    value_ = *parsed;
+    if (setter_) setter_(*parsed);
     return true;
   }
 
@@ -374,27 +394,27 @@ struct EngineOptions {
     AddKingSafetyOptions();
   }
   std::vector<std::unique_ptr<OptionBase>> options;
-  bool ParseSetoption(std::stringstream command) {
-    std::string option_name;
-    command >> option_name;
-
-    for (const auto& option : options) {
-      if (option->GetName() == option_name) {
-        std::string value;
-        if (!(command >> value)) /* do sth for button */
-          return false;
-
-        if (value != "value") {
-          return false;
-        }
-
-        command >> value;
-        return option->SetValue(value);
+  const OptionBase* ParseSetoption(std::stringstream command) {
+    std::string token;
+    std::string name;
+    std::string value;
+    bool reading_value = false;
+    while (command >> token) {
+      if (!reading_value && token == "value") {
+        reading_value = true;
+        continue;
       }
+      auto& target = reading_value ? value : name;
+      if (!target.empty()) target += ' ';
+      target += token;
     }
 
-    assert(false);
-    std::unreachable();
+    for (const auto& option : options) {
+      if (EqualsIgnoreCase(option->GetName(), name)) {
+        return option->SetValue(value) ? option.get() : nullptr;
+      }
+    }
+    return nullptr;
   }
 
   void PrintOptionsNames(std::ostream& out) {
@@ -671,7 +691,7 @@ class UciChessEngine {
   void ParseDebug(std::stringstream command);
 
   void Send(const std::string& message) const {
-    o_stream_ << message << std::endl;
+    std::osyncstream(o_stream_) << message << std::endl;
   }
 
   std::istream& i_stream_;
@@ -741,7 +761,8 @@ inline void UciChessEngine::ParseCommand(std::stringstream command) {
   if (command_name == "bench") {
     ParsePosition(std::stringstream{std::string{"startpos"}});
     const auto result = PerftBench(info_.position, 6);
-    o_stream_ << result.nodes << " nodes " << result.nps << " nps" << std::endl;
+    std::osyncstream(o_stream_)
+        << result.nodes << " nodes " << result.nps << " nps" << std::endl;
     std::exit(0);
   }
 
@@ -767,11 +788,18 @@ inline void UciChessEngine::ParseSetOption(std::stringstream command) {
     Send("Maybe you meant 'name'?");
     return;
   }
-  if (options_.ParseSetoption(std::move(command))) {
+  StopSearch();
+  const auto* option = options_.ParseSetoption(std::move(command));
+  if (!option) {
+    Send("info string unknown option or invalid value");
+    return;
+  }
+  if (option->GetName() == "Threads") {
     search_thread_.SetThreadCount(options_.GetThreadCount());
-    if (!search_thread_.SetTablebasePath(options_.GetTablebasePath())) {
-      Send("info string failed to load Syzygy tablebases");
-    }
+  }
+  if (option->GetName() == "SyzygyPath" &&
+      !search_thread_.SetTablebasePath(options_.GetTablebasePath())) {
+    Send("info string failed to load Syzygy tablebases");
   }
 }
 inline void UciChessEngine::ParseIsReady(std::stringstream) const {
@@ -805,23 +833,18 @@ inline void UciChessEngine::ParsePosition(std::stringstream command) {
   command >> token;
 
   if (token == "fen") {
-    std::string board;
-    std::string side_to_move;
-    std::string castling_rights;
-    std::string en_croissant;
-    std::string rule50;
-    std::string move_number;
-    command >> board >> side_to_move >> castling_rights >> en_croissant >>
-        rule50 >> move_number;
-    const auto fen = board + " " + side_to_move + " " + castling_rights + " " +
-                     en_croissant + " " + rule50 + " " + move_number;
+    std::string fen;
+    while (command >> token && token != "moves") {
+      if (!fen.empty()) fen += ' ';
+      fen += token;
+    }
     ParseFen(fen);
-  }
-  if (token == "startpos") {
+  } else if (token == "startpos") {
     ParseStartPos();
+    command >> token;
+  } else {
+    return;
   }
-
-  command >> token;
 
   if (token == "moves") {
     ParseMoves(std::move(command));
@@ -831,19 +854,23 @@ inline void UciChessEngine::ParsePosition(std::stringstream command) {
 inline void UciChessEngine::ParsePerft(std::stringstream command) {
   std::string token;
   command >> token;
-  const auto depth = std::stoull(token);
+  const auto parsed_depth = ParseNumber<std::size_t>(token);
+  if (!parsed_depth) return;
+  const auto depth = *parsed_depth;
 
   const auto start_time = std::chrono::high_resolution_clock::now();
   const auto nodes = Perft(o_stream_, info_.position, depth);
   const auto time = std::chrono::duration<double>(
                         std::chrono::high_resolution_clock::now() - start_time)
                         .count();
-  o_stream_ << "Time: " << time << " seconds" << std::endl;
-  o_stream_ << NodePerSecondInfo{static_cast<size_t>(nodes / time)};
+  std::osyncstream(o_stream_) << "Time: " << time << " seconds" << std::endl;
+  std::osyncstream(o_stream_)
+      << NodePerSecondInfo{static_cast<size_t>(nodes / time)};
 }
 
 inline void UciChessEngine::ParseEvaluate() const {
-  o_stream_ << "eval: " << info_.position.Evaluate() << " cp" << std::endl;
+  std::osyncstream(o_stream_)
+      << "eval: " << info_.position.Evaluate() << " cp" << std::endl;
 }
 
 inline void UciChessEngine::ParseQuiescenceEvaluate() const {
@@ -853,13 +880,13 @@ inline void UciChessEngine::ParseQuiescenceEvaluate() const {
   const auto score =
       quiescence.Search<true>(position, kMateValue, -kMateValue, 0);
   if (!score) {
-    o_stream_ << "qeval unavailable" << std::endl;
+    std::osyncstream(o_stream_) << "qeval unavailable" << std::endl;
     return;
   }
   const Eval white_score =
       info_.position.GetSideToMove() == Player::kWhite ? *score : -*score;
-  o_stream_ << "qeval white_cp " << white_score << " nodes "
-            << quiescence.GetSearchedNodes() << std::endl;
+  std::osyncstream(o_stream_) << "qeval white_cp " << white_score << " nodes "
+                              << quiescence.GetSearchedNodes() << std::endl;
 }
 
 inline void UciChessEngine::ParseGo(std::stringstream command) {
@@ -886,7 +913,8 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
   }
 
   if (token == "hash") {
-    o_stream_ << "hash: " << info_.position.GetHash() << std::endl;
+    std::osyncstream(o_stream_)
+        << "hash: " << info_.position.GetHash() << std::endl;
     return;
   }
 
@@ -916,8 +944,10 @@ inline void UciChessEngine::ParsePonderhit(std::stringstream) {
 inline void UciChessEngine::ParseMoveTime(std::stringstream command) {
   std::string token;
   command >> token;
-  info_.time_control =
-      TimePerMove{std::chrono::milliseconds{std::stoull(token)}};
+  if (const auto movetime = ParseNumber<std::int64_t>(token)) {
+    info_.time_control = TimePerMove{
+        std::chrono::milliseconds{std::max<std::int64_t>(*movetime, 0)}};
+  }
 }
 
 inline void UciChessEngine::ParsePlayersTime(std::stringstream command) {
@@ -957,7 +987,10 @@ inline void SimpleChessEngine::UciChessEngine::ParseDepth(
     std::stringstream command) {
   std::string token;
   command >> token;
-  info_.time_control = MaxDepth{static_cast<Depth>(std::stoul(token))};
+  if (const auto depth = ParseNumber<int>(token)) {
+    info_.time_control = MaxDepth{static_cast<Depth>(
+        std::clamp(*depth, 1, static_cast<int>(kMaxSearchPly) - 1))};
+  }
 }
 
 inline void UciChessEngine::ParseStop(std::stringstream) { StopSearch(); }
@@ -968,7 +1001,7 @@ inline void UciChessEngine::ParseQuit(std::stringstream) {
 }
 
 inline void UciChessEngine::ParseDebug(std::stringstream) {
-  o_stream_ << FenFactory{}(info_.position) << std::endl;
+  std::osyncstream(o_stream_) << FenFactory{}(info_.position) << std::endl;
 }
 
 inline SearchThread::SearchThread(Position position, std::ostream& o_stream)

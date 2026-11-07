@@ -166,9 +166,11 @@ void Position::DoMove(const Move &move) {
     
     // Check if it's a double pawn push
     if (piece_to_move == Piece::kPawn && std::abs(from - to) == 16) {
-      const auto file = GetCoordinates(from).first;
-      hash_ ^= hasher_.en_croissant_hash[file];
-      irreversible_data_.en_croissant_square = std::midpoint(from, to);
+      const BitIndex passed_square = std::midpoint(from, to);
+      if ((GetAllPawnAttacks(them) & SingleSquare(passed_square)).Any()) {
+        hash_ ^= hasher_.en_croissant_hash[GetCoordinates(from).first];
+        irreversible_data_.en_croissant_square = passed_square;
+      }
     }
     
     if (!!captured_piece) RemovePiece(to, them);
@@ -346,7 +348,11 @@ void Position::SetCastlingRights(
   irreversible_data_.castling_rights = castling_rights;
 }
 
-void Position::SetEnCroissantSquare(const std::optional<BitIndex> square) {
+void Position::SetEnCroissantSquare(std::optional<BitIndex> square) {
+  if (square.has_value() &&
+      (GetAllPawnAttacks(side_to_move_) & SingleSquare(*square)).None()) {
+    square.reset();
+  }
   if (irreversible_data_.en_croissant_square.has_value()) {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(
         *irreversible_data_.en_croissant_square).first];

@@ -2,6 +2,7 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <thread>
 #include <variant>
 #include "Evaluation.h"
 #include "Searcher.h"
@@ -139,6 +140,13 @@ struct Pondering {
           unwrapped_condition.Update(info);
         },
         *condition);
+  }
+
+  void WaitForPonderEnd() const {
+    while (!HasCondition() &&
+           !(stop_signal && stop_signal->load(std::memory_order_relaxed))) {
+      std::this_thread::sleep_for(std::chrono::milliseconds{1});
+    }
   }
 
   void SetCondition(Condition new_condition) {
