@@ -463,6 +463,8 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     const auto &move = *it;
 
     const bool is_quiet = move.IsQuiet(current_position);
+    const auto quiet_score =
+        is_quiet ? searcher_.GetQuietScore(move, ply) : std::int64_t{0};
     const bool can_prune =
         move_pruning_allowed &&
         iteration_status_.best_eval >
@@ -496,18 +498,24 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     int R = 0;
     if (lmr_conditions_met &&
         move_picker_.GetCurrentStage() >= MovePicker::Stage::kQuiet) {
-      R = 0.99 +
+      using LMRSettings = Settings::PruneParameters::LMRSettings;
+      double reduction =
+          0.99 +
           std::log(remaining_depth) *
               std::log(move_picker_.current() - move_picker_.begin()) / 3.14 -
           (position_info_.is_under_check
-               ? Settings::PruneParameters::LMRSettings::
-                     kUnderCheckReductionPenalty
+               ? LMRSettings::kUnderCheckReductionPenalty
                : 0) -
           (current_position.IsUnderCheck()
-               ? Settings::PruneParameters::LMRSettings::
-                     kDoingCheckReductionPenalty
+               ? LMRSettings::kDoingCheckReductionPenalty
                : 0);
-      R = std::clamp(R, 0, static_cast<int>(remaining_depth - 1));
+      if constexpr (node_type == NodeType::kCut) {
+        reduction += LMRSettings::kCutNodeReduction;
+      }
+      reduction -= static_cast<double>(quiet_score) /
+                   static_cast<double>(LMRSettings::kHistoryDivisor);
+      R = std::clamp(static_cast<int>(reduction), 0,
+                     static_cast<int>(remaining_depth - 1));
     }
 
     auto temp_eval_optional = StartSubsearch<kZWSNodeType>(

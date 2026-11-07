@@ -336,6 +336,14 @@ struct EngineOptions {
               value;
         }));
     options.emplace_back(std::make_unique<SpinOption>(
+        "LMRCutNode", 2, 0, 4, [](const int value) {
+          Settings::PruneParameters::LMRSettings::kCutNodeReduction = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
+        "LMRHistoryDivisor", 13000, 1000, 100000, [](const int value) {
+          Settings::PruneParameters::LMRSettings::kHistoryDivisor = value;
+        }));
+    options.emplace_back(std::make_unique<SpinOption>(
         "FutilityDepth", 6, 0, 10, [](const int value) {
           Settings::PruneParameters::FutilitySettings::kDepthLimit =
               static_cast<Depth>(value);
