@@ -705,7 +705,7 @@ class UciChessEngine {
   void ParseSetOption(std::stringstream command);
   void ParseIsReady(std::stringstream command) const;
   void ParseUciNewGame(std::stringstream command);
-  void ParseFen(const std::string& fen);
+  [[nodiscard]] bool ParseFen(const std::string& fen);
   void ParseStartPos();
   [[nodiscard]] std::optional<LegalMove> ParseLegalMove(const std::string& text);
   void ParseMoves(std::stringstream command);
@@ -734,7 +734,7 @@ class UciChessEngine {
 
   SearchThread search_thread_;
 
-  Info info_;
+  Info info_{.position = PositionFactory{}(), .time_control = {}};
   EngineOptions options_;
 
   bool quit_ = false;
@@ -866,8 +866,16 @@ inline void UciChessEngine::ParseUciNewGame(std::stringstream) {
   search_thread_.NewGame();
 }
 
-inline void UciChessEngine::ParseFen(const std::string& fen) {
-  info_.position = PositionFactory{}(fen);
+inline bool UciChessEngine::ParseFen(const std::string& fen) {
+  auto position = PositionFactory{}.TryParse(fen);
+  const bool king_capturable =
+      position && position->IsUnderCheck(Flip(position->GetSideToMove()));
+  if (!position || king_capturable) {
+    Send("info string invalid fen " + fen);
+    return false;
+  }
+  info_.position = std::move(*position);
+  return true;
 }
 
 inline void UciChessEngine::ParseStartPos() {
@@ -917,7 +925,7 @@ inline void UciChessEngine::ParsePosition(std::stringstream command) {
       if (!fen.empty()) fen += ' ';
       fen += token;
     }
-    ParseFen(fen);
+    if (!ParseFen(fen)) return;
   } else if (token == "startpos") {
     ParseStartPos();
     command >> token;
