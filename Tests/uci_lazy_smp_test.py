@@ -50,7 +50,7 @@ def main() -> int:
                 return line
 
     send("uci")
-    wait_for(lambda line: line == "uciok", "uciok")
+    wait_for(lambda line: line == "uciok", "uciok", timeout=60.0)
     if "option name Threads type spin default 1 min 1 max 256" not in lines:
         raise RuntimeError("Threads UCI option was not advertised")
     expected_tuning_options = {
