@@ -312,6 +312,8 @@ class Position {
 
   void MovePiece(const BitIndex from, const BitIndex to, const Player color);
 
+  [[nodiscard]] bool VerifyIncrementalState() const;
+
 
   void SetCastlingRights(const std::array<std::bitset<2>, 2> &castling_rights);
 

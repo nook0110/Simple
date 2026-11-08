@@ -30,4 +30,6 @@ void Unload();
 [[nodiscard]] NetworkOutput Evaluate(const Position& position,
                                      AccumulatorStack& stack);
 [[nodiscard]] NetworkOutput EvaluateFromScratch(const Position& position);
+[[nodiscard]] bool VerifyAccumulators(const Position& position,
+                                      AccumulatorStack& stack);
 }  // namespace SimpleChessEngine::Nnue
