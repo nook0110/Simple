@@ -137,15 +137,28 @@ class FeatureTransformer {
       added_columns[i] = reinterpret_cast<const __m256i*>(
           &weights[kHalfDimensions * added[i]]);
     }
-    for (IndexType i = 0; i < kNumChunks; ++i) {
-      __m256i value = in[i];
+    constexpr IndexType kNumRegisters = 8;
+    static_assert(kNumChunks % kNumRegisters == 0);
+    for (IndexType tile = 0; tile < kNumChunks; tile += kNumRegisters) {
+      __m256i registers[kNumRegisters];
+      for (IndexType k = 0; k < kNumRegisters; ++k) {
+        registers[k] = in[tile + k];
+      }
       for (std::size_t r = 0; r < removed.size(); ++r) {
-        value = _mm256_sub_epi16(value, removed_columns[r][i]);
+        for (IndexType k = 0; k < kNumRegisters; ++k) {
+          registers[k] =
+              _mm256_sub_epi16(registers[k], removed_columns[r][tile + k]);
+        }
       }
       for (std::size_t a = 0; a < added.size(); ++a) {
-        value = _mm256_add_epi16(value, added_columns[a][i]);
+        for (IndexType k = 0; k < kNumRegisters; ++k) {
+          registers[k] =
+              _mm256_add_epi16(registers[k], added_columns[a][tile + k]);
+        }
       }
-      out[i] = value;
+      for (IndexType k = 0; k < kNumRegisters; ++k) {
+        out[tile + k] = registers[k];
+      }
     }
     static_assert(kPsqtBuckets * sizeof(PsqtWeightType) == sizeof(__m256i));
     __m256i psqt =

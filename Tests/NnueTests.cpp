@@ -1,12 +1,16 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <array>
 #include <cstdlib>
+#include <memory>
 #include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "MoveGenerator.h"
+#include "Nnue/FeatureTransformer.h"
 #include "Nnue/Nnue.h"
 #include "Position.h"
 #include "PositionFactory.h"
@@ -111,4 +115,72 @@ TEST_P(NnueIncremental, EvaluationIsSideRelative) {
 
 INSTANTIATE_TEST_SUITE_P(Networks, NnueIncremental,
                          ::testing::Values("SCE_NNUE_SMALL", "SCE_NNUE_BIG"));
+
+template <Nnue::IndexType kDimensions>
+void CheckFeatureCounts() {
+  auto transformer = std::make_unique<Nnue::FeatureTransformer<kDimensions>>();
+  alignas(Nnue::kCacheLineSize) std::int16_t input[kDimensions];
+  alignas(Nnue::kCacheLineSize) std::int16_t output[kDimensions];
+  std::array<std::int32_t, Nnue::kPsqtBuckets> psqt_input{};
+  std::array<std::int32_t, Nnue::kPsqtBuckets> psqt_output{};
+  for (Nnue::IndexType i = 0; i < kDimensions; ++i) {
+    input[i] = static_cast<std::int16_t>(i * 997);
+    for (Nnue::IndexType feature = 0; feature < 3; ++feature) {
+      transformer->weights[feature * kDimensions + i] =
+          static_cast<std::int16_t>(i * 317 + feature * 1709);
+    }
+  }
+  for (Nnue::IndexType i = 0; i < Nnue::kPsqtBuckets; ++i) {
+    psqt_input[i] = static_cast<int>(i) * 107;
+    for (Nnue::IndexType feature = 0; feature < 3; ++feature) {
+      transformer->psqt_weights[feature * Nnue::kPsqtBuckets + i] =
+          static_cast<int>(i * 137 + feature * 2017);
+    }
+  }
+  for (Nnue::IndexType r = 0; r <= 3; ++r) {
+    for (Nnue::IndexType a = 0; a <= 3; ++a) {
+      Nnue::Features::ChangedIndexList removed, added;
+      for (Nnue::IndexType i = 0; i < r; ++i) removed.push_back(i);
+      for (Nnue::IndexType i = 0; i < a; ++i) added.push_back(2 - i);
+      transformer->ApplyUpdate(input, output, psqt_input.data(),
+                               psqt_output.data(), removed, added);
+      for (Nnue::IndexType i = 0; i < kDimensions; ++i) {
+        int expected = input[i];
+        for (const auto feature : removed) {
+          expected -= transformer->weights[feature * kDimensions + i];
+        }
+        for (const auto feature : added) {
+          expected += transformer->weights[feature * kDimensions + i];
+        }
+        ASSERT_EQ(output[i], static_cast<std::int16_t>(expected))
+            << r << "," << a << " dimension " << i;
+      }
+      for (Nnue::IndexType i = 0; i < Nnue::kPsqtBuckets; ++i) {
+        int expected = psqt_input[i];
+        for (const auto feature : removed) {
+          expected -= transformer->psqt_weights[feature * Nnue::kPsqtBuckets + i];
+        }
+        for (const auto feature : added) {
+          expected += transformer->psqt_weights[feature * Nnue::kPsqtBuckets + i];
+        }
+        ASSERT_EQ(psqt_output[i], expected);
+      }
+      alignas(Nnue::kCacheLineSize) std::int16_t aliased[kDimensions];
+      std::copy_n(input, kDimensions, aliased);
+      auto aliased_psqt = psqt_input;
+      transformer->ApplyUpdate(aliased, aliased, aliased_psqt.data(),
+                               aliased_psqt.data(), removed, added);
+      EXPECT_TRUE(std::equal(aliased, aliased + kDimensions, output));
+      EXPECT_EQ(aliased_psqt, psqt_output);
+    }
+  }
+}
+
+TEST(NnueUpdates, SmallAllFeatureCounts) {
+  CheckFeatureCounts<Nnue::kSmallDimensions>();
+}
+
+TEST(NnueUpdates, BigAllFeatureCounts) {
+  CheckFeatureCounts<Nnue::kBigDimensions>();
+}
 }  // namespace NnueTests
