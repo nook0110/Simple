@@ -44,7 +44,11 @@ struct MaxDepth {
   Depth depth;
 };
 
-using TimeControl = std::variant<TournamentTime, TimePerMove, MaxDepth>;
+struct MaxNodes {
+  std::shared_ptr<NodeBudget> budget;
+};
+
+using TimeControl = std::variant<TournamentTime, TimePerMove, MaxDepth, MaxNodes>;
 
 struct Info {
   Position position;
@@ -165,6 +169,10 @@ class SearchThread {
     }
     if (const auto max_depth = std::get_if<MaxDepth>(&info.time_control)) {
       return DepthCondition{max_depth->depth, stop_signal_};
+    }
+    if (const auto max_nodes = std::get_if<MaxNodes>(&info.time_control)) {
+      return DepthCondition{static_cast<Depth>(kMaxSearchPly - 1), stop_signal_,
+                            max_nodes->budget};
     }
     assert(false);
     std::unreachable();
@@ -712,6 +720,7 @@ class UciChessEngine {
   void ParseMoveTime(std::stringstream command);
   void ParsePlayersTime(std::stringstream command);
   void ParseDepth(std::stringstream command);
+  void ParseNodes(std::stringstream command);
   void ParseStop(std::stringstream command);
   void ParseQuit(std::stringstream command);
   void ParseDebug(std::stringstream command);
@@ -1021,6 +1030,8 @@ inline void UciChessEngine::ParseGo(std::stringstream command) {
     ParseMoveTime(std::move(command));
   } else if (token == "depth") {
     ParseDepth(std::move(command));
+  } else if (token == "nodes") {
+    ParseNodes(std::move(command));
   }
 
   StartSearch(ponder);
@@ -1079,6 +1090,15 @@ inline void SimpleChessEngine::UciChessEngine::ParseDepth(
   if (const auto depth = ParseNumber<int>(token)) {
     info_.time_control = MaxDepth{static_cast<Depth>(
         std::clamp(*depth, 1, static_cast<int>(kMaxSearchPly) - 1))};
+  }
+}
+
+inline void SimpleChessEngine::UciChessEngine::ParseNodes(
+    std::stringstream command) {
+  std::string token;
+  command >> token;
+  if (const auto nodes = ParseNumber<std::uint64_t>(token)) {
+    info_.time_control = MaxNodes{std::make_shared<NodeBudget>(*nodes)};
   }
 }
 

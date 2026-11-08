@@ -39,6 +39,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     searched_nodes_ = 0;
   }
   searched_nodes_++;
+  if constexpr (CountsNodes<ExitCondition>) exit_condition_.CountNode();
 
   if (IsTimeToExit()) {
     return std::nullopt;

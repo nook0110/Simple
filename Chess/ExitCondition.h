@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <thread>
 #include <variant>
@@ -47,7 +48,7 @@ struct TimeCondition {
     return !stop_now_ && Elapsed() <= deepen_limit && Elapsed() < hard_limit_;
   }
 
-  bool IsTimeToExit() const {
+  [[gnu::always_inline]] bool IsTimeToExit() const {
     return IsStopped() || (managed_ && stop_now_) || Elapsed() >= hard_limit_;
   }
 
@@ -85,15 +86,37 @@ struct TimeCondition {
 };
 static_assert(SearchCondition<TimeCondition>);
 
+class NodeBudget {
+ public:
+  explicit NodeBudget(std::uint64_t limit) : limit_(limit) {}
+
+  void Spend() { searched_.fetch_add(1, std::memory_order_relaxed); }
+  [[nodiscard]] bool IsSpent() const {
+    return searched_.load(std::memory_order_relaxed) >= limit_;
+  }
+
+ private:
+  std::atomic<std::uint64_t> searched_{0};
+  const std::uint64_t limit_;
+};
+
 struct DepthCondition {
-  explicit DepthCondition(Depth max_depth, StopSignal stop_signal = {})
-      : max_depth_(max_depth), stop_signal_(std::move(stop_signal)) {}
+  explicit DepthCondition(Depth max_depth, StopSignal stop_signal = {},
+                          std::shared_ptr<NodeBudget> node_budget = {})
+      : max_depth_(max_depth),
+        stop_signal_(std::move(stop_signal)),
+        node_budget_(std::move(node_budget)) {}
   bool ShouldContinueIteration() const {
     return !IsTimeToExit() && cur_depth < max_depth_;
   }
 
-  bool IsTimeToExit() const {
-    return stop_signal_ && stop_signal_->load(std::memory_order_relaxed);
+  [[gnu::always_inline]] bool IsTimeToExit() const {
+    return (stop_signal_ && stop_signal_->load(std::memory_order_relaxed)) ||
+           (node_budget_ && node_budget_->IsSpent());
+  }
+
+  [[gnu::always_inline]] void CountNode() const {
+    if (node_budget_) node_budget_->Spend();
   }
 
   void Update(const IterationInfo& info) { cur_depth = info.depth; }
@@ -101,6 +124,7 @@ struct DepthCondition {
   Depth cur_depth = 0;
   Depth max_depth_;
   StopSignal stop_signal_;
+  std::shared_ptr<NodeBudget> node_budget_;
 };
 static_assert(SearchCondition<DepthCondition>);
 
