@@ -41,7 +41,8 @@ struct NetworkArchitecture {
   }
 
   std::int32_t Propagate(
-      const TransformedFeatureType* transformed_features) const {
+      const TransformedFeatureType* transformed_features,
+      const std::uint16_t* nonzero, const IndexType nonzero_count) const {
     struct alignas(kCacheLineSize) Buffer {
       alignas(kCacheLineSize) typename decltype(fc_0)::OutputBuffer fc_0_out;
       alignas(kCacheLineSize) typename decltype(ac_sqr_0)::OutputType
@@ -54,7 +55,8 @@ struct NetworkArchitecture {
 
     alignas(kCacheLineSize) static thread_local Buffer buffer{};
 
-    fc_0.Propagate(transformed_features, buffer.fc_0_out);
+    fc_0.Propagate(transformed_features, buffer.fc_0_out, nonzero,
+                    nonzero_count);
     ac_sqr_0.Propagate(buffer.fc_0_out, buffer.ac_sqr_0_out);
     ac_0.Propagate(buffer.fc_0_out, buffer.ac_0_out);
     std::memcpy(buffer.ac_sqr_0_out + kFc0Outputs, buffer.ac_0_out,

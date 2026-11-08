@@ -11,6 +11,7 @@
 #include "Accumulator.h"
 #include "Common.h"
 #include "Features.h"
+#include "Layers.h"
 
 namespace SimpleChessEngine::Nnue {
 using BiasType = std::int16_t;
@@ -53,7 +54,14 @@ class FeatureTransformer {
 
   std::int32_t Transform(const Accumulator<kHalfDimensions>& accumulator,
                          const Player side_to_move, const int bucket,
-                         OutputType* output) const {
+                         OutputType* output,
+                         [[maybe_unused]] std::uint16_t* nonzero,
+                         IndexType& nonzero_count) const {
+    nonzero_count = 0;
+#if defined(SCE_NNUE_AVX2)
+    __m128i base = _mm_setzero_si128();
+    const __m128i increment = _mm_set1_epi16(8);
+#endif
     const std::array<std::size_t, 2> perspectives = {
         static_cast<std::size_t>(side_to_move),
         static_cast<std::size_t>(Flip(side_to_move))};
@@ -89,7 +97,10 @@ class FeatureTransformer {
         const __m256i sum1b = _mm256_min_epi16(in1[j * 2 + 1], one);
         const __m256i pa = _mm256_mulhi_epi16(sum0a, sum1a);
         const __m256i pb = _mm256_mulhi_epi16(sum0b, sum1b);
-        out[j] = _mm256_packus_epi16(pa, pb);
+        const __m256i transformed = _mm256_packus_epi16(pa, pb);
+        out[j] = transformed;
+        Layers::AppendNonZero(transformed, base, nonzero, nonzero_count);
+        base = _mm_add_epi16(base, increment);
       }
 #else
       for (IndexType j = 0; j < kHalfDimensions / 2; ++j) {

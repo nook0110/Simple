@@ -91,9 +91,13 @@ class Network {
     const int bucket =
         static_cast<int>((position.GetAllPieces().Count() - 1) / 4);
     alignas(kCacheLineSize) TransformedFeatureType transformed[kL1];
+    alignas(kCacheLineSize) std::uint16_t nonzero[kL1 / 4];
+    IndexType nonzero_count;
     const std::int32_t psqt = transformer_->Transform(
-        accumulator, position.GetSideToMove(), bucket, transformed);
-    const std::int32_t positional = stacks_[bucket].Propagate(transformed);
+        accumulator, position.GetSideToMove(), bucket, transformed, nonzero,
+        nonzero_count);
+    const std::int32_t positional =
+        stacks_[bucket].Propagate(transformed, nonzero, nonzero_count);
     return {psqt / kOutputScale, positional / kOutputScale};
   }
 

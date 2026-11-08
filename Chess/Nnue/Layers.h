@@ -170,40 +170,18 @@ struct OffsetIndices {
 
 alignas(kCacheLineSize) inline constexpr OffsetIndices kLookup{};
 
-template <IndexType kInputDimensions>
-void FindNonZero(const std::uint8_t* input, std::uint16_t* out,
-                 IndexType& count_out) {
-  using vec_t = __m256i;
-  constexpr IndexType kInputSimdWidth = sizeof(vec_t) / sizeof(std::int32_t);
-  constexpr IndexType kChunkSize = std::max<IndexType>(kInputSimdWidth, 8);
-  constexpr IndexType kNumChunks = kInputDimensions / kChunkSize;
-  constexpr IndexType kInputsPerChunk = kChunkSize / kInputSimdWidth;
-  constexpr IndexType kOutputsPerChunk = kChunkSize / 8;
-
-  const auto input_vector = reinterpret_cast<const vec_t*>(input);
-  IndexType count = 0;
-  __m128i base = _mm_setzero_si128();
-  const __m128i increment = _mm_set1_epi16(8);
-  for (IndexType i = 0; i < kNumChunks; ++i) {
-    unsigned nnz = 0;
-    for (IndexType j = 0; j < kInputsPerChunk; ++j) {
-      const vec_t chunk = input_vector[i * kInputsPerChunk + j];
-      nnz |= static_cast<unsigned>(_mm256_movemask_ps(_mm256_castsi256_ps(
-                 _mm256_cmpgt_epi32(chunk, _mm256_setzero_si256()))))
-             << (j * kInputSimdWidth);
-    }
-    for (IndexType j = 0; j < kOutputsPerChunk; ++j) {
-      const unsigned lookup = (nnz >> (j * 8)) & 0xFF;
-      const __m128i offsets = _mm_cvtepu8_epi16(_mm_loadl_epi64(
-          reinterpret_cast<const __m128i*>(&kLookup.offset_indices[lookup])));
-      _mm_storeu_si128(reinterpret_cast<__m128i*>(out + count),
-                       _mm_add_epi16(base, offsets));
-      count += std::popcount(lookup);
-      base = _mm_add_epi16(base, increment);
-    }
-  }
-  count_out = count;
+inline void AppendNonZero(const __m256i chunk, const __m128i base,
+                          std::uint16_t* out, IndexType& count) {
+  const unsigned lookup = static_cast<unsigned>(_mm256_movemask_ps(
+      _mm256_castsi256_ps(_mm256_cmpgt_epi32(chunk, _mm256_setzero_si256()))));
+  const __m128i offsets = _mm_cvtepu8_epi16(_mm_loadl_epi64(
+      reinterpret_cast<const __m128i*>(&kLookup.offset_indices[lookup])));
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(out + count),
+                   _mm_add_epi16(base, offsets));
+  count += std::popcount(lookup);
 }
+
+
 #endif
 
 template <IndexType kInDims, IndexType kOutDims>
@@ -255,18 +233,13 @@ class AffineTransformSparseInput {
     return !stream.fail();
   }
 
-  void Propagate(const InputType* input, OutputType* output) const {
+  void Propagate(const InputType* input, OutputType* output,
+                 [[maybe_unused]] const std::uint16_t* nnz,
+                 [[maybe_unused]] const IndexType count) const {
 #if defined(SCE_NNUE_AVX2)
     using vec_t = __m256i;
     constexpr IndexType kOutputSimdWidth = sizeof(vec_t) / sizeof(OutputType);
-    constexpr IndexType kNumChunks =
-        CeilToMultiple<IndexType>(kInputDimensions, 8) / kChunkSize;
     constexpr IndexType kNumRegs = kOutputDimensions / kOutputSimdWidth;
-    std::uint16_t nnz[kNumChunks];
-    IndexType count;
-
-    FindNonZero<kNumChunks>(input, nnz, count);
-
     const auto bias_vec = reinterpret_cast<const vec_t*>(biases_);
     vec_t acc[kNumRegs];
     for (IndexType k = 0; k < kNumRegs; ++k) acc[k] = bias_vec[k];
