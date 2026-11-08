@@ -164,11 +164,15 @@ std::optional<Wdl> Syzygy::ProbeWdl(const Position& position) const {
   return result == TB_RESULT_FAILED ? std::nullopt : DecodeWdl(result);
 }
 
-std::optional<Move> Syzygy::RootMove(const Position& position) const {
+std::optional<LegalMove> Syzygy::RootMove(const Position& position) const {
   if (!CanProbe(position)) return std::nullopt;
   const auto encoded = Encode(position);
   std::lock_guard lock(root_probe_mutex_);
-  return DecodeMove(ProbeRoot(encoded));
+  const auto move = DecodeMove(ProbeRoot(encoded));
+  if (!move) return std::nullopt;
+  auto validation = position;
+  const auto pseudo = validation.TryPseudoLegal(*move);
+  return pseudo ? validation.TryLegal(*pseudo) : std::nullopt;
 }
 
 }  // namespace SimpleChessEngine::Tablebase

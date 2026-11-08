@@ -14,6 +14,7 @@
 #include "ExitCondition.h"
 #include "Move.h"
 #include "MoveFactory.h"
+#include "CheckedMove.h"
 #include "MoveGenerator.h"
 #include "SimpleChessEngine.h"
 
@@ -47,14 +48,14 @@ TEST(RootRepetition, SearchStillReturnsLegalMove) {
   auto position = PositionFactory{}();
   for (const auto *move :
        {"g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8"}) {
-    position.DoMove(MoveFactory{}(position, move));
+    position.DoMove(CheckedMove(position, move));
   }
   std::stringstream ss;
   ChessEngine engine(position, ss);
   DepthCondition condition{2};
   engine.ComputeBestMove(condition);
   const auto legal_moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
   EXPECT_NE(std::ranges::find(legal_moves, engine.GetCurrentBestMove()),
             legal_moves.end());
 }
@@ -91,7 +92,7 @@ TEST(TimeManagement, ReturnsLegalMoveWithoutTime) {
   TimeCondition condition{std::chrono::milliseconds{0}};
   engine.ComputeBestMove(condition);
   const auto legal =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
   EXPECT_NE(std::ranges::find(legal, engine.GetCurrentBestMove()), legal.end());
   EXPECT_EQ(ss.str().find("info depth "), std::string::npos);
 }

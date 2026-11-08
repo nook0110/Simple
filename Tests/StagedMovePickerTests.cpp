@@ -30,7 +30,7 @@ constexpr std::array kPositions = {
 std::set<std::uint16_t> LegalSet(Position& position) {
   std::set<std::uint16_t> result;
   for (auto move :
-       MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position)) {
+       MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position)) {
     result.insert(move.Raw());
   }
   return result;
@@ -41,7 +41,7 @@ TEST(StagedMovePicker, PseudoLegalValidationMatchesGenerator) {
   for (const auto* fen : kPositions) {
     SCOPED_TRACE(fen);
     auto position = PositionFactory{}(fen);
-    std::array<Move, MoveGenerator::kMaxMovesPerPosition> generated;
+    std::array<PseudoLegalMove, MoveGenerator::kMaxMovesPerPosition> generated;
     auto* end = MoveGenerator{}.GeneratePseudoLegal<MoveGenerator::Type::kAll>(
         position, generated.data());
     std::set<std::uint16_t> expected;
@@ -59,7 +59,7 @@ TEST(StagedMovePicker, CaptureAndQuietStagesPartitionLegalMoves) {
     SCOPED_TRACE(fen);
     auto position = PositionFactory{}(fen);
     const auto expected = LegalSet(position);
-    std::array<Move, MoveGenerator::kMaxMovesPerPosition> generated;
+    std::array<PseudoLegalMove, MoveGenerator::kMaxMovesPerPosition> generated;
     auto* middle =
         MoveGenerator{}.GeneratePseudoLegal<MoveGenerator::Type::kCaptures>(
             position, generated.data());
@@ -92,14 +92,15 @@ TEST(StagedMovePicker, MainSearchEmitsLegalMovesOnceWithTtFirst) {
       std::set<std::uint16_t> actual;
       auto move = picker.SelectNextMove();
       if (expected.contains(tt.Raw())) {
-        EXPECT_EQ(move, tt);
+        ASSERT_TRUE(move);
+        EXPECT_EQ(*move, tt);
       }
-      for (; move.IsValid(); move = picker.SelectNextMove()) {
-        ASSERT_TRUE(expected.contains(move.Raw()));
-        EXPECT_TRUE(actual.insert(move.Raw()).second);
-        position.DoMove(move);
+      for (; move; move = picker.SelectNextMove()) {
+        ASSERT_TRUE(expected.contains((*move).Raw()));
+        EXPECT_TRUE(actual.insert((*move).Raw()).second);
+        position.DoMove(*move);
         position.ComputePins(position.GetSideToMove());
-        position.UndoMove(move, uncomputed_data);
+        position.UndoMove(*move, uncomputed_data);
       }
       EXPECT_EQ(actual, expected);
       EXPECT_EQ(picker.MoveCount(), expected.size());
@@ -113,12 +114,16 @@ TEST(StagedMovePicker, QuiescencePreservesGeneratorOrderAndEvasions) {
     auto position = PositionFactory{}(fen);
     const auto expected =
         position.IsUnderCheck()
-            ? MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position)
-            : MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kQuiescence>(
+            ? MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position)
+            : MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kQuiescence>(
                   position);
     MovePicker picker;
     picker.InitPicker(position, nullptr, 0);
-    for (auto move : expected) EXPECT_EQ(picker.SelectNextMove(), move);
-    EXPECT_EQ(picker.SelectNextMove(), Move::None());
+    for (auto move : expected) {
+      const auto selected = picker.SelectNextMove();
+      ASSERT_TRUE(selected);
+      EXPECT_EQ(*selected, move);
+    }
+    EXPECT_FALSE(picker.SelectNextMove());
   }
 }

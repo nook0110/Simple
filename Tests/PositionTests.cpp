@@ -3,6 +3,7 @@
 #include <limits>
 
 #include "MoveFactory.h"
+#include "CheckedMove.h"
 #include "MoveGenerator.h"
 #include "ExitCondition.h"
 #include "NodeType.h"
@@ -19,7 +20,7 @@ TEST(DoMove, DoAndUndoEqualZero) {
   Position pos = start_pos;
 
   for (const auto moves =
-           MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(pos);
+           MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(pos);
        const auto &move : moves) {
     const auto irreversible_data = pos.GetIrreversibleData();
     pos.DoMove(move);
@@ -35,7 +36,7 @@ TEST(SomeMoves, DifferentHash) {
   std::vector<std::string> moves = {"b1c3", "d7d5", "a1b1"};
   std::set<Hash> hashes = {pos.GetHash()};
   for (const auto &move_str : moves) {
-    auto move = MoveFactory{}(pos, move_str);
+    auto move = CheckedMove(pos, move_str);
     pos.DoMove(move);
     ASSERT_TRUE(hashes.insert(pos.GetHash()).second);
   }
@@ -43,7 +44,7 @@ TEST(SomeMoves, DifferentHash) {
 
 Position DoMoves(Position pos, const std::vector<std::string> &moves) {
   for (const auto &move_str : moves) {
-    auto move = MoveFactory{}(pos, move_str);
+    auto move = CheckedMove(pos, move_str);
 
     pos.DoMove(move);
   }
@@ -77,10 +78,10 @@ TEST(FenFactory, PreservesEnPassantSquare) {
 TEST(FenFactory, UpdatesCountersFromInitialFenState) {
   auto position = PositionFactory{}(
       "7k/8/8/8/8/8/8/K7 b - - 37 42");
-  position.DoMove(MoveFactory{}(position, "h8g7"));
+  position.DoMove(CheckedMove(position, "h8g7"));
   EXPECT_EQ(position.GetHalfMoveClock(), 38);
   EXPECT_EQ(position.GetFullMoveNumber(), 43);
-  position.DoMove(MoveFactory{}(position, "a1b1"));
+  position.DoMove(CheckedMove(position, "a1b1"));
   EXPECT_EQ(position.GetHalfMoveClock(), 39);
   EXPECT_EQ(position.GetFullMoveNumber(), 43);
 }
@@ -88,17 +89,17 @@ TEST(FenFactory, UpdatesCountersFromInitialFenState) {
 TEST(FenFactory, CastlingIgnoresRooksOffTheBackRank) {
   auto position =
       PositionFactory{}("3qk2r/prp1pppp/1p1p4/8/8/8/1R2PPPP/4K2R w Kk - 0 1");
-  position.DoMove(MoveFactory{}(position, "e1g1"));
-  position.DoMove(MoveFactory{}(position, "e8g8"));
+  position.DoMove(CheckedMove(position, "e1g1"));
+  position.DoMove(CheckedMove(position, "e8g8"));
   EXPECT_EQ(FenFactory{}(position),
             "3q1rk1/prp1pppp/1p1p4/8/8/8/1R2PPPP/5RK1 w - - 2 2");
 }
 
 TEST(FenFactory, CastlingUsesCornerRookWhenAnotherRookShares) {
   auto position = PositionFactory{}("r1r1k2r/8/8/8/8/8/8/R3K2R b Kq - 0 1");
-  position.DoMove(MoveFactory{}(position, "c8c7"));
-  position.DoMove(MoveFactory{}(position, "e1g1"));
-  position.DoMove(MoveFactory{}(position, "e8c8"));
+  position.DoMove(CheckedMove(position, "c8c7"));
+  position.DoMove(CheckedMove(position, "e1g1"));
+  position.DoMove(CheckedMove(position, "e8c8"));
   EXPECT_EQ(FenFactory{}(position), "2kr3r/2r5/8/8/8/8/8/R4RK1 w - - 3 3");
 }
 
@@ -112,10 +113,10 @@ TEST(Hash, IncludesCastlingRightsFromFen) {
 
 TEST(Hash, LostCastlingRightsMatchFenWithoutThem) {
   auto position = PositionFactory{}("4k3/8/8/8/8/8/8/4K2R w K - 0 1");
-  position.DoMove(MoveFactory{}(position, "h1g1"));
-  position.DoMove(MoveFactory{}(position, "e8d8"));
-  position.DoMove(MoveFactory{}(position, "g1h1"));
-  position.DoMove(MoveFactory{}(position, "d8e8"));
+  position.DoMove(CheckedMove(position, "h1g1"));
+  position.DoMove(CheckedMove(position, "e8d8"));
+  position.DoMove(CheckedMove(position, "g1h1"));
+  position.DoMove(CheckedMove(position, "d8e8"));
   const auto expected = PositionFactory{}("4k3/8/8/8/8/8/8/4K2R w - - 4 3");
   EXPECT_EQ(position.GetHash(), expected.GetHash());
 }
@@ -124,14 +125,14 @@ TEST(Repetition, IgnoresEnPassantSquareNobodyCanCapture) {
   auto position = PositionFactory{}();
   for (const auto *move : {"e2e4", "g8f6", "g1f3", "f6g8", "f3g1", "g8f6",
                            "g1f3", "f6g8", "f3g1"}) {
-    position.DoMove(MoveFactory{}(position, move));
+    position.DoMove(CheckedMove(position, move));
   }
   EXPECT_TRUE(position.DetectRepetition(0));
 }
 
 TEST(Hash, KeepsCapturableEnPassantSquare) {
   auto position = PositionFactory{}("4k3/8/8/8/3p4/8/4P3/4K3 w - - 0 1");
-  position.DoMove(MoveFactory{}(position, "e2e4"));
+  position.DoMove(CheckedMove(position, "e2e4"));
   const auto with_square =
       PositionFactory{}("4k3/8/8/8/3pP3/8/8/4K3 b - e3 0 1");
   const auto without_square =
@@ -143,10 +144,10 @@ TEST(Hash, KeepsCapturableEnPassantSquare) {
 TEST(FiftyMoveClock, QuietPromotionResetsCounter) {
   auto position = PositionFactory{}(
       "7k/P7/8/8/8/8/8/K7 w - - 99 42");
-  position.DoMove(MoveFactory{}(position, "a7a8q"));
+  position.DoMove(CheckedMove(position, "a7a8q"));
   EXPECT_EQ(position.GetHalfMoveClock(), 0);
   EXPECT_EQ(position.GetFullMoveNumber(), 42);
-  position.DoMove(MoveFactory{}(position, "h8g7"));
+  position.DoMove(CheckedMove(position, "h8g7"));
   EXPECT_EQ(position.GetHalfMoveClock(), 1);
   EXPECT_EQ(position.GetFullMoveNumber(), 43);
 }
@@ -194,7 +195,7 @@ TEST(InsufficientMaterial, SearchReturnsDrawAndLegalRootMove) {
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(*result, kDrawValue);
   const auto legal_moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
   EXPECT_NE(std::ranges::find(legal_moves, searcher.GetCurrentBestMove()),
             legal_moves.end());
 }
@@ -261,7 +262,7 @@ TEST(TranspositionTable, IllegalStoredMoveIsIgnored) {
 
   ASSERT_TRUE(result.has_value());
   const auto legal_moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
   EXPECT_NE(std::ranges::find(legal_moves, searcher.GetCurrentBestMove()),
             legal_moves.end());
 }

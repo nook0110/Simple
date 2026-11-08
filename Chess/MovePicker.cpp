@@ -61,9 +61,9 @@ void MovePicker::InitPicker(Position& position, const Searcher* searcher,
 }
 
 void MovePicker::Generate(bool quiet) {
-  std::array<Move, MoveGenerator::kMaxMovesPerPosition> generated;
+  std::array<PseudoLegalMove, MoveGenerator::kMaxMovesPerPosition> generated;
   auto* begin = generated.data();
-  Move* end;
+  PseudoLegalMove* end;
   const MoveGenerator generator;
   if (quiet) {
     end = generator.GeneratePseudoLegal<MoveGenerator::Type::kQuiets>(
@@ -108,18 +108,18 @@ void MovePicker::Generate(bool quiet) {
   }
 }
 
-Move MovePicker::Emit(Move move) {
+LegalMove MovePicker::Emit(LegalMove move) {
   ++move_count_;
   return move;
 }
 
-Move MovePicker::SelectNextMove() {
+MaybeLegalMove MovePicker::SelectNextMove() {
   for (;;) {
     switch (stage_) {
       case Stage::kTT:
         stage_ = Stage::kCaptureInit;
         if (tt_move_.IsValid() && position_->IsLegal(tt_move_, blockers_))
-          return Emit(tt_move_);
+          return Emit(Position::AssumeLegal(tt_move_));
         break;
       case Stage::kCaptureInit:
         Generate(false);
@@ -129,14 +129,14 @@ Move MovePicker::SelectNextMove() {
         while (current_ < end_) {
           const auto candidate = moves_[current_++];
           if (!position_->IsLegal(candidate.move, blockers_)) continue;
-          if (!searcher_) return Emit(candidate.move);
+          if (!searcher_) return Emit(Position::AssumeLegal(candidate.move));
           const auto promotion = candidate.move.IsPromotion()
                                      ? candidate.move.PromotionPiece()
                                      : Piece::kNone;
           if (!IsUnderpromotion(promotion) &&
               position_->StaticExchangeEvaluation(candidate.move,
                                                   kGoodCaptureThreshold))
-            return Emit(candidate.move);
+            return Emit(Position::AssumeLegal(candidate.move));
           moves_[bad_end_++] = candidate;
         }
         stage_ = searcher_ ? Stage::kKillers : Stage::kEnd;
@@ -158,7 +158,7 @@ Move MovePicker::SelectNextMove() {
             found->move = Move::None();
           }
           killers_[index] = move;
-          return Emit(move);
+          return Emit(Position::AssumeLegal(move));
         }
         stage_ = Stage::kQuietInit;
         break;
@@ -170,7 +170,7 @@ Move MovePicker::SelectNextMove() {
       case Stage::kQuiet:
         while (current_ < end_) {
           const auto move = moves_[current_++].move;
-          if (position_->IsLegal(move, blockers_)) return Emit(move);
+          if (position_->IsLegal(move, blockers_)) return Emit(Position::AssumeLegal(move));
         }
         current_ = 0;
         end_ = bad_end_;
@@ -179,12 +179,12 @@ Move MovePicker::SelectNextMove() {
       case Stage::kBadCaptures:
         while (current_ < end_) {
           const auto move = moves_[current_++].move;
-          if (move.IsValid()) return Emit(move);
+          if (move.IsValid()) return Emit(Position::AssumeLegal(move));
         }
         stage_ = Stage::kEnd;
         break;
       case Stage::kEnd:
-        return Move::None();
+        return MaybeLegalMove::None();
     }
   }
 }

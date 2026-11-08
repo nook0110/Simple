@@ -95,9 +95,9 @@ struct SearchNode {
   Position &GetCurrentPosition();
 
   template <NodeType expected_node_type>
-  SearchResult ProbeMove(const Move &move);
+  SearchResult ProbeMove(const LegalMove &move);
   template <NodeType expected_node_type>
-  std::optional<bool> CheckFirstMove(const Move &move);
+  std::optional<bool> CheckFirstMove(const LegalMove &move);
 
   [[nodiscard]] bool CanRFP() const;
   [[nodiscard]] bool CanLateMovePrune() const;
@@ -314,7 +314,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     if (excluded_move_) return alpha;
     return GetEndGameScore();
   }
-  auto has_cutoff_opt = CheckFirstMove<kFirstChildNodeExpectedType>(first_move);
+  auto has_cutoff_opt = CheckFirstMove<kFirstChildNodeExpectedType>(*first_move);
   if (!has_cutoff_opt) return std::nullopt;
   if (*has_cutoff_opt) {
     if (iteration_status_.tt_info &&
@@ -404,7 +404,7 @@ void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <NodeType expected_node_type>
-SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
+SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const LegalMove &move) {
   auto &current_position = GetCurrentPosition();
   auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
 
@@ -443,7 +443,7 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <NodeType expected_node_type>
 std::optional<bool> SearchNode<node_type, ExitCondition>::CheckFirstMove(
-    const Move &move) {
+    const LegalMove &move) {
   static_assert(expected_node_type == kFirstChildNodeExpectedType);
   static_assert(expected_node_type != NodeType::kPV ||
                 expected_node_type == node_type);
@@ -488,8 +488,9 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
   const bool move_pruning_allowed =
       ply != 0 && !position_info_.is_under_check;
 
-  for (auto move = move_picker_.SelectNextMove(); move.IsValid();
-       move = move_picker_.SelectNextMove()) {
+  for (auto next = move_picker_.SelectNextMove(); next;
+       next = move_picker_.SelectNextMove()) {
+    const auto& move = *next;
     const bool is_quiet = move.IsQuiet(current_position);
     const auto quiet_score =
         is_quiet ? searcher_.GetQuietScore(move, ply) : std::int64_t{0};

@@ -27,7 +27,7 @@ class MovePicker {
   void InitPicker(Position& position, const Searcher* searcher, Depth ply,
                   Move tt_move = Move::None(),
                   Move excluded_move = Move::None());
-  [[nodiscard]] Move SelectNextMove();
+  [[nodiscard]] MaybeLegalMove SelectNextMove();
   [[nodiscard]] Stage GetCurrentStage() const { return stage_; }
   [[nodiscard]] std::ptrdiff_t MoveCount() const { return move_count_; }
 
@@ -41,7 +41,7 @@ class MovePicker {
   static void PartialInsertionSort(ScoredMove* begin, ScoredMove* end,
                                    std::int64_t limit);
   void Generate(bool quiet);
-  [[nodiscard]] Move Emit(Move move);
+  [[nodiscard]] LegalMove Emit(LegalMove move);
 
   std::array<ScoredMove, MoveGenerator::kMaxMovesPerPosition> moves_;
   std::array<Move, 2> killers_{};

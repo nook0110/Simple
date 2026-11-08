@@ -93,7 +93,7 @@ void Position::MovePiece(const BitIndex from, const BitIndex to,
   hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][to];
 }
 
-void Position::DoMove(const Move &move) {
+void Position::DoMove(const LegalMove &move) {
   if (const auto &ep_square = irreversible_data_.en_croissant_square;
       ep_square.has_value()) {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
@@ -239,7 +239,7 @@ void SimpleChessEngine::Position::DoMove(NullMove) {
 }
 
 
-void Position::UndoMove(const Move &move, const IrreversibleData &data) {
+void Position::UndoMove(const LegalMove &move, const IrreversibleData &data) {
   const auto &ep_square = irreversible_data_.en_croissant_square;
   for (const auto color : {Player::kWhite, Player::kBlack}) {
     hash_ ^= hasher_.cr_hash[static_cast<size_t>(
@@ -345,11 +345,11 @@ bool Position::IsPseudoLegal(const Move &move) {
   const auto to = move.To();
   if (!GetPieces(side_to_move_).Test(from)) return false;
   if (!move.IsNormal()) {
-    std::array<Move, MoveGenerator::kMaxMovesPerPosition> moves;
+    std::array<PseudoLegalMove, MoveGenerator::kMaxMovesPerPosition> moves;
     const auto *end =
         MoveGenerator{}.GeneratePseudoLegal<MoveGenerator::Type::kAll>(
             *this, moves.data());
-    return std::find(static_cast<const Move *>(moves.data()), end, move) != end;
+    return std::find(static_cast<const PseudoLegalMove *>(moves.data()), end, move) != end;
   }
   if ((move.Raw() & 0x3000) || from == to || GetPieces(side_to_move_).Test(to))
     return false;

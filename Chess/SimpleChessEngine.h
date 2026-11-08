@@ -378,11 +378,11 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     ponder_move_.reset();
     Position ponder_position = position_;
     const auto legal_root_moves =
-        MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(
+        MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(
             ponder_position);
-    if (std::ranges::find(legal_root_moves, best_move_) !=
-        legal_root_moves.end()) {
-      ponder_position.DoMove(best_move_);
+    if (const auto found = std::ranges::find(legal_root_moves, best_move_);
+        found != legal_root_moves.end()) {
+      ponder_position.DoMove(*found);
       if (auto ponder_pv =
               searcher_.GetPrincipalVariation(1, std::move(ponder_position));
           !ponder_pv.empty()) {

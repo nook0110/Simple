@@ -68,8 +68,8 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
 
   MovePicker picker;
   picker.InitPicker(current_position, nullptr, current_depth);
-  auto move = picker.SelectNextMove();
-  if (!move.IsValid() && !move_generator_.HasLegalMove(current_position)) {
+  auto next = picker.SelectNextMove();
+  if (!next.IsValid() && !move_generator_.HasLegalMove(current_position)) {
     return kDrawValue;
   }
 
@@ -83,7 +83,8 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     alpha = stand_pat;
   }
 
-  for (; move.IsValid(); move = picker.SelectNextMove()) {
+  for (; next.IsValid(); next = picker.SelectNextMove()) {
+    const auto& move = *next;
     if (!current_position.StaticExchangeEvaluation(
             move, std::max(1, alpha - stand_pat - kSEEMargin))) {
       continue;
@@ -122,13 +123,14 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     const Depth current_depth) {
   MovePicker picker;
   picker.InitPicker(current_position, nullptr, current_depth);
-  auto move = picker.SelectNextMove();
-  if (!move.IsValid()) {
+  auto next = picker.SelectNextMove();
+  if (!next.IsValid()) {
     return kMateValue +
            static_cast<Eval>(std::min<size_t>(current_depth, kMaxSearchPly));
   }
 
-  for (; move.IsValid(); move = picker.SelectNextMove()) {
+  for (; next.IsValid(); next = picker.SelectNextMove()) {
+    const auto& move = *next;
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree

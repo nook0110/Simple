@@ -50,12 +50,12 @@ TEST_P(NnueIncremental, RandomGamesMatchFullRefresh) {
   for (const auto& fen : fens) {
     for (int game = 0; game < 16; ++game) {
       Position position = PositionFactory{}(fen);
-      std::vector<std::pair<Move, Position::IrreversibleData>> history;
+      std::vector<std::pair<LegalMove, Position::IrreversibleData>> history;
       for (int ply = 0; ply < 160; ++ply) {
         ASSERT_TRUE(MatchesFullRefresh(position)) << fen << " ply " << ply;
         ++checked;
         const auto moves =
-            MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+            MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
         if (moves.empty()) break;
         const auto roll = random() % 12;
         if (roll == 0 && !history.empty()) {

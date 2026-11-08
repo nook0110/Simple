@@ -7,6 +7,7 @@
 
 #include "ExitCondition.h"
 #include "MoveFactory.h"
+#include "CheckedMove.h"
 #include "Nnue/Nnue.h"
 #include "PositionFactory.h"
 #include "Quiescence.h"
@@ -26,7 +27,7 @@ TEST(QuiescenceDraws, RepetitionInGameHistory) {
   auto position = PositionFactory{}("7k/8/6K1/8/8/8/8/1Q6 w - - 0 1");
   for (const auto* move : {"b1b2", "h8g8", "b2b1", "g8h8", "b1b2",
                            "h8g8", "b2b1", "g8h8"}) {
-    position.DoMove(MoveFactory{}(position, move));
+    position.DoMove(CheckedMove(position, move));
   }
   ASSERT_TRUE(position.DetectRepetition(0));
   DepthCondition condition{4};
@@ -38,7 +39,7 @@ TEST(QuiescenceDraws, RepetitionInGameHistory) {
 TEST(QuiescenceDraws, StalemateWithPinnedBishop) {
   auto position = PositionFactory{}("7k/5K1b/7Q/8/8/8/8/8 b - - 0 1");
   ASSERT_FALSE(position.IsUnderCheck());
-  ASSERT_TRUE(MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position)
+  ASSERT_TRUE(MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position)
                   .empty());
   DepthCondition condition{4};
   Quiescence search{condition};
@@ -100,7 +101,7 @@ TEST(SingularExtensions, ExclusionIgnoresBoundsAndPreservesFullNodeEntry) {
 TEST(SingularExtensions, ExcludingOnlyEvasionReturnsFailLow) {
   auto position = PositionFactory{}("r7/8/8/8/8/2k5/8/K7 w - - 0 1");
   const auto moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
   ASSERT_EQ(moves.size(), 1u);
   ASSERT_TRUE(position.IsUnderCheck());
   Searcher searcher(position);

@@ -3,11 +3,14 @@
 #include <bitset>
 #include <cassert>
 #include <cstddef>
+#include <iosfwd>
 
 #include "BitBoard.h"
 #include "Evaluation.h"
+#include "Concepts.h"
+#include "NodeType.h"
 #include "Hasher.h"
-#include "Move.h"
+#include "TypedMove.h"
 #include "Nnue/Accumulator.h"
 #include "Nnue/Nnue.h"
 #include "Piece.h"
@@ -15,6 +18,15 @@
 #include "Utility.h"
 
 namespace SimpleChessEngine {
+class Position;
+template <bool print>
+size_t Perft(std::ostream&, Position&, Depth);
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+struct SearchNode;
+template <class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+class Quiescence;
 namespace Tablebase {
 class PositionBuilder;
 }
@@ -128,17 +140,34 @@ class Position {
    *
    * \param move Move to do.
    */
-  void DoMove(const Move &move);
+  void DoMove(const LegalMove &move);
 
   /**
    * \brief Undoes given move.
    *
    * \param move Move to undo.
    */
-  void UndoMove(const Move &move, const IrreversibleData &data);
+  void UndoMove(const LegalMove &move, const IrreversibleData &data);
 
   void DoMove(NullMove);
   void UndoMove(NullMove, const IrreversibleData &data);
+
+  [[nodiscard, gnu::always_inline]] MaybePseudoLegalMove TryPseudoLegal(const Move& move) {
+    return IsPseudoLegal(move) ? MaybePseudoLegalMove(PseudoLegalMove(move))
+                               : MaybePseudoLegalMove::None();
+  }
+
+  [[nodiscard, gnu::always_inline]] std::optional<LegalMove> TryLegal(const PseudoLegalMove& move) {
+    ComputePins(GetSideToMove());
+    if (!IsLegal(move)) return std::nullopt;
+    return LegalMove(move);
+  }
+
+  [[nodiscard, gnu::always_inline]] std::optional<LegalMove> TryLegal(
+      const PseudoLegalMove& move, Bitboard blockers) const {
+    if (!IsLegal(move, blockers)) return std::nullopt;
+    return LegalMove(move);
+  }
 
   [[nodiscard]] bool CanPseudoCastle(CastlingSide side) const;
   [[nodiscard]] bool IsPseudoLegal(const Move &move);
@@ -291,6 +320,9 @@ class Position {
   }
 
  private:
+  friend class MovePicker;
+  static constexpr LegalMove AssumeLegal(Move move) { return LegalMove(move); }
+
   /**
    * \brief Places a piece with a color on a chosen square.
    *

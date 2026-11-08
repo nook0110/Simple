@@ -11,6 +11,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <syncstream>
 #include <thread>
 #include <utility>
@@ -698,6 +699,7 @@ class UciChessEngine {
   void ParseUciNewGame(std::stringstream command);
   void ParseFen(const std::string& fen);
   void ParseStartPos();
+  [[nodiscard]] std::optional<LegalMove> ParseLegalMove(const std::string& text);
   void ParseMoves(std::stringstream command);
   void ParsePosition(std::stringstream command);
   void ParsePerft(std::stringstream command);
@@ -863,10 +865,35 @@ inline void UciChessEngine::ParseStartPos() {
   info_.position = PositionFactory{}();
 }
 
+inline bool IsUciMoveText(std::string_view text) {
+  if (text == "O-O" || text == "O-O-O") return true;
+  const auto is_file = [](char c) { return c >= 'a' && c <= 'h'; };
+  const auto is_rank = [](char c) { return c >= '1' && c <= '8'; };
+  const auto is_promotion = [](char c) {
+    return std::string_view{"qrbnQRBN"}.contains(c);
+  };
+  return (text.size() == 4 || (text.size() == 5 && is_promotion(text[4]))) &&
+         is_file(text[0]) && is_rank(text[1]) && is_file(text[2]) &&
+         is_rank(text[3]);
+}
+
+inline std::optional<LegalMove> UciChessEngine::ParseLegalMove(
+    const std::string& text) {
+  if (!IsUciMoveText(text)) return std::nullopt;
+  auto& position = info_.position;
+  const auto pseudo_legal = position.TryPseudoLegal(MoveFactory{}(position, text));
+  return pseudo_legal ? position.TryLegal(*pseudo_legal) : std::nullopt;
+}
+
 inline void UciChessEngine::ParseMoves(std::stringstream command) {
-  std::string move;
-  while (command >> move) {
-    info_.position.DoMove(MoveFactory{}(info_.position, move));
+  std::string text;
+  while (command >> text) {
+    const auto move = ParseLegalMove(text);
+    if (!move) {
+      Send("info string illegal move " + text);
+      break;
+    }
+    info_.position.DoMove(*move);
   }
 }
 
