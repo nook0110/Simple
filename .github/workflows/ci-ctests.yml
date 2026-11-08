@@ -3,30 +3,72 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
-    container: 
+    container:
       image: gcc:15
       options: --user root
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    
-    - name: Set up dependencies
-      run: |
-        apt-get update
-        apt-get install -y wget unzip g++ make git cmake
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y cmake git wget unzip
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DSCE_WARNINGS_AS_ERRORS=ON
+          cmake --build build -j2
+      - name: Download and verify NNUE
+        run: |
+          wget -q https://tests.stockfishchess.org/api/nn/nn-37f18f62d772.nnue -O build/nn-37f18f62d772.nnue
+          hash=$(sha256sum build/nn-37f18f62d772.nnue | cut -c1-12)
+          test "$hash" = 37f18f62d772
+      - name: Run tests
+        env:
+          SCE_NNUE_SMALL: ${{ github.workspace }}/build/nn-37f18f62d772.nnue
+        run: |
+          ulimit -s unlimited
+          ctest --test-dir build -j1 --output-on-failure --timeout 300 -E 'SharedClusterTable.ConcurrentEntriesStayConsistent|LazySmpUciLifecycle|WinAtChess|StopRestoresPosition'
+      - name: Check perft
+        run: |
+          set -o pipefail
+          printf 'position startpos\ngo perft 5\nquit\n' | build/SimpleChessEngine | grep -q '^Leafs: 4865609$'
+          printf 'position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\ngo perft 4\nquit\n' | build/SimpleChessEngine | grep -q '^Leafs: 4085603$'
+      - name: Check bench signature
+        run: |
+          expected=$(git log -1 --format=%B | sed -n 's/^Bench: \([0-9][0-9]*\)$/\1/p')
+          [[ "$expected" =~ ^[0-9]+$ ]]
+          actual=$(cd build && ./SimpleChessEngine bench | sed -n 's/^Nodes searched: \([0-9][0-9]*\)$/\1/p')
+          test "$actual" = "$expected"
 
-    - name: Building the project
-      working-directory: ${{runner.workspace}}/Simple
-      run: |
-        mkdir build
-        cmake -DBUILD_TESTS=True -DCMAKE_BUILD_TYPE=Release -B build
-        cmake --build build -t SCE_tests
-
-    - name: Run tests
-      working-directory: ${{runner.workspace}}/Simple/build
-      run: |
-        ulimit -s unlimited
-        ctest -E "BestMove.WinAtChess"
+  sanitizer:
+    runs-on: ubuntu-latest
+    container:
+      image: gcc:15
+      options: --user root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y cmake git wget unzip
+      - name: Build
+        run: |
+          cmake -S . -B build-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DSCE_SANITIZE=ON -DSCE_WARNINGS_AS_ERRORS=ON
+          cmake --build build-sanitize -j2
+      - name: Download and verify NNUE
+        run: |
+          wget -q https://tests.stockfishchess.org/api/nn/nn-37f18f62d772.nnue -O build-sanitize/nn-37f18f62d772.nnue
+          hash=$(sha256sum build-sanitize/nn-37f18f62d772.nnue | cut -c1-12)
+          test "$hash" = 37f18f62d772
+      - name: Run tests
+        env:
+          SCE_NNUE_SMALL: ${{ github.workspace }}/build-sanitize/nn-37f18f62d772.nnue
+        run: |
+          ctest --test-dir build-sanitize -j1 --output-on-failure --timeout 300 -E 'SharedClusterTable.ConcurrentEntriesStayConsistent|LazySmpUciLifecycle|WinAtChess|StopRestoresPosition|BestMoveTest.FindBestMove|PerftTests/GenerateMovesTest.Perft/Position[1-4]'
+      - name: Search three positions
+        run: python3 Tests/sanitizer_smoke.py --engine build-sanitize/SimpleChessEngine
