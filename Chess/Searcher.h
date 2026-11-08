@@ -103,6 +103,16 @@ class Searcher {
                                     Eval alpha, Eval beta);
   void InitStartOfSearch();
 
+  struct SingularInfo {
+    std::uint64_t searches{};
+    std::uint64_t extensions{};
+    std::uint64_t multi_cuts{};
+    std::uint64_t negative_extensions{};
+  };
+
+  [[nodiscard]] const SingularInfo &GetSingularInfo() const {
+    return singular_info_;
+  }
   [[nodiscard]] const DebugInfo &GetInfo() const { return debug_info_; }
   [[nodiscard]] const auto &GetKillers() const { return killers_; }
   [[nodiscard]] const auto &GetHistory() const { return history_; }
@@ -150,6 +160,7 @@ class Searcher {
   std::vector<std::pair<Move, std::uint64_t>> root_effort_;
 
   DebugInfo debug_info_;
+  SingularInfo singular_info_;
 };
 
 }  // namespace SimpleChessEngine
@@ -277,6 +288,7 @@ SearchResult SimpleChessEngine::Searcher::Search(
     const ExitCondition &stop_search_condition, Depth max_depth,
     Depth remaining_depth, Eval alpha, Eval beta) {
   debug_info_ = DebugInfo{};
+  singular_info_ = {};
   ++age_;
 
   return SearchNode<node_type, ExitCondition>{

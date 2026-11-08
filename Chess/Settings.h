@@ -246,6 +246,12 @@ struct Settings {
     static constexpr SEEPruningSettings kSEEPruningSettings = {};
   };
   struct SearchParameters {
+    struct SingularExtensionSettings {
+      inline static Depth kDepthLimit = 6;
+      inline static Eval kMarginNumerator = 59 * 311;
+      inline static Eval kMarginDenominator = 54 * 1024;
+      static constexpr int kNegativeExtension = -3;
+    };
     struct AspirationWindowSettings {
       enum class Strategy { Linear, Exponential };
       static constexpr bool kEnabled = false;

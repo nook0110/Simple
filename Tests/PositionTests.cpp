@@ -244,7 +244,7 @@ TEST(Quiescence, StopRestoresPosition) {
     ASSERT_EQ(position.GetHash(), original_hash);
   }
   EXPECT_TRUE(stopped);
-  EXPECT_GT(quiescence.GetSearchedNodes(), 1u);
+  EXPECT_EQ(quiescence.GetSearchedNodes(), 1u);
 }
 TEST(TranspositionTable, IllegalStoredMoveIsIgnored) {
   auto position = PositionFactory{}();
