@@ -17,6 +17,7 @@
 #include <variant>
 #include <vector>
 
+#include "Bench.h"
 #include "MoveFactory.h"
 #include "Nnue/Nnue.h"
 #include "Perft.h"
@@ -783,6 +784,19 @@ inline void UciChessEngine::ParseCommand(std::stringstream command) {
     return ParseDebug(std::move(command));
   }
   if (command_name == "bench") {
+    std::string token;
+    command >> token;
+    const auto depth =
+        token.empty() ? std::optional<int>{9} : ParseNumber<int>(token);
+    if (!depth || *depth < 1 || *depth > 30) {
+      Send("Invalid bench depth");
+      return;
+    }
+    StopSearch();
+    RunSearchBench(o_stream_, *depth);
+    return;
+  }
+  if (command_name == "perftbench") {
     ParsePosition(std::stringstream{std::string{"startpos"}});
     const auto result = PerftBench(info_.position, 6);
     std::osyncstream(o_stream_)
