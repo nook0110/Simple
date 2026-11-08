@@ -315,6 +315,10 @@ struct EngineOptions {
         std::make_unique<StringOption>("EvalFile", Nnue::kDefaultEvalFile);
     eval_file_ = eval_file.get();
     options.emplace_back(std::move(eval_file));
+    auto eval_file_small = std::make_unique<StringOption>(
+        "EvalFileSmall", Nnue::kDefaultEvalFileSmall);
+    eval_file_small_ = eval_file_small.get();
+    options.emplace_back(std::move(eval_file_small));
     options.emplace_back(std::make_unique<SpinOption>(
         "NnueScale", Settings::EvaluationParameters::nnue_scale, 0, 4096,
         [](const int value) {
@@ -451,10 +455,14 @@ struct EngineOptions {
   [[nodiscard]] const std::string& GetEvalFile() const {
     return eval_file_->GetValue();
   }
+  [[nodiscard]] const std::string& GetEvalFileSmall() const {
+    return eval_file_small_->GetValue();
+  }
 
  private:
   StringOption* tablebase_path_{};
   StringOption* eval_file_{};
+  StringOption* eval_file_small_{};
   void AddPsqtAdjustmentOptions() {
     constexpr std::array piece_names = {"Knight", "Bishop", "Rook", "Queen",
                                         "King"};
@@ -680,6 +688,7 @@ class UciChessEngine {
                           std::ostream& o_stream = std::cout)
       : i_stream_(i_stream), o_stream_(o_stream), search_thread_(o_stream) {
     (void)search_thread_.SetTablebasePath(options_.GetTablebasePath());
+    LoadEvalFileSmall();
   }
 
   ~UciChessEngine();
@@ -705,6 +714,7 @@ class UciChessEngine {
   void ParseNnueEvaluate() const;
   void ParseQuiescenceEvaluate() const;
   void LoadEvalFile() const;
+  void LoadEvalFileSmall() const;
   void ParseGo(std::stringstream command);
   void ParsePonderhit(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
@@ -828,6 +838,23 @@ inline void UciChessEngine::ParseSetOption(std::stringstream command) {
   if (option->GetName() == "EvalFile") {
     LoadEvalFile();
   }
+  if (option->GetName() == "EvalFileSmall") {
+    LoadEvalFileSmall();
+  }
+}
+
+inline void UciChessEngine::LoadEvalFileSmall() const {
+  const auto& path = options_.GetEvalFileSmall();
+  if (path.empty() || path == "<empty>" || EqualsIgnoreCase(path, "none")) {
+    Nnue::UnloadSmall();
+    Send("info string small NNUE disabled");
+    return;
+  }
+  if (Nnue::LoadSmall(path)) {
+    Send("info string small NNUE evaluation using " + path);
+    return;
+  }
+  Send("info string failed to load small NNUE file " + path);
 }
 
 inline void UciChessEngine::LoadEvalFile() const {
@@ -838,6 +865,7 @@ inline void UciChessEngine::LoadEvalFile() const {
     return;
   }
   if (Nnue::Load(path)) {
+    LoadEvalFileSmall();
     Send("info string NNUE evaluation using " + Nnue::Description());
     return;
   }

@@ -21,6 +21,11 @@ template Bitboard Position::GetPiecesByType<Piece::kKing>(Player player) const;
 
 const Hasher Position::hasher_{std::mt19937_64(0xb00b1e5)};
 
+Eval Position::SimpleMaterialEval() const {
+  return evaluation_data_.material[static_cast<size_t>(side_to_move_)].eval[0] -
+         evaluation_data_.material[static_cast<size_t>(Flip(side_to_move_))].eval[0];
+}
+
 /**
  * \brief Places a piece with a color on a chosen square.
  *

@@ -120,6 +120,7 @@ class Position {
   }
 
   [[nodiscard]] Eval Evaluate() const;
+  [[nodiscard]] Eval SimpleMaterialEval() const;
 
   [[nodiscard]] Nnue::NetworkOutput EvaluateNetwork() const;
 
