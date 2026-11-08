@@ -64,12 +64,14 @@ class Position {
     std::array<std::bitset<2>, kColors>
         castling_rights{};  //!< Castling rights for each color.
 
-    std::array<Bitboard, kColors>
+    mutable std::array<Bitboard, kColors>
         pinners{};  //!< Pieces that are pinning opponent's pieces.
-    std::array<Bitboard, kColors>
+    mutable std::array<Bitboard, kColors>
         blockers{};  //!< Pieces that are blocking attacks on the king.
     
     Piece captured_piece{Piece::kNone};  //!< Piece captured by the last move
+
+    mutable std::array<bool, kColors> pins_valid{};
 
     bool operator==(const IrreversibleData &other) const {
       return std::tie(en_croissant_square, castling_rights, captured_piece) ==
@@ -219,7 +221,7 @@ class Position {
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
 
-  void ComputePins(Player us);
+  void ComputePins(Player us) const;
 
   [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us,
                                    Bitboard transparent = kEmptyBoard) const;

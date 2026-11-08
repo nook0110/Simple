@@ -99,6 +99,7 @@ void Position::MovePiece(const BitIndex from, const BitIndex to,
 }
 
 void Position::DoMove(const Move &move) {
+  irreversible_data_.pins_valid = {};
   if (const auto &ep_square = irreversible_data_.en_croissant_square;
       ep_square.has_value()) {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
@@ -667,6 +668,15 @@ bool Position::StaticExchangeEvaluation(const Move &move,
       break;
     }
 
+    ComputePins(color);
+    const auto color_idx = static_cast<size_t>(color);
+    if ((irreversible_data_.pinners[color_idx] & occupancy).Any()) {
+      our_attackers &= ~irreversible_data_.blockers[color_idx];
+      if (our_attackers.None()) {
+        break;
+      }
+    }
+
     Bitboard attacker_bitboard;
 
     next_victim = Piece::kKing;
@@ -739,55 +749,39 @@ Bitboard Position::Attackers(const BitIndex square,
           pieces_by_type_[static_cast<size_t>(Piece::kKing)]);
 }
 
-void Position::ComputePins(const Player us) {
+void Position::ComputePins(const Player us) const {
   const Player them = Flip(us);
 
   const auto us_idx = static_cast<size_t>(us);
+  if (irreversible_data_.pins_valid[us_idx]) {
+    return;
+  }
 
   irreversible_data_.blockers[us_idx] = kEmptyBoard;
   irreversible_data_.pinners[us_idx] = kEmptyBoard;
 
   const BitIndex king_square = GetKingSquare(us);
 
-  const Bitboard all_pieces = GetAllPieces();
+  Bitboard snipers =
+      (AttackTable<Piece::kBishop>::GetAttackMap(king_square, kEmptyBoard) &
+       (GetPiecesByType<Piece::kBishop>(them) |
+        GetPiecesByType<Piece::kQueen>(them))) |
+      (AttackTable<Piece::kRook>::GetAttackMap(king_square, kEmptyBoard) &
+       (GetPiecesByType<Piece::kRook>(them) |
+        GetPiecesByType<Piece::kQueen>(them)));
+  const Bitboard occupancy = GetAllPieces() ^ snipers;
 
-  const Bitboard diagonal_blockers =
-      AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces) &
-      all_pieces;
-  const Bitboard straight_blockers =
-      AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces) &
-      all_pieces;
-
-  Bitboard diagonal_pinners = AttackTable<Piece::kBishop>::GetAttackMap(
-                                  king_square, all_pieces ^ diagonal_blockers) &
-                              (GetPiecesByType<Piece::kBishop>(them) |
-                               GetPiecesByType<Piece::kQueen>(them)) &
-                              ~diagonal_blockers;
-  Bitboard straight_pinners = AttackTable<Piece::kRook>::GetAttackMap(
-                                  king_square, all_pieces ^ straight_blockers) &
-                              (GetPiecesByType<Piece::kRook>(them) |
-                               GetPiecesByType<Piece::kQueen>(them)) &
-                              ~straight_blockers;
-
-  irreversible_data_.pinners[us_idx] = diagonal_pinners | straight_pinners;
-
-  Bitboard &blockers = irreversible_data_.blockers[us_idx];
-  while (diagonal_pinners.Any()) {
-    const BitIndex square = diagonal_pinners.PopFirstBit();
-
-    const auto blockers_between =
-        bishop_between[square][king_square] & diagonal_blockers;
-    assert(blockers_between.Any() && !blockers_between.MoreThanOne());
-    blockers |= blockers_between;
+  while (snipers.Any()) {
+    const BitIndex square = snipers.PopFirstBit();
+    const Bitboard blockers_between = Between(king_square, square) & occupancy;
+    if (blockers_between.Any() && !blockers_between.MoreThanOne()) {
+      irreversible_data_.blockers[us_idx] |= blockers_between;
+      if ((blockers_between & GetPieces(us)).Any()) {
+        irreversible_data_.pinners[us_idx] |= SingleSquare(square);
+      }
+    }
   }
-  while (straight_pinners.Any()) {
-    const BitIndex square = straight_pinners.PopFirstBit();
-
-    const auto blockers_between =
-        rook_between[square][king_square] & straight_blockers;
-    assert(blockers_between.Any() && !blockers_between.MoreThanOne());
-    blockers |= blockers_between;
-  }
+  irreversible_data_.pins_valid[us_idx] = true;
 }
 
 Position::IrreversibleData Position::GetIrreversibleData() const {
