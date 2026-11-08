@@ -218,7 +218,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   if (ProbeTranspositionTable()) {
     searcher_.debug_info_.tt_hits++;
-    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _, cached_eval] =
         *iteration_status_.tt_info;
     entry_score -= IsMateScore(entry_score) * ply;
 
@@ -360,7 +360,18 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 Eval SearchNode<node_type, ExitCondition>::GetStaticEval() const {
   if (!position_info_.static_eval) {
-    position_info_.static_eval = searcher_.GetPosition().Evaluate();
+    Eval cached_eval = kNoStaticEval;
+    if (iteration_status_.tt_info && Nnue::IsLoaded()) {
+      const auto context =
+          (static_cast<std::uint64_t>(Nnue::Generation()) << 32) |
+          static_cast<std::uint32_t>(
+              Settings::EvaluationParameters::nnue_scale);
+      cached_eval = searcher_.best_moves_->GetStaticEval(
+          *iteration_status_.tt_info, context);
+    }
+    position_info_.static_eval = cached_eval != kNoStaticEval
+                                     ? cached_eval
+                                     : searcher_.GetPosition().Evaluate();
   }
   return *position_info_.static_eval;
 }
@@ -382,7 +393,12 @@ void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
       GetCurrentPosition(), *iteration_status_.best_move,
       iteration_status_.best_eval +
           IsMateScore(iteration_status_.best_eval) * state_.ply,
-      state_.remaining_depth, bound, searcher_.age_);
+      state_.remaining_depth, bound, searcher_.age_,
+      Nnue::IsLoaded() ? position_info_.static_eval.value_or(kNoStaticEval)
+                       : kNoStaticEval,
+      (static_cast<std::uint64_t>(Nnue::Generation()) << 32) |
+          static_cast<std::uint32_t>(
+              Settings::EvaluationParameters::nnue_scale));
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -762,7 +778,7 @@ SearchNode<node_type, ExitCondition>::CheckTranspositionTable(
       std::ranges::find(moves, iteration_status_.tt_info->move) !=
           moves.end()) {
     auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
-    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _] =
+    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _, cached_eval] =
         *iteration_status_.tt_info;
 
     auto has_cutoff_opt =

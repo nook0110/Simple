@@ -25,6 +25,7 @@ void Unload();
 [[nodiscard]] bool IsLoaded();
 [[nodiscard]] std::string Description();
 [[nodiscard]] int DefaultScale();
+[[nodiscard]] std::uint32_t Generation();
 
 [[nodiscard]] NetworkOutput Evaluate(const Position& position,
                                      AccumulatorStack& stack);

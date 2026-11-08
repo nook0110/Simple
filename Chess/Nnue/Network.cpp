@@ -308,6 +308,8 @@ bool IsLoaded() { return registry.type != NetworkType::kNone; }
 
 std::string Description() { return registry.description; }
 
+std::uint32_t Generation() { return registry.generation; }
+
 int DefaultScale() {
   return registry.type == NetworkType::kBig ? kBigDefaultScale
                                             : kSmallDefaultScale;

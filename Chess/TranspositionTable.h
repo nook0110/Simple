@@ -13,6 +13,8 @@
 #include "Position.h"
 
 namespace SimpleChessEngine {
+inline constexpr Eval kNoStaticEval = -8192;
+
 enum class Bound : std::uint8_t {
   kLower = 1,
   kUpper = 2,
@@ -30,6 +32,7 @@ struct Node {
   Depth depth{};
   Bound bound{Bound::kLower};
   std::uint8_t age{};
+  Eval static_eval{kNoStaticEval};
 
   [[nodiscard]] bool IsOccupied() const { return move.IsValid(); }
 };
@@ -82,7 +85,9 @@ class TranspositionTable {
   }
 
   void SetEntry(const Position& position, const Move& move, const Eval score,
-                const Depth depth, const Bound bound, const Age age) {
+                const Depth depth, const Bound bound, const Age age,
+                const Eval static_eval = kNoStaticEval,
+                const std::uint64_t eval_context = 0) {
     const auto hash = position.GetHash();
     auto& cluster = table_[Index(hash)];
     const auto incoming_age = static_cast<std::uint8_t>(age);
@@ -113,7 +118,18 @@ class TranspositionTable {
         bound == Bound::kExact || replacement_node.age != incoming_age ||
         (replacement_node.bound != Bound::kExact &&
          static_cast<unsigned>(depth) + 4 > replacement_node.depth)) {
-      replacement->Store(Node{hash, move, score, depth, bound, incoming_age});
+      Eval cached_eval = kNoStaticEval;
+      if (static_eval > kNoStaticEval && static_eval < -kNoStaticEval) {
+        auto context = eval_context_.load(std::memory_order_relaxed);
+        if (context == 0) {
+          eval_context_.compare_exchange_strong(
+              context, eval_context, std::memory_order_relaxed);
+          context = eval_context_.load(std::memory_order_relaxed);
+        }
+        if (context == eval_context) cached_eval = static_eval;
+      }
+      replacement->Store(
+          Node{hash, move, score, depth, bound, incoming_age, cached_eval});
     }
   }
 
@@ -133,10 +149,25 @@ class TranspositionTable {
     return {};
   }
 
+  [[nodiscard]] Eval GetStaticEval(const Node& node,
+                                   const std::uint64_t eval_context) const {
+    return eval_context_.load(std::memory_order_relaxed) == eval_context
+               ? node.static_eval
+               : kNoStaticEval;
+  }
+
   static constexpr std::uint64_t Pack(const Node& node) {
-    const auto score = static_cast<std::uint32_t>(node.score);
+    assert(node.score >= -(1 << 17) && node.score < (1 << 17));
+    const auto score = static_cast<std::uint32_t>(node.score) & 0x3FFFF;
+    const auto static_eval =
+        static_cast<std::uint32_t>(
+            node.static_eval > kNoStaticEval && node.static_eval < -kNoStaticEval
+                ? node.static_eval
+                : kNoStaticEval) &
+        0x3FFF;
     return static_cast<std::uint64_t>(node.move.Raw()) |
            (static_cast<std::uint64_t>(score) << 16) |
+           (static_cast<std::uint64_t>(static_eval) << 34) |
            (static_cast<std::uint64_t>(node.depth & 0x3F) << 48) |
            (static_cast<std::uint64_t>(node.bound) << 54) |
            (static_cast<std::uint64_t>(node.age) << 56);
@@ -146,10 +177,16 @@ class TranspositionTable {
     return Node{
         hash,
         Move{static_cast<std::uint16_t>(payload)},
-        static_cast<Eval>(static_cast<std::int32_t>(payload >> 16)),
+        static_cast<Eval>((static_cast<std::int32_t>(
+                              (payload >> 16) & 0x3FFFF) ^
+                          0x20000) -
+                         0x20000),
         static_cast<Depth>((payload >> 48) & 0x3F),
         static_cast<Bound>((payload >> 54) & 0x3),
-        static_cast<std::uint8_t>(payload >> 56)};
+        static_cast<std::uint8_t>(payload >> 56),
+        static_cast<Eval>((static_cast<int>((payload >> 34) & 0x3FFF) ^
+                           0x2000) -
+                          0x2000)};
   }
 
   static constexpr int ReplacementValue(const Node& node,
@@ -183,5 +220,6 @@ class TranspositionTable {
   }
 
   std::unique_ptr<Cluster[], MappingDeleter> table_;
+  std::atomic<std::uint64_t> eval_context_{};
 };
 }  // namespace SimpleChessEngine
