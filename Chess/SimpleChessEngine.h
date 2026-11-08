@@ -159,11 +159,12 @@ class ChessEngine {
     PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
                                                  current_depth, position_)};
     PrintInfo(pv);
-    PrintInfo(NodesInfo{info.searched_nodes});
+    PrintInfo(NodesInfo{info.searched_nodes + info.quiescence_nodes});
     PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
         (info.searched_nodes + info.quiescence_nodes) / search_time.count())});
     for (const auto& [name, counter] : kDebugCounters) {
-      if (counter != &DebugInfo::searched_nodes) {
+      if (counter != &DebugInfo::searched_nodes &&
+          counter != &DebugInfo::quiescence_nodes) {
         Output() << "info " << name << " " << info.*counter << "\n";
       }
     }
