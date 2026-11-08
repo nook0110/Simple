@@ -2,6 +2,10 @@ name: CI
 
 on: [push, pull_request]
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -38,6 +42,7 @@ jobs:
           printf 'position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\ngo perft 4\nquit\n' | build/SimpleChessEngine | grep -q '^Leafs: 4085603$'
       - name: Check bench signature
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           expected=$(git log -1 --format=%B | sed -n 's/^Bench: \([0-9][0-9]*\)$/\1/p')
           [[ "$expected" =~ ^[0-9]+$ ]]
           actual=$(cd build && ./SimpleChessEngine bench | sed -n 's/^Nodes searched: \([0-9][0-9]*\)$/\1/p')
