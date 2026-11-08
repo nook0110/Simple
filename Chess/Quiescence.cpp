@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "ExitCondition.h"
+#include "MovePicker.h"
 
 namespace SimpleChessEngine {
 template class Quiescence<TimeCondition>;
@@ -49,8 +50,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
 
   if (current_position.GetHalfMoveClock() >= 100 &&
       (!current_position.IsUnderCheck() ||
-       !move_generator_.GenerateMoves<MoveGenerator::Type::kAll>(current_position)
-            .empty())) {
+       move_generator_.HasLegalMove(current_position))) {
     return kDrawValue;
   }
 
@@ -66,11 +66,10 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     return SearchUnderCheck(current_position, alpha, beta, current_depth);
   }
 
-  auto moves = move_generator_.GenerateMoves<MoveGenerator::Type::kQuiescence>(
-      current_position);
-  if (moves.empty() &&
-      move_generator_.GenerateMoves<MoveGenerator::Type::kAll>(current_position)
-          .empty()) {
+  MovePicker picker;
+  picker.InitPicker(current_position, nullptr, current_depth);
+  auto move = picker.SelectNextMove();
+  if (!move.IsValid() && !move_generator_.HasLegalMove(current_position)) {
     return kDrawValue;
   }
 
@@ -84,14 +83,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     alpha = stand_pat;
   }
 
-  /*
-  std::ranges::sort(moves,
-                    [&current_position](const Move& lhs, const Move& rhs) {
-                      return kCompareMoves(lhs, rhs, current_position);
-                    });
-                    */
-
-  for (const auto& move : moves) {
+  for (; move.IsValid(); move = picker.SelectNextMove()) {
     if (!current_position.StaticExchangeEvaluation(
             move, std::max(1, alpha - stand_pat - kSEEMargin))) {
       continue;
@@ -128,23 +120,15 @@ template <class ExitCondition>
 SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     Position& current_position, Eval alpha, Eval beta,
     const Depth current_depth) {
-  MoveGenerator::Moves moves =
-      move_generator_.GenerateMoves<MoveGenerator::Type::kAll>(
-          current_position);
-
-  if (moves.empty()) {
+  MovePicker picker;
+  picker.InitPicker(current_position, nullptr, current_depth);
+  auto move = picker.SelectNextMove();
+  if (!move.IsValid()) {
     return kMateValue +
            static_cast<Eval>(std::min<size_t>(current_depth, kMaxSearchPly));
   }
 
-  /*
-  std::ranges::sort(moves,
-                    [&current_position](const Move& lhs, const Move& rhs) {
-                      return kCompareMoves(lhs, rhs, current_position);
-                    });
-                    */
-
-  for (const auto& move : moves) {
+  for (; move.IsValid(); move = picker.SelectNextMove()) {
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree

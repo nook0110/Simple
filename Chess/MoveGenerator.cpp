@@ -1,5 +1,6 @@
 #include "MoveGenerator.h"
 
+#include <algorithm>
 #include <cassert>
 
 #include "Attacks.h"
@@ -13,45 +14,9 @@ template MoveGenerator::Moves MoveGenerator::GenerateMoves<
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<
     MoveGenerator::Type::kAddChecks>(Position& position) const;
 
-constexpr MoveGenerator::Type operator|(MoveGenerator::Type a,
-                                        MoveGenerator::Type b) {
-  return static_cast<MoveGenerator::Type>(static_cast<std::uint8_t>(a) |
-                                          static_cast<std::uint8_t>(b));
-}
-
-constexpr MoveGenerator::Type operator&(MoveGenerator::Type a,
-                                        MoveGenerator::Type b) {
-  return static_cast<MoveGenerator::Type>(static_cast<std::uint8_t>(a) &
-                                          static_cast<std::uint8_t>(b));
-}
-
-constexpr bool operator!(MoveGenerator::Type t) {
-  return static_cast<std::uint8_t>(t) == 0;
-}
-
 MoveGenerator::~MoveGenerator() = default;
 
-[[nodiscard]] bool MoveGenerator::IsPawnMoveLegal(Position& position,
-                                                  const Move& move) {
-  const auto us = position.GetSideToMove();
-
-  if (move.IsEnPassant()) {
-    const auto irreversible_data = position.GetIrreversibleData();
-    position.DoMove(move);
-    const auto valid = !position.IsUnderCheck(us);
-    position.UndoMove(move, irreversible_data);
-    return valid;
-  }
-
-  const auto from = move.From();
-  const auto to = move.To();
-  
-  return !position.GetIrreversibleData().blockers[static_cast<size_t>(us)].Test(
-             from) ||
-         Ray(position.GetKingSquare(us), from).Test(to);
-}
-
-void MoveGenerator::GenerateCastling(Moves& moves, const Position& position) {
+void MoveGenerator::GenerateCastling(Move*& moves, const Position& position) {
   if (position.IsUnderCheck()) {
     return;
   }
@@ -60,19 +25,18 @@ void MoveGenerator::GenerateCastling(Moves& moves, const Position& position) {
   const auto king_square = position.GetKingSquare(side_to_move);
   const auto color_idx = static_cast<size_t>(side_to_move);
 
-  for (const auto castling_side :
-       {CastlingSide::k00, CastlingSide::k000}) {
-    if (position.CanCastle(castling_side)) {
+  for (const auto castling_side : {CastlingSide::k00, CastlingSide::k000}) {
+    if (position.CanPseudoCastle(castling_side)) {
       const auto side_idx = static_cast<size_t>(castling_side);
       const auto king_to = kKingCastlingDestination[color_idx][side_idx];
-      
-      moves.emplace_back(Move::Make<MoveType::kCastling>(king_square, king_to));
+
+      *moves++ = Move::Make<MoveType::kCastling>(king_square, king_to);
     }
   }
 }
 
 template <Piece piece>
-void MoveGenerator::GenerateMovesForPiece(Moves& moves, Position& position,
+void MoveGenerator::GenerateMovesForPiece(Move*& moves, Position& position,
                                           const Bitboard target) const {
   static_assert(piece != Piece::kPawn && piece != Piece::kKing);
 
@@ -87,7 +51,7 @@ void MoveGenerator::GenerateMovesForPiece(Moves& moves, Position& position,
 
 template <>
 void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
-    Moves& moves, Position& position, const Bitboard target) const {
+    Move*& moves, Position& position, const Bitboard target) const {
   const auto us = position.GetSideToMove();
   const auto us_idx = static_cast<size_t>(us);
   const auto them = Flip(us);
@@ -112,7 +76,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
   while (push.Any()) {
     const auto to = push.PopFirstBit();
     const auto from = Shift(to, opposite_direction);
-    moves.emplace_back(Move(from, to));
+    *moves++ = Move(from, to);
   }
 
   auto double_push = Shift(double_push_pawns, direction) & valid_squares;
@@ -121,7 +85,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
   while (double_push.Any()) {
     const auto to = double_push.PopFirstBit();
     const auto from = Shift(Shift(to, opposite_direction), opposite_direction);
-    moves.emplace_back(Move(from, to));
+    *moves++ = Move(from, to);
   }
 
   static constexpr std::array cant_attack_files = {kFileBB[0], kFileBB[7]};
@@ -151,7 +115,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
     while (attack_squares.Any()) {
       const auto to = attack_squares.PopFirstBit();
       const auto from = Shift(to, opposite_attacks[attack_direction]);
-      moves.emplace_back(Move(from, to));
+      *moves++ = Move(from, to);
     }
   }
 
@@ -164,7 +128,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
       if (attack_to.Any()) {
         const auto to = en_croissant_square.value();
         const auto from = Shift(to, opposite_attacks[attack_direction]);
-        moves.emplace_back(Move::Make<MoveType::kEnPassant>(from, to));
+        *moves++ = Move::Make<MoveType::kEnPassant>(from, to);
       }
     }
   }
@@ -178,10 +142,10 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
     const auto to = promotion_push.PopFirstBit();
     const auto from = Shift(to, opposite_direction);
 
-    moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen));
-    moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight));
-    moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kRook));
-    moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop));
+    *moves++ = Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen);
+    *moves++ = Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight);
+    *moves++ = Move::Make<MoveType::kPromotion>(from, to, Piece::kRook);
+    *moves++ = Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop);
   }
 
   for (size_t attack_direction = 0; attack_direction < attacks.size();
@@ -195,139 +159,126 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
       const auto to = attack_squares.PopFirstBit();
       const auto from = Shift(to, opposite_attacks[attack_direction]);
 
-      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen));
-      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight));
-      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kRook));
-      moves.emplace_back(Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop));
+      *moves++ = Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen);
+      *moves++ = Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight);
+      *moves++ = Move::Make<MoveType::kPromotion>(from, to, Piece::kRook);
+      *moves++ = Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop);
     }
   }
 }
 
 template <MoveGenerator::Type type>
-MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
-  moves_.clear();
-
+Move* MoveGenerator::GeneratePseudoLegal(Position& position,
+                                         Move* moves) const {
   const auto us = position.GetSideToMove();
   const auto them = Flip(us);
-
   auto target = ~position.GetPieces(us);
-
-  if constexpr (!!(type & Type::kQuiescence)) {
-    target &= position.GetPieces(Flip(us));
+  if constexpr (type == Type::kCaptures || type == Type::kQuiescence) {
+    target = position.GetPieces(them);
+  } else if constexpr (type == Type::kQuiets) {
+    target = ~position.GetAllPieces();
   }
-
   const auto king_square = position.GetKingSquare(us);
-  const auto king_attacker =
+  const auto checkers =
       position.Attackers(king_square) & position.GetPieces(them);
-
-  // Double-check check
-  if (king_attacker.MoreThanOne()) {
-    GenerateMovesForPiece<Piece::kKing>(moves_, position, target);
-    return moves_;
-  }
-
-  // compute pins
-  position.ComputePins(us);
-
   const auto king_target = target;
-  auto pawn_target = target;
-
-  if constexpr (!!(type & Type::kQuiescence)) {
-    pawn_target |= (kRankBB[0] | kRankBB[7]);
-  }
-  if constexpr (!!(type & Type::kAddChecks)) {
-    pawn_target |= GetPawnAttacks(king_square, us);
-  }
-  // is in check
-  if (king_attacker.Any()) {
-    const auto attacker = king_attacker.GetFirstBit();
-    const auto ray =
-        Between(king_square, attacker) | SingleSquare(attacker);
-    target &= ray;
-    pawn_target &= ray;
-  }
-
-  GenerateMovesForPiece<Piece::kPawn>(moves_, position,
-                                      pawn_target & ~position.GetPieces(us));
-
-  std::erase_if(moves_, [&position](const Move& move) {
-    return !IsPawnMoveLegal(position, move);
-  });
-
-  // generate moves for piece
-  auto generate_move_for_piece = [this, &position, king_square,
-                                  us]<Piece piece>(Bitboard target) {
-    if constexpr (!!(type & Type::kAddChecks)) {
-      target |=
-          AttackTable<piece>::GetAttackMap(king_square, position.GetPieces(us));
+  if (!checkers.MoreThanOne()) {
+    auto pawn_target = target;
+    if constexpr (type == Type::kCaptures || type == Type::kQuiescence) {
+      pawn_target |= kRankBB[0] | kRankBB[7];
+    } else if constexpr (type == Type::kQuiets) {
+      pawn_target &= ~(kRankBB[0] | kRankBB[7]);
     }
-    GenerateMovesForPiece<piece>(moves_, position,
-                                 target & ~position.GetPieces(us));
-  };
-
-  auto generate_moves = [target, &generate_move_for_piece]<Piece... pieces>() {
-    (generate_move_for_piece.template operator()<pieces>(target), ...);
-  };
-
-  generate_moves.template
-  operator()<Piece::kQueen, Piece::kRook, Piece::kBishop, Piece::kKnight>();
-
-  GenerateMovesForPiece<Piece::kKing>(moves_, position,
-                                      king_target & ~position.GetPieces(us));
-  GenerateCastling(moves_, position);
-
-  // return moves
-  return moves_;
+    if constexpr (type == Type::kAddChecks) {
+      pawn_target |= GetPawnAttacks(king_square, us);
+    }
+    if (checkers.Any()) {
+      const auto attacker = checkers.GetFirstBit();
+      const auto ray = Between(king_square, attacker) | SingleSquare(attacker);
+      target &= ray;
+      pawn_target &= ray;
+    }
+    auto* pawn_begin = moves;
+    GenerateMovesForPiece<Piece::kPawn>(moves, position,
+                                        pawn_target & ~position.GetPieces(us));
+    auto* pawn_end = moves;
+    moves = pawn_begin;
+    for (auto* p = pawn_begin; p != pawn_end; ++p) {
+      if constexpr (type == Type::kQuiets) {
+        if (p->IsEnPassant()) continue;
+      }
+      if (p->IsEnPassant() && checkers.Any()) {
+        const auto captured =
+            static_cast<BitIndex>(p->To() + (us == Player::kWhite ? -8 : 8));
+        if (!checkers.Test(captured) &&
+            !Between(king_square, checkers.GetFirstBit()).Test(p->To()))
+          continue;
+      }
+      *moves++ = *p;
+    }
+    auto generate = [&]<Piece piece>() {
+      auto piece_target = target;
+      if constexpr (type == Type::kAddChecks) {
+        piece_target |= AttackTable<piece>::GetAttackMap(
+            king_square, position.GetPieces(us));
+      }
+      GenerateMovesForPiece<piece>(moves, position,
+                                   piece_target & ~position.GetPieces(us));
+    };
+    generate.template operator()<Piece::kQueen>();
+    generate.template operator()<Piece::kRook>();
+    generate.template operator()<Piece::kBishop>();
+    generate.template operator()<Piece::kKnight>();
+  }
+  GenerateMovesForPiece<Piece::kKing>(moves, position, king_target);
+  if constexpr (type != Type::kCaptures) {
+    GenerateCastling(moves, position);
+  }
+  return moves;
 }
 
+template <MoveGenerator::Type type>
+MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
+  std::array<Move, kMaxMovesPerPosition> moves;
+  auto* end = GeneratePseudoLegal<type>(position, moves.data());
+  position.ComputePins(position.GetSideToMove());
+  Moves legal;
+  legal.reserve(end - moves.data());
+  for (auto* p = moves.data(); p != end; ++p) {
+    if (position.IsLegal(*p)) legal.push_back(*p);
+  }
+  return legal;
+}
+
+bool MoveGenerator::HasLegalMove(Position& position) const {
+  std::array<Move, kMaxMovesPerPosition> moves;
+  auto* end = GeneratePseudoLegal<Type::kAll>(position, moves.data());
+  position.ComputePins(position.GetSideToMove());
+  return std::any_of(moves.data(), end,
+                     [&position](Move move) { return position.IsLegal(move); });
+}
+
+template Move* MoveGenerator::GeneratePseudoLegal<MoveGenerator::Type::kAll>(
+    Position&, Move*) const;
+template Move*
+MoveGenerator::GeneratePseudoLegal<MoveGenerator::Type::kCaptures>(Position&,
+                                                                   Move*) const;
+template Move* MoveGenerator::GeneratePseudoLegal<MoveGenerator::Type::kQuiets>(
+    Position&, Move*) const;
+template Move* MoveGenerator::GeneratePseudoLegal<
+    MoveGenerator::Type::kQuiescence>(Position&, Move*) const;
+
 template <>
-void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(Moves& moves,
+void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(Move*& moves,
                                                         Position& position,
                                                         Bitboard target) const {
-  const auto us = position.GetSideToMove();
-  const auto them = Flip(us);
-
-  const auto king_pos = position.GetKingSquare(us);
-  const auto king_mask = SingleSquare(king_pos);
-
-  const auto occupancy = position.GetAllPieces() ^ king_mask;
-
-  // we prevent the king from going to squares attacked by enemy pieces
-
-  target &= ~position.GetAllPawnAttacks(Flip(us));
-
-  Bitboard attackers = position.GetPiecesByType<Piece::kKnight>(them);
-  while (attackers.Any()) {
-    target &= ~AttackTable<Piece::kKnight>::GetAttackMap(
-        attackers.PopFirstBit(), occupancy);
-  }
-
-  attackers = position.GetPiecesByType<Piece::kBishop>(them);
-  while (attackers.Any()) {
-    target &= ~AttackTable<Piece::kBishop>::GetAttackMap(
-        attackers.PopFirstBit(), occupancy);
-  }
-
-  attackers = position.GetPiecesByType<Piece::kRook>(them);
-  while (attackers.Any()) {
-    target &= ~AttackTable<Piece::kRook>::GetAttackMap(attackers.PopFirstBit(),
-                                                       occupancy);
-  }
-
-  attackers = position.GetPiecesByType<Piece::kQueen>(them);
-  while (attackers.Any()) {
-    target &= ~AttackTable<Piece::kQueen>::GetAttackMap(attackers.PopFirstBit(),
-                                                        occupancy);
-  }
-
-  target &= ~AttackTable<Piece::kKing>::GetAttackMap(
-      position.GetKingSquare(them), occupancy);
-
-  GenerateMovesFromSquare<Piece::kKing>(moves, position, king_pos, target);
+  GenerateMovesFromSquare<Piece::kKing>(
+      moves, position, position.GetKingSquare(position.GetSideToMove()),
+      target);
 }
 
 template <Piece piece>
-void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
+void MoveGenerator::GenerateMovesFromSquare(Move*& moves, Position& position,
                                             const BitIndex from,
                                             Bitboard target) const {
   assert(position.GetPieceAt(from) == piece);
@@ -336,22 +287,12 @@ void MoveGenerator::GenerateMovesFromSquare(Moves& moves, Position& position,
   const auto attacks =
       AttackTable<piece>::GetAttackMap(from, position.GetAllPieces());
 
-  // get whose move is now
-  const auto side_to_move = position.GetSideToMove();
-
-  // if the piece is pinned we can only move in pin direction
-  if (position.GetIrreversibleData()
-          .blockers[static_cast<size_t>(side_to_move)]
-          .Test(from)) {
-    target &= Ray(position.GetKingSquare(side_to_move), from);
-  }
-
   // we move only in target squares
   auto valid_moves = attacks & target;
 
   while (valid_moves.Any()) {
     const auto to = valid_moves.PopFirstBit();
-    moves.emplace_back(Move(from, to));
+    *moves++ = Move(from, to);
   }
 }
 }  // namespace SimpleChessEngine

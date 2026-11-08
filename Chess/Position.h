@@ -140,6 +140,11 @@ class Position {
   void DoMove(NullMove);
   void UndoMove(NullMove, const IrreversibleData &data);
 
+  [[nodiscard]] bool CanPseudoCastle(CastlingSide side) const;
+  [[nodiscard]] bool IsPseudoLegal(const Move &move);
+  [[nodiscard]] bool IsLegal(const Move &move) const;
+  [[nodiscard]] bool IsLegal(const Move &move, Bitboard blockers) const;
+
   [[nodiscard]] bool CanCastle(
       const CastlingSide castling_side) const;
 

@@ -4,6 +4,7 @@
 
 #include "Attacks.h"
 #include "BitBoard.h"
+#include "MoveGenerator.h"
 #include "PSQT.h"
 #include "Piece.h"
 
@@ -326,6 +327,115 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
   history_stack_.Pop();
 }
 
+bool Position::CanPseudoCastle(CastlingSide side) const {
+  const auto us = static_cast<size_t>(side_to_move_);
+  const auto cs = static_cast<size_t>(side);
+  if (!irreversible_data_.castling_rights[us].test(cs)) return false;
+  const auto obstacles = GetAllPieces() & ~SingleSquare(king_position_[us]) &
+                         ~SingleSquare(rook_positions_[us][cs]);
+  return ((castling_squares_for_king_[us][cs] |
+           castling_squares_for_rook_[us][cs]) &
+          obstacles)
+      .None();
+}
+
+bool Position::IsPseudoLegal(const Move &move) {
+  if (!move.IsValid()) return false;
+  const auto from = move.From();
+  const auto to = move.To();
+  if (!GetPieces(side_to_move_).Test(from)) return false;
+  if (!move.IsNormal()) {
+    std::array<Move, MoveGenerator::kMaxMovesPerPosition> moves;
+    const auto *end =
+        MoveGenerator{}.GeneratePseudoLegal<MoveGenerator::Type::kAll>(
+            *this, moves.data());
+    return std::find(static_cast<const Move *>(moves.data()), end, move) != end;
+  }
+  if ((move.Raw() & 0x3000) || from == to || GetPieces(side_to_move_).Test(to))
+    return false;
+  const auto piece = GetPieceAt(from);
+  const auto occupancy = GetAllPieces();
+  Bitboard attacks;
+  switch (piece) {
+    case Piece::kPawn: {
+      if ((kRankBB[0] | kRankBB[7]).Test(to)) return false;
+      const int step = side_to_move_ == Player::kWhite ? 8 : -8;
+      const auto start_rank =
+          side_to_move_ == Player::kWhite ? kRankBB[1] : kRankBB[6];
+      if (!(GetPawnAttacks(from, side_to_move_) &
+            GetPieces(Flip(side_to_move_)))
+               .Test(to) &&
+          !(to == from + step && !occupancy.Test(to)) &&
+          !(to == from + 2 * step && start_rank.Test(from) &&
+            !occupancy.Test(to) && !occupancy.Test(from + step)))
+        return false;
+      break;
+    }
+    case Piece::kKnight:
+      attacks = AttackTable<Piece::kKnight>::GetAttackMap(from, occupancy);
+      break;
+    case Piece::kBishop:
+      attacks = AttackTable<Piece::kBishop>::GetAttackMap(from, occupancy);
+      break;
+    case Piece::kRook:
+      attacks = AttackTable<Piece::kRook>::GetAttackMap(from, occupancy);
+      break;
+    case Piece::kQueen:
+      attacks = AttackTable<Piece::kQueen>::GetAttackMap(from, occupancy);
+      break;
+    case Piece::kKing:
+      attacks = AttackTable<Piece::kKing>::GetAttackMap(from, occupancy);
+      break;
+    default:
+      return false;
+  }
+  if (piece != Piece::kPawn && !attacks.Test(to)) return false;
+  const auto king = GetKingSquare(side_to_move_);
+  const auto checkers = Attackers(king) & GetPieces(Flip(side_to_move_));
+  if (checkers.Any() && piece != Piece::kKing &&
+      (checkers.MoreThanOne() ||
+       !(Between(king, checkers.GetFirstBit()) | checkers).Test(to)))
+    return false;
+  return true;
+}
+
+bool Position::IsLegal(const Move &move) const {
+  return IsLegal(
+      move, irreversible_data_.blockers[static_cast<size_t>(side_to_move_)]);
+}
+
+bool Position::IsLegal(const Move &move, Bitboard blockers) const {
+  const auto us = side_to_move_;
+  const auto them = Flip(us);
+  const auto from = move.From();
+  const auto to = move.To();
+  if (move.IsCastling()) {
+    return !IsUnderCheck() &&
+           CanCastle(to == kKingCastlingDestination[static_cast<size_t>(us)][0]
+                         ? CastlingSide::k00
+                         : CastlingSide::k000);
+  }
+  if (move.IsEnPassant()) {
+    const auto captured =
+        static_cast<BitIndex>(to + (us == Player::kWhite ? -8 : 8));
+    const auto occupancy =
+        (GetAllPieces() ^ SingleSquare(from) ^ SingleSquare(captured)) |
+        SingleSquare(to);
+    const auto king = GetKingSquare(us);
+    return !(AttackTable<Piece::kRook>::GetAttackMap(king, occupancy) &
+             (GetPiecesByType<Piece::kRook>(them) |
+              GetPiecesByType<Piece::kQueen>(them)))
+                .Any() &&
+           !(AttackTable<Piece::kBishop>::GetAttackMap(king, occupancy) &
+             (GetPiecesByType<Piece::kBishop>(them) |
+              GetPiecesByType<Piece::kQueen>(them)))
+                .Any();
+  }
+  if (GetPieceAt(from) == Piece::kKing) {
+    return !IsUnderAttack(to, us, SingleSquare(from));
+  }
+  return !blockers.Test(from) || Ray(GetKingSquare(us), from).Test(to);
+}
 
 [[nodiscard]] bool Position::CanCastle(
     const CastlingSide castling_side) const {

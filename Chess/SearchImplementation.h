@@ -105,8 +105,7 @@ struct SearchNode {
   [[nodiscard]] bool PassesSEEPruning(const Move &move, bool is_quiet) const;
 
   bool ProbeTranspositionTable();
-  std::optional<SearchResult> CheckTranspositionTable(
-      const MoveGenerator::Moves &moves);
+  std::optional<SearchResult> CheckSingularExtension();
 
   SearchResult PVSearch();
 
@@ -180,9 +179,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   if (ply > 0 && GetCurrentPosition().GetHalfMoveClock() >= 100 &&
       (!position_info_.is_under_check ||
-       !searcher_.move_generator_
-            .GenerateMoves<MoveGenerator::Type::kAll>(GetCurrentPosition())
-            .empty())) {
+       searcher_.move_generator_.HasLegalMove(GetCurrentPosition()))) {
     return kDrawValue;
   }
 
@@ -301,40 +298,31 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     }
   }
 
-  auto moves = searcher_.move_generator_
-                   .GenerateMoves<MoveGenerator::Type::kAll>(current_position);
-
-  if (auto result = CheckTranspositionTable(moves)) {
-    searcher_.debug_info_.tt_cuts++;
-    return *result;
+  const auto tt_move = !excluded_move_ && iteration_status_.tt_info
+                           ? iteration_status_.tt_info->move
+                           : Move::None();
+  move_picker_.InitPicker(current_position, &searcher_, ply, tt_move,
+                          excluded_move_.value_or(Move::None()));
+  const auto first_move = move_picker_.SelectNextMove();
+  if (first_move.IsValid() && first_move == tt_move) {
+    if (auto result = CheckSingularExtension()) {
+      searcher_.debug_info_.tt_cuts++;
+      return *result;
+    }
   }
-
-  if (excluded_move_) {
-    std::erase(moves, *excluded_move_);
-    if (moves.empty()) return alpha;
-  }
-
-  move_picker_.InitPicker(std::move(moves), searcher_, ply);
-
-  // check if there are no possible moves
-  if (move_picker_.Done()) {
+  if (!first_move.IsValid()) {
+    if (excluded_move_) return alpha;
     return GetEndGameScore();
   }
-
-  if (!iteration_status_.best_move) {
-    auto has_cutoff_opt = CheckFirstMove<kFirstChildNodeExpectedType>(
-        *move_picker_.SelectNextMove(searcher_, ply));
-    if (!has_cutoff_opt) {
-      return std::nullopt;
+  auto has_cutoff_opt = CheckFirstMove<kFirstChildNodeExpectedType>(first_move);
+  if (!has_cutoff_opt) return std::nullopt;
+  if (*has_cutoff_opt) {
+    if (iteration_status_.tt_info &&
+        first_move == iteration_status_.tt_info->move) {
+      searcher_.debug_info_.tt_cuts++;
     }
-    if (*has_cutoff_opt) {
-      SetTTEntry(Bound::kLower);
-      return beta;
-    }
-  } else {
-    // skip the first move
-    assert(iteration_status_.best_move);
-    move_picker_.SkipMove(*iteration_status_.best_move);
+    SetTTEntry(Bound::kLower);
+    return beta;
   }
 
   return PVSearch();
@@ -500,11 +488,8 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
   const bool move_pruning_allowed =
       ply != 0 && !position_info_.is_under_check;
 
-  for (auto it = move_picker_.SelectNextMove(searcher_, ply);
-       it != move_picker_.end();
-       it = move_picker_.SelectNextMove(searcher_, ply)) {
-    const auto &move = *it;
-
+  for (auto move = move_picker_.SelectNextMove(); move.IsValid();
+       move = move_picker_.SelectNextMove()) {
     const bool is_quiet = move.IsQuiet(current_position);
     const auto quiet_score =
         is_quiet ? searcher_.GetQuietScore(move, ply) : std::int64_t{0};
@@ -546,16 +531,15 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     if (lmr_conditions_met &&
         move_picker_.GetCurrentStage() >= MovePicker::Stage::kQuiet) {
       using LMRSettings = Settings::PruneParameters::LMRSettings;
-      double reduction =
-          0.99 +
-          std::log(remaining_depth) *
-              std::log(move_picker_.current() - move_picker_.begin()) / 3.14 -
-          (position_info_.is_under_check
-               ? LMRSettings::kUnderCheckReductionPenalty
-               : 0) -
-          (current_position.IsUnderCheck()
-               ? LMRSettings::kDoingCheckReductionPenalty
-               : 0);
+      double reduction = 0.99 +
+                         std::log(remaining_depth) *
+                             std::log(move_picker_.MoveCount()) / 3.14 -
+                         (position_info_.is_under_check
+                              ? LMRSettings::kUnderCheckReductionPenalty
+                              : 0) -
+                         (current_position.IsUnderCheck()
+                              ? LMRSettings::kDoingCheckReductionPenalty
+                              : 0);
       if constexpr (node_type == NodeType::kCut) {
         reduction += LMRSettings::kCutNodeReduction;
       }
@@ -737,7 +721,7 @@ bool SearchNode<node_type, ExitCondition>::CanLateMovePrune() const {
   const int depth = state_.remaining_depth;
   if (depth > LMPSettings::kDepthLimit) return false;
 
-  const auto move_count = move_picker_.current() - move_picker_.begin();
+  const auto move_count = move_picker_.MoveCount();
   return move_count >= LMPSettings::kBaseCount + depth * depth;
 }
 
@@ -786,56 +770,41 @@ bool SearchNode<node_type, ExitCondition>::ProbeTranspositionTable() {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 std::optional<SearchResult>
-SearchNode<node_type, ExitCondition>::CheckTranspositionTable(
-    const MoveGenerator::Moves &moves) {
-  if (!excluded_move_ && iteration_status_.tt_info &&
-      std::ranges::find(moves, iteration_status_.tt_info->move) !=
-          moves.end()) {
-    auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
-    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _, cached_eval] =
-        *iteration_status_.tt_info;
+SearchNode<node_type, ExitCondition>::CheckSingularExtension() {
+  auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
+  auto [hash, hash_move, entry_score, entry_depth, entry_bound, _, cached_eval] =
+      *iteration_status_.tt_info;
 
-    using Singular = Settings::SearchParameters::SingularExtensionSettings;
-    entry_score -= IsMateScore(entry_score) * ply;
-    if (ply > 0 && ply < 2 * max_depth &&
-        remaining_depth >= Singular::kDepthLimit + kIsPrincipalVariation &&
-        entry_depth >= remaining_depth - 3 &&
-        (entry_bound & Bound::kLower) &&
-        std::abs(entry_score) <
-            kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
-      const Eval singular_beta =
-          entry_score - Singular::kMarginNumerator * remaining_depth /
-                            Singular::kMarginDenominator;
-      constexpr auto verification_type =
-          node_type == NodeType::kCut ? NodeType::kCut : NodeType::kAll;
-      ++searcher_.singular_info_.searches;
-      const auto result = SearchNode<verification_type, ExitCondition>{
-          searcher_,
-          {max_depth, static_cast<Depth>((remaining_depth - 1) / 2),
-           singular_beta - 1, singular_beta, ply,
-           state_.was_previous_move_a_null},
-          exit_condition_, hash_move}();
-      if (!result) return SearchResult{std::nullopt};
-      if (*result < singular_beta) {
-        tt_move_extension_ = 1;
-        ++searcher_.singular_info_.extensions;
-      } else if (singular_beta >= beta) {
-        ++searcher_.singular_info_.multi_cuts;
-        return beta;
-      } else if (entry_score >= beta) {
-        tt_move_extension_ = Singular::kNegativeExtension;
-        ++searcher_.singular_info_.negative_extensions;
-      }
-    }
-
-    auto has_cutoff_opt =
-        CheckFirstMove<kFirstChildNodeExpectedType>(hash_move);
-    if (!has_cutoff_opt) {
-      return SearchResult{std::nullopt};
-    }
-    if (*has_cutoff_opt) {
-      SetTTEntry(Bound::kLower);
+  using Singular = Settings::SearchParameters::SingularExtensionSettings;
+  entry_score -= IsMateScore(entry_score) * ply;
+  if (ply > 0 && ply < 2 * max_depth &&
+      remaining_depth >= Singular::kDepthLimit + kIsPrincipalVariation &&
+      entry_depth >= remaining_depth - 3 &&
+      (entry_bound & Bound::kLower) &&
+      std::abs(entry_score) <
+          kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+    const Eval singular_beta =
+        entry_score - Singular::kMarginNumerator * remaining_depth /
+                          Singular::kMarginDenominator;
+    constexpr auto verification_type =
+        node_type == NodeType::kCut ? NodeType::kCut : NodeType::kAll;
+    ++searcher_.singular_info_.searches;
+    const auto result = SearchNode<verification_type, ExitCondition>{
+        searcher_,
+        {max_depth, static_cast<Depth>((remaining_depth - 1) / 2),
+         singular_beta - 1, singular_beta, ply,
+         state_.was_previous_move_a_null},
+        exit_condition_, hash_move}();
+    if (!result) return SearchResult{std::nullopt};
+    if (*result < singular_beta) {
+      tt_move_extension_ = 1;
+      ++searcher_.singular_info_.extensions;
+    } else if (singular_beta >= beta) {
+      ++searcher_.singular_info_.multi_cuts;
       return beta;
+    } else if (entry_score >= beta) {
+      tt_move_extension_ = Singular::kNegativeExtension;
+      ++searcher_.singular_info_.negative_extensions;
     }
   }
 

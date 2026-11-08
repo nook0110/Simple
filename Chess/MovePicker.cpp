@@ -1,21 +1,18 @@
 #include "MovePicker.h"
 
 #include <algorithm>
-#include <cstddef>
-#include <tuple>
-#include <utility>
+#include <limits>
 
-#include "Move.h"
 #include "Position.h"
 #include "Searcher.h"
-namespace SimpleChessEngine {
 
+namespace SimpleChessEngine {
 namespace {
-constexpr bool IsUnderpromotion(const Piece promotion) {
+constexpr bool IsUnderpromotion(Piece promotion) {
   return promotion != Piece::kNone && promotion != Piece::kQueen;
 }
 
-constexpr int PromotionRank(const Piece promotion) {
+constexpr int PromotionRank(Piece promotion) {
   switch (promotion) {
     case Piece::kQueen:
       return 4;
@@ -31,172 +28,164 @@ constexpr int PromotionRank(const Piece promotion) {
 }
 }  // namespace
 
-template <typename UnaryPredicate, typename Compare>
-size_t FindMaxIf(size_t first, size_t last, UnaryPredicate pred, Compare comp) {
-  size_t result = last;
-  for (; first != last; ++first) {
-    if (pred(first)) {
-      if (result == last || comp(result, first)) {
-        result = first;
+void MovePicker::PartialInsertionSort(ScoredMove* begin, ScoredMove* end,
+                                      std::int64_t limit) {
+  if (begin == end) return;
+  for (auto *sorted_end = begin, *p = begin + 1; p < end; ++p) {
+    if (p->score >= limit) {
+      const auto tmp = *p;
+      *p = *++sorted_end;
+      auto* q = sorted_end;
+      for (; q != begin && (q - 1)->score < tmp.score; --q) {
+        *q = *(q - 1);
       }
+      *q = tmp;
     }
   }
-  return result;
 }
 
-template <typename Compare>
-size_t MaxElement(size_t first, size_t last, Compare comp) {
-  if (first == last) {
-    return last;
+void MovePicker::InitPicker(Position& position, const Searcher* searcher,
+                            Depth ply, Move tt_move, Move excluded_move) {
+  position_ = &position;
+  searcher_ = searcher;
+  ply_ = ply;
+  current_ = end_ = bad_end_ = killer_index_ = move_count_ = 0;
+  killers_.fill(Move::None());
+  evasions_ = position.IsUnderCheck();
+  position.ComputePins(position.GetSideToMove());
+  blockers_ = position.GetIrreversibleData()
+                  .blockers[static_cast<size_t>(position.GetSideToMove())];
+  excluded_move_ = excluded_move;
+  tt_move_ = position.IsPseudoLegal(tt_move) ? tt_move : Move::None();
+  stage_ = Stage::kTT;
+}
+
+void MovePicker::Generate(bool quiet) {
+  std::array<Move, MoveGenerator::kMaxMovesPerPosition> generated;
+  auto* begin = generated.data();
+  Move* end;
+  const MoveGenerator generator;
+  if (quiet) {
+    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kQuiets>(
+        *position_, begin);
+  } else if (!searcher_ && evasions_) {
+    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kAll>(*position_,
+                                                                   begin);
+  } else if (!searcher_) {
+    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kQuiescence>(
+        *position_, begin);
+  } else {
+    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kCaptures>(
+        *position_, begin);
   }
-
-  size_t largest = first;
-  ++first;
-
-  for (; first != last; ++first) {
-    if (comp(largest, first)) {
-      largest = first;
+  current_ = quiet ? bad_end_ : 0;
+  end_ = current_;
+  for (auto* p = begin; p != end; ++p) {
+    const auto move = *p;
+    if (move == tt_move_ || move == excluded_move_ ||
+        (quiet && std::ranges::find(killers_, move) != killers_.end()))
+      continue;
+    std::int64_t score = 0;
+    if (searcher_ && quiet) {
+      score = searcher_->GetQuietScore(move, ply_);
+    } else if (searcher_) {
+      const auto captured =
+          move.IsEnPassant() ? Piece::kPawn : position_->GetPieceAt(move.To());
+      const auto promotion =
+          move.IsPromotion() ? move.PromotionPiece() : Piece::kNone;
+      const auto victim_rank =
+          !IsUnderpromotion(promotion) * 8 + static_cast<int>(captured);
+      const auto promotion_rank = victim_rank * 8 + PromotionRank(promotion);
+      score = promotion_rank * 8 -
+              static_cast<int>(position_->GetPieceAt(move.From()));
     }
+    assert(end_ < moves_.size());
+    moves_[end_++] = {move, score};
   }
-
-  return largest;
+  if (searcher_) {
+    PartialInsertionSort(moves_.data() + current_, moves_.data() + end_,
+                         std::numeric_limits<std::int64_t>::min());
+  }
 }
 
-MovePicker::MovePicker() = default;
-
-MovePicker::Stage& operator++(MovePicker::Stage& stage) {
-  stage = MovePicker::Stage(static_cast<std::uint8_t>(stage) + 1);
-  return stage;
+Move MovePicker::Emit(Move move) {
+  ++move_count_;
+  return move;
 }
 
-MoveGenerator::Moves::const_iterator MovePicker::SelectNextMove(
-    const Searcher& searcher, const Depth ply) {
-  const auto& position = searcher.GetPosition();
-  const auto capture_key = [this, &position](size_t idx) {
-    const auto& data = data_[idx];
-    return std::tuple{!IsUnderpromotion(data.promotion),
-                      static_cast<int>(data.captured),
-                      PromotionRank(data.promotion),
-                      -static_cast<int>(position.GetPieceAt(data.from))};
-  };
-  const auto compare_captures = [&capture_key](size_t lhs, size_t rhs) {
-    return capture_key(lhs) < capture_key(rhs);
-  };
-  switch (stage_) {
-    case Stage::kGoodCaptures: {
-      const auto is_good_capture = [this](size_t idx) {
-        return data_[idx].is_good_capture;
-      };
-
-      auto good_capture =
-          FindMaxIf(current_move_ - moves_.begin(), moves_.size(),
-                    is_good_capture, compare_captures);
-      if (good_capture == moves_.size()) {
-        ++stage_;
-      } else {
-        Swap(good_capture, current_move_ - moves_.begin());
-        return current_move_++;
-      }
-      begin_quiet_ = current_move_;
-      [[fallthrough]];
-    }
-
-    case Stage::kKillers: {
-      const auto& killers = searcher.GetKillers();
-      for (size_t i = 0; i < killers.AvailableKillerCount(ply); ++i) {
-        const auto killer = killers.Get(ply, i);
-        auto killer_move = std::find(current_move_, moves_.end(), killer);
-        if (killer_move != moves_.end()) {
-          Swap(killer_move - moves_.begin(), current_move_ - moves_.begin());
-          return current_move_++;
+Move MovePicker::SelectNextMove() {
+  for (;;) {
+    switch (stage_) {
+      case Stage::kTT:
+        stage_ = Stage::kCaptureInit;
+        if (tt_move_.IsValid() && position_->IsLegal(tt_move_, blockers_))
+          return Emit(tt_move_);
+        break;
+      case Stage::kCaptureInit:
+        Generate(false);
+        stage_ = Stage::kGoodCaptures;
+        break;
+      case Stage::kGoodCaptures:
+        while (current_ < end_) {
+          const auto candidate = moves_[current_++];
+          if (!position_->IsLegal(candidate.move, blockers_)) continue;
+          if (!searcher_) return Emit(candidate.move);
+          const auto promotion = candidate.move.IsPromotion()
+                                     ? candidate.move.PromotionPiece()
+                                     : Piece::kNone;
+          if (!IsUnderpromotion(promotion) &&
+              position_->StaticExchangeEvaluation(candidate.move,
+                                                  kGoodCaptureThreshold))
+            return Emit(candidate.move);
+          moves_[bad_end_++] = candidate;
         }
+        stage_ = searcher_ ? Stage::kKillers : Stage::kEnd;
+        break;
+      case Stage::kKillers: {
+        const auto& killers = searcher_->GetKillers();
+        while (killer_index_ < killers.AvailableKillerCount(ply_)) {
+          const auto index = killer_index_++;
+          const auto move = killers.Get(ply_, index);
+          if (move == tt_move_ || move == excluded_move_ ||
+              !position_->IsPseudoLegal(move) ||
+              !position_->IsLegal(move, blockers_))
+            continue;
+          if (!move.IsQuiet(*position_)) {
+            auto* found = std::find_if(
+                moves_.data(), moves_.data() + bad_end_,
+                [move](const auto& data) { return data.move == move; });
+            if (found == moves_.data() + bad_end_) continue;
+            found->move = Move::None();
+          }
+          killers_[index] = move;
+          return Emit(move);
+        }
+        stage_ = Stage::kQuietInit;
+        break;
       }
-      ++stage_;
-      [[fallthrough]];
-    }
-
-    case Stage::kQuiet: {
-      const auto is_quiet = [this](size_t idx) {
-        return data_[idx].captured == Piece::kNone &&
-               data_[idx].promotion == Piece::kNone;
-      };
-      const auto compare_quiet = [this](size_t lhs, size_t rhs) {
-        return history_[lhs] < history_[rhs];
-      };
-
-      auto quiet_move = FindMaxIf(current_move_ - moves_.begin(), moves_.size(),
-                                  is_quiet, compare_quiet);
-      if (quiet_move != moves_.size()) {
-        Swap(quiet_move, current_move_ - moves_.begin());
-        return current_move_++;
-      }
-      ++stage_;
-      [[fallthrough]];
-    }
-
-    case Stage::kBadCaptures: {
-      auto bad_capture = MaxElement(current_move_ - moves_.begin(),
-                                    moves_.size(), compare_captures);
-      if (bad_capture != moves_.size()) {
-        Swap(bad_capture, current_move_ - moves_.begin());
-        return current_move_++;
-      }
-      ++stage_;
-      [[fallthrough]];
-    }
-
-    case Stage::kEnd: {
-      return end();
+      case Stage::kQuietInit:
+        Generate(true);
+        stage_ = Stage::kQuiet;
+        break;
+      case Stage::kQuiet:
+        while (current_ < end_) {
+          const auto move = moves_[current_++].move;
+          if (position_->IsLegal(move, blockers_)) return Emit(move);
+        }
+        current_ = 0;
+        end_ = bad_end_;
+        stage_ = Stage::kBadCaptures;
+        break;
+      case Stage::kBadCaptures:
+        while (current_ < end_) {
+          const auto move = moves_[current_++].move;
+          if (move.IsValid()) return Emit(move);
+        }
+        stage_ = Stage::kEnd;
+        break;
+      case Stage::kEnd:
+        return Move::None();
     }
   }
-
-  assert(false);
-  std::unreachable();
 }
-
-void MovePicker::InitPicker(MoveGenerator::Moves&& moves,
-                            const Searcher& searcher, const Depth ply) {
-  moves_ = std::move(moves);
-  data_.resize(moves_.size());
-  history_.resize(moves_.size());
-  for (size_t i = 0; i < moves_.size(); ++i) {
-    const auto& move = moves_[i];
-    const auto from = move.From();
-    const auto to = move.To();
-    
-    // Determine captured piece
-    Piece capture = Piece::kNone;
-    if (move.IsEnPassant()) {
-      capture = Piece::kPawn;
-    } else if (!move.IsCastling()) {
-      capture = searcher.GetPosition().GetPieceAt(to);
-    }
-    
-    const auto promotion =
-        move.IsPromotion() ? move.PromotionPiece() : Piece::kNone;
-    const bool tactical =
-        capture != Piece::kNone || promotion == Piece::kQueen;
-    data_[i] = {from, to, capture,
-                tactical && !IsUnderpromotion(promotion)
-                    ? searcher.GetPosition().StaticExchangeEvaluation(
-                          move, kGoodCaptureThreshold)
-                    : false,
-                promotion};
-    history_[i] = capture == Piece::kNone && promotion == Piece::kNone
-                      ? searcher.GetQuietScore(move, ply)
-                      : 0;
-  }
-  current_move_ = moves_.begin();
-}
-
-void MovePicker::SkipMove(const Move& move) {
-  const auto found = std::find(current_move_, moves_.end(), move);
-  if (found == moves_.end()) return;
-  Swap(current_move_ - moves_.begin(), found - moves_.begin());
-  ++current_move_;
-}
-
-bool MovePicker::Done() const { return current_move_ == moves_.end(); }
-
-MovePicker::Stage MovePicker::GetCurrentStage() const { return stage_; }
 }  // namespace SimpleChessEngine

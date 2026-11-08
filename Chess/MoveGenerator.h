@@ -14,10 +14,16 @@ namespace SimpleChessEngine {
  */
 class MoveGenerator {
  public:
-  enum class Type : std::uint8_t { kAll = 0, kQuiescence = 1, kAddChecks = 2 };
+  enum class Type : std::uint8_t {
+    kAll = 0,
+    kQuiescence = 1,
+    kAddChecks = 2,
+    kCaptures = 4,
+    kQuiets = 8
+  };
 
-  static constexpr size_t kMaxMovesPerPosition = 218;
-  MoveGenerator() { moves_.reserve(kMaxMovesPerPosition); }
+  static constexpr size_t kMaxMovesPerPosition = 256;
+  MoveGenerator() = default;
   ~MoveGenerator();
 
   using Moves = std::vector<Move>;
@@ -32,10 +38,13 @@ class MoveGenerator {
   template <Type type>
   [[nodiscard]] Moves GenerateMoves(Position& position) const;
 
- private:
-  [[nodiscard]] static bool IsPawnMoveLegal(Position& position,
-                                            const Move& move);
+  template <Type type>
+  [[nodiscard]] Move* GeneratePseudoLegal(Position& position,
+                                          Move* moves) const;
 
+  [[nodiscard]] bool HasLegalMove(Position& position) const;
+
+ private:
   /**
    * \brief Generates all possible moves for a given square.
    *
@@ -46,7 +55,7 @@ class MoveGenerator {
    * \return All possible moves for the given square.
    */
   template <Piece piece>
-  void GenerateMovesForPiece(Moves& moves, Position& position,
+  void GenerateMovesForPiece(Move*& moves, Position& position,
                              Bitboard target) const;
 
   /**
@@ -61,13 +70,10 @@ class MoveGenerator {
    * \return All possible moves for the given square and piece.
    */
   template <Piece piece>
-  void GenerateMovesFromSquare(Moves& moves, Position& position, BitIndex from,
+  void GenerateMovesFromSquare(Move*& moves, Position& position, BitIndex from,
                                Bitboard target) const;
 
-  static void GenerateCastling(Moves& moves, const Position& position);
-
-  // mutable because it is used as a pre-allocated storage to return, not as an object state
-  mutable Moves moves_;
+  static void GenerateCastling(Move*& moves, const Position& position);
 };
 
 }  // namespace SimpleChessEngine
