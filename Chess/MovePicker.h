@@ -2,6 +2,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <ranges>
 
 #include "Evaluation.h"
 #include "Move.h"
@@ -38,12 +39,15 @@ class MovePicker {
     std::int64_t score;
   };
 
-  static void PartialInsertionSort(ScoredMove* begin, ScoredMove* end,
-                                   std::int64_t limit);
+  using ScoredMoves =
+      std::array<ScoredMove, MoveGenerator::kMaxMovesPerPosition>;
+  using ScoredRange = std::ranges::subrange<ScoredMoves::iterator>;
+
+  static void SortByScore(ScoredRange moves);
   void Generate(bool quiet);
   [[nodiscard]] LegalMove Emit(LegalMove move);
 
-  std::array<ScoredMove, MoveGenerator::kMaxMovesPerPosition> moves_;
+  ScoredMoves moves_;
   std::array<Move, 2> killers_{};
   Position* position_ = nullptr;
   const Searcher* searcher_ = nullptr;

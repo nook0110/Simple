@@ -1,7 +1,7 @@
 #include "MovePicker.h"
 
 #include <algorithm>
-#include <limits>
+#include <iterator>
 
 #include "Position.h"
 #include "Searcher.h"
@@ -28,19 +28,16 @@ constexpr int PromotionRank(Piece promotion) {
 }
 }  // namespace
 
-void MovePicker::PartialInsertionSort(ScoredMove* begin, ScoredMove* end,
-                                      std::int64_t limit) {
-  if (begin == end) return;
-  for (auto *sorted_end = begin, *p = begin + 1; p < end; ++p) {
-    if (p->score >= limit) {
-      const auto tmp = *p;
-      *p = *++sorted_end;
-      auto* q = sorted_end;
-      for (; q != begin && (q - 1)->score < tmp.score; --q) {
-        *q = *(q - 1);
-      }
-      *q = tmp;
+void MovePicker::SortByScore(ScoredRange moves) {
+  if (moves.empty()) return;
+  for (auto next = std::next(moves.begin()); next != moves.end(); ++next) {
+    const ScoredMove inserted = *next;
+    auto slot = next;
+    for (; slot != moves.begin() && std::prev(slot)->score < inserted.score;
+         --slot) {
+      *slot = *std::prev(slot);
     }
+    *slot = inserted;
   }
 }
 
@@ -97,8 +94,7 @@ void MovePicker::Generate(bool quiet) {
     moves_[end_++] = {move, score};
   }
   if (searcher_) {
-    PartialInsertionSort(moves_.data() + current_, moves_.data() + end_,
-                         std::numeric_limits<std::int64_t>::min());
+    SortByScore({moves_.begin() + current_, moves_.begin() + end_});
   }
 }
 
@@ -145,10 +141,11 @@ MaybeLegalMove MovePicker::SelectNextMove() {
               !position_->IsLegal(move, blockers_))
             continue;
           if (!move.IsQuiet(*position_)) {
-            auto* found = std::find_if(
-                moves_.data(), moves_.data() + bad_end_,
-                [move](const auto& data) { return data.move == move; });
-            if (found == moves_.data() + bad_end_) continue;
+            const ScoredRange bad_captures{moves_.begin(),
+                                           moves_.begin() + bad_end_};
+            const auto found =
+                std::ranges::find(bad_captures, move, &ScoredMove::move);
+            if (found == bad_captures.end()) continue;
             found->move = Move::None();
           }
           killers_[index] = move;
