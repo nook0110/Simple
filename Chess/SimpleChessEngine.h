@@ -36,7 +36,7 @@ struct NodePerSecondInfo {
 
 struct PrincipalVariationInfo {
   size_t current_depth = 0;
-  MoveGenerator::Moves moves;
+  Searcher::PrincipalVariation moves;
 };
 
 struct BestMoveInfo {
@@ -256,7 +256,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   };
 
   const auto legal_moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position_);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position_);
   if (legal_moves.empty()) {
     finish(BestMoveInfo{Move::None(), std::nullopt});
     return;

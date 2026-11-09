@@ -1,5 +1,6 @@
 #include "Position.h"
 
+#include <algorithm>
 #include <numeric>
 
 #include "Attacks.h"
@@ -345,11 +346,10 @@ bool Position::IsPseudoLegal(const Move &move) {
   const auto to = move.To();
   if (!GetPieces(side_to_move_).Test(from)) return false;
   if (!move.IsNormal()) {
-    std::array<PseudoLegalMove, MoveGenerator::kMaxMovesPerPosition> moves;
-    const auto *end =
-        MoveGenerator{}.GeneratePseudoLegal<MoveGenerator::Type::kAll>(
-            *this, moves.data());
-    return std::find(static_cast<const PseudoLegalMove *>(moves.data()), end, move) != end;
+    return std::ranges::contains(
+        MoveGenerator{}.GeneratePseudoLegalMoves<MoveGenerator::Type::kAll>(
+            *this),
+        move);
   }
   if ((move.Raw() & 0x3000) || from == to || GetPieces(side_to_move_).Test(to))
     return false;

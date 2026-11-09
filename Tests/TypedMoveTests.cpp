@@ -81,9 +81,6 @@ TEST(TypedMoves, AcceptsEveryGeneratedLegalMove) {
            "4k3/8/8/8/8/8/8/6KR w H - 0 1"}) {
     auto position = PositionFactory{}(fen);
     const auto moves = MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
-    const auto raw_moves = MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
-    ASSERT_EQ(moves.size(), raw_moves.size());
-    for (size_t i = 0; i < moves.size(); ++i) EXPECT_EQ(moves[i], raw_moves[i]);
     for (const auto move : moves) {
       const Move raw = move;
       const PseudoLegalMove degraded = move;
