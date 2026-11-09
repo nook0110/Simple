@@ -1,8 +1,9 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
-#include <vector>
 
+#include "InplaceVector.h"
 #include "Move.h"
 #include "Position.h"
 
@@ -22,11 +23,13 @@ class MoveGenerator {
     kQuiets = 8
   };
 
-  static constexpr size_t kMaxMovesPerPosition = 256;
+  static constexpr std::size_t kMaxMovesPerPosition = 256;
+
+  using PseudoLegalMoves = InplaceVector<PseudoLegalMove, kMaxMovesPerPosition>;
+  using LegalMoves = InplaceVector<LegalMove, kMaxMovesPerPosition>;
+
   MoveGenerator() = default;
   ~MoveGenerator();
-
-  using Moves = std::vector<LegalMove>;
 
   /**
    * \brief Generates all possible moves for a given position.
@@ -36,16 +39,11 @@ class MoveGenerator {
    * \return All possible moves for the given position.
    */
   template <Type type>
-  [[nodiscard]] Moves GenerateMoves(Position& position) const;
+  [[nodiscard]] LegalMoves GenerateLegalMoves(Position& position) const;
 
   template <Type type>
-  [[nodiscard, gnu::always_inline]] Moves GenerateLegalMoves(Position& position) const {
-    return GenerateMoves<type>(position);
-  }
-
-  template <Type type>
-  [[nodiscard]] PseudoLegalMove* GeneratePseudoLegal(Position& position,
-                                          PseudoLegalMove* moves) const;
+  [[nodiscard]] PseudoLegalMoves GeneratePseudoLegalMoves(
+      Position& position) const;
 
   [[nodiscard]] bool HasLegalMove(Position& position) const;
 
@@ -60,7 +58,7 @@ class MoveGenerator {
    * \return All possible moves for the given square.
    */
   template <Piece piece>
-  void GenerateMovesForPiece(PseudoLegalMove*& moves, Position& position,
+  void GenerateMovesForPiece(PseudoLegalMoves& moves, Position& position,
                              Bitboard target) const;
 
   /**
@@ -75,10 +73,11 @@ class MoveGenerator {
    * \return All possible moves for the given square and piece.
    */
   template <Piece piece>
-  void GenerateMovesFromSquare(PseudoLegalMove*& moves, Position& position, BitIndex from,
-                               Bitboard target) const;
+  void GenerateMovesFromSquare(PseudoLegalMoves& moves, Position& position,
+                               BitIndex from, Bitboard target) const;
 
-  static void GenerateCastling(PseudoLegalMove*& moves, const Position& position);
+  static void GenerateCastling(PseudoLegalMoves& moves,
+                               const Position& position);
 };
 
 }  // namespace SimpleChessEngine

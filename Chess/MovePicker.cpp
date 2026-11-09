@@ -61,27 +61,21 @@ void MovePicker::InitPicker(Position& position, const Searcher* searcher,
 }
 
 void MovePicker::Generate(bool quiet) {
-  std::array<PseudoLegalMove, MoveGenerator::kMaxMovesPerPosition> generated;
-  auto* begin = generated.data();
-  PseudoLegalMove* end;
-  const MoveGenerator generator;
-  if (quiet) {
-    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kQuiets>(
-        *position_, begin);
-  } else if (!searcher_ && evasions_) {
-    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kAll>(*position_,
-                                                                   begin);
-  } else if (!searcher_) {
-    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kQuiescence>(
-        *position_, begin);
-  } else {
-    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kCaptures>(
-        *position_, begin);
-  }
+  const auto generated = [this, quiet] {
+    using enum MoveGenerator::Type;
+    const MoveGenerator generator;
+    if (quiet) return generator.GeneratePseudoLegalMoves<kQuiets>(*position_);
+    if (!searcher_ && evasions_) {
+      return generator.GeneratePseudoLegalMoves<kAll>(*position_);
+    }
+    if (!searcher_) {
+      return generator.GeneratePseudoLegalMoves<kQuiescence>(*position_);
+    }
+    return generator.GeneratePseudoLegalMoves<kCaptures>(*position_);
+  }();
   current_ = quiet ? bad_end_ : 0;
   end_ = current_;
-  for (auto* p = begin; p != end; ++p) {
-    const auto move = *p;
+  for (const auto move : generated) {
     if (move == tt_move_ || move == excluded_move_ ||
         (quiet && std::ranges::find(killers_, move) != killers_.end()))
       continue;

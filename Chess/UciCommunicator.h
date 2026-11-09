@@ -153,7 +153,7 @@ class SearchThread {
 
       Position position = info.position;
       if (MoveGenerator{}
-              .GenerateMoves<MoveGenerator::Type::kAll>(position)
+              .GenerateLegalMoves<MoveGenerator::Type::kAll>(position)
               .size() == 1) {
         optimum = std::min(optimum, kSingleMoveTime);
       }
