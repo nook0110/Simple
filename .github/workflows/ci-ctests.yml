@@ -6,7 +6,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container: 
-      image: gcc:15
+      image: gcc:16
       options: --user root
 
     steps:

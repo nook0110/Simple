@@ -15,7 +15,8 @@ add_compile_definitions(SCE_EVALFILE="${SCE_EVALFILE}")
 add_compile_options(-Wall -Wextra -Wpedantic)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_definitions(NDEBUG)
-  add_compile_options(-Ofast -mtune=native -march=native -fno-stack-protector)
+  add_compile_options(-Ofast -mtune=native -march=native -fno-stack-protector
+                      -ftrivial-auto-var-init=uninitialized)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-flto=auto>
                       $<$<COMPILE_LANGUAGE:CXX>:-frename-registers>)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
