@@ -7,16 +7,15 @@
 namespace SimpleChessEngine {
 struct Settings {
   struct EvaluationParameters {
-    inline static std::array<TaperedEval, kPieceTypes> mobility = [] {
-      std::array<TaperedEval, kPieceTypes> values{};
-      values[static_cast<size_t>(Piece::kKnight)] = TaperedEval{{4, 2}};
-      values[static_cast<size_t>(Piece::kBishop)] = TaperedEval{{7, 3}};
-      values[static_cast<size_t>(Piece::kRook)] = TaperedEval{{2, 4}};
-      values[static_cast<size_t>(Piece::kQueen)] = TaperedEval{{2, 2}};
+    inline static ByPiece<TaperedEval> mobility = [] {
+      ByPiece<TaperedEval> values{};
+      values[Piece::kKnight] = TaperedEval{{4, 2}};
+      values[Piece::kBishop] = TaperedEval{{7, 3}};
+      values[Piece::kRook] = TaperedEval{{2, 4}};
+      values[Piece::kQueen] = TaperedEval{{2, 2}};
       return values;
     }();
-    inline static std::array<std::array<std::array<TaperedEval, 4>, 8>,
-                             kPieceTypes>
+    inline static ByPiece<std::array<std::array<TaperedEval, 4>, 8>>
         psqt_adjustment{};
     inline static TaperedEval doubled_pawn{{-15, -15}};
     inline static TaperedEval isolated_pawn{{-10, -10}};
@@ -45,11 +44,11 @@ struct Settings {
           };
           return values;
         }();
-    inline static std::array<TaperedEval, kPieceTypes> material_value = [] {
+    inline static ByPiece<TaperedEval> material_value = [] {
       auto values = kPieceValues;
-      values[static_cast<size_t>(Piece::kKnight)]
+      values[Piece::kKnight]
           .eval[static_cast<size_t>(GamePhase::kEndGame)] = 275;
-      values[static_cast<size_t>(Piece::kBishop)]
+      values[Piece::kBishop]
           .eval[static_cast<size_t>(GamePhase::kMiddleGame)] = 375;
       return values;
     }();
@@ -59,12 +58,12 @@ struct Settings {
     inline static Eval king_open_file = -14;
     inline static Eval king_pawn_storm_near = -12;
     inline static Eval king_pawn_storm_far = -8;
-    inline static std::array<Eval, kPieceTypes> king_attack = [] {
-      std::array<Eval, kPieceTypes> values{};
-      values[static_cast<size_t>(Piece::kKnight)] = 8;
-      values[static_cast<size_t>(Piece::kBishop)] = 10;
-      values[static_cast<size_t>(Piece::kRook)] = 18;
-      values[static_cast<size_t>(Piece::kQueen)] = 20;
+    inline static ByPiece<Eval> king_attack = [] {
+      ByPiece<Eval> values{};
+      values[Piece::kKnight] = 8;
+      values[Piece::kBishop] = 10;
+      values[Piece::kRook] = 18;
+      values[Piece::kQueen] = 20;
       return values;
     }();
     inline static bool pawns_enabled = true;
@@ -101,13 +100,13 @@ struct Settings {
     }
 
     static void SetMaterialValue(Piece piece, GamePhase phase, Eval value) {
-      material_value[static_cast<size_t>(piece)]
+      material_value[piece]
           .eval[static_cast<size_t>(phase)] = value;
       material_enabled = material_value != kPieceValues;
     }
 
     static void SetMobility(Piece piece, GamePhase phase, Eval value) {
-      mobility[static_cast<size_t>(piece)].eval[static_cast<size_t>(phase)] =
+      mobility[piece].eval[static_cast<size_t>(phase)] =
           value;
       mobility_enabled = false;
       for (const auto& weight : mobility) {
@@ -118,7 +117,7 @@ struct Settings {
     static void SetPsqtAdjustment(Piece piece, size_t relative_rank,
                                   size_t mirrored_file, GamePhase phase,
                                   Eval value) {
-      psqt_adjustment[static_cast<size_t>(piece)][relative_rank][mirrored_file]
+      psqt_adjustment[piece][relative_rank][mirrored_file]
           .eval[static_cast<size_t>(phase)] = value;
       psqt_adjustment_enabled = false;
       for (const auto& piece_values : psqt_adjustment) {
@@ -164,7 +163,7 @@ struct Settings {
     static void SetKingAttack(Eval value) {
       static_assert(piece == Piece::kKnight || piece == Piece::kBishop ||
                     piece == Piece::kRook || piece == Piece::kQueen);
-      king_attack[static_cast<size_t>(piece)] = value;
+      king_attack[piece] = value;
       RefreshKingSafetyEnabled();
     }
 
@@ -256,7 +255,7 @@ struct Settings {
       enum class Strategy { Linear, Exponential };
       static constexpr bool kEnabled = false;
       static constexpr Eval kPawnValue =
-          kPieceValues[static_cast<size_t>(Piece::kPawn)]
+          kPieceValues[Piece::kPawn]
               .eval[static_cast<size_t>(GamePhase::kMiddleGame)];
       static constexpr Eval kDelta = kPawnValue * 3 / 4;
       static constexpr Strategy kStrategy = Strategy::Linear;

@@ -32,7 +32,7 @@ struct KingPawnHashEntry {
   Bitboard black_pawns{};
   BitIndex white_king{-1};
   BitIndex black_king{-1};
-  std::array<Eval, kColors> king_score{};
+  ByPlayer<Eval> king_score{};
 };
 
 struct KingPawnHashTable {
@@ -44,10 +44,10 @@ thread_local KingPawnHashTable king_pawn_hash_table;
 
 struct PawnEvaluation {
   TaperedEval score{};
-  std::array<Eval, kColors> king_score{};
+  ByPlayer<Eval> king_score{};
 };
 
-[[nodiscard]] const std::array<Eval, kColors>& EvaluateKingPawns(
+[[nodiscard]] const ByPlayer<Eval>& EvaluateKingPawns(
     const Position& position, Bitboard white_pawns, Bitboard black_pawns,
     size_t pawn_hash_index);
 
@@ -66,27 +66,25 @@ struct PawnEvaluation {
 [[nodiscard]] TaperedEval EvaluatePawns(const Bitboard pawns,
                                         const Bitboard enemy_pawns,
                                         const Player side) {
-  const auto side_index = static_cast<size_t>(side);
   TaperedEval result{};
 
   Bitboard remaining = pawns;
   while (remaining.Any()) {
     const BitIndex square = remaining.PopFirstBit();
-    if ((pawns & kPawnSpans.rear[side_index][square]).Any()) {
+    if ((pawns & kPawnSpans.rear[side][square]).Any()) {
       result += Settings::EvaluationParameters::doubled_pawn;
     }
     if ((pawns & kPawnSpans.adjacent_files[square]).None()) {
       result += Settings::EvaluationParameters::isolated_pawn;
     }
     const auto [file_coordinate, rank_coordinate] = GetCoordinates(square);
-    const auto file = static_cast<size_t>(file_coordinate);
     const auto rank = static_cast<size_t>(rank_coordinate);
     const auto relative_rank =
         side == Player::kWhite ? rank : static_cast<size_t>(7 - rank);
     result +=
         Settings::EvaluationParameters::pawn_psqt_adjustment[relative_rank]
-                                                            [file];
-    if ((enemy_pawns & kPawnSpans.passed[side_index][square]).Any()) {
+                                                            [file_coordinate];
+    if ((enemy_pawns & kPawnSpans.passed[side][square]).Any()) {
       continue;
     }
     result += Settings::EvaluationParameters::passed_pawn[relative_rank];
@@ -128,7 +126,7 @@ void AddMobility(const Position& position, const Player side,
                  const Bitboard occupied, const Bitboard mobility_area,
                  TaperedEval& result) {
   const auto& weight =
-      Settings::EvaluationParameters::mobility[static_cast<size_t>(piece)];
+      Settings::EvaluationParameters::mobility[piece];
   if (weight == TaperedEval{}) return;
 
   Bitboard pieces = position.GetPiecesByType<piece>(side);
@@ -172,8 +170,8 @@ void AddPsqtAdjustment(const Position& position, const Player side,
         side == Player::kWhite ? rank : static_cast<size_t>(7 - rank);
     const size_t mirrored_file = std::min(file, static_cast<size_t>(7 - file));
     result +=
-        Settings::EvaluationParameters::psqt_adjustment[static_cast<size_t>(
-            piece)][relative_rank][mirrored_file];
+        Settings::EvaluationParameters::psqt_adjustment[
+            piece][relative_rank][mirrored_file];
   }
 }
 
@@ -213,7 +211,7 @@ void AddPsqtAdjustment(const Position& position, const Player side,
       result += Settings::EvaluationParameters::king_shield_far;
     }
 
-    const Bitboard file_mask = kFileBB[static_cast<size_t>(file)];
+    const Bitboard file_mask = kFileBB[file];
     if ((own_pawns & file_mask).None()) {
       result += Settings::EvaluationParameters::king_semi_open_file;
       if ((enemy_pawns & file_mask).None()) {
@@ -240,7 +238,7 @@ void AddPsqtAdjustment(const Position& position, const Player side,
   return result;
 }
 
-[[nodiscard]] const std::array<Eval, kColors>& EvaluateKingPawns(
+[[nodiscard]] const ByPlayer<Eval>& EvaluateKingPawns(
     const Position& position, const Bitboard white_pawns,
     const Bitboard black_pawns, const size_t pawn_hash_index) {
   const BitIndex white_king = position.GetKingSquare(Player::kWhite);
@@ -312,7 +310,7 @@ void AddKingTropism(const Position& position, const Player attacker,
   const size_t tropism = outer + (pieces & masks[0]).Count();
   attack_units +=
       static_cast<Eval>(tropism) *
-      Settings::EvaluationParameters::king_attack[static_cast<size_t>(piece)];
+      Settings::EvaluationParameters::king_attack[piece];
 }
 
 [[nodiscard]] Eval EvaluateKingAttack(const Position& position,
@@ -353,9 +351,9 @@ void AddKingTropism(const Position& position, const Player attacker,
 
 [[nodiscard]] Eval TaperedEval::operator()(PhaseValue pv) const {
   const auto mg_limit =
-      kPhaseValueLimits[static_cast<size_t>(GamePhase::kMiddleGame)];
+      kPhaseValueLimits[GamePhase::kMiddleGame];
   const auto eg_limit =
-      kPhaseValueLimits[static_cast<size_t>(GamePhase::kEndGame)];
+      kPhaseValueLimits[GamePhase::kEndGame];
   pv = std::clamp(pv, eg_limit, mg_limit);
   return (eval[static_cast<size_t>(GamePhase::kMiddleGame)] * (pv - eg_limit) +
           eval[static_cast<size_t>(GamePhase::kEndGame)] * (mg_limit - pv)) /
@@ -381,18 +379,15 @@ void AddKingTropism(const Position& position, const Player attacker,
 
   const auto us = side_to_move_;
   const auto them = Flip(us);
-  const auto us_idx = static_cast<size_t>(us);
-  const auto them_idx = static_cast<size_t>(them);
 
   TaperedEval result{};
   result +=
-      evaluation_data_.material[us_idx] - evaluation_data_.material[them_idx];
+      evaluation_data_.material[us] - evaluation_data_.material[them];
   if (Settings::EvaluationParameters::material_enabled) {
-    for (size_t piece = static_cast<size_t>(Piece::kPawn);
-         piece <= static_cast<size_t>(Piece::kQueen); ++piece) {
+    for (const auto piece : kPiecesByValue) {
       const int count_difference =
-          static_cast<int>(evaluation_data_.piece_counts[us_idx][piece]) -
-          static_cast<int>(evaluation_data_.piece_counts[them_idx][piece]);
+          static_cast<int>(evaluation_data_.piece_counts[us][piece]) -
+          static_cast<int>(evaluation_data_.piece_counts[them][piece]);
       const TaperedEval correction =
           Settings::EvaluationParameters::material_value[piece] -
           kPieceValues[piece];
@@ -400,7 +395,7 @@ void AddKingTropism(const Position& position, const Player attacker,
       result.eval[1] += count_difference * correction.eval[1];
     }
   }
-  result += evaluation_data_.psqt[us_idx] - evaluation_data_.psqt[them_idx];
+  result += evaluation_data_.psqt[us] - evaluation_data_.psqt[them];
   const bool king_safety_active =
       Settings::EvaluationParameters::king_safety_enabled &&
       (GetPiecesByType<Piece::kQueen>(Player::kWhite) |
@@ -430,8 +425,8 @@ void AddKingTropism(const Position& position, const Player attacker,
   if (king_safety_active) {
     if (Settings::EvaluationParameters::king_pawns_enabled) {
       result +=
-          EvaluateKingSafety(*this, us, pawn_evaluation.king_score[us_idx]) -
-          EvaluateKingSafety(*this, them, pawn_evaluation.king_score[them_idx]);
+          EvaluateKingSafety(*this, us, pawn_evaluation.king_score[us]) -
+          EvaluateKingSafety(*this, them, pawn_evaluation.king_score[them]);
     } else {
       result +=
           EvaluateKingSafety(*this, us, 0) - EvaluateKingSafety(*this, them, 0);

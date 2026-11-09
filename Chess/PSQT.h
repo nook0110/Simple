@@ -4,11 +4,10 @@
 
 namespace SimpleChessEngine {
 // clang-format off
-  inline std::array<std::array<std::array<TaperedEval, kBoardArea>, kPieceTypes>,
-    kColors>
-    kPSQT = { {
+  inline ByPlayer<ByPiece<std::array<TaperedEval, kBoardArea>>>
+    kPSQT = { { {
         // White pieces table
-        {{// Empty squares values are irrelevant since kNone is not being placed
+        {{{// Empty squares values are irrelevant since kNone is not being placed
           // or removed at any time
           {},
           // Pawns
@@ -77,10 +76,10 @@ namespace SimpleChessEngine {
             {  29 , -12 }, { -1  ,  17 }, { -20 ,  14 }, { -7  ,  17 }, { -8  ,  17 }, { -4  ,  38 }, { -38 ,  23 }, { -29 ,  11 },
             { -65 , -74 }, {  23 , -35 }, {  16 , -18 }, { -15 , -18 }, { -56 , -11 }, { -34 ,  15 }, {  2  ,  4  }, {  13 , -17 },
           }}
-  }}
+  }}}
     // Black pieces table is initialized symmetrically to the white pieces
     // table
-} };
+} } };
 // clang-format on
 
 inline void InitPSQT() {
@@ -90,9 +89,8 @@ inline void InitPSQT() {
          ++square) {
       const auto [file, rank] = GetCoordinates(square);
       const BitIndex new_square = GetSquareIndex(file, 7 - rank);
-      kPSQT[static_cast<size_t>(Player::kBlack)][static_cast<size_t>(piece)]
-           [new_square] = kPSQT[static_cast<size_t>(Player::kWhite)]
-                               [static_cast<size_t>(piece)][square];
+      kPSQT[Player::kBlack][piece][new_square] =
+          kPSQT[Player::kWhite][piece][square];
     }
   }
 }

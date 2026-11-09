@@ -1,8 +1,11 @@
 #pragma once
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cassert>
 #include <tuple>
 #include "BitBoard.h"
+#include "EnumArray.h"
 #include "Piece.h"
 
 namespace SimpleChessEngine {
@@ -92,6 +95,14 @@ private:
 };
 
 enum class CastlingSide : std::uint8_t { k00, k000 };
+
+template <>
+inline constexpr std::size_t kEnumSize<CastlingSide> = 2;
+
+inline constexpr std::array kCastlingSides{CastlingSide::k00, CastlingSide::k000};
+
+template <class Value>
+using ByCastlingSide = EnumArray<CastlingSide, Value>;
 
 static_assert(sizeof(Move) == 2, "Move must be exactly 2 bytes");
 static_assert(alignof(Move) == 2, "Move should be 2-byte aligned");

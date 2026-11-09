@@ -24,12 +24,10 @@ void MoveGenerator::GenerateCastling(PseudoLegalMoves& moves,
 
   const auto side_to_move = position.GetSideToMove();
   const auto king_square = position.GetKingSquare(side_to_move);
-  const auto color_idx = static_cast<size_t>(side_to_move);
 
   for (const auto castling_side : {CastlingSide::k00, CastlingSide::k000}) {
     if (position.CanPseudoCastle(castling_side)) {
-      const auto side_idx = static_cast<size_t>(castling_side);
-      const auto king_to = kKingCastlingDestination[color_idx][side_idx];
+      const auto king_to = kKingCastlingDestination[side_to_move][castling_side];
 
       moves.unchecked_push_back(PseudoLegalMove(
           Move::Make<MoveType::kCastling>(king_square, king_to)));
@@ -56,14 +54,12 @@ template <>
 void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
     PseudoLegalMoves& moves, Position& position, const Bitboard target) const {
   const auto us = position.GetSideToMove();
-  const auto us_idx = static_cast<size_t>(us);
   const auto them = Flip(us);
-  const auto them_idx = static_cast<size_t>(them);
 
   const auto pawns = position.GetPiecesByType<Piece::kPawn>(us);
   const auto promotion_rank = us == Player::kWhite ? kRankBB[6] : kRankBB[1];
-  const auto direction = kPawnMoveDirection[us_idx];
-  const auto opposite_direction = kPawnMoveDirection[them_idx];
+  const auto direction = kPawnMoveDirection[us];
+  const auto opposite_direction = kPawnMoveDirection[them];
 
   const auto non_promoting_pawns = pawns & ~promotion_rank;
 
