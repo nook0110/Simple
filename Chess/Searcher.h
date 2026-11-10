@@ -17,6 +17,7 @@
 #include "MoveGenerator.h"
 #include "NodeType.h"
 #include "PositionFactory.h"
+#include "Settings.h"
 #include "StaticEvalHistory.h"
 #include "SyzygyTablebase.h"
 #include "TranspositionTable.h"
@@ -45,6 +46,7 @@ class Searcher {
   template <NodeType node_type, class ExitCondition>
     requires StopSearchCondition<ExitCondition>
   friend struct SearchNode;
+  friend struct SearchEvaluationTestAccess;
   constexpr static size_t kTTSizeInMb = SCE_TT_SIZE_MB;
   using SearcherTranspositionTable = TranspositionTable<kTTSizeInMb>;
 
@@ -149,22 +151,33 @@ class Searcher {
     Piece piece = Piece::kNone;
     BitIndex to = 0;
   };
+  struct PlayedMove {
+    PieceTo piece_to;
+    Move move = Move::None();
+    Player side = Player::kWhite;
+    bool quiet = false;
+    std::optional<Eval> parent_eval;
+  };
   static constexpr std::int64_t kHistoryMax = 16384;
   static constexpr size_t kPieceToSize = kPieceTypes * (kBoardArea + 1);
   static constexpr std::array<Depth, 2> kContinuationOffsets = {1, 2};
 
   [[nodiscard]] static std::int64_t HistoryBonus(Depth depth);
+  [[nodiscard]] static std::int64_t StaticEvalHistoryBonus(Eval parent_eval,
+                                                           Eval child_eval);
   [[nodiscard]] static size_t ContinuationIndex(PieceTo previous,
                                                 PieceTo current);
   [[nodiscard]] PieceTo GetPieceTo(const Move &move) const;
-  void SetPlayedMove(Depth ply, const Move &move);
+  void SetPlayedMove(Depth ply, const Move &move,
+                     std::optional<Eval> parent_eval);
   void SetPlayedNullMove(Depth ply);
+  void UpdateStaticEvalHistory(Depth ply, Eval child_eval);
   void UpdateQuietHistory(const Move &move, Depth ply, std::int64_t bonus);
   void AddRootEffort(const Move &move, std::uint64_t nodes);
 
   std::vector<std::int32_t> continuation_history_ =
       std::vector<std::int32_t>(kPieceToSize * kPieceToSize);
-  std::array<PieceTo, kMaxSearchPly + 1> move_stack_{};
+  std::array<PlayedMove, kMaxSearchPly + 1> move_stack_{};
   StaticEvalHistory static_evals_;
 
   std::vector<std::pair<Move, std::uint64_t>> root_effort_;
@@ -227,12 +240,44 @@ inline Searcher::PieceTo Searcher::GetPieceTo(const Move &move) const {
   return {current_position_.GetPieceAt(move.From()), move.To()};
 }
 
-inline void Searcher::SetPlayedMove(const Depth ply, const Move &move) {
-  move_stack_[ply] = GetPieceTo(move);
+inline std::int64_t Searcher::StaticEvalHistoryBonus(const Eval parent_eval,
+                                                     const Eval child_eval) {
+  using Policy = Settings::SearchParameters::StaticEvalPolicySettings;
+  const auto round_ratio = [](std::int64_t numerator,
+                              std::int64_t denominator) {
+    return numerator < 0 ? -((-numerator + denominator / 2) / denominator)
+                         : (numerator + denominator / 2) / denominator;
+  };
+  const auto gain = -(static_cast<std::int64_t>(parent_eval) + child_eval);
+  const auto difference =
+      std::clamp<std::int64_t>(
+          round_ratio(gain * Policy::kEvalNumerator, Policy::kEvalDenominator),
+          Policy::kMinDifference, Policy::kMaxDifference) +
+      Policy::kOffset;
+  return round_ratio(difference * Policy::kBonusMultiplier * kHistoryMax,
+                     Policy::kStockfishHistoryMax);
+}
+
+inline void Searcher::SetPlayedMove(const Depth ply, const Move &move,
+                                    const std::optional<Eval> parent_eval) {
+  move_stack_[ply] = {GetPieceTo(move), move, current_position_.GetSideToMove(),
+                      move.IsQuiet(current_position_), parent_eval};
 }
 
 inline void Searcher::SetPlayedNullMove(const Depth ply) {
   move_stack_[ply] = {};
+}
+
+inline void Searcher::UpdateStaticEvalHistory(const Depth ply,
+                                              const Eval child_eval) {
+  if (ply == 0) return;
+  const auto &previous = move_stack_[ply - 1];
+  if (!previous.quiet || !previous.parent_eval || !previous.move.IsValid())
+    return;
+  const auto bonus = StaticEvalHistoryBonus(*previous.parent_eval, child_eval);
+  auto &entry = history_[static_cast<size_t>(previous.side)]
+                        [previous.move.From()][previous.move.To()];
+  entry += bonus - entry * std::abs(bonus) / kHistoryMax;
 }
 
 inline std::int64_t Searcher::GetQuietScore(const Move &move,
@@ -242,7 +287,7 @@ inline std::int64_t Searcher::GetQuietScore(const Move &move,
   const auto current = GetPieceTo(move);
   for (const auto offset : kContinuationOffsets) {
     if (ply < offset) break;
-    const auto previous = move_stack_[ply - offset];
+    const auto previous = move_stack_[ply - offset].piece_to;
     if (previous.piece == Piece::kNone) continue;
     score += continuation_history_[ContinuationIndex(previous, current)];
   }
@@ -260,7 +305,7 @@ inline void Searcher::UpdateQuietHistory(const Move &move, const Depth ply,
   const auto current = GetPieceTo(move);
   for (const auto offset : kContinuationOffsets) {
     if (ply < offset) break;
-    const auto previous = move_stack_[ply - offset];
+    const auto previous = move_stack_[ply - offset].piece_to;
     if (previous.piece == Piece::kNone) continue;
     apply(continuation_history_[ContinuationIndex(previous, current)]);
   }

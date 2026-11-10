@@ -44,6 +44,8 @@ struct PositionInfo {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 struct SearchNode {
+  friend struct SearchEvaluationTestAccess;
+
  public:
   constexpr static bool kIsPrincipalVariation = node_type == NodeType::kPV;
   constexpr static NodeType kFirstChildNodeExpectedType =
@@ -258,6 +260,9 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   evaluation_trend_ = searcher_.static_evals_.Update(
       ply, position_info_.is_under_check ? std::nullopt
                                          : std::optional{GetStaticEval()});
+  if (!excluded_move_ && !position_info_.is_under_check) {
+    searcher_.UpdateStaticEvalHistory(ply, *position_info_.static_eval);
+  }
 
   if (CanRFP()) {
     searcher_.debug_info_.rfp_cuts++;
@@ -449,7 +454,8 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
   if (move.IsQuiet(current_position)) {
     RecordSearchedQuiet(move);
   }
-  searcher_.SetPlayedMove(ply, move);
+  searcher_.SetPlayedMove(
+      ply, move, excluded_move_ ? std::nullopt : position_info_.static_eval);
   const auto nodes_before = searcher_.debug_info_.searched_nodes +
                             searcher_.debug_info_.quiescence_nodes;
 
@@ -549,7 +555,8 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     const bool can_futility_prune =
         can_prune && is_quiet && CanFutilityPrune();
 
-    searcher_.SetPlayedMove(ply, move);
+    searcher_.SetPlayedMove(
+        ply, move, excluded_move_ ? std::nullopt : position_info_.static_eval);
     const auto nodes_before = searcher_.debug_info_.searched_nodes +
                               searcher_.debug_info_.quiescence_nodes;
     current_position.DoMove(move);  // make the move and search the tree

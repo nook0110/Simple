@@ -279,6 +279,15 @@ struct Settings {
   };
   struct SearchParameters {
     inline static Eval kImprovingBetaMargin = 0;
+    struct StaticEvalPolicySettings {
+      inline static int kEvalNumerator = 208;
+      inline static int kEvalDenominator = 82;
+      inline static int kMinDifference = -189;
+      inline static int kMaxDifference = 194;
+      inline static int kOffset = 60;
+      inline static int kBonusMultiplier = 11;
+      inline static int kStockfishHistoryMax = 7183;
+    };
     struct SingularExtensionSettings {
       inline static Depth kDepthLimit = 6;
       inline static Eval kMarginNumerator = 59 * 311;
