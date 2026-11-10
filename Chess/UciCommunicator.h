@@ -334,7 +334,9 @@ struct EngineOptions {
           Settings::PruneParameters::RFPSettings::kThreshold = value;
         }));
     options.emplace_back(std::make_unique<SpinOption>(
-        "NMPReduction", 3, 2, 5, [](const int value) {
+        "NMPReduction",
+        Settings::PruneParameters::NMPSettings::kNullMoveReduction, 2, 10,
+        [](const int value) {
           Settings::PruneParameters::NMPSettings::kNullMoveReduction = value;
         }));
     options.emplace_back(std::make_unique<SpinOption>(

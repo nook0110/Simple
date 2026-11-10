@@ -218,7 +218,15 @@ struct Settings {
     };
     struct NMPSettings {
       static constexpr bool kEnabled = true;
-      inline static size_t kNullMoveReduction = 3;
+      inline static Eval kStaticEvalBaseMarginNumerator = 365 * 82;
+      inline static Eval kStaticEvalDepthMarginNumerator = 13 * 82;
+      inline static Eval kStaticEvalImprovingMarginNumerator = 47 * 82;
+      inline static Eval kStaticEvalMarginDenominator = 208;
+      inline static Eval kMinBeta = -788;
+      inline static Eval kEvalDivisor = 101;
+      inline static int kDepthDivisor = 3;
+      inline static int kNullMoveReduction = 7;
+      inline static Depth kVerificationDepth = 16;
     };
     struct IIRSettings {
       inline static Depth kBaseLimit = 2;
@@ -270,7 +278,7 @@ struct Settings {
     static constexpr SEEPruningSettings kSEEPruningSettings = {};
   };
   struct SearchParameters {
-    inline static Eval kImprovingBetaMargin = 37;
+    inline static Eval kImprovingBetaMargin = 0;
     struct SingularExtensionSettings {
       inline static Depth kDepthLimit = 6;
       inline static Eval kMarginNumerator = 59 * 311;
