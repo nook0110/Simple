@@ -80,12 +80,16 @@ class SearchThread {
 
   void Stop();
   void NewGame() {
+    StopThread();
     original_time_adjust_ = -1;
     engine_.NewGame();
+    for (auto& helper : helper_engines_) helper->NewGame();
   }
   void SetThreadCount(std::size_t thread_count) {
     StopThread();
-    thread_count_ = std::max<std::size_t>(1, thread_count);
+    const auto new_count = std::max<std::size_t>(1, thread_count);
+    if (new_count != thread_count_) helper_engines_.clear();
+    thread_count_ = new_count;
   }
   [[nodiscard]] bool SetTablebasePath(const std::string& path);
 
@@ -1106,6 +1110,7 @@ inline bool SearchThread::SetTablebasePath(const std::string& path) {
   if (path == tablebase_path_ && tablebase_) return true;
   StopThread();
   engine_.SetTablebase({});
+  for (auto& helper : helper_engines_) helper->SetTablebase({});
   tablebase_.reset();
   tablebase_path_ = "<empty>";
   if (path.empty() || path == "<empty>") {
@@ -1117,6 +1122,7 @@ inline bool SearchThread::SetTablebasePath(const std::string& path) {
   tablebase_ = std::move(tablebase);
   tablebase_path_ = path;
   engine_.SetTablebase(tablebase_);
+  for (auto& helper : helper_engines_) helper->SetTablebase(tablebase_);
   return true;
 }
 
@@ -1150,10 +1156,14 @@ inline void SearchThread::Start(const Info& info) {
 
 inline ChessEngine& SearchThread::AddHelperEngine(const Info& info,
                                                   const std::size_t worker) {
-  helper_engines_.push_back(std::make_unique<ChessEngine>(
-      info.position, std::cout, transposition_table_, false,
-      static_cast<Depth>(1 + worker % 2), tablebase_));
-  return *helper_engines_.back();
+  if (helper_engines_.size() < worker) {
+    helper_engines_.push_back(std::make_unique<ChessEngine>(
+        info.position, std::cout, transposition_table_, false,
+        static_cast<Depth>(1 + worker % 2), tablebase_));
+  } else {
+    helper_engines_[worker - 1]->SetPosition(info.position);
+  }
+  return *helper_engines_[worker - 1];
 }
 
 inline void SearchThread::StartPonderHelpers(const Info& info) {
@@ -1180,7 +1190,6 @@ inline void SearchThread::StopThread() {
     if (helper_thread.joinable()) helper_thread.join();
   }
   helper_threads_.clear();
-  helper_engines_.clear();
   helper_pondering_.clear();
   pondering_ = std::nullopt;
 }

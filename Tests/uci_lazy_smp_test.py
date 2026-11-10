@@ -169,6 +169,30 @@ def main() -> int:
     send("stop")
     wait_for(lambda line: line.startswith("bestmove "), "SMP bestmove")
 
+    for moves in ("e2e4", "e2e4 e7e5"):
+        send(f"position startpos moves {moves}")
+        send("go depth 4")
+        wait_for(lambda line: line.startswith("bestmove "), "reused SMP bestmove")
+
+    send("go ponder movetime 100")
+    wait_for(lambda line: line.startswith("info depth "), "reused SMP ponder")
+    send("ponderhit")
+    wait_for(lambda line: line.startswith("bestmove "), "SMP ponderhit bestmove")
+
+    send("go ponder movetime 100")
+    wait_for(lambda line: line.startswith("info depth "), "SMP ponder before new game")
+    send("ucinewgame")
+    wait_for(lambda line: line.startswith("bestmove "), "new game stopped ponder")
+    send("isready")
+    wait_for(lambda line: line == "readyok", "new game readyok")
+    send("position startpos")
+    send("go depth 4")
+    wait_for(lambda line: line.startswith("bestmove "), "new game SMP bestmove")
+
+    send("setoption name Threads value 3")
+    send("go depth 4")
+    wait_for(lambda line: line.startswith("bestmove "), "resized SMP bestmove")
+
     send("setoption name Threads value 1")
     send("position startpos moves e2e4 e7e5")
     send("go movetime 500")
@@ -187,8 +211,8 @@ def main() -> int:
         raise RuntimeError(f"engine exited with {process.returncode}: {stderr}")
 
     bestmoves = [line for line in lines if line.startswith("bestmove ")]
-    if len(bestmoves) != 2:
-        raise RuntimeError(f"expected two bestmoves, got {len(bestmoves)}")
+    if len(bestmoves) != 8:
+        raise RuntimeError(f"expected eight bestmoves, got {len(bestmoves)}")
     for line in bestmoves:
         if not re.fullmatch(
             r"bestmove (?:[a-h][1-8][a-h][1-8][qrbn]?|0000)"

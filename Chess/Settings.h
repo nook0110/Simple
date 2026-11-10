@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <ostream>
 
 #include "Evaluation.h"
@@ -287,6 +288,10 @@ struct Settings {
       inline static int kOffset = 60;
       inline static int kBonusMultiplier = 11;
       inline static int kStockfishHistoryMax = 7183;
+    };
+    struct HistorySettings {
+      inline static std::int64_t kDecayNumerator = 729;
+      inline static std::int64_t kDecayDenominator = 1024;
     };
     struct SingularExtensionSettings {
       inline static Depth kDepthLimit = 6;

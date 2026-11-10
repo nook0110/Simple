@@ -103,6 +103,7 @@ class ChessEngine {
 
   void GoPonder(Pondering& conditions) { ComputeBestMove(conditions); }
   void NewGame() {
+    searcher_.ClearHistories();
     previous_score_.reset();
     previous_time_reduction_ = kInitialTimeReduction;
   }
@@ -110,6 +111,7 @@ class ChessEngine {
   void ComputeBestMove(SearchCondition auto& conditions);
 
   [[nodiscard]] const Move& GetCurrentBestMove() const;
+  [[nodiscard]] const Searcher& GetSearcher() const { return searcher_; }
 
   void PrintBestMove() {
     if (!reporting_) return;

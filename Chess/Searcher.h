@@ -105,6 +105,7 @@ class Searcher {
                                     Depth max_depth, Depth remaining_depth,
                                     Eval alpha, Eval beta);
   void InitStartOfSearch();
+  void ClearHistories();
 
   struct SingularInfo {
     std::uint64_t searches{};
@@ -127,6 +128,9 @@ class Searcher {
   [[nodiscard]] const DebugInfo &GetInfo() const { return debug_info_; }
   [[nodiscard]] const auto &GetKillers() const { return killers_; }
   [[nodiscard]] const auto &GetHistory() const { return history_; }
+  [[nodiscard]] const auto &GetContinuationHistory() const {
+    return continuation_history_;
+  }
   [[nodiscard]] std::int64_t GetQuietScore(const Move &move, Depth ply) const;
   [[nodiscard]] std::uint64_t GetRootEffort(const Move &move) const;
 
@@ -331,14 +335,22 @@ inline void Searcher::InitStartOfSearch() {
   nmp_min_ply_ = 0;
   killers_.Clear();
   root_effort_.clear();
-  std::ranges::fill(continuation_history_, 0);
   move_stack_ = {};
   static_evals_.Clear();
-  for (size_t color = 0; color < kColors; ++color) {
-    for (BitIndex from = 0; from <= static_cast<BitIndex>(kBoardArea); ++from) {
-      history_[color][from].fill(0LL);
+  for (auto &side : history_) {
+    for (auto &from : side) {
+      for (auto &entry : from) {
+        entry = entry *
+                Settings::SearchParameters::HistorySettings::kDecayNumerator /
+                Settings::SearchParameters::HistorySettings::kDecayDenominator;
+      }
     }
   }
+}
+
+inline void Searcher::ClearHistories() {
+  history_ = {};
+  std::ranges::fill(continuation_history_, 0);
 }
 
 template <NodeType node_type, class ExitCondition>
