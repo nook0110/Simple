@@ -5,13 +5,19 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: gcc:16
-      options: --user root
     strategy:
       fail-fast: false
       matrix:
-        compiler: [gcc, clang]
+        include:
+          - compiler: gcc
+            image: gcc:16
+          - compiler: clang
+            image: ubuntu:26.04
+    container:
+      image: ${{ matrix.image }}
+      options: --user root
+    env:
+      DEBIAN_FRONTEND: noninteractive
 
     steps:
     - name: Checkout code
@@ -20,18 +26,16 @@ jobs:
     - name: Set up dependencies
       run: |
         apt-get update
-        apt-get install -y wget unzip g++ make git cmake lsb-release gnupg
+        apt-get install -y wget unzip g++ make git cmake python3
 
     - name: Set up clang
       if: matrix.compiler == 'clang'
       run: |
+        apt-get install -y lsb-release gnupg software-properties-common
         wget -qO llvm.sh https://apt.llvm.org/llvm.sh
         bash llvm.sh 23
-        gcc_install_dir=$(dirname "$(g++ -print-libgcc-file-name)")
         echo "CC=clang-23" >> "$GITHUB_ENV"
         echo "CXX=clang++-23" >> "$GITHUB_ENV"
-        echo "CXXFLAGS=--gcc-install-dir=$gcc_install_dir" >> "$GITHUB_ENV"
-        echo "LDFLAGS=--gcc-install-dir=$gcc_install_dir" >> "$GITHUB_ENV"
 
     - name: Building the project
       working-directory: ${{runner.workspace}}/Simple
