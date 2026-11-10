@@ -15,7 +15,22 @@
 namespace SimpleChessEngine {
 inline constexpr Eval kNoStaticEval = -8192;
 
+inline Eval TTScorePlyAdjustment(const Eval value, const Depth ply) {
+  return std::abs(value) >= kTablebaseWinValue - kMaxSearchPly
+             ? ((value > 0) - (value < 0)) * ply
+             : 0;
+}
+
+inline Eval ToTTScore(const Eval value, const Depth ply) {
+  return value + TTScorePlyAdjustment(value, ply);
+}
+
+inline Eval FromTTScore(const Eval value, const Depth ply) {
+  return value - TTScorePlyAdjustment(value, ply);
+}
+
 enum class Bound : std::uint8_t {
+  kNone = 0,
   kLower = 1,
   kUpper = 2,
   kExact = kLower | kUpper
@@ -30,11 +45,11 @@ struct Node {
   Move move{Move::None()};
   Eval score{};
   Depth depth{};
-  Bound bound{Bound::kLower};
+  Bound bound{Bound::kNone};
   std::uint8_t age{};
   Eval static_eval{kNoStaticEval};
 
-  [[nodiscard]] bool IsOccupied() const { return move.IsValid(); }
+  [[nodiscard]] bool IsOccupied() const { return bound != Bound::kNone; }
 };
 
 template <size_t TableSizeMB>
@@ -129,7 +144,11 @@ class TranspositionTable {
         if (context == eval_context) cached_eval = static_eval;
       }
       replacement->Store(
-          Node{hash, move, score, depth, bound, incoming_age, cached_eval});
+          Node{hash,
+               !move.IsValid() && replacement_node.true_hash == hash
+                   ? replacement_node.move
+                   : move,
+               score, depth, bound, incoming_age, cached_eval});
     }
   }
 

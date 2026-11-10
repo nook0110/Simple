@@ -224,7 +224,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     searcher_.debug_info_.tt_hits++;
     auto [hash, hash_move, entry_score, entry_depth, entry_bound, _, cached_eval] =
         *iteration_status_.tt_info;
-    entry_score -= IsMateScore(entry_score) * ply;
+    entry_score = FromTTScore(entry_score, ply);
 
     if (!excluded_move_ && !kIsPrincipalVariation &&
         entry_depth >= remaining_depth) {
@@ -298,9 +298,9 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   // Internal Iterative Reduction
   if constexpr (node_type == NodeType::kPV || node_type == NodeType::kCut) {
-    if (!iteration_status_.tt_info &&
-        remaining_depth >
-            Settings::PruneParameters::IIRSettings::kReduction &&
+    if ((!iteration_status_.tt_info ||
+         !iteration_status_.tt_info->move.IsValid()) &&
+        remaining_depth > Settings::PruneParameters::IIRSettings::kReduction &&
         remaining_depth >=
             Settings::PruneParameters::IIRSettings::kBaseLimit +
                 (node_type == NodeType::kCut
@@ -344,12 +344,14 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 SearchResult SearchNode<node_type, ExitCondition>::QuiescenceSearch() {
   auto &current_position = GetCurrentPosition();
-  auto quiescence_searcher = Quiescence{exit_condition_};
+  auto quiescence_searcher =
+      Quiescence{exit_condition_, searcher_.best_moves_.get(), searcher_.age_};
 
   const auto eval =
       quiescence_searcher
           .template Search</* start of the quiescence search */ true>(
-              current_position, state_.alpha, state_.beta, state_.ply);
+              current_position, state_.alpha, state_.beta, state_.ply,
+              kIsPrincipalVariation);
 
   searcher_.debug_info_.quiescence_nodes +=
       quiescence_searcher.GetSearchedNodes();
@@ -403,8 +405,7 @@ void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
   assert(iteration_status_.best_move);
   searcher_.best_moves_->SetEntry(
       GetCurrentPosition(), *iteration_status_.best_move,
-      iteration_status_.best_eval +
-          IsMateScore(iteration_status_.best_eval) * state_.ply,
+      ToTTScore(iteration_status_.best_eval, state_.ply),
       state_.remaining_depth, bound, searcher_.age_,
       Nnue::IsLoaded() ? position_info_.static_eval.value_or(kNoStaticEval)
                        : kNoStaticEval,
@@ -809,7 +810,7 @@ SearchNode<node_type, ExitCondition>::CheckSingularExtension() {
       *iteration_status_.tt_info;
 
   using Singular = Settings::SearchParameters::SingularExtensionSettings;
-  entry_score -= IsMateScore(entry_score) * ply;
+  entry_score = FromTTScore(entry_score, ply);
   if (ply > 0 && ply < 2 * max_depth &&
       remaining_depth >= Singular::kDepthLimit + kIsPrincipalVariation &&
       entry_depth >= remaining_depth - 3 &&

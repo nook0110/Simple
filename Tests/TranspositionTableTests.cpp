@@ -91,4 +91,39 @@ TEST(SharedClusterTable, CachedEvalRejectsDifferentContext) {
   table.SetEntry(position, move, 543, 14, Bound::kExact, 1, 7, 11);
   EXPECT_EQ(table.GetStaticEval(table.GetNode(position), 11), 7);
 }
+
+TEST(SharedClusterTable, MoveLessQuiescenceEntriesRoundTripAndKeepOldMove) {
+  TranspositionTable<1> table;
+  const Position position = PositionFactory{}();
+  EXPECT_FALSE(table.GetNode(position).IsOccupied());
+  table.SetEntry(position, Move::None(), 123, 0, Bound::kLower, 7);
+  ASSERT_TRUE(table.Contains(position));
+  EXPECT_EQ(table.GetNode(position).score, 123);
+  EXPECT_FALSE(table.GetNode(position).move.IsValid());
+  constexpr Move move{12, 28};
+  table.SetEntry(position, move, 321, 0, Bound::kUpper, 7);
+  table.SetEntry(position, Move::None(), 234, 0, Bound::kUpper, 7);
+  EXPECT_EQ(table.GetNode(position).score, 234);
+  EXPECT_EQ(table.GetNode(position).move, move);
+}
+
+TEST(SharedClusterTable, QuiescencePreservesDeepEntriesUntilTheyAge) {
+  for (const auto bound : {Bound::kLower, Bound::kUpper, Bound::kExact}) {
+    TranspositionTable<1> table;
+    const Position position = PositionFactory{}();
+    constexpr Move move{12, 28};
+    table.SetEntry(position, move, 123, 12, bound, 7);
+    for (const auto shallow_bound : {Bound::kLower, Bound::kUpper}) {
+      table.SetEntry(position, Move::None(), 234, 0, shallow_bound, 7);
+      EXPECT_EQ(table.GetNode(position).depth, 12);
+      EXPECT_EQ(table.GetNode(position).score, 123);
+      EXPECT_EQ(table.GetNode(position).bound, bound);
+    }
+    table.SetEntry(position, Move::None(), 234, 0, Bound::kUpper, 8);
+    EXPECT_EQ(table.GetNode(position).depth, 0);
+    EXPECT_EQ(table.GetNode(position).score, 234);
+    EXPECT_EQ(table.GetNode(position).move, move);
+  }
+}
+
 }  // namespace SimpleChessEngine::TranspositionTableTests

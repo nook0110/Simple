@@ -122,3 +122,29 @@ TEST(StagedMovePicker, QuiescencePreservesGeneratorOrderAndEvasions) {
     EXPECT_EQ(picker.SelectNextMove(), Move::None());
   }
 }
+
+TEST(StagedMovePicker, QuiescenceTtMoveComesFirstWithoutDuplicates) {
+  for (const auto* fen : kPositions) {
+    auto position = PositionFactory{}(fen);
+    const auto expected =
+        position.IsUnderCheck()
+            ? MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position)
+            : MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kQuiescence>(
+                  position);
+    for (const auto tt_move : expected) {
+      if (!position.IsUnderCheck() && !tt_move.IsEnPassant() &&
+          position.GetPieceAt(tt_move.To()) == Piece::kNone)
+        continue;
+      MovePicker picker;
+      picker.InitPicker(position, nullptr, 0, tt_move);
+      EXPECT_EQ(picker.SelectNextMove(), tt_move);
+      for (const auto move : expected) {
+        if (move != tt_move) {
+          EXPECT_EQ(picker.SelectNextMove(), move);
+        }
+      }
+      EXPECT_EQ(picker.SelectNextMove(), Move::None());
+      EXPECT_EQ(picker.MoveCount(), expected.size());
+    }
+  }
+}
