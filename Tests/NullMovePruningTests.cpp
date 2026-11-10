@@ -60,9 +60,15 @@ void StoreNullBound(Searcher::SearcherTranspositionTable &table,
 
 namespace SimpleChessEngine {
 template <>
+Quiescence<SearchTestCondition>::Quiescence(
+    const SearchTestCondition &exit_condition, Table *table, Age age)
+    : exit_condition_(exit_condition), table_(table), age_(age),
+      cache_static_eval_(false), eval_context_(0) {}
+
+template <>
 template <>
 SearchResult Quiescence<SearchTestCondition>::Search<true>(Position &, Eval,
-                                                           Eval, Depth) {
+                                                           Eval, Depth, bool) {
   ADD_FAILURE() << "Main-search probe unexpectedly reached quiescence";
   return std::nullopt;
 }
