@@ -202,6 +202,19 @@ struct Settings {
       static constexpr bool kEnabled = true;
       inline static Depth kDepthLimit = 5;
       inline static Eval kThreshold = 100;
+      inline static Eval kNoTtCutNodeDiscount = 23;
+      inline static int kImprovingDepthDeduction = 2;
+      inline static int kOpponentWorseningDivisor = 3;
+
+      [[nodiscard]] static Eval Margin(Depth depth, bool no_tt_cut_node,
+                                       bool improving,
+                                       bool opponent_worsening) {
+        const Eval multiplier =
+            kThreshold - kNoTtCutNodeDiscount * no_tt_cut_node;
+        return multiplier * depth -
+               improving * multiplier * kImprovingDepthDeduction -
+               opponent_worsening * multiplier / kOpponentWorseningDivisor;
+      }
     };
     struct NMPSettings {
       static constexpr bool kEnabled = true;
@@ -219,6 +232,13 @@ struct Settings {
       inline static int kDoingCheckReductionPenalty = 2;
       inline static int kCutNodeReduction = 2;
       inline static int kHistoryDivisor = 13000;
+      inline static double kNotImprovingReductionScale = 191.0 / 512;
+
+      [[nodiscard]] static double ScaleReduction(double reduction_scale,
+                                                 bool improving) {
+        return reduction_scale +
+               !improving * reduction_scale * kNotImprovingReductionScale;
+      }
     };
     struct FutilitySettings {
       static constexpr bool kEnabled = true;
@@ -230,6 +250,10 @@ struct Settings {
       static constexpr bool kEnabled = true;
       inline static Depth kDepthLimit = 8;
       inline static int kBaseCount = 3;
+
+      [[nodiscard]] static int MoveCount(Depth depth, bool improving) {
+        return (kBaseCount + depth * depth) / (2 - improving);
+      }
     };
     struct SEEPruningSettings {
       static constexpr bool kEnabled = true;
@@ -246,6 +270,7 @@ struct Settings {
     static constexpr SEEPruningSettings kSEEPruningSettings = {};
   };
   struct SearchParameters {
+    inline static Eval kImprovingBetaMargin = 37;
     struct SingularExtensionSettings {
       inline static Depth kDepthLimit = 6;
       inline static Eval kMarginNumerator = 59 * 311;

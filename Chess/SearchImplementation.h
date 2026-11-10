@@ -8,6 +8,7 @@
 #include "MovePicker.h"
 #include "NodeType.h"
 #include "Position.h"
+#include "StaticEvalHistory.h"
 #include "TranspositionTable.h"
 #include "Utility.h"
 
@@ -78,6 +79,7 @@ struct SearchNode {
   /* Local variables for search */
   IterationStatus iteration_status_;
   PositionInfo position_info_;
+  EvaluationTrend evaluation_trend_;
   MovePicker move_picker_;
   std::array<Move, 64> searched_quiets_{};
   size_t searched_quiet_count_ = 0;
@@ -253,6 +255,10 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     }
   }
 
+  evaluation_trend_ = searcher_.static_evals_.Update(
+      ply, position_info_.is_under_check ? std::nullopt
+                                         : std::optional{GetStaticEval()});
+
   if (CanRFP()) {
     searcher_.debug_info_.rfp_cuts++;
     return GetStaticEval();
@@ -282,6 +288,12 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
       searcher_.debug_info_.nmp_cuts++;
       return beta;
     }
+  }
+
+  if (!position_info_.is_under_check) {
+    evaluation_trend_.improving |=
+        GetStaticEval() >=
+        beta + Settings::SearchParameters::kImprovingBetaMargin;
   }
 
   // Internal Iterative Reduction
@@ -531,9 +543,14 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     if (lmr_conditions_met &&
         move_picker_.GetCurrentStage() >= MovePicker::Stage::kQuiet) {
       using LMRSettings = Settings::PruneParameters::LMRSettings;
-      double reduction = 0.99 +
-                         std::log(remaining_depth) *
-                             std::log(move_picker_.MoveCount()) / 3.14 -
+      double reduction_scale =
+          std::log(remaining_depth) * std::log(move_picker_.MoveCount()) / 3.14;
+      if (alpha > -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly) &&
+          alpha < kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+        reduction_scale = LMRSettings::ScaleReduction(
+            reduction_scale, evaluation_trend_.improving);
+      }
+      double reduction = 0.99 + reduction_scale -
                          (position_info_.is_under_check
                               ? LMRSettings::kUnderCheckReductionPenalty
                               : 0) -
@@ -700,16 +717,31 @@ Position &SearchNode<node_type, ExitCondition>::GetCurrentPosition() {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool SearchNode<node_type, ExitCondition>::CanRFP() const {
-  if constexpr (!Settings::PruneParameters::RFPSettings::kEnabled) return false;
+  using RFPSettings = Settings::PruneParameters::RFPSettings;
+  if constexpr (!RFPSettings::kEnabled) return false;
 
   if constexpr (kIsPrincipalVariation) return false;
 
-  return !position_info_.is_under_check &&
-         state_.remaining_depth <=
-             Settings::PruneParameters::RFPSettings::kDepthLimit &&
-         GetStaticEval() >
-             state_.beta + Settings::PruneParameters::RFPSettings::kThreshold *
-                               state_.remaining_depth;
+  if (position_info_.is_under_check ||
+      state_.remaining_depth > RFPSettings::kDepthLimit ||
+      state_.beta <= -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly)) {
+    return false;
+  }
+
+  const Eval eval = GetStaticEval();
+  if (eval < state_.beta ||
+      eval >= kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly) ||
+      (iteration_status_.tt_info && iteration_status_.tt_info->move.IsValid() &&
+       iteration_status_.tt_info->move.IsQuiet(searcher_.GetPosition()))) {
+    return false;
+  }
+
+  return eval >= state_.beta +
+                     RFPSettings::Margin(state_.remaining_depth,
+                                         node_type == NodeType::kCut &&
+                                             !iteration_status_.tt_info,
+                                         evaluation_trend_.improving,
+                                         evaluation_trend_.opponent_worsening);
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -722,7 +754,8 @@ bool SearchNode<node_type, ExitCondition>::CanLateMovePrune() const {
   if (depth > LMPSettings::kDepthLimit) return false;
 
   const auto move_count = move_picker_.MoveCount();
-  return move_count >= LMPSettings::kBaseCount + depth * depth;
+  return move_count >=
+         LMPSettings::MoveCount(depth, evaluation_trend_.improving);
 }
 
 template <NodeType node_type, class ExitCondition>

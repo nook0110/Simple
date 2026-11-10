@@ -17,6 +17,7 @@
 #include "MoveGenerator.h"
 #include "NodeType.h"
 #include "PositionFactory.h"
+#include "StaticEvalHistory.h"
 #include "SyzygyTablebase.h"
 #include "TranspositionTable.h"
 
@@ -156,6 +157,7 @@ class Searcher {
   std::vector<std::int32_t> continuation_history_ =
       std::vector<std::int32_t>(kPieceToSize * kPieceToSize);
   std::array<PieceTo, kMaxSearchPly + 1> move_stack_{};
+  StaticEvalHistory static_evals_;
 
   std::vector<std::pair<Move, std::uint64_t>> root_effort_;
 
@@ -275,6 +277,7 @@ inline void Searcher::InitStartOfSearch() {
   root_effort_.clear();
   std::ranges::fill(continuation_history_, 0);
   move_stack_ = {};
+  static_evals_.Clear();
   for (size_t color = 0; color < kColors; ++color) {
     for (BitIndex from = 0; from <= static_cast<BitIndex>(kBoardArea); ++from) {
       history_[color][from].fill(0LL);
