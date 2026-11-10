@@ -15,6 +15,7 @@
 #include "KillerTable.h"
 #include "Move.h"
 #include "MoveGenerator.h"
+#include "NodeCounter.h"
 #include "NodeType.h"
 #include "PositionFactory.h"
 #include "SyzygyTablebase.h"
@@ -114,6 +115,7 @@ class Searcher {
     return singular_info_;
   }
   [[nodiscard]] const DebugInfo &GetInfo() const { return debug_info_; }
+  [[nodiscard]] std::uint64_t GetNodes() const { return nodes_.Get(); }
   [[nodiscard]] const auto &GetKillers() const { return killers_; }
   [[nodiscard]] const auto &GetHistory() const { return history_; }
   [[nodiscard]] std::int64_t GetQuietScore(const Move &move, Depth ply) const;
@@ -160,6 +162,7 @@ class Searcher {
   std::vector<std::pair<Move, std::uint64_t>> root_effort_;
 
   DebugInfo debug_info_;
+  NodeCounter nodes_;
   SingularInfo singular_info_;
 };
 
@@ -272,6 +275,7 @@ inline void Searcher::AddRootEffort(const Move &move, std::uint64_t nodes) {
 }
 
 inline void Searcher::InitStartOfSearch() {
+  nodes_.Reset();
   killers_.Clear();
   root_effort_.clear();
   std::ranges::fill(continuation_history_, 0);

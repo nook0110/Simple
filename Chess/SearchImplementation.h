@@ -217,6 +217,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   }
 
   searcher_.debug_info_.searched_nodes++;
+  searcher_.nodes_.Add(1);
   if constexpr (CountsNodes<ExitCondition>) exit_condition_.CountNode();
 
   if (ProbeTranspositionTable()) {
@@ -340,8 +341,9 @@ SearchResult SearchNode<node_type, ExitCondition>::QuiescenceSearch() {
           .template Search</* start of the quiescence search */ true>(
               current_position, state_.alpha, state_.beta, state_.ply);
 
-  searcher_.debug_info_.quiescence_nodes +=
-      quiescence_searcher.GetSearchedNodes();
+  const auto quiescence_nodes = quiescence_searcher.GetSearchedNodes();
+  searcher_.debug_info_.quiescence_nodes += quiescence_nodes;
+  searcher_.nodes_.Add(quiescence_nodes);
 
   return eval;
 }

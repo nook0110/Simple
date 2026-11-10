@@ -4,9 +4,14 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
+#include <functional>
 #include <limits>
+#include <memory>
 #include <numeric>
 #include <optional>
+#include <ranges>
+#include <span>
 #include <syncstream>
 
 #include "Evaluation.h"
@@ -102,6 +107,20 @@ class ChessEngine {
   }
 
   void GoPonder(Pondering& conditions) { ComputeBestMove(conditions); }
+
+  void SetHelperEngines(
+      std::span<const std::unique_ptr<ChessEngine>> helper_engines) {
+    helper_engines_ = helper_engines;
+  }
+
+  [[nodiscard]] std::uint64_t GetNodes() const { return searcher_.GetNodes(); }
+
+  [[nodiscard]] std::uint64_t GetNodesOfAllThreads() const {
+    return std::ranges::fold_left(
+        helper_engines_ | std::views::transform(&ChessEngine::GetNodes),
+        GetNodes(), std::plus{});
+  }
+
   void NewGame() {
     previous_score_.reset();
     previous_time_reduction_ = kInitialTimeReduction;
@@ -159,9 +178,11 @@ class ChessEngine {
     PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
                                                  current_depth, position_)};
     PrintInfo(pv);
-    PrintInfo(NodesInfo{info.searched_nodes + info.quiescence_nodes});
-    PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
-        (info.searched_nodes + info.quiescence_nodes) / search_time.count())});
+    const auto nodes = GetNodesOfAllThreads();
+    PrintInfo(NodesInfo{nodes});
+    PrintInfo(NodePerSecondInfo{
+        static_cast<std::size_t>(static_cast<double>(nodes) /
+                                 search_time.count())});
     for (const auto& [name, counter] : kDebugCounters) {
       if (counter != &DebugInfo::searched_nodes &&
           counter != &DebugInfo::quiescence_nodes) {
@@ -240,6 +261,7 @@ class ChessEngine {
   Depth initial_depth_;
   std::optional<Eval> previous_score_;
   double previous_time_reduction_ = kInitialTimeReduction;
+  std::span<const std::unique_ptr<ChessEngine>> helper_engines_;
 };
 }  // namespace SimpleChessEngine
 

@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <chrono>
+#include <string>
 #include <memory>
 #include <atomic>
 #include <thread>
@@ -139,6 +141,37 @@ TEST(BestMove, PrintsNullMoveWithoutLegalMoves) {
   DepthCondition condition{3};
   engine.ComputeBestMove(condition);
   EXPECT_NE(ss.str().find("bestmove 0000"), std::string::npos);
+}
+
+TEST(NodeCounting, ReportsNodesOfAllThreads) {
+  const auto position = PositionFactory{}();
+  const auto transposition_table =
+      std::make_shared<Searcher::SearcherTranspositionTable>();
+
+  std::stringstream helper_output;
+  std::vector<std::unique_ptr<ChessEngine>> helpers;
+  helpers.push_back(std::make_unique<ChessEngine>(
+      position, helper_output, transposition_table, false));
+  DepthCondition helper_condition{6};
+  helpers.front()->ComputeBestMove(helper_condition);
+
+  std::stringstream output;
+  ChessEngine engine(position, output, transposition_table);
+  engine.SetHelperEngines(helpers);
+  DepthCondition condition{6};
+  engine.ComputeBestMove(condition);
+
+  std::uint64_t reported_nodes = 0;
+  for (std::string line; std::getline(output, line);) {
+    std::istringstream words(line);
+    std::string prefix;
+    std::string field;
+    if (words >> prefix >> field && prefix == "info" && field == "nodes") {
+      words >> reported_nodes;
+    }
+  }
+  EXPECT_GT(helpers.front()->GetNodes(), 0U);
+  EXPECT_EQ(reported_nodes, engine.GetNodes() + helpers.front()->GetNodes());
 }
 
 TEST_P(BestMoveTest, FindBestMove) {

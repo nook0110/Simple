@@ -77,6 +77,7 @@ class SearchThread {
     ponder_start_ = std::chrono::steady_clock::now();
     pondering_.emplace(stop_signal_);
     StartPonderHelpers(info);
+    engine_.SetHelperEngines(helper_engines_);
     thread_ = std::thread([this, stop_signal = stop_signal_] {
       engine_.GoPonder(*pondering_);
       stop_signal->store(true, std::memory_order_relaxed);
@@ -1161,6 +1162,7 @@ inline void SearchThread::Start(const Info& info) {
           condition);
     });
   }
+  engine_.SetHelperEngines(helper_engines_);
 
   thread_ = std::thread([this, stop_signal = stop_signal_,
                          condition = GetCondition(info)]() mutable {
@@ -1205,6 +1207,7 @@ inline void SearchThread::StopThread() {
     if (helper_thread.joinable()) helper_thread.join();
   }
   helper_threads_.clear();
+  engine_.SetHelperEngines({});
   helper_engines_.clear();
   helper_pondering_.clear();
   pondering_ = std::nullopt;
