@@ -18,6 +18,13 @@ struct DebugInfo {
   std::size_t nmp_tries{};
   std::size_t nmp_cuts{};
 
+  std::size_t probcut_tries{};
+  std::size_t probcut_candidates{};
+  std::size_t probcut_qsearch_passes{};
+  std::size_t probcut_cuts{};
+  std::size_t probcut_qsearch_nodes{};
+  std::size_t probcut_verification_nodes{};
+
   std::size_t lmp_prunes{};
   std::size_t see_prunes{};
   std::size_t futility_prunes{};
@@ -36,6 +43,12 @@ inline constexpr auto kDebugCounters = std::to_array<DebugCounter>({
     {"rfp_cuts", &DebugInfo::rfp_cuts},
     {"nmp_tries", &DebugInfo::nmp_tries},
     {"nmp_cuts", &DebugInfo::nmp_cuts},
+    {"probcut_tries", &DebugInfo::probcut_tries},
+    {"probcut_candidates", &DebugInfo::probcut_candidates},
+    {"probcut_qsearch_passes", &DebugInfo::probcut_qsearch_passes},
+    {"probcut_cuts", &DebugInfo::probcut_cuts},
+    {"probcut_qsearch_nodes", &DebugInfo::probcut_qsearch_nodes},
+    {"probcut_verification_nodes", &DebugInfo::probcut_verification_nodes},
     {"lmp_prunes", &DebugInfo::lmp_prunes},
     {"see_prunes", &DebugInfo::see_prunes},
     {"futility_prunes", &DebugInfo::futility_prunes},

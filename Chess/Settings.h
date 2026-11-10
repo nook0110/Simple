@@ -234,6 +234,12 @@ struct Settings {
       inline static Depth kCutNodePenalty = 1;
       inline static Depth kReduction = 1;
     };
+    struct ProbCutSettings {
+      inline static Depth kMinDepth = 5;
+      inline static int kDepthReduction = 4;
+      inline static Eval kMargin = 95;
+      inline static Eval kImprovingMargin = 70;
+    };
     struct LMRSettings {
       static constexpr bool kEnabled = true;
       inline static size_t kDepthLimit = 3;

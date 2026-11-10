@@ -71,6 +71,8 @@ struct SearchNode {
   SearchResult operator()();
 
  private:
+  friend struct ProbCutTestAccess;
+
   /* Search args */
   SearchState state_;
   const std::optional<Move> excluded_move_;
@@ -108,6 +110,7 @@ struct SearchNode {
   [[nodiscard]] bool CanFutilityPrune() const;
   [[nodiscard]] bool PassesSEEPruning(const Move &move, bool is_quiet) const;
 
+  std::optional<SearchResult> CheckProbCut();
   bool ProbeTranspositionTable();
   std::optional<SearchResult> CheckSingularExtension();
 
@@ -340,6 +343,8 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     }
   }
 
+  if (auto result = CheckProbCut()) return *result;
+
   const auto tt_move = !excluded_move_ && iteration_status_.tt_info
                            ? iteration_status_.tt_info->move
                            : Move::None();
@@ -368,6 +373,79 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   }
 
   return PVSearch();
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+std::optional<SearchResult>
+SearchNode<node_type, ExitCondition>::CheckProbCut() {
+  if constexpr (kIsPrincipalVariation) return std::nullopt;
+
+  using ProbCutSettings = Settings::PruneParameters::ProbCutSettings;
+  constexpr Eval decisive = kTablebaseWinValue - kMaxSearchPly;
+  if (state_.ply == 0 || position_info_.is_under_check || excluded_move_ ||
+      state_.remaining_depth < ProbCutSettings::kMinDepth ||
+      state_.beta <= -decisive || state_.beta >= decisive)
+    return std::nullopt;
+
+  const Eval probcut_beta =
+      state_.beta + (evaluation_trend_.improving
+                         ? ProbCutSettings::kImprovingMargin
+                         : ProbCutSettings::kMargin);
+  if (probcut_beta >= decisive) return std::nullopt;
+
+  const auto child_depth = static_cast<Depth>(int{state_.remaining_depth} -
+                                              ProbCutSettings::kDepthReduction);
+  if (iteration_status_.tt_info) {
+    const auto &entry = *iteration_status_.tt_info;
+    const Eval value = FromTTScore(entry.score, state_.ply);
+    if (entry.depth >= child_depth + 1 && value > -decisive &&
+        value < decisive && value < probcut_beta)
+      return std::nullopt;
+  }
+
+  ++searcher_.debug_info_.probcut_tries;
+  auto &position = GetCurrentPosition();
+  move_picker_.InitProbCut(position, &searcher_, state_.ply);
+  const Eval see_threshold = probcut_beta - GetStaticEval();
+  for (auto move = move_picker_.SelectProbCutMove(see_threshold);
+       move.IsValid(); move = move_picker_.SelectProbCutMove(see_threshold)) {
+    ++searcher_.debug_info_.probcut_candidates;
+    searcher_.SetPlayedMove(
+        state_.ply, move,
+        excluded_move_ ? std::nullopt : position_info_.static_eval);
+    position.DoMove(move);
+
+    auto quiescence = Quiescence{exit_condition_, searcher_.best_moves_.get(),
+                                 searcher_.age_};
+    const auto qvalue = quiescence.template Search<true>(
+        position, -probcut_beta, -probcut_beta + 1,
+        static_cast<Depth>(state_.ply + 1), false);
+    searcher_.debug_info_.quiescence_nodes += quiescence.GetSearchedNodes();
+    searcher_.debug_info_.probcut_qsearch_nodes +=
+        quiescence.GetSearchedNodes();
+
+    SearchResult value = qvalue;
+    if (qvalue && -*qvalue >= probcut_beta) {
+      ++searcher_.debug_info_.probcut_qsearch_passes;
+      const auto nodes_before = searcher_.debug_info_.searched_nodes +
+                                searcher_.debug_info_.quiescence_nodes;
+      value = StartSubsearch<kZWSNodeType>(
+          {state_.max_depth, child_depth, -probcut_beta, -probcut_beta + 1,
+           static_cast<Depth>(state_.ply + 1)});
+      searcher_.debug_info_.probcut_verification_nodes +=
+          searcher_.debug_info_.searched_nodes +
+          searcher_.debug_info_.quiescence_nodes - nodes_before;
+    }
+
+    position.UndoMove(move, position_info_.irreversible_data);
+    if (!value || IsTimeToExit()) return SearchResult{};
+    if (-*value >= probcut_beta) {
+      ++searcher_.debug_info_.probcut_cuts;
+      return SearchResult{state_.beta};
+    }
+  }
+  return std::nullopt;
 }
 
 template <NodeType node_type, class ExitCondition>
