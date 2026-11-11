@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <string_view>
 
 #include "Nnue/Nnue.h"
 #include "Settings.h"
@@ -44,8 +45,12 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   }
   std::stringstream ss;
-  for (size_t arg_idx = 1; arg_idx < static_cast<size_t>(argc); ++arg_idx) {
-    ss << argv[arg_idx] << "\n";
+  if (argc == 3 && std::string_view(argv[1]) == "bench") {
+    ss << argv[1] << ' ' << argv[2] << '\n';
+  } else {
+    for (size_t arg_idx = 1; arg_idx < static_cast<size_t>(argc); ++arg_idx) {
+      ss << argv[arg_idx] << "\n";
+    }
   }
   SimpleChessEngine::UciChessEngine uci(ss);
   uci.Start();

@@ -97,6 +97,88 @@ void Position::MovePiece(const BitIndex from, const BitIndex to,
   hash_ ^= kZobristKeys.psqt_hash[piece_idx][color_idx][to];
 }
 
+bool Position::VerifyPinCache() const {
+  const auto cached = irreversible_data_;
+  bool valid = true;
+  for (const auto player : {Player::kWhite, Player::kBlack}) {
+    const auto side = static_cast<std::size_t>(player);
+    if (!cached.pins_valid[side]) continue;
+    irreversible_data_.pins_valid[side] = false;
+    ComputePins(player);
+    valid &= irreversible_data_.blockers[side] == cached.blockers[side] &&
+             irreversible_data_.pinners[side] == cached.pinners[side];
+    irreversible_data_.blockers[side] = cached.blockers[side];
+    irreversible_data_.pinners[side] = cached.pinners[side];
+    irreversible_data_.pins_valid[side] = cached.pins_valid[side];
+  }
+  return valid;
+}
+
+bool Position::VerifyIncrementalState() const {
+  static thread_local std::uint64_t checks = 0;
+  if ((checks++ & 4095u) != 0) return true;
+
+  std::array<Bitboard, kPieceTypes> pieces_by_type{};
+  std::array<Bitboard, kColors> pieces_by_color{};
+  std::array<BitIndex, kColors> king_position{};
+  std::array<int, kColors> king_count{};
+  EvaluationData evaluation;
+  Hash hash = side_to_move_ == Player::kBlack ? kZobristKeys.stm_hash : 0;
+  for (std::size_t index = 0; index < kBoardArea; ++index) {
+    const auto square = static_cast<BitIndex>(index);
+    const auto piece = board_[square];
+    const bool white = pieces_by_color_[0].Test(square);
+    const bool black = pieces_by_color_[1].Test(square);
+    if (piece == Piece::kNone) {
+      if (white || black) return false;
+      continue;
+    }
+    if (white == black) return false;
+    const auto color = white ? Player::kWhite : Player::kBlack;
+    const auto color_idx = static_cast<std::size_t>(color);
+    const auto piece_idx = static_cast<std::size_t>(piece);
+    pieces_by_type[piece_idx].Set(square);
+    pieces_by_color[color_idx].Set(square);
+    ++evaluation.piece_counts[color_idx][piece_idx];
+    evaluation.material[color_idx] += kPieceValues[piece_idx];
+    evaluation.psqt[color_idx] += kPSQT[color_idx][piece_idx][square];
+    if (piece != Piece::kPawn) {
+      evaluation.non_pawn_material += kPieceValues[piece_idx].eval[0];
+    }
+    if (piece == Piece::kKing) {
+      king_position[color_idx] = square;
+      ++king_count[color_idx];
+    }
+    hash ^= kZobristKeys.psqt_hash[piece_idx][color_idx][square];
+  }
+  for (std::size_t color = 0; color < kColors; ++color) {
+    hash ^= kZobristKeys.cr_hash[color][0];
+    hash ^= kZobristKeys
+                .cr_hash[color]
+                        [irreversible_data_.castling_rights[color].to_ulong()];
+  }
+  if (irreversible_data_.en_croissant_square) {
+    hash ^=
+        kZobristKeys.en_croissant_hash
+            [GetCoordinates(*irreversible_data_.en_croissant_square).first];
+  }
+  if (pieces_by_type != pieces_by_type_ ||
+      pieces_by_color != pieces_by_color_ ||
+      (pieces_by_color[0] | pieces_by_color[1]) != GetAllPieces() ||
+      king_count[0] != 1 || king_count[1] != 1 ||
+      king_position != king_position_ || evaluation != evaluation_data_ ||
+      hash != hash_) {
+    return false;
+  }
+  if (!VerifyPinCache()) return false;
+  if (!Nnue::IsLoaded()) return true;
+  if (!Nnue::VerifyAccumulators(*this, nnue_)) return false;
+  const auto incremental = EvaluateNetwork();
+  const auto scratch = Nnue::EvaluateFromScratch(*this);
+  return incremental.psqt == scratch.psqt &&
+         incremental.positional == scratch.positional;
+}
+
 void Position::DoMove(const Move &move) {
   irreversible_data_.pins_valid = {};
   if (const auto &ep_square = irreversible_data_.en_croissant_square;
@@ -229,6 +311,7 @@ void Position::DoMove(const Move &move) {
       (moving_piece == Piece::kPawn) ||  // Moving piece is a pawn
       (irreversible_data_.captured_piece != Piece::kNone);  // Any capture
   history_stack_.Push(hash_, resets_fifty_move);
+  assert(VerifyIncrementalState());
 }
 
 void SimpleChessEngine::Position::DoMove(NullMove) {
@@ -243,6 +326,7 @@ void SimpleChessEngine::Position::DoMove(NullMove) {
   nnue_.Push();
 
   history_stack_.Push(hash_, false);
+  assert(VerifyIncrementalState());
 }
 
 
@@ -321,6 +405,7 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
 
   nnue_.Pop();
   history_stack_.Pop();
+  assert(VerifyIncrementalState());
 }
 
 void SimpleChessEngine::Position::UndoMove(NullMove,
@@ -336,6 +421,7 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
   nnue_.Pop();
 
   history_stack_.Pop();
+  assert(VerifyIncrementalState());
 }
 
 bool Position::CanPseudoCastle(CastlingSide side) const {
