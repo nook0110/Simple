@@ -59,6 +59,14 @@ class InplaceVector {
   [[nodiscard]] constexpr const_reference front() const noexcept {
     return (*this)[0];
   }
+  [[nodiscard]] constexpr reference back() noexcept {
+    assert(!empty());
+    return *(end() - 1);
+  }
+  [[nodiscard]] constexpr const_reference back() const noexcept {
+    assert(!empty());
+    return *(end() - 1);
+  }
 
   constexpr reference unchecked_push_back(const T& value) noexcept {
     assert(size_ < N);

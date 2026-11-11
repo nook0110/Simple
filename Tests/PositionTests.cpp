@@ -15,6 +15,30 @@
 using namespace SimpleChessEngine;
 
 namespace PositionTests {
+TEST(KingLegality, RejectsMissingOrDuplicateKings) {
+  for (const auto *fen :
+       {"8/8/8/8/8/8/8/8 w - - 0 1", "8/8/8/8/8/8/8/K7 w - - 0 1",
+        "7k/8/8/8/8/8/8/8 w - - 0 1", "7k/8/8/8/8/8/8/KK6 w - - 0 1",
+        "6kk/8/8/8/8/8/8/K7 w - - 0 1"}) {
+    EXPECT_FALSE(PositionFactory{}(fen).HasLegalKings()) << fen;
+  }
+}
+
+TEST(KingLegality, OnlySideToMoveMayBeInCheck) {
+  for (const auto *fen :
+       {"8/8/8/4k3/8/8/2K5/4R3 w - - 0 1", "8/8/8/4k3/8/8/2K5/4Q3 w - - 0 1",
+        "8/8/8/4k3/8/8/2K5/4R2R w - - 0 1", "8/8/8/4k3/8/8/2K5/2r5 b - - 0 1",
+        "8/8/8/8/8/8/k7/K7 w - - 0 1"}) {
+    EXPECT_FALSE(PositionFactory{}(fen).HasLegalKings()) << fen;
+  }
+  for (const auto *fen :
+       {"8/8/8/4k3/8/8/2K5/4R3 b - - 0 1", "8/8/8/4k3/8/8/2K5/4Q3 b - - 0 1",
+        "8/8/8/4k3/8/8/2K5/2r5 w - - 0 1", "8/8/8/4k3/8/8/2K5/R7 w - - 0 1"}) {
+    EXPECT_TRUE(PositionFactory{}(fen).HasLegalKings()) << fen;
+  }
+  EXPECT_TRUE(PositionFactory{}().HasLegalKings());
+}
+
 TEST(DoMove, DoAndUndoEqualZero) {
   const auto start_pos = PositionFactory{}();
   Position pos = start_pos;

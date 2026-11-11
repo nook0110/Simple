@@ -34,7 +34,7 @@ class Parameter:
 PARAMETERS = {
     "RFPDepth": Parameter(5, 1, 8, 1),
     "RFPThreshold": Parameter(100, 25, 200, 25),
-    "NMPReduction": Parameter(3, 2, 5, 1),
+    "NMPReduction": Parameter(7, 2, 10, 1),
     "IIRBaseDepth": Parameter(2, 1, 8, 1),
     "IIRCutPenalty": Parameter(1, 0, 4, 1),
     "IIRReduction": Parameter(1, 1, 3, 1),
