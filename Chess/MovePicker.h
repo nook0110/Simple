@@ -27,6 +27,8 @@ class MovePicker {
   void InitPicker(Position& position, const Searcher* searcher, Depth ply,
                   Move tt_move = Move::None(),
                   Move excluded_move = Move::None());
+  void InitProbCut(Position& position, const Searcher* searcher, Depth ply);
+  [[nodiscard]] Move SelectProbCutMove(Eval see_threshold);
   [[nodiscard]] Move SelectNextMove();
   [[nodiscard]] Stage GetCurrentStage() const { return stage_; }
   [[nodiscard]] std::ptrdiff_t MoveCount() const { return move_count_; }

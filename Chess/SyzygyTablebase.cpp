@@ -129,6 +129,7 @@ void Syzygy::Disable() {
 
 bool Syzygy::CanProbe(const Position& position) const {
   if (position.GetAllPieces().Count() > max_pieces_) return false;
+  if (!position.HasLegalKings()) return false;
   const auto& rights = position.GetCastlingRights();
   return rights[static_cast<std::size_t>(Player::kWhite)].none() &&
          rights[static_cast<std::size_t>(Player::kBlack)].none();

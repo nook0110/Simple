@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -246,6 +247,9 @@ class Network {
 
 constexpr int kSmallDefaultScale = 362;
 constexpr int kBigDefaultScale = 311;
+constexpr int kSmallMaterialThreshold =
+    962 * kPieceValues[static_cast<std::size_t>(Piece::kPawn)].eval[0] / 208;
+constexpr int kSmallFallbackThresholdNumerator = 236 * kBigDefaultScale;
 
 using SmallNetwork = Network<kSmallDimensions, kSmallL2, kSmallL3>;
 using BigNetwork = Network<kBigDimensions, kBigL2, kBigL3>;
@@ -256,7 +260,9 @@ struct Registry {
   NetworkType type = NetworkType::kNone;
   std::unique_ptr<SmallNetwork> small;
   std::unique_ptr<BigNetwork> big;
+  std::unique_ptr<SmallNetwork> auxiliary_small;
   std::string description;
+  std::string small_description;
   std::uint32_t generation = 0;
 };
 
@@ -280,6 +286,25 @@ bool ReadNetwork(std::istream& stream, std::unique_ptr<NetworkClass>& target) {
   if (!network->ReadParameters(stream)) return false;
   target = std::move(network);
   return true;
+}
+
+template <typename EvaluateNetwork>
+NetworkOutput SelectNetwork(const Position& position,
+                            EvaluateNetwork evaluate_network) {
+  if (registry.type == NetworkType::kSmall) {
+    return evaluate_network(*registry.small);
+  }
+  if (registry.type != NetworkType::kBig) return {};
+  if (registry.auxiliary_small &&
+      std::abs(position.SimpleMaterialEval()) > kSmallMaterialThreshold) {
+    const auto output = evaluate_network(*registry.auxiliary_small);
+    const int nnue_numerator =
+        (output.psqt + output.positional) * kBigDefaultScale;
+    if (std::abs(nnue_numerator) >= kSmallFallbackThresholdNumerator) {
+      return output;
+    }
+  }
+  return evaluate_network(*registry.big);
 }
 }  // namespace
 
@@ -320,15 +345,45 @@ bool Load(const std::string& path) {
   return false;
 }
 
+bool LoadSmall(const std::string& path) {
+  for (const auto& candidate : CandidatePaths(path)) {
+    std::ifstream stream(candidate, std::ios::binary);
+    if (!stream) continue;
+    const auto version = ReadLittleEndian<std::uint32_t>(stream);
+    const auto hash = ReadLittleEndian<std::uint32_t>(stream);
+    const auto description_size = ReadLittleEndian<std::uint32_t>(stream);
+    if (!stream || version != kVersion || hash != SmallNetwork::kHash) {
+      return false;
+    }
+    stream.ignore(description_size);
+    if (!stream || !ReadNetwork(stream, registry.auxiliary_small)) return false;
+    registry.small_description = candidate.string();
+    ++registry.generation;
+    return true;
+  }
+  return false;
+}
+
+void UnloadSmall() {
+  registry.auxiliary_small.reset();
+  registry.small_description.clear();
+  ++registry.generation;
+}
+
 void Unload() {
   registry.type = NetworkType::kNone;
   registry.description.clear();
-  ++registry.generation;
+  UnloadSmall();
 }
 
 bool IsLoaded() { return registry.type != NetworkType::kNone; }
 
-std::string Description() { return registry.description; }
+std::string Description() {
+  return registry.description +
+         (registry.type == NetworkType::kBig && registry.auxiliary_small
+              ? " + " + registry.small_description
+              : "");
+}
 
 std::uint32_t Generation() { return registry.generation; }
 
@@ -341,24 +396,17 @@ NetworkOutput Evaluate(const Position& position, AccumulatorStack& stack) {
   stack.Synchronize(registry.generation);
   auto& output = stack.Output();
   if (output.valid) return {output.psqt, output.positional};
-  const NetworkOutput result =
-      registry.type == NetworkType::kSmall
-          ? registry.small->Evaluate(position, stack, registry.generation)
-          : registry.big->Evaluate(position, stack, registry.generation);
+  const NetworkOutput result = SelectNetwork(position, [&](const auto& network) {
+    return network.Evaluate(position, stack, registry.generation);
+  });
   output = {true, result.psqt, result.positional};
   return result;
 }
 
 NetworkOutput EvaluateFromScratch(const Position& position) {
-  switch (registry.type) {
-    case NetworkType::kSmall:
-      return registry.small->EvaluateFromScratch(position);
-    case NetworkType::kBig:
-      return registry.big->EvaluateFromScratch(position);
-    case NetworkType::kNone:
-      break;
-  }
-  return {};
+  return SelectNetwork(position, [&](const auto& network) {
+    return network.EvaluateFromScratch(position);
+  });
 }
 
 bool VerifyAccumulators(const Position& position, AccumulatorStack& stack) {

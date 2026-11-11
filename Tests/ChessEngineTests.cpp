@@ -21,11 +21,12 @@ using namespace SimpleChessEngine;
 
 namespace ChessEngineTests {
 struct BestMoveTestCase {
-  BestMoveTestCase(std::string fen, std::string best_move)
-      : fen(std::move(fen)), best_move(std::move(best_move)) {}
+  BestMoveTestCase(std::string fen, std::string best_move, Depth depth = 0)
+      : fen(std::move(fen)), best_move(std::move(best_move)), depth(depth) {}
 
   std::string fen;
   std::string best_move;
+  Depth depth;
 };
 
 std::ostream& operator<<(std::ostream& os, const BestMoveTestCase& test_case) {
@@ -145,8 +146,13 @@ TEST_P(BestMoveTest, FindBestMove) {
 
   std::stringstream ss;
   ChessEngine engine(position, ss);
-  auto time_for_move = TimeCondition{std::chrono::milliseconds{3000}};
-  engine.ComputeBestMove(time_for_move);
+  if (GetParam().depth) {
+    DepthCondition condition{GetParam().depth};
+    engine.ComputeBestMove(condition);
+  } else {
+    auto time_for_move = TimeCondition{std::chrono::milliseconds{3000}};
+    engine.ComputeBestMove(time_for_move);
+  }
   ASSERT_EQ(engine.GetCurrentBestMove(), GetMove());
 }
 
@@ -195,7 +201,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Values(
         BestMoveTestCase{R"(1q1k4/2Rr4/8/2Q3K1/8/8/8/8 w - -)", R"(g5h6)"},
         BestMoveTestCase{R"(8/8/p1p5/1p5p/1P5p/8/PPP2K1p/4R1rk w - -)",
-                         R"(e1f1)"}));
+                         R"(e1f1)", 16}));
 INSTANTIATE_TEST_CASE_P(DISABLED_NMP, BestMoveTest,
                         ::testing::Values(BestMoveTestCase{
                             R"(8/6B1/p5p1/Pp4kp/1P5r/5P1Q/4q1PK/8 w - -)",

@@ -21,6 +21,11 @@ template Bitboard Position::GetPiecesByType<Piece::kKing>(Player player) const;
 
 const Hasher Position::hasher_{std::mt19937_64(0xb00b1e5)};
 
+Eval Position::SimpleMaterialEval() const {
+  return evaluation_data_.material[static_cast<size_t>(side_to_move_)].eval[0] -
+         evaluation_data_.material[static_cast<size_t>(Flip(side_to_move_))].eval[0];
+}
+
 /**
  * \brief Places a piece with a color on a chosen square.
  *
@@ -93,6 +98,23 @@ void Position::MovePiece(const BitIndex from, const BitIndex to,
   hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][to];
 }
 
+bool Position::VerifyPinCache() const {
+  const auto cached = irreversible_data_;
+  bool valid = true;
+  for (const auto player : {Player::kWhite, Player::kBlack}) {
+    const auto side = static_cast<std::size_t>(player);
+    if (!cached.pins_valid[side]) continue;
+    irreversible_data_.pins_valid[side] = false;
+    ComputePins(player);
+    valid &= irreversible_data_.blockers[side] == cached.blockers[side] &&
+             irreversible_data_.pinners[side] == cached.pinners[side];
+    irreversible_data_.blockers[side] = cached.blockers[side];
+    irreversible_data_.pinners[side] = cached.pinners[side];
+    irreversible_data_.pins_valid[side] = cached.pins_valid[side];
+  }
+  return valid;
+}
+
 bool Position::VerifyIncrementalState() const {
   static thread_local std::uint64_t checks = 0;
   if ((checks++ & 4095u) != 0) return true;
@@ -147,6 +169,7 @@ bool Position::VerifyIncrementalState() const {
       hash != hash_) {
     return false;
   }
+  if (!VerifyPinCache()) return false;
   if (!Nnue::IsLoaded()) return true;
   if (!Nnue::VerifyAccumulators(*this, nnue_)) return false;
   const auto incremental = EvaluateNetwork();
@@ -156,6 +179,7 @@ bool Position::VerifyIncrementalState() const {
 }
 
 void Position::DoMove(const Move &move) {
+  irreversible_data_.pins_valid = {};
   if (const auto &ep_square = irreversible_data_.en_croissant_square;
       ep_square.has_value()) {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
@@ -660,6 +684,12 @@ bool Position::IsUnderCheck(const Player player) const {
   return IsUnderAttack(GetKingSquare(player), player);
 }
 
+bool Position::HasLegalKings() const {
+  return GetPiecesByType<Piece::kKing>(Player::kWhite).Count() == 1 &&
+         GetPiecesByType<Piece::kKing>(Player::kBlack).Count() == 1 &&
+         !IsUnderCheck(Flip(side_to_move_));
+}
+
 Eval Position::EstimatePiece(const Piece piece) const {
   const auto piece_type_idx = static_cast<size_t>(piece);
   return kPieceValues[piece_type_idx](evaluation_data_.non_pawn_material);
@@ -726,6 +756,15 @@ bool Position::StaticExchangeEvaluation(const Move &move,
     Bitboard our_attackers = attackers & GetPieces(color);
     if (our_attackers.None()) {
       break;
+    }
+
+    ComputePins(color);
+    const auto color_idx = static_cast<size_t>(color);
+    if ((irreversible_data_.pinners[color_idx] & occupancy).Any()) {
+      our_attackers &= ~irreversible_data_.blockers[color_idx];
+      if (our_attackers.None()) {
+        break;
+      }
     }
 
     Bitboard attacker_bitboard;
@@ -800,55 +839,39 @@ Bitboard Position::Attackers(const BitIndex square,
           pieces_by_type_[static_cast<size_t>(Piece::kKing)]);
 }
 
-void Position::ComputePins(const Player us) {
+void Position::ComputePins(const Player us) const {
   const Player them = Flip(us);
 
   const auto us_idx = static_cast<size_t>(us);
+  if (irreversible_data_.pins_valid[us_idx]) {
+    return;
+  }
 
   irreversible_data_.blockers[us_idx] = kEmptyBoard;
   irreversible_data_.pinners[us_idx] = kEmptyBoard;
 
   const BitIndex king_square = GetKingSquare(us);
 
-  const Bitboard all_pieces = GetAllPieces();
+  Bitboard snipers =
+      (AttackTable<Piece::kBishop>::GetAttackMap(king_square, kEmptyBoard) &
+       (GetPiecesByType<Piece::kBishop>(them) |
+        GetPiecesByType<Piece::kQueen>(them))) |
+      (AttackTable<Piece::kRook>::GetAttackMap(king_square, kEmptyBoard) &
+       (GetPiecesByType<Piece::kRook>(them) |
+        GetPiecesByType<Piece::kQueen>(them)));
+  const Bitboard occupancy = GetAllPieces() ^ snipers;
 
-  const Bitboard diagonal_blockers =
-      AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces) &
-      all_pieces;
-  const Bitboard straight_blockers =
-      AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces) &
-      all_pieces;
-
-  Bitboard diagonal_pinners = AttackTable<Piece::kBishop>::GetAttackMap(
-                                  king_square, all_pieces ^ diagonal_blockers) &
-                              (GetPiecesByType<Piece::kBishop>(them) |
-                               GetPiecesByType<Piece::kQueen>(them)) &
-                              ~diagonal_blockers;
-  Bitboard straight_pinners = AttackTable<Piece::kRook>::GetAttackMap(
-                                  king_square, all_pieces ^ straight_blockers) &
-                              (GetPiecesByType<Piece::kRook>(them) |
-                               GetPiecesByType<Piece::kQueen>(them)) &
-                              ~straight_blockers;
-
-  irreversible_data_.pinners[us_idx] = diagonal_pinners | straight_pinners;
-
-  Bitboard &blockers = irreversible_data_.blockers[us_idx];
-  while (diagonal_pinners.Any()) {
-    const BitIndex square = diagonal_pinners.PopFirstBit();
-
-    const auto blockers_between =
-        bishop_between[square][king_square] & diagonal_blockers;
-    assert(blockers_between.Any() && !blockers_between.MoreThanOne());
-    blockers |= blockers_between;
+  while (snipers.Any()) {
+    const BitIndex square = snipers.PopFirstBit();
+    const Bitboard blockers_between = Between(king_square, square) & occupancy;
+    if (blockers_between.Any() && !blockers_between.MoreThanOne()) {
+      irreversible_data_.blockers[us_idx] |= blockers_between;
+      if ((blockers_between & GetPieces(us)).Any()) {
+        irreversible_data_.pinners[us_idx] |= SingleSquare(square);
+      }
+    }
   }
-  while (straight_pinners.Any()) {
-    const BitIndex square = straight_pinners.PopFirstBit();
-
-    const auto blockers_between =
-        rook_between[square][king_square] & straight_blockers;
-    assert(blockers_between.Any() && !blockers_between.MoreThanOne());
-    blockers |= blockers_between;
-  }
+  irreversible_data_.pins_valid[us_idx] = true;
 }
 
 Position::IrreversibleData Position::GetIrreversibleData() const {

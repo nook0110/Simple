@@ -32,6 +32,7 @@ class PositionBuilder;
 class Position {
  public:
   friend struct PositionFactory;
+  friend struct PositionStateTestAccess;
   friend class Tablebase::PositionBuilder;
   /**
    * \brief Struct to hold evaluation data for the position.
@@ -64,12 +65,14 @@ class Position {
     std::array<std::bitset<2>, kColors>
         castling_rights{};  //!< Castling rights for each color.
 
-    std::array<Bitboard, kColors>
+    mutable std::array<Bitboard, kColors>
         pinners{};  //!< Pieces that are pinning opponent's pieces.
-    std::array<Bitboard, kColors>
+    mutable std::array<Bitboard, kColors>
         blockers{};  //!< Pieces that are blocking attacks on the king.
     
     Piece captured_piece{Piece::kNone};  //!< Piece captured by the last move
+
+    mutable std::array<bool, kColors> pins_valid{};
 
     bool operator==(const IrreversibleData &other) const {
       return std::tie(en_croissant_square, castling_rights, captured_piece) ==
@@ -120,6 +123,7 @@ class Position {
   }
 
   [[nodiscard]] Eval Evaluate() const;
+  [[nodiscard]] Eval SimpleMaterialEval() const;
 
   [[nodiscard]] Nnue::NetworkOutput EvaluateNetwork() const;
 
@@ -218,7 +222,7 @@ class Position {
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
 
-  void ComputePins(Player us);
+  void ComputePins(Player us) const;
 
   [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us,
                                    Bitboard transparent = kEmptyBoard) const;
@@ -236,6 +240,8 @@ class Position {
    * \return True if given player is under check, false otherwise.
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const;
+
+  [[nodiscard]] bool HasLegalKings() const;
 
   [[nodiscard]] bool DetectRepetition(Depth depth) const {
     if (history_stack_.history.size() < 3) {
@@ -313,6 +319,7 @@ class Position {
   void MovePiece(const BitIndex from, const BitIndex to, const Player color);
 
   [[nodiscard]] bool VerifyIncrementalState() const;
+  [[nodiscard]] bool VerifyPinCache() const;
 
 
   void SetCastlingRights(const std::array<std::bitset<2>, 2> &castling_rights);
