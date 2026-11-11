@@ -6,6 +6,7 @@
 #include "Evaluation.h"
 #include "Move.h"
 #include "MovePicker.h"
+#include "NodeExit.h"
 #include "NodeType.h"
 #include "Position.h"
 #include "Score.h"
@@ -97,16 +98,16 @@ struct SearchNode {
   template <NodeType expected_node_type>
   SearchResult ProbeMove(const Move &move);
   template <NodeType expected_node_type>
-  std::optional<bool> CheckFirstMove(const Move &move);
+  NodeExit SearchFirstMove(const Move &move);
 
   [[nodiscard]] bool CanRFP() const;
   [[nodiscard]] bool CanLateMovePrune() const;
   [[nodiscard]] bool CanFutilityPrune() const;
   [[nodiscard]] bool PassesSEEPruning(const Move &move, bool is_quiet) const;
 
-  std::optional<SearchResult> CheckProbCut();
+  NodeExit TryProbCut();
   bool ProbeTranspositionTable();
-  std::optional<SearchResult> CheckSingularExtension();
+  NodeExit TrySingularExtension();
 
   SearchResult PVSearch();
 
@@ -322,7 +323,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     }
   }
 
-  if (auto result = CheckProbCut()) return *result;
+  if (const auto exit = TryProbCut()) return exit.Result();
 
   const auto tt_move = !excluded_move_ && iteration_status_.tt_info
                            ? iteration_status_.tt_info->move
@@ -331,24 +332,15 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
                           excluded_move_.value_or(Move::None()));
   const auto first_move = move_picker_.SelectNextMove();
   if (first_move.IsValid() && first_move == tt_move) {
-    if (auto result = CheckSingularExtension()) {
-      if (*result) searcher_.debug_info_.tt_cuts++;
-      return *result;
-    }
+    if (const auto exit = TrySingularExtension()) return exit.Result();
   }
   if (!first_move.IsValid()) {
     if (excluded_move_) return alpha;
     return GetEndGameScore();
   }
-  auto has_cutoff_opt = CheckFirstMove<kFirstChildNodeExpectedType>(first_move);
-  if (!has_cutoff_opt) return std::nullopt;
-  if (*has_cutoff_opt) {
-    if (iteration_status_.tt_info &&
-        first_move == iteration_status_.tt_info->move) {
-      searcher_.debug_info_.tt_cuts++;
-    }
-    SetTTEntry(Bound::kLower);
-    return beta;
+  if (const auto exit =
+          SearchFirstMove<kFirstChildNodeExpectedType>(first_move)) {
+    return exit.Result();
   }
 
   return PVSearch();
@@ -356,21 +348,20 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-std::optional<SearchResult>
-SearchNode<node_type, ExitCondition>::CheckProbCut() {
-  if constexpr (kIsPrincipalVariation) return std::nullopt;
+NodeExit SearchNode<node_type, ExitCondition>::TryProbCut() {
+  if constexpr (kIsPrincipalVariation) return NodeExit::Continue();
 
   using ProbCutSettings = Settings::PruneParameters::ProbCutSettings;
   if (state_.ply == 0 || position_info_.is_under_check || excluded_move_ ||
       state_.remaining_depth < ProbCutSettings::kMinDepth ||
       Score::IsDecisive(state_.beta))
-    return std::nullopt;
+    return NodeExit::Continue();
 
   const Eval probcut_beta =
       state_.beta + (evaluation_trend_.improving
                          ? ProbCutSettings::kImprovingMargin
                          : ProbCutSettings::kMargin).RoundedToEngine();
-  if (Score::IsWin(probcut_beta)) return std::nullopt;
+  if (Score::IsWin(probcut_beta)) return NodeExit::Continue();
 
   const auto child_depth = static_cast<Depth>(int{state_.remaining_depth} -
                                               ProbCutSettings::kDepthReduction);
@@ -379,7 +370,7 @@ SearchNode<node_type, ExitCondition>::CheckProbCut() {
     const Eval value = iteration_status_.tt_value;
     if (entry.depth >= child_depth + 1 && !Score::IsDecisive(value) &&
         value < probcut_beta)
-      return std::nullopt;
+      return NodeExit::Continue();
   }
 
   ++searcher_.debug_info_.probcut_tries;
@@ -413,13 +404,13 @@ SearchNode<node_type, ExitCondition>::CheckProbCut() {
     }
 
     position.UndoMove(move, position_info_.irreversible_data);
-    if (!value || IsTimeToExit()) return SearchResult{};
+    if (!value || IsTimeToExit()) return NodeExit::Abort();
     if (-*value >= probcut_beta) {
       ++searcher_.debug_info_.probcut_cuts;
-      return SearchResult{state_.beta};
+      return NodeExit::Cutoff(state_.beta);
     }
   }
-  return std::nullopt;
+  return NodeExit::Continue();
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -529,7 +520,7 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <NodeType expected_node_type>
-std::optional<bool> SearchNode<node_type, ExitCondition>::CheckFirstMove(
+NodeExit SearchNode<node_type, ExitCondition>::SearchFirstMove(
     const Move &move) {
   static_assert(expected_node_type == kFirstChildNodeExpectedType);
   static_assert(expected_node_type != NodeType::kPV ||
@@ -538,7 +529,7 @@ std::optional<bool> SearchNode<node_type, ExitCondition>::CheckFirstMove(
 
   const auto eval_optional = ProbeMove<expected_node_type>(move);
   if (!eval_optional) {
-    return std::nullopt;
+    return NodeExit::Abort();
   }
   SetBestMove(move);
   iteration_status_.best_eval = -*eval_optional;
@@ -551,15 +542,20 @@ std::optional<bool> SearchNode<node_type, ExitCondition>::CheckFirstMove(
       if (iteration_status_.best_move->IsQuiet(searcher_.GetPosition())) {
         UpdateQuietMove(*iteration_status_.best_move);
       }
+      if (iteration_status_.tt_info &&
+          move == iteration_status_.tt_info->move) {
+        searcher_.debug_info_.tt_cuts++;
+      }
+      SetTTEntry(Bound::kLower);
 
-      return true;
+      return NodeExit::Cutoff(beta);
     }
 
     iteration_status_.has_raised_alpha = true;
     alpha = iteration_status_.best_eval;
   }
 
-  return false;
+  return NodeExit::Continue();
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -871,8 +867,7 @@ bool SearchNode<node_type, ExitCondition>::ProbeTranspositionTable() {
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-std::optional<SearchResult>
-SearchNode<node_type, ExitCondition>::CheckSingularExtension() {
+NodeExit SearchNode<node_type, ExitCondition>::TrySingularExtension() {
   auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
   const auto &entry = *iteration_status_.tt_info;
   const Eval entry_score = iteration_status_.tt_value;
@@ -893,19 +888,20 @@ SearchNode<node_type, ExitCondition>::CheckSingularExtension() {
          state_.was_previous_move_a_null},
         exit_condition_,
         entry.move}();
-    if (!result) return SearchResult{std::nullopt};
+    if (!result) return NodeExit::Abort();
     if (*result < singular_beta) {
       tt_move_extension_ = 1;
       ++searcher_.singular_info_.extensions;
     } else if (singular_beta >= beta) {
       ++searcher_.singular_info_.multi_cuts;
-      return beta;
+      searcher_.debug_info_.tt_cuts++;
+      return NodeExit::Cutoff(beta);
     } else if (entry_score >= beta) {
       tt_move_extension_ = Singular::kNegativeExtension;
       ++searcher_.singular_info_.negative_extensions;
     }
   }
 
-  return std::nullopt;
+  return NodeExit::Continue();
 }
 }  // namespace SimpleChessEngine
