@@ -113,6 +113,8 @@ struct SearchNode {
 
   [[nodiscard]] bool CanNullMove() const
     requires(node_type == NodeType::kCut);
+  NodeExit TryNullMove()
+    requires(node_type == NodeType::kCut);
 
   Searcher &searcher_;
 };
@@ -249,58 +251,8 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     return GetStaticEval();
   }
 
-  auto &current_position = GetCurrentPosition();
-
   if constexpr (node_type == NodeType::kCut) {
-    if (CanNullMove()) {
-      searcher_.debug_info_.nmp_tries++;
-
-      using NMPSettings = Settings::PruneParameters::NMPSettings;
-      const int reduction =
-          NMPSettings::kNullMoveReduction +
-          remaining_depth / NMPSettings::kDepthDivisor +
-          std::max((GetStaticEval() - beta) /
-                       NMPSettings::kEvalDivisor.RoundedToEngine(),
-                   0);
-      const auto null_depth =
-          static_cast<Depth>(std::max(0, remaining_depth - reduction));
-
-      searcher_.SetPlayedNullMove(ply);
-      current_position.DoMove(NullMove{});
-
-      const auto eval_optional = StartSubsearch<NodeType::kAll>(
-          {max_depth, null_depth, -beta, -beta + 1, static_cast<Depth>(ply + 1),
-           true});
-
-      current_position.UndoMove(NullMove{}, position_info_.irreversible_data);
-
-      if (!eval_optional) return std::nullopt;
-
-      const auto &null_eval = -*eval_optional;
-      if (null_eval >= beta && !Score::IsWin(null_eval)) {
-        if (searcher_.nmp_min_ply_ ||
-            remaining_depth < NMPSettings::kVerificationDepth) {
-          searcher_.debug_info_.nmp_cuts++;
-          return beta;
-        }
-
-        searcher_.nmp_min_ply_ = static_cast<Depth>(ply + 3 * null_depth / 4);
-        ++searcher_.null_move_info_.verifications;
-        const auto verification = SearchNode<NodeType::kAll, ExitCondition>{
-            searcher_,
-            {max_depth, null_depth, beta - 1, beta, ply,
-             state_.was_previous_move_a_null},
-            exit_condition_}();
-        searcher_.nmp_min_ply_ = 0;
-
-        if (!verification) return std::nullopt;
-        if (*verification >= beta) {
-          searcher_.debug_info_.nmp_cuts++;
-          return beta;
-        }
-        ++searcher_.null_move_info_.verification_fail_lows;
-      }
-    }
+    if (const auto exit = TryNullMove()) return exit.Result();
   }
 
   if (!position_info_.is_under_check) {
@@ -328,7 +280,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   const auto tt_move = !excluded_move_ && iteration_status_.tt_info
                            ? iteration_status_.tt_info->move
                            : Move::None();
-  move_picker_.InitPicker(current_position, &searcher_, ply, tt_move,
+  move_picker_.InitPicker(GetCurrentPosition(), &searcher_, ply, tt_move,
                           excluded_move_.value_or(Move::None()));
   const auto first_move = move_picker_.SelectNextMove();
   if (first_move.IsValid() && first_move == tt_move) {
@@ -748,6 +700,64 @@ bool SearchNode<node_type, ExitCondition>::CanNullMove() const
       current_position.GetPiecesByType<Piece::kPawn>(side_to_move);
 
   return current_position.GetPieces(side_to_move) != king_and_pawns;
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+NodeExit SearchNode<node_type, ExitCondition>::TryNullMove()
+  requires(node_type == NodeType::kCut)
+{
+  if (!CanNullMove()) return NodeExit::Continue();
+  searcher_.debug_info_.nmp_tries++;
+
+  auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
+  using NMPSettings = Settings::PruneParameters::NMPSettings;
+  const int reduction =
+      NMPSettings::kNullMoveReduction +
+      remaining_depth / NMPSettings::kDepthDivisor +
+      std::max((GetStaticEval() - beta) /
+                   NMPSettings::kEvalDivisor.RoundedToEngine(),
+               0);
+  const auto null_depth =
+      static_cast<Depth>(std::max(0, remaining_depth - reduction));
+
+  searcher_.SetPlayedNullMove(ply);
+  auto &current_position = GetCurrentPosition();
+  current_position.DoMove(NullMove{});
+
+  const auto eval_optional = StartSubsearch<NodeType::kAll>(
+      {max_depth, null_depth, -beta, -beta + 1, static_cast<Depth>(ply + 1),
+       true});
+
+  current_position.UndoMove(NullMove{}, position_info_.irreversible_data);
+
+  if (!eval_optional) return NodeExit::Abort();
+
+  const Eval null_eval = -*eval_optional;
+  if (null_eval < beta || Score::IsWin(null_eval)) return NodeExit::Continue();
+
+  if (searcher_.nmp_min_ply_ ||
+      remaining_depth < NMPSettings::kVerificationDepth) {
+    searcher_.debug_info_.nmp_cuts++;
+    return NodeExit::Cutoff(beta);
+  }
+
+  searcher_.nmp_min_ply_ = static_cast<Depth>(ply + 3 * null_depth / 4);
+  ++searcher_.null_move_info_.verifications;
+  const auto verification = SearchNode<NodeType::kAll, ExitCondition>{
+      searcher_,
+      {max_depth, null_depth, beta - 1, beta, ply,
+       state_.was_previous_move_a_null},
+      exit_condition_}();
+  searcher_.nmp_min_ply_ = 0;
+
+  if (!verification) return NodeExit::Abort();
+  if (*verification >= beta) {
+    searcher_.debug_info_.nmp_cuts++;
+    return NodeExit::Cutoff(beta);
+  }
+  ++searcher_.null_move_info_.verification_fail_lows;
+  return NodeExit::Continue();
 }
 
 template <NodeType node_type, class ExitCondition>
