@@ -233,29 +233,18 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
     if (!excluded_move_ && !kIsPrincipalVariation &&
         entry_depth >= remaining_depth) {
-      if (static_cast<Bound>(entry_bound) & Bound::kUpper &&
-          entry_score <= alpha) {
+      if (entry_bound & Bound::kUpper && entry_score <= alpha) {
         return alpha;
       }
 
-      if (static_cast<Bound>(entry_bound) & Bound::kLower &&
-          entry_score > alpha) {
-        if (entry_score >= beta) {
-          if (hash_move.IsQuiet(searcher_.GetPosition())) {
-            UpdateQuietMove<true>(hash_move);
-          }
-
-          // TODO: update entry age
-
-          return beta;
+      if (entry_bound & Bound::kLower && entry_score >= beta) {
+        if (hash_move.IsQuiet(searcher_.GetPosition())) {
+          UpdateQuietMove<true>(hash_move);
         }
 
-        iteration_status_.has_raised_alpha = true;
-        alpha = entry_score;
-      }
+        // TODO: update entry age
 
-      if (static_cast<Bound>(entry_bound) == Bound::kExact) {
-        return entry_score;
+        return beta;
       }
     }
   }
