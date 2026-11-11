@@ -229,8 +229,8 @@ struct Settings {
       inline static int kNullMoveReduction = 7;
       static constexpr Depth kVerificationDepth = 16;
 
-      [[nodiscard]] static SfMargin StaticEvalMargin(Depth depth,
-                                                     bool improving) {
+      [[nodiscard]] static constexpr SfMargin StaticEvalMargin(Depth depth,
+                                                               bool improving) {
         return kStaticEvalBaseMargin - kStaticEvalDepthMargin * depth -
                kStaticEvalImprovingMargin * improving;
       }
@@ -256,8 +256,8 @@ struct Settings {
       inline static int kHistoryDivisor = 13000;
       static constexpr double kNotImprovingReductionScale = 191.0 / 512;
 
-      [[nodiscard]] static double ScaleReduction(double reduction_scale,
-                                                 bool improving) {
+      [[nodiscard]] static constexpr double ScaleReduction(
+          double reduction_scale, bool improving) {
         return reduction_scale +
                !improving * reduction_scale * kNotImprovingReductionScale;
       }
@@ -318,7 +318,7 @@ struct Settings {
           kStockfishMarginDenominator * kNnueScaleDenominator;
       static constexpr int kNegativeExtension = -3;
 
-      [[nodiscard]] static Eval Margin(Depth depth) {
+      [[nodiscard]] static constexpr Eval Margin(Depth depth) {
         return kMarginNumerator * depth / kMarginDenominator;
       }
     };
