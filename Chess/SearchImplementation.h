@@ -577,8 +577,6 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
   for (auto move = move_picker_.SelectNextMove(); move.IsValid();
        move = move_picker_.SelectNextMove()) {
     const bool is_quiet = move.IsQuiet(current_position);
-    const auto quiet_score =
-        is_quiet ? searcher_.GetQuietScore(move, ply) : std::int64_t{0};
     const bool can_prune =
         move_pruning_allowed &&
         iteration_status_.best_eval >
@@ -594,6 +592,8 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
       continue;
     }
 
+    const auto quiet_score =
+        is_quiet ? searcher_.GetQuietScore(move, ply) : std::int64_t{0};
     const bool can_futility_prune =
         can_prune && is_quiet && CanFutilityPrune();
 
