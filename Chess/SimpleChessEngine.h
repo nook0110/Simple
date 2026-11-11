@@ -69,6 +69,64 @@ std::ostream& operator<<(std::ostream& out,
 std::ostream& operator<<(std::ostream& out, const BestMoveInfo& bm_info);
 std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info);
 
+struct TimeManagementParameters {
+  struct Line {
+    double from_x;
+    double to_x;
+    double from_y;
+    double to_y;
+    double min;
+    double max;
+  };
+
+  template <Line kLine>
+  struct ClampedLine {
+    static_assert(kLine.min <= kLine.max);
+
+    [[nodiscard]] static constexpr double operator()(const double x) {
+      return std::clamp(kLine.from_y + (kLine.to_y - kLine.from_y) *
+                                           (x - kLine.from_x) /
+                                           (kLine.to_x - kLine.from_x),
+                        kLine.min, kLine.max);
+    }
+  };
+
+  static constexpr double kInitialTimeReduction = 0.85;
+  static constexpr double kNodesEffortScale = 100000.0;
+
+  static constexpr double kFallingEvalBase = 11.48;
+  static constexpr double kPreviousScoreDropWeight = 2.30;
+  static constexpr double kIterationScoreDropWeight = 1.1;
+  static constexpr double kFallingEvalDivisor = 100.0;
+  static constexpr double kFallingEvalMin = 0.576;
+  static constexpr double kFallingEvalMax = 1.728;
+
+  static constexpr ClampedLine<Line{
+      .from_x = 4.96,
+      .to_x = 18.79,
+      .from_y = 0.639,
+      .to_y = 1.712,
+      .min = 0.629,
+      .max = 1.544,
+  }>
+      kStableBestMoveReduction{};
+  static constexpr double kPreviousReductionOffset = 1.468;
+  static constexpr double kReductionDivisor = 2.284;
+
+  static constexpr ClampedLine<Line{
+      .from_x = 75800.0,
+      .to_x = 104510.0,
+      .from_y = 0.969,
+      .to_y = 0.714,
+      .min = 0.693,
+      .max = 0.838,
+  }>
+      kBestMoveEffortScale{};
+  static constexpr double kSingleLegalMoveMaxScale = 1.0;
+
+  static_assert(kFallingEvalMin <= kFallingEvalMax);
+};
+
 /**
  * \brief Class that represents a chess engine.
  *
@@ -107,7 +165,7 @@ class ChessEngine {
   void NewGame() {
     searcher_.ClearHistories();
     previous_score_.reset();
-    previous_time_reduction_ = kInitialTimeReduction;
+    previous_time_reduction_ = TimeManagementParameters::kInitialTimeReduction;
   }
 
   void ComputeBestMove(SearchCondition auto& conditions);
@@ -183,13 +241,6 @@ class ChessEngine {
     return std::osyncstream(o_stream_);
   }
 
-  static double Interpolate(double x, double x0, double x1, double y0,
-                            double y1) {
-    return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
-  }
-
-  static constexpr double kInitialTimeReduction = 0.85;
-
   std::ostream& o_stream_;
 
   Searcher searcher_;
@@ -201,7 +252,8 @@ class ChessEngine {
   Depth initial_depth_;
   std::size_t thread_index_;
   std::optional<Eval> previous_score_;
-  double previous_time_reduction_ = kInitialTimeReduction;
+  double previous_time_reduction_ =
+      TimeManagementParameters::kInitialTimeReduction;
 };
 }  // namespace SimpleChessEngine
 
@@ -317,32 +369,32 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       last_best_move = iteration_best_move;
       last_best_move_depth = current_depth;
     }
+    using Tm = TimeManagementParameters;
     const double total_nodes =
         static_cast<double>(std::max<std::size_t>(1, info.TotalNodes()));
     const double nodes_effort =
         static_cast<double>(searcher_.GetRootEffort(iteration_best_move)) *
-        100000.0 / total_nodes;
-    double falling_eval = 1.728;
+        Tm::kNodesEffortScale / total_nodes;
+    double falling_eval = Tm::kFallingEvalMax;
     if (previous_score_) {
-      falling_eval =
-          (11.48 + 2.30 * SfMargin::kPerEngineUnit * (*previous_score_ - eval) +
-           1.1 * SfMargin::kPerEngineUnit *
-               (iteration_values[iteration_index] - eval)) /
-          100.0;
+      falling_eval = (Tm::kFallingEvalBase +
+                      Tm::kPreviousScoreDropWeight * SfMargin::kPerEngineUnit *
+                          (*previous_score_ - eval) +
+                      Tm::kIterationScoreDropWeight * SfMargin::kPerEngineUnit *
+                          (iteration_values[iteration_index] - eval)) /
+                     Tm::kFallingEvalDivisor;
     }
-    falling_eval = std::clamp(falling_eval, 0.576, 1.728);
-    time_reduction = std::clamp(
-        Interpolate(static_cast<double>(current_depth - last_best_move_depth),
-                    4.96, 18.79, 0.639, 1.712),
-        0.629, 1.544);
+    falling_eval =
+        std::clamp(falling_eval, Tm::kFallingEvalMin, Tm::kFallingEvalMax);
+    time_reduction = Tm::kStableBestMoveReduction(
+        static_cast<double>(current_depth - last_best_move_depth));
     const double reduction =
-        (1.468 + previous_time_reduction_) / (2.284 * time_reduction);
-    const double high_best_move_effort = std::clamp(
-        Interpolate(nodes_effort, 75800.0, 104510.0, 0.969, 0.714), 0.693,
-        0.838);
+        (Tm::kPreviousReductionOffset + previous_time_reduction_) /
+        (Tm::kReductionDivisor * time_reduction);
+    const double high_best_move_effort = Tm::kBestMoveEffortScale(nodes_effort);
     double time_scale = falling_eval * reduction * high_best_move_effort;
     if (legal_moves.size() == 1) {
-      time_scale = std::min(time_scale, 1.0);
+      time_scale = std::min(time_scale, Tm::kSingleLegalMoveMaxScale);
     }
     const bool confirmed_mate =
         Score::IsMateWin(eval) && previous_iteration_eval &&
