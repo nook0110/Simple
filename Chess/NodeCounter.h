@@ -4,6 +4,8 @@
 #include <cstdint>
 
 namespace SimpleChessEngine {
+static_assert(std::atomic<std::uint64_t>::is_always_lock_free);
+
 class NodeCounter {
  public:
   [[gnu::always_inline]] void Add(const std::uint64_t nodes) noexcept {

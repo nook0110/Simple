@@ -114,6 +114,7 @@ class ChessEngine {
   }
 
   [[nodiscard]] std::uint64_t GetNodes() const { return searcher_.GetNodes(); }
+  void ResetNodes() noexcept { searcher_.ResetNodes(); }
 
   [[nodiscard]] std::uint64_t GetNodesOfAllThreads() const {
     return std::ranges::fold_left(
@@ -122,6 +123,7 @@ class ChessEngine {
   }
 
   void NewGame() {
+    searcher_.ClearHistories();
     previous_score_.reset();
     previous_time_reduction_ = kInitialTimeReduction;
   }
@@ -129,6 +131,7 @@ class ChessEngine {
   void ComputeBestMove(SearchCondition auto& conditions);
 
   [[nodiscard]] const Move& GetCurrentBestMove() const;
+  [[nodiscard]] const Searcher& GetSearcher() const { return searcher_; }
 
   void PrintBestMove() {
     if (!reporting_) return;
@@ -278,6 +281,12 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     PrintBestMove(bm_info);
   };
 
+  if (!position_.HasLegalKings()) {
+    if (reporting_) Output() << "info string invalid position: illegal kings\n";
+    finish(BestMoveInfo{Move::None(), std::nullopt});
+    return;
+  }
+
   const auto legal_moves =
       MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position_);
   if (legal_moves.empty()) {
@@ -304,6 +313,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   EBFsInfo ebfs;
   Window window{};
   Depth current_depth = initial_depth_;
+  Depth completed_depth = 0;
   Depth last_best_move_depth = 0;
   Move last_best_move = Move::None();
   std::optional<Eval> previous_iteration_eval;
@@ -334,6 +344,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       continue;
     }
 
+    completed_depth = current_depth;
     ebfs.Update(searcher_.GetInfo().searched_nodes);
     info += searcher_.GetInfo();
 
@@ -415,7 +426,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     window.SetNewEval(eval);
   }
 
-  PrintInfo(info, eval, current_depth,
+  PrintInfo(info, eval, completed_depth,
             std::chrono::duration<double>{std::chrono::steady_clock::now() -
                                           start_time});
 
@@ -474,7 +485,7 @@ inline std::ostream& operator<<(std::ostream& out,
 
 inline std::ostream& operator<<(
     std::ostream& out, const PrincipalVariationInfo& principal_variation) {
-  out << "info depth " << principal_variation.moves.size() << " pv";
+  out << "info depth " << principal_variation.current_depth << " pv";
   for (const auto move : principal_variation.moves) {
     out << " " << move;
   }

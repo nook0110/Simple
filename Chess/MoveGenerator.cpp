@@ -7,6 +7,10 @@
 #include "BitBoard.h"
 
 namespace SimpleChessEngine {
+template <>
+void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(
+    PseudoLegalMove*& moves, Position& position, Bitboard target) const;
+
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<
     MoveGenerator::Type::kAll>(Position& position) const;
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<

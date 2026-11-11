@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "PositionFactory.h"
 #include "SyzygyTablebase.h"
 
 using namespace SimpleChessEngine;
@@ -9,6 +10,34 @@ namespace TablebaseTests {
 TEST(Syzygy, MissingDirectoryIsUnavailable) {
   EXPECT_FALSE(Tablebase::Syzygy::Open("/missing/syzygy"));
   Tablebase::Syzygy::Disable();
+}
+
+TEST(Syzygy, RejectsIllegalKings) {
+  const std::filesystem::path path{
+      "/home/blokhtin/github/lichess-bot/engines/syzygy"};
+  if (!std::filesystem::is_directory(path)) {
+    GTEST_SKIP() << "Syzygy tablebase directory is unavailable";
+  }
+  const auto tablebase = Tablebase::Syzygy::Open(path);
+  ASSERT_TRUE(tablebase);
+  struct TablebaseGuard {
+    ~TablebaseGuard() { Tablebase::Syzygy::Disable(); }
+  } guard;
+  const auto expect_rejected = [&](const Position& position) {
+    EXPECT_FALSE(tablebase->RootMove(position));
+    EXPECT_FALSE(tablebase->Probe(position));
+    EXPECT_FALSE(tablebase->ProbeWdl(position));
+  };
+  for (const auto* fen :
+       {"8/8/8/4k3/8/8/2K5/4R3 w - - 0 1", "8/8/8/4k3/8/8/2K5/4Q3 w - - 0 1",
+        "8/8/8/4k3/8/8/2K5/4R2R w - - 0 1"}) {
+    SCOPED_TRACE(fen);
+    expect_rejected(PositionFactory{}(fen));
+  }
+  expect_rejected(Position{});
+  const auto position = PositionFactory{}("8/8/8/4k3/8/8/2K5/R7 w - - 0 1");
+  EXPECT_TRUE(tablebase->RootMove(position));
+  EXPECT_EQ(tablebase->ProbeWdl(position), Tablebase::Wdl::kWin);
 }
 
 TEST(Wdl, ValuesMatchFathomOrdering) {

@@ -45,6 +45,10 @@ def main() -> int:
     send("uci")
     wait_for(r"option name SyzygyPath type string default syzygy")
     wait_for(r"uciok")
+    send("setoption name Threads value 2")
+    send("position startpos")
+    send("go depth 3")
+    wait_for(r"bestmove [a-h][1-8][a-h][1-8][qrbn]?")
     def load_and_probe() -> None:
         send(f"setoption name SyzygyPath value {args.tablebase}")
         send("isready")

@@ -8,6 +8,7 @@
 #include "MovePicker.h"
 #include "NodeType.h"
 #include "Position.h"
+#include "StaticEvalHistory.h"
 #include "TranspositionTable.h"
 #include "Utility.h"
 
@@ -43,6 +44,8 @@ struct PositionInfo {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 struct SearchNode {
+  friend struct SearchEvaluationTestAccess;
+
  public:
   constexpr static bool kIsPrincipalVariation = node_type == NodeType::kPV;
   constexpr static NodeType kFirstChildNodeExpectedType =
@@ -68,6 +71,8 @@ struct SearchNode {
   SearchResult operator()();
 
  private:
+  friend struct ProbCutTestAccess;
+
   /* Search args */
   SearchState state_;
   const std::optional<Move> excluded_move_;
@@ -78,6 +83,7 @@ struct SearchNode {
   /* Local variables for search */
   IterationStatus iteration_status_;
   PositionInfo position_info_;
+  EvaluationTrend evaluation_trend_;
   MovePicker move_picker_;
   std::array<Move, 64> searched_quiets_{};
   size_t searched_quiet_count_ = 0;
@@ -104,6 +110,7 @@ struct SearchNode {
   [[nodiscard]] bool CanFutilityPrune() const;
   [[nodiscard]] bool PassesSEEPruning(const Move &move, bool is_quiet) const;
 
+  std::optional<SearchResult> CheckProbCut();
   bool ProbeTranspositionTable();
   std::optional<SearchResult> CheckSingularExtension();
 
@@ -224,7 +231,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     searcher_.debug_info_.tt_hits++;
     auto [hash, hash_move, entry_score, entry_depth, entry_bound, _, cached_eval] =
         *iteration_status_.tt_info;
-    entry_score -= IsMateScore(entry_score) * ply;
+    entry_score = FromTTScore(entry_score, ply);
 
     if (!excluded_move_ && !kIsPrincipalVariation &&
         entry_depth >= remaining_depth) {
@@ -255,6 +262,13 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     }
   }
 
+  evaluation_trend_ = searcher_.static_evals_.Update(
+      ply, position_info_.is_under_check ? std::nullopt
+                                         : std::optional{GetStaticEval()});
+  if (!excluded_move_ && !position_info_.is_under_check) {
+    searcher_.UpdateStaticEvalHistory(ply, *position_info_.static_eval);
+  }
+
   if (CanRFP()) {
     searcher_.debug_info_.rfp_cuts++;
     return GetStaticEval();
@@ -265,32 +279,63 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   if (CanNullMove()) {
     searcher_.debug_info_.nmp_tries++;
 
+    using NMPSettings = Settings::PruneParameters::NMPSettings;
+    const int reduction =
+        NMPSettings::kNullMoveReduction +
+        remaining_depth / NMPSettings::kDepthDivisor +
+        std::max((GetStaticEval() - beta) / NMPSettings::kEvalDivisor, 0);
+    const auto null_depth =
+        static_cast<Depth>(std::max(0, remaining_depth - reduction));
+
     searcher_.SetPlayedNullMove(ply);
     current_position.DoMove(NullMove{});
 
-    const auto eval_optional = StartSubsearch<NodeType::kAll>(
-        {max_depth,
-         static_cast<Depth>(
-             remaining_depth -
-             Settings::PruneParameters::NMPSettings::kNullMoveReduction - 1),
-         -beta, -beta + 1, static_cast<Depth>(ply + 1), true});
+    const auto eval_optional =
+        StartSubsearch<NodeType::kAll>({max_depth, null_depth, -beta, -beta + 1,
+                                        static_cast<Depth>(ply + 1), true});
 
     current_position.UndoMove(NullMove{}, position_info_.irreversible_data);
 
     if (!eval_optional) return std::nullopt;
 
     const auto &null_eval = -*eval_optional;
-    if (null_eval >= beta) {
-      searcher_.debug_info_.nmp_cuts++;
-      return beta;
+    if (null_eval >= beta &&
+        null_eval < kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+      if (searcher_.nmp_min_ply_ ||
+          remaining_depth < NMPSettings::kVerificationDepth) {
+        searcher_.debug_info_.nmp_cuts++;
+        return beta;
+      }
+
+      searcher_.nmp_min_ply_ = static_cast<Depth>(ply + 3 * null_depth / 4);
+      ++searcher_.null_move_info_.verifications;
+      const auto verification = SearchNode<NodeType::kAll, ExitCondition>{
+          searcher_,
+          {max_depth, null_depth, beta - 1, beta, ply,
+           state_.was_previous_move_a_null},
+          exit_condition_}();
+      searcher_.nmp_min_ply_ = 0;
+
+      if (!verification) return std::nullopt;
+      if (*verification >= beta) {
+        searcher_.debug_info_.nmp_cuts++;
+        return beta;
+      }
+      ++searcher_.null_move_info_.verification_fail_lows;
     }
+  }
+
+  if (!position_info_.is_under_check) {
+    evaluation_trend_.improving |=
+        GetStaticEval() >=
+        beta + Settings::SearchParameters::kImprovingBetaMargin;
   }
 
   // Internal Iterative Reduction
   if constexpr (node_type == NodeType::kPV || node_type == NodeType::kCut) {
-    if (!iteration_status_.tt_info &&
-        remaining_depth >
-            Settings::PruneParameters::IIRSettings::kReduction &&
+    if ((!iteration_status_.tt_info ||
+         !iteration_status_.tt_info->move.IsValid()) &&
+        remaining_depth > Settings::PruneParameters::IIRSettings::kReduction &&
         remaining_depth >=
             Settings::PruneParameters::IIRSettings::kBaseLimit +
                 (node_type == NodeType::kCut
@@ -299,6 +344,8 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
       remaining_depth -= Settings::PruneParameters::IIRSettings::kReduction;
     }
   }
+
+  if (auto result = CheckProbCut()) return *result;
 
   const auto tt_move = !excluded_move_ && iteration_status_.tt_info
                            ? iteration_status_.tt_info->move
@@ -332,18 +379,92 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
+std::optional<SearchResult>
+SearchNode<node_type, ExitCondition>::CheckProbCut() {
+  if constexpr (kIsPrincipalVariation) return std::nullopt;
+
+  using ProbCutSettings = Settings::PruneParameters::ProbCutSettings;
+  constexpr Eval decisive = kTablebaseWinValue - kMaxSearchPly;
+  if (state_.ply == 0 || position_info_.is_under_check || excluded_move_ ||
+      state_.remaining_depth < ProbCutSettings::kMinDepth ||
+      state_.beta <= -decisive || state_.beta >= decisive)
+    return std::nullopt;
+
+  const Eval probcut_beta =
+      state_.beta + (evaluation_trend_.improving
+                         ? ProbCutSettings::kImprovingMargin
+                         : ProbCutSettings::kMargin);
+  if (probcut_beta >= decisive) return std::nullopt;
+
+  const auto child_depth = static_cast<Depth>(int{state_.remaining_depth} -
+                                              ProbCutSettings::kDepthReduction);
+  if (iteration_status_.tt_info) {
+    const auto &entry = *iteration_status_.tt_info;
+    const Eval value = FromTTScore(entry.score, state_.ply);
+    if (entry.depth >= child_depth + 1 && value > -decisive &&
+        value < decisive && value < probcut_beta)
+      return std::nullopt;
+  }
+
+  ++searcher_.debug_info_.probcut_tries;
+  auto &position = GetCurrentPosition();
+  move_picker_.InitProbCut(position, &searcher_, state_.ply);
+  const Eval see_threshold = probcut_beta - GetStaticEval();
+  for (auto next = move_picker_.SelectProbCutMove(see_threshold); next;
+       next = move_picker_.SelectProbCutMove(see_threshold)) {
+    const auto& move = *next;
+    ++searcher_.debug_info_.probcut_candidates;
+    searcher_.SetPlayedMove(
+        state_.ply, move,
+        excluded_move_ ? std::nullopt : position_info_.static_eval);
+    position.DoMove(move);
+
+    auto quiescence = Quiescence{exit_condition_, searcher_.best_moves_.get(),
+                                 searcher_.age_};
+    const auto qvalue = quiescence.template Search<true>(
+        position, -probcut_beta, -probcut_beta + 1,
+        static_cast<Depth>(state_.ply + 1), false);
+    searcher_.CountQuiescenceNodes(quiescence.GetSearchedNodes());
+    searcher_.debug_info_.probcut_qsearch_nodes +=
+        quiescence.GetSearchedNodes();
+
+    SearchResult value = qvalue;
+    if (qvalue && -*qvalue >= probcut_beta) {
+      ++searcher_.debug_info_.probcut_qsearch_passes;
+      const auto nodes_before = searcher_.debug_info_.searched_nodes +
+                                searcher_.debug_info_.quiescence_nodes;
+      value = StartSubsearch<kZWSNodeType>(
+          {state_.max_depth, child_depth, -probcut_beta, -probcut_beta + 1,
+           static_cast<Depth>(state_.ply + 1)});
+      searcher_.debug_info_.probcut_verification_nodes +=
+          searcher_.debug_info_.searched_nodes +
+          searcher_.debug_info_.quiescence_nodes - nodes_before;
+    }
+
+    position.UndoMove(move, position_info_.irreversible_data);
+    if (!value || IsTimeToExit()) return SearchResult{};
+    if (-*value >= probcut_beta) {
+      ++searcher_.debug_info_.probcut_cuts;
+      return SearchResult{state_.beta};
+    }
+  }
+  return std::nullopt;
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
 SearchResult SearchNode<node_type, ExitCondition>::QuiescenceSearch() {
   auto &current_position = GetCurrentPosition();
-  auto quiescence_searcher = Quiescence{exit_condition_};
+  auto quiescence_searcher =
+      Quiescence{exit_condition_, searcher_.best_moves_.get(), searcher_.age_};
 
   const auto eval =
       quiescence_searcher
           .template Search</* start of the quiescence search */ true>(
-              current_position, state_.alpha, state_.beta, state_.ply);
+              current_position, state_.alpha, state_.beta, state_.ply,
+              kIsPrincipalVariation);
 
-  const auto quiescence_nodes = quiescence_searcher.GetSearchedNodes();
-  searcher_.debug_info_.quiescence_nodes += quiescence_nodes;
-  searcher_.nodes_.Add(quiescence_nodes);
+  searcher_.CountQuiescenceNodes(quiescence_searcher.GetSearchedNodes());
 
   return eval;
 }
@@ -394,8 +515,7 @@ void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
   assert(iteration_status_.best_move);
   searcher_.best_moves_->SetEntry(
       GetCurrentPosition(), *iteration_status_.best_move,
-      iteration_status_.best_eval +
-          IsMateScore(iteration_status_.best_eval) * state_.ply,
+      ToTTScore(iteration_status_.best_eval, state_.ply),
       state_.remaining_depth, bound, searcher_.age_,
       Nnue::IsLoaded() ? position_info_.static_eval.value_or(kNoStaticEval)
                        : kNoStaticEval,
@@ -414,7 +534,8 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const LegalMove &mo
   if (move.IsQuiet(current_position)) {
     RecordSearchedQuiet(move);
   }
-  searcher_.SetPlayedMove(ply, move);
+  searcher_.SetPlayedMove(
+      ply, move, excluded_move_ ? std::nullopt : position_info_.static_eval);
   const auto nodes_before = searcher_.debug_info_.searched_nodes +
                             searcher_.debug_info_.quiescence_nodes;
 
@@ -515,7 +636,8 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     const bool can_futility_prune =
         can_prune && is_quiet && CanFutilityPrune();
 
-    searcher_.SetPlayedMove(ply, move);
+    searcher_.SetPlayedMove(
+        ply, move, excluded_move_ ? std::nullopt : position_info_.static_eval);
     const auto nodes_before = searcher_.debug_info_.searched_nodes +
                               searcher_.debug_info_.quiescence_nodes;
     current_position.DoMove(move);  // make the move and search the tree
@@ -535,9 +657,14 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     if (lmr_conditions_met &&
         move_picker_.GetCurrentStage() >= MovePicker::Stage::kQuiet) {
       using LMRSettings = Settings::PruneParameters::LMRSettings;
-      double reduction = 0.99 +
-                         std::log(remaining_depth) *
-                             std::log(move_picker_.MoveCount()) / 3.14 -
+      double reduction_scale =
+          std::log(remaining_depth) * std::log(move_picker_.MoveCount()) / 3.14;
+      if (alpha > -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly) &&
+          alpha < kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+        reduction_scale = LMRSettings::ScaleReduction(
+            reduction_scale, evaluation_trend_.improving);
+      }
+      double reduction = 0.99 + reduction_scale -
                          (position_info_.is_under_check
                               ? LMRSettings::kUnderCheckReductionPenalty
                               : 0) -
@@ -650,15 +777,21 @@ bool SearchNode<node_type, ExitCondition>::CanNullMove() const {
 
   if (excluded_move_ || state_.was_previous_move_a_null) return false;
 
-  const auto remaining_depth = state_.remaining_depth;
-
-  if (remaining_depth <=
-      Settings::PruneParameters::NMPSettings::kNullMoveReduction)
+  using NMPSettings = Settings::PruneParameters::NMPSettings;
+  if (state_.ply < searcher_.nmp_min_ply_ ||
+      state_.beta < NMPSettings::kMinBeta)
     return false;
 
   if (position_info_.is_under_check) return false;
 
-  if (GetStaticEval() < state_.beta) return false;
+  if ((GetStaticEval() - state_.beta) *
+          NMPSettings::kStaticEvalMarginDenominator <
+      NMPSettings::kStaticEvalBaseMarginNumerator -
+          NMPSettings::kStaticEvalDepthMarginNumerator *
+              state_.remaining_depth -
+          NMPSettings::kStaticEvalImprovingMarginNumerator *
+              evaluation_trend_.improving)
+    return false;
 
   const auto &current_position = searcher_.GetPosition();
   const auto side_to_move = current_position.GetSideToMove();
@@ -704,16 +837,31 @@ Position &SearchNode<node_type, ExitCondition>::GetCurrentPosition() {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool SearchNode<node_type, ExitCondition>::CanRFP() const {
-  if constexpr (!Settings::PruneParameters::RFPSettings::kEnabled) return false;
+  using RFPSettings = Settings::PruneParameters::RFPSettings;
+  if constexpr (!RFPSettings::kEnabled) return false;
 
   if constexpr (kIsPrincipalVariation) return false;
 
-  return !position_info_.is_under_check &&
-         state_.remaining_depth <=
-             Settings::PruneParameters::RFPSettings::kDepthLimit &&
-         GetStaticEval() >
-             state_.beta + Settings::PruneParameters::RFPSettings::kThreshold *
-                               state_.remaining_depth;
+  if (position_info_.is_under_check ||
+      state_.remaining_depth > RFPSettings::kDepthLimit ||
+      state_.beta <= -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly)) {
+    return false;
+  }
+
+  const Eval eval = GetStaticEval();
+  if (eval < state_.beta ||
+      eval >= kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly) ||
+      (iteration_status_.tt_info && iteration_status_.tt_info->move.IsValid() &&
+       iteration_status_.tt_info->move.IsQuiet(searcher_.GetPosition()))) {
+    return false;
+  }
+
+  return eval >= state_.beta +
+                     RFPSettings::Margin(state_.remaining_depth,
+                                         node_type == NodeType::kCut &&
+                                             !iteration_status_.tt_info,
+                                         evaluation_trend_.improving,
+                                         evaluation_trend_.opponent_worsening);
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -726,7 +874,8 @@ bool SearchNode<node_type, ExitCondition>::CanLateMovePrune() const {
   if (depth > LMPSettings::kDepthLimit) return false;
 
   const auto move_count = move_picker_.MoveCount();
-  return move_count >= LMPSettings::kBaseCount + depth * depth;
+  return move_count >=
+         LMPSettings::MoveCount(depth, evaluation_trend_.improving);
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -780,7 +929,7 @@ SearchNode<node_type, ExitCondition>::CheckSingularExtension() {
       *iteration_status_.tt_info;
 
   using Singular = Settings::SearchParameters::SingularExtensionSettings;
-  entry_score -= IsMateScore(entry_score) * ply;
+  entry_score = FromTTScore(entry_score, ply);
   if (ply > 0 && ply < 2 * max_depth &&
       remaining_depth >= Singular::kDepthLimit + kIsPrincipalVariation &&
       entry_depth >= remaining_depth - 3 &&
