@@ -96,8 +96,7 @@ class TranspositionTable {
   TranspositionTable() : table_(Allocate()) {}
 
   [[nodiscard]] bool Contains(const Position& position) const {
-    const Node node = GetNode(position);
-    return node.IsOccupied() && node.true_hash == position.GetHash();
+    return GetNode(position).IsOccupied();
   }
 
   void SetEntry(const Position& position, const Move& move, const Eval score,

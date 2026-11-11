@@ -891,8 +891,8 @@ bool SearchNode<node_type, ExitCondition>::PassesSEEPruning(
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 bool SearchNode<node_type, ExitCondition>::ProbeTranspositionTable() {
-  if (auto node = searcher_.best_moves_->GetNode(searcher_.current_position_);
-      node.IsOccupied() && node.true_hash == GetCurrentPosition().GetHash()) {
+  if (auto node = searcher_.best_moves_->GetNode(GetCurrentPosition());
+      node.IsOccupied()) {
     iteration_status_.tt_info = std::move(node);
     return true;
   }

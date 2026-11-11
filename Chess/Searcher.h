@@ -221,9 +221,7 @@ inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
   MoveGenerator::Moves answer;
   for (Depth i = 0; i < max_depth; ++i) {
     const auto hashed_node = best_moves_->GetNode(position);
-    if (!hashed_node.IsOccupied() ||
-        hashed_node.true_hash != position.GetHash())
-      break;
+    if (!hashed_node.IsOccupied()) break;
     const auto legal_moves =
         MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
     if (std::ranges::find(legal_moves, hashed_node.move) == legal_moves.end())
