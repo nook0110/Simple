@@ -7,8 +7,8 @@ import sys
 CASES = [
     ("reject short castling notation", ["position startpos moves O-O"], "info string illegal move O-O"),
     ("reject long castling notation", ["position startpos moves O-O-O"], "info string illegal move O-O-O"),
-    ("disable small NNUE", ["setoption name EvalFileSmall value none"], "info string small NNUE disabled"),
-    ("small NNUE option is case insensitive", ["setoption name evalfilesmall value none"], "info string small NNUE disabled"),
+    ("disable NNUE", ["setoption name EvalFile value none"], "info string NNUE disabled"),
+    ("NNUE option is case insensitive", ["setoption name evalfile value none"], "info string NNUE disabled"),
     ("unknown option", ["setoption name Hash value 64"], "info string unknown option or invalid value"),
     ("option name with spaces", ["setoption name Clear Hash"], "info string unknown option or invalid value"),
     ("option name is case insensitive", ["setoption name threads value 2"], None),

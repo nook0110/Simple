@@ -194,12 +194,9 @@ TEST(QuiescenceTT, DrawAndStopChecksPrecedeTtCutoffs) {
 class QuiescenceTTNnue : public ::testing::Test {
  protected:
   void SetUp() override {
-    const auto* big = std::getenv("SCE_NNUE_BIG");
-    const auto* small = std::getenv("SCE_NNUE_SMALL");
-    ASSERT_NE(big, nullptr);
-    ASSERT_NE(small, nullptr);
-    ASSERT_TRUE(Nnue::Load(big));
-    ASSERT_TRUE(Nnue::LoadSmall(small));
+    const auto* network = std::getenv("SCE_NNUE");
+    if (!network) GTEST_SKIP() << "SCE_NNUE is not set";
+    ASSERT_TRUE(Nnue::Load(network));
   }
 
   void TearDown() override { Nnue::Unload(); }

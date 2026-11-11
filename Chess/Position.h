@@ -30,6 +30,7 @@ class Position {
  public:
   friend struct PositionFactory;
   friend struct PositionStateTestAccess;
+  friend struct NnueTestAccess;
   /**
    * \brief Struct to hold evaluation data for the position.
    *
@@ -315,7 +316,8 @@ class Position {
    * \param color Color of the piece.
    *
    */
-  void PlacePiece(const BitIndex square, const Piece piece, const Player color);
+  void PlacePiece(const BitIndex square, const Piece piece, const Player color,
+                  Stockfish::DirtyThreats *threats = nullptr);
 
   /**
    * \brief Removes a piece from a chosen square.
@@ -324,9 +326,11 @@ class Position {
    * \param color Color of the piece.
    *
    */
-  void RemovePiece(const BitIndex square, const Player color);
+  void RemovePiece(const BitIndex square, const Player color,
+                   Stockfish::DirtyThreats *threats = nullptr);
 
-  void MovePiece(const BitIndex from, const BitIndex to, const Player color);
+  void MovePiece(const BitIndex from, const BitIndex to, const Player color,
+                 Stockfish::DirtyThreats *threats = nullptr);
 
   [[nodiscard]] bool VerifyIncrementalState() const;
   [[nodiscard]] bool VerifyPinCache() const;

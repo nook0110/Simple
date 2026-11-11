@@ -9,16 +9,11 @@ class Position;
 }
 
 #ifndef SCE_EVALFILE
-#define SCE_EVALFILE "nn-37f18f62d772.nnue"
-#endif
-
-#ifndef SCE_EVALFILE_SMALL
-#define SCE_EVALFILE_SMALL "nn-37f18f62d772.nnue"
+#define SCE_EVALFILE "nn-1a298aa575a0.nnue"
 #endif
 
 namespace SimpleChessEngine::Nnue {
 inline constexpr const char* kDefaultEvalFile = SCE_EVALFILE;
-inline constexpr const char* kDefaultEvalFileSmall = SCE_EVALFILE_SMALL;
 
 struct NetworkOutput {
   int psqt = 0;
@@ -26,12 +21,11 @@ struct NetworkOutput {
 };
 
 [[nodiscard]] bool Load(const std::string& path);
-[[nodiscard]] bool LoadSmall(const std::string& path);
-void UnloadSmall();
 void Unload();
 [[nodiscard]] bool IsLoaded();
 [[nodiscard]] std::string Description();
 [[nodiscard]] int DefaultScale();
+[[nodiscard]] int PostProcess(const Position& position, NetworkOutput output);
 [[nodiscard]] std::uint32_t Generation();
 
 [[nodiscard]] NetworkOutput Evaluate(const Position& position,
