@@ -75,6 +75,9 @@ constexpr PhaseValue kLimitsDifference =
 
 constexpr Eval kTempoBonus = 20;
 
+constexpr Eval kNnueScaleDenominator = 1024;
+constexpr Eval kNnueEvalLimit = 20'000;
+
 constexpr Eval kMateValue = -100'000;
 constexpr Eval kDrawValue = 0;
 constexpr Eval kTablebaseWinValue = 50'000;

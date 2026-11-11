@@ -8,6 +8,8 @@
 #include "Evaluation.h"
 #include "Hasher.h"
 #include "Move.h"
+#include "Nnue/Accumulator.h"
+#include "Nnue/Nnue.h"
 #include "Piece.h"
 #include "Player.h"
 #include "Utility.h"
@@ -62,12 +64,14 @@ class Position {
     std::array<std::bitset<2>, kColors>
         castling_rights{};  //!< Castling rights for each color.
 
-    std::array<Bitboard, kColors>
+    mutable std::array<Bitboard, kColors>
         pinners{};  //!< Pieces that are pinning opponent's pieces.
-    std::array<Bitboard, kColors>
+    mutable std::array<Bitboard, kColors>
         blockers{};  //!< Pieces that are blocking attacks on the king.
     
     Piece captured_piece{Piece::kNone};  //!< Piece captured by the last move
+
+    mutable std::array<bool, kColors> pins_valid{};
 
     bool operator==(const IrreversibleData &other) const {
       return std::tie(en_croissant_square, castling_rights, captured_piece) ==
@@ -118,6 +122,9 @@ class Position {
   }
 
   [[nodiscard]] Eval Evaluate() const;
+  [[nodiscard]] Eval SimpleMaterialEval() const;
+
+  [[nodiscard]] Nnue::NetworkOutput EvaluateNetwork() const;
 
   /**
    * \brief Does given move.
@@ -135,6 +142,11 @@ class Position {
 
   void DoMove(NullMove);
   void UndoMove(NullMove, const IrreversibleData &data);
+
+  [[nodiscard]] bool CanPseudoCastle(CastlingSide side) const;
+  [[nodiscard]] bool IsPseudoLegal(const Move &move);
+  [[nodiscard]] bool IsLegal(const Move &move) const;
+  [[nodiscard]] bool IsLegal(const Move &move, Bitboard blockers) const;
 
   [[nodiscard]] bool CanCastle(
       const CastlingSide castling_side) const;
@@ -165,6 +177,12 @@ class Position {
   template <Piece piece>
   [[nodiscard]] Bitboard GetPiecesByType(Player player) const;
 
+  [[nodiscard]] Bitboard GetPiecesOf(const Player player,
+                                     const Piece piece) const {
+    return pieces_by_color_[static_cast<size_t>(player)] &
+           pieces_by_type_[static_cast<size_t>(piece)];
+  }
+
   /**
    * \brief Gets piece on given square.
    *
@@ -190,6 +208,7 @@ class Position {
     if (side_to_move_ == player) return;
     side_to_move_ = player;
     hash_ ^= hasher_.stm_hash;
+    nnue_.InvalidateOutput();
   }
 
   [[nodiscard]] Bitboard GetAllPawnAttacks(Player player) const;
@@ -202,7 +221,7 @@ class Position {
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
 
-  void ComputePins(Player us);
+  void ComputePins(Player us) const;
 
   [[nodiscard]] bool IsUnderAttack(BitIndex square, Player us,
                                    Bitboard transparent = kEmptyBoard) const;
@@ -312,6 +331,8 @@ class Position {
 
   [[nodiscard]] Eval EstimatePiece(Piece piece) const;
 
+  [[nodiscard]] Eval EvaluateNnue() const;
+
   EvaluationData evaluation_data_;
   IrreversibleData irreversible_data_;
   GameHistory history_stack_ = {};
@@ -337,6 +358,8 @@ class Position {
 
   const static Hasher hasher_;
   Hash hash_{};
+
+  mutable Nnue::AccumulatorStack nnue_;
 };
 
 }  // namespace SimpleChessEngine

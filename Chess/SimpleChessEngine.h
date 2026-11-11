@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -101,10 +102,16 @@ class ChessEngine {
   }
 
   void GoPonder(Pondering& conditions) { ComputeBestMove(conditions); }
+  void NewGame() {
+    searcher_.ClearHistories();
+    previous_score_.reset();
+    previous_time_reduction_ = kInitialTimeReduction;
+  }
 
   void ComputeBestMove(SearchCondition auto& conditions);
 
   [[nodiscard]] const Move& GetCurrentBestMove() const;
+  [[nodiscard]] const Searcher& GetSearcher() const { return searcher_; }
 
   void PrintBestMove() {
     if (!reporting_) return;
@@ -214,6 +221,15 @@ class ChessEngine {
     return std::osyncstream(o_stream_);
   }
 
+  static double Interpolate(double x, double x0, double x1, double y0,
+                            double y1) {
+    return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+  }
+
+  static constexpr double kInitialTimeReduction = 0.85;
+  static constexpr double kStockfishUnitsPerEval =
+      208.0 / Settings::SearchParameters::AspirationWindowSettings::kPawnValue;
+
   std::ostream& o_stream_;
 
   Searcher searcher_;
@@ -223,13 +239,15 @@ class ChessEngine {
   std::optional<Move> ponder_move_;
   bool reporting_;
   Depth initial_depth_;
+  std::optional<Eval> previous_score_;
+  double previous_time_reduction_ = kInitialTimeReduction;
 };
 }  // namespace SimpleChessEngine
 
 namespace SimpleChessEngine {
 inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     SearchCondition auto& condition) {
-  const TimePoint start_time = std::chrono::system_clock::now();
+  const TimePoint start_time = std::chrono::steady_clock::now();
   searcher_.InitStartOfSearch();
 
   const auto finish = [this, &condition](const BestMoveInfo& bm_info) {
@@ -247,6 +265,10 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   }
   best_move_ = legal_moves.front();
   ponder_move_.reset();
+  if (!condition.ShouldContinueIteration()) {
+    finish(BestMoveInfo{best_move_, std::nullopt});
+    return;
+  }
 
   if (const auto& tablebase = searcher_.GetTablebase(); tablebase) {
     if (const auto tablebase_move = tablebase->RootMove(position_)) {
@@ -261,10 +283,18 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   EBFsInfo ebfs;
   Window window{};
   Depth current_depth = initial_depth_;
+  Depth completed_depth = 0;
+  Depth last_best_move_depth = 0;
+  Move last_best_move = Move::None();
+  std::optional<Eval> previous_iteration_eval;
+  Move previous_iteration_best_move = Move::None();
+  double time_reduction = 1;
+  std::array<Eval, 4> iteration_values{};
+  iteration_values.fill(previous_score_.value_or(0));
+  std::size_t iteration_index = 0;
 
   for (current_depth = initial_depth_;
-       (current_depth == initial_depth_ ||
-        condition.ShouldContinueIteration()) &&
+       condition.ShouldContinueIteration() &&
        current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
@@ -284,17 +314,63 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       continue;
     }
 
-    condition.Update(IterationInfo{searcher_, eval, current_depth});
+    completed_depth = current_depth;
     ebfs.Update(searcher_.GetInfo().searched_nodes);
     info += searcher_.GetInfo();
+
+    const Move& iteration_best_move = searcher_.GetCurrentBestMove();
+    if (iteration_best_move != last_best_move) {
+      last_best_move = iteration_best_move;
+      last_best_move_depth = current_depth;
+    }
+    const double total_nodes = static_cast<double>(std::max<std::size_t>(
+        1, info.searched_nodes + info.quiescence_nodes));
+    const double nodes_effort =
+        static_cast<double>(searcher_.GetRootEffort(iteration_best_move)) *
+        100000.0 / total_nodes;
+    double falling_eval = 1.728;
+    if (previous_score_) {
+      falling_eval =
+          (11.48 +
+           2.30 * kStockfishUnitsPerEval * (*previous_score_ - eval) +
+           1.1 * kStockfishUnitsPerEval *
+               (iteration_values[iteration_index] - eval)) /
+          100.0;
+    }
+    falling_eval = std::clamp(falling_eval, 0.576, 1.728);
+    time_reduction = std::clamp(
+        Interpolate(static_cast<double>(current_depth - last_best_move_depth),
+                    4.96, 18.79, 0.639, 1.712),
+        0.629, 1.544);
+    const double reduction =
+        (1.468 + previous_time_reduction_) / (2.284 * time_reduction);
+    const double high_best_move_effort = std::clamp(
+        Interpolate(nodes_effort, 75800.0, 104510.0, 0.969, 0.714), 0.693,
+        0.838);
+    double time_scale = falling_eval * reduction * high_best_move_effort;
+    if (legal_moves.size() == 1) {
+      time_scale = std::min(time_scale, 1.0);
+    }
+    const bool confirmed_mate =
+        IsMateScore(eval) > 0 && previous_iteration_eval &&
+        IsMateScore(*previous_iteration_eval) > 0 &&
+        iteration_best_move == previous_iteration_best_move;
+    const bool proven_result = eval >= -kMateValue - 3 ||
+                               eval == kMateValue + 2 || confirmed_mate;
+    condition.Update(IterationInfo{searcher_, eval, current_depth, time_scale,
+                                   proven_result});
+    previous_iteration_eval = eval;
+    previous_iteration_best_move = iteration_best_move;
+    iteration_values[iteration_index] = eval;
+    iteration_index = (iteration_index + 1) % iteration_values.size();
     PrintInfo(info, eval, current_depth,
-              std::chrono::duration<double>{std::chrono::system_clock::now() -
+              std::chrono::duration<double>{std::chrono::steady_clock::now() -
                                             start_time});
     PrintInfo(ebfs.GetInfo());
     if (reporting_) {
       Output() << "info time "
                << std::chrono::duration_cast<std::chrono::milliseconds>(
-                      std::chrono::system_clock::now() - start_time)
+                      std::chrono::steady_clock::now() - start_time)
                       .count()
                << "\n";
     }
@@ -320,10 +396,12 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     window.SetNewEval(eval);
   }
 
-  PrintInfo(info, eval, current_depth,
-            std::chrono::duration<double>{std::chrono::system_clock::now() -
+  PrintInfo(info, eval, completed_depth,
+            std::chrono::duration<double>{std::chrono::steady_clock::now() -
                                           start_time});
 
+  previous_score_ = eval;
+  previous_time_reduction_ = time_reduction;
   finish(BestMoveInfo{best_move_, ponder_move_});
 }
 
@@ -377,7 +455,7 @@ inline std::ostream& operator<<(std::ostream& out,
 
 inline std::ostream& operator<<(
     std::ostream& out, const PrincipalVariationInfo& principal_variation) {
-  out << "info depth " << principal_variation.moves.size() << " pv";
+  out << "info depth " << principal_variation.current_depth << " pv";
   for (const auto move : principal_variation.moves) {
     out << " " << move;
   }

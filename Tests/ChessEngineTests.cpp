@@ -21,11 +21,12 @@ using namespace SimpleChessEngine;
 
 namespace ChessEngineTests {
 struct BestMoveTestCase {
-  BestMoveTestCase(std::string fen, std::string best_move)
-      : fen(std::move(fen)), best_move(std::move(best_move)) {}
+  BestMoveTestCase(std::string fen, std::string best_move, Depth depth = 0)
+      : fen(std::move(fen)), best_move(std::move(best_move)), depth(depth) {}
 
   std::string fen;
   std::string best_move;
+  Depth depth;
 };
 
 std::ostream& operator<<(std::ostream& os, const BestMoveTestCase& test_case) {
@@ -83,14 +84,38 @@ TEST(FiftyMoveRule, MateOnTheLastMoveStillCounts) {
   EXPECT_GT(*result, kTablebaseWinValue);
 }
 
-TEST(TimeManagement, CompletesFirstIterationWithoutTime) {
+TEST(TimeManagement, ReturnsLegalMoveWithoutTime) {
   auto position = PositionFactory{}(
       "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4");
   std::stringstream ss;
   ChessEngine engine(position, ss);
   TimeCondition condition{std::chrono::milliseconds{0}};
   engine.ComputeBestMove(condition);
-  EXPECT_EQ(engine.GetCurrentBestMove(), MoveFactory{}(position, "h5f7"));
+  const auto legal =
+      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+  EXPECT_NE(std::ranges::find(legal, engine.GetCurrentBestMove()), legal.end());
+  EXPECT_EQ(ss.str().find("info depth "), std::string::npos);
+}
+
+TEST(TimeManagement, StopPreventsDepthIteration) {
+  auto stop = std::make_shared<std::atomic_bool>(true);
+  DepthCondition condition{10, stop};
+  EXPECT_FALSE(condition.ShouldContinueIteration());
+}
+
+TEST(TimeManagement, SearchHonorsStopAtFirstNode) {
+  Searcher searcher(PositionFactory{}());
+  auto stop = std::make_shared<std::atomic_bool>(true);
+  DepthCondition condition{1, stop};
+  EXPECT_FALSE(searcher.Search<NodeType::kPV>(condition, 1, 1, -10000, 10000));
+}
+
+TEST(TimeManagement, QuiescenceHonorsStopAtFirstNode) {
+  auto position = PositionFactory{}();
+  auto stop = std::make_shared<std::atomic_bool>(true);
+  DepthCondition condition{1, stop};
+  Quiescence quiescence{condition};
+  EXPECT_FALSE(quiescence.Search<true>(position, -10000, 10000, 0));
 }
 
 TEST(Pondering, WaitsForPonderhitBeforeBestMove) {
@@ -121,8 +146,13 @@ TEST_P(BestMoveTest, FindBestMove) {
 
   std::stringstream ss;
   ChessEngine engine(position, ss);
-  auto time_for_move = TimeCondition{std::chrono::milliseconds{3000}};
-  engine.ComputeBestMove(time_for_move);
+  if (GetParam().depth) {
+    DepthCondition condition{GetParam().depth};
+    engine.ComputeBestMove(condition);
+  } else {
+    auto time_for_move = TimeCondition{std::chrono::milliseconds{3000}};
+    engine.ComputeBestMove(time_for_move);
+  }
   ASSERT_EQ(engine.GetCurrentBestMove(), GetMove());
 }
 
@@ -171,7 +201,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Values(
         BestMoveTestCase{R"(1q1k4/2Rr4/8/2Q3K1/8/8/8/8 w - -)", R"(g5h6)"},
         BestMoveTestCase{R"(8/8/p1p5/1p5p/1P5p/8/PPP2K1p/4R1rk w - -)",
-                         R"(e1f1)"}));
+                         R"(e1f1)", 16}));
 INSTANTIATE_TEST_CASE_P(DISABLED_NMP, BestMoveTest,
                         ::testing::Values(BestMoveTestCase{
                             R"(8/6B1/p5p1/Pp4kp/1P5r/5P1Q/4q1PK/8 w - -)",

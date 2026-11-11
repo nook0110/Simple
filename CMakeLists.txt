@@ -4,11 +4,15 @@ project(SimpleChessEngine LANGUAGES C CXX)
 # Добавляем опцию для включения/выключения тестов
 option(BUILD_TESTS "Build tests" OFF)
 set(SCE_TT_SIZE_MB 640 CACHE STRING "Shared transposition table size in MiB")
+set(SCE_EVALFILE "nn-37f18f62d772.nnue" CACHE STRING "Default NNUE network file")
+set(SCE_EVALFILE_SMALL "nn-37f18f62d772.nnue" CACHE STRING "Default small NNUE network file")
 
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_definitions(SCE_TT_SIZE_MB=${SCE_TT_SIZE_MB})
+add_compile_definitions(SCE_EVALFILE="${SCE_EVALFILE}")
+add_compile_definitions(SCE_EVALFILE_SMALL="${SCE_EVALFILE_SMALL}")
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -35,7 +39,7 @@ target_include_directories(fathom PUBLIC ${fathom_SOURCE_DIR}/src)
 target_compile_definitions(fathom PRIVATE TB_NO_HELPER_API)
 target_link_libraries(fathom PRIVATE Threads::Threads)
 
-FILE(GLOB CHESS_SOURCES CONFIGURE_DEPENDS Chess/*.cpp)
+FILE(GLOB CHESS_SOURCES CONFIGURE_DEPENDS Chess/*.cpp Chess/Nnue/*.cpp)
 list(REMOVE_ITEM CHESS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Chess/main.cpp)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Chess)

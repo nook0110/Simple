@@ -4,6 +4,7 @@
 
 #include "Attacks.h"
 #include "BitBoard.h"
+#include "MoveGenerator.h"
 #include "PSQT.h"
 #include "Piece.h"
 
@@ -19,6 +20,11 @@ template Bitboard Position::GetPiecesByType<Piece::kQueen>(Player player) const;
 template Bitboard Position::GetPiecesByType<Piece::kKing>(Player player) const;
 
 const Hasher Position::hasher_{std::mt19937_64(0xb00b1e5)};
+
+Eval Position::SimpleMaterialEval() const {
+  return evaluation_data_.material[static_cast<size_t>(side_to_move_)].eval[0] -
+         evaluation_data_.material[static_cast<size_t>(Flip(side_to_move_))].eval[0];
+}
 
 /**
  * \brief Places a piece with a color on a chosen square.
@@ -93,6 +99,7 @@ void Position::MovePiece(const BitIndex from, const BitIndex to,
 }
 
 void Position::DoMove(const Move &move) {
+  irreversible_data_.pins_valid = {};
   if (const auto &ep_square = irreversible_data_.en_croissant_square;
       ep_square.has_value()) {
     hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
@@ -112,15 +119,21 @@ void Position::DoMove(const Move &move) {
   
   // Store captured piece for undo
   irreversible_data_.captured_piece = board_[to];
+  auto &dirty = nnue_.Push();
 
   if (move.IsEnPassant()) {
     const auto capture_square = Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
     irreversible_data_.captured_piece = Piece::kPawn;  // En passant always captures a pawn
+    dirty.Add(Piece::kPawn, us, from, to);
+    dirty.Add(Piece::kPawn, them, capture_square, Nnue::kNoSquare);
     RemovePiece(capture_square, them);
     MovePiece(from, to, us);
   } else if (move.IsPromotion()) {
     const auto promoted_to = move.PromotionPiece();
     const auto captured_piece = board_[to];
+    dirty.Add(Piece::kPawn, us, from, Nnue::kNoSquare);
+    if (!!captured_piece) dirty.Add(captured_piece, them, to, Nnue::kNoSquare);
+    dirty.Add(promoted_to, us, Nnue::kNoSquare, to);
     RemovePiece(from, us);
     if (!!captured_piece) RemovePiece(to, them);
     PlacePiece(to, promoted_to, us);
@@ -152,6 +165,10 @@ void Position::DoMove(const Move &move) {
     }
     
     const auto side_idx = static_cast<size_t>(side);
+    dirty.Add(Piece::kKing, us, king_from,
+              kKingCastlingDestination[color_idx][side_idx]);
+    dirty.Add(Piece::kRook, us, rook_from,
+              kRookCastlingDestination[color_idx][side_idx]);
     RemovePiece(king_from, us);
     RemovePiece(rook_from, us);
     PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us);
@@ -173,7 +190,11 @@ void Position::DoMove(const Move &move) {
       }
     }
     
-    if (!!captured_piece) RemovePiece(to, them);
+    dirty.Add(piece_to_move, us, from, to);
+    if (!!captured_piece) {
+      dirty.Add(captured_piece, them, to, Nnue::kNoSquare);
+      RemovePiece(to, them);
+    }
     MovePiece(from, to, us);
     
     if (piece_to_move == Piece::kKing) {
@@ -218,6 +239,7 @@ void SimpleChessEngine::Position::DoMove(NullMove) {
   }
   side_to_move_ = Flip(side_to_move_);
   hash_ ^= hasher_.stm_hash;
+  nnue_.Push();
 
   history_stack_.Push(hash_, false);
 }
@@ -293,6 +315,7 @@ void Position::UndoMove(const Move &move, const IrreversibleData &data) {
     }
   }
 
+  nnue_.Pop();
   history_stack_.Pop();
 }
 
@@ -305,10 +328,120 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
   }
   hash_ ^= hasher_.stm_hash;
   side_to_move_ = Flip(side_to_move_);
+  nnue_.Pop();
 
   history_stack_.Pop();
 }
 
+bool Position::CanPseudoCastle(CastlingSide side) const {
+  const auto us = static_cast<size_t>(side_to_move_);
+  const auto cs = static_cast<size_t>(side);
+  if (!irreversible_data_.castling_rights[us].test(cs)) return false;
+  const auto obstacles = GetAllPieces() & ~SingleSquare(king_position_[us]) &
+                         ~SingleSquare(rook_positions_[us][cs]);
+  return ((castling_squares_for_king_[us][cs] |
+           castling_squares_for_rook_[us][cs]) &
+          obstacles)
+      .None();
+}
+
+bool Position::IsPseudoLegal(const Move &move) {
+  if (!move.IsValid()) return false;
+  const auto from = move.From();
+  const auto to = move.To();
+  if (!GetPieces(side_to_move_).Test(from)) return false;
+  if (!move.IsNormal()) {
+    std::array<Move, MoveGenerator::kMaxMovesPerPosition> moves;
+    const auto *end =
+        MoveGenerator{}.GeneratePseudoLegal<MoveGenerator::Type::kAll>(
+            *this, moves.data());
+    return std::find(static_cast<const Move *>(moves.data()), end, move) != end;
+  }
+  if ((move.Raw() & 0x3000) || from == to || GetPieces(side_to_move_).Test(to))
+    return false;
+  const auto piece = GetPieceAt(from);
+  const auto occupancy = GetAllPieces();
+  Bitboard attacks;
+  switch (piece) {
+    case Piece::kPawn: {
+      if ((kRankBB[0] | kRankBB[7]).Test(to)) return false;
+      const int step = side_to_move_ == Player::kWhite ? 8 : -8;
+      const auto start_rank =
+          side_to_move_ == Player::kWhite ? kRankBB[1] : kRankBB[6];
+      if (!(GetPawnAttacks(from, side_to_move_) &
+            GetPieces(Flip(side_to_move_)))
+               .Test(to) &&
+          !(to == from + step && !occupancy.Test(to)) &&
+          !(to == from + 2 * step && start_rank.Test(from) &&
+            !occupancy.Test(to) && !occupancy.Test(from + step)))
+        return false;
+      break;
+    }
+    case Piece::kKnight:
+      attacks = AttackTable<Piece::kKnight>::GetAttackMap(from, occupancy);
+      break;
+    case Piece::kBishop:
+      attacks = AttackTable<Piece::kBishop>::GetAttackMap(from, occupancy);
+      break;
+    case Piece::kRook:
+      attacks = AttackTable<Piece::kRook>::GetAttackMap(from, occupancy);
+      break;
+    case Piece::kQueen:
+      attacks = AttackTable<Piece::kQueen>::GetAttackMap(from, occupancy);
+      break;
+    case Piece::kKing:
+      attacks = AttackTable<Piece::kKing>::GetAttackMap(from, occupancy);
+      break;
+    default:
+      return false;
+  }
+  if (piece != Piece::kPawn && !attacks.Test(to)) return false;
+  const auto king = GetKingSquare(side_to_move_);
+  const auto checkers = Attackers(king) & GetPieces(Flip(side_to_move_));
+  if (checkers.Any() && piece != Piece::kKing &&
+      (checkers.MoreThanOne() ||
+       !(Between(king, checkers.GetFirstBit()) | checkers).Test(to)))
+    return false;
+  return true;
+}
+
+bool Position::IsLegal(const Move &move) const {
+  return IsLegal(
+      move, irreversible_data_.blockers[static_cast<size_t>(side_to_move_)]);
+}
+
+bool Position::IsLegal(const Move &move, Bitboard blockers) const {
+  const auto us = side_to_move_;
+  const auto them = Flip(us);
+  const auto from = move.From();
+  const auto to = move.To();
+  if (move.IsCastling()) {
+    return !IsUnderCheck() &&
+           CanCastle(to == kKingCastlingDestination[static_cast<size_t>(us)][0]
+                         ? CastlingSide::k00
+                         : CastlingSide::k000);
+  }
+  if (move.IsEnPassant()) {
+    const auto captured =
+        static_cast<BitIndex>(to + (us == Player::kWhite ? -8 : 8));
+    const auto occupancy =
+        (GetAllPieces() ^ SingleSquare(from) ^ SingleSquare(captured)) |
+        SingleSquare(to);
+    const auto king = GetKingSquare(us);
+    return !(AttackTable<Piece::kRook>::GetAttackMap(king, occupancy) &
+             (GetPiecesByType<Piece::kRook>(them) |
+              GetPiecesByType<Piece::kQueen>(them)))
+                .Any() &&
+           !(AttackTable<Piece::kBishop>::GetAttackMap(king, occupancy) &
+             (GetPiecesByType<Piece::kBishop>(them) |
+              GetPiecesByType<Piece::kQueen>(them)))
+                .Any();
+  }
+  if (GetPieceAt(from) == Piece::kKing) {
+    return !IsUnderAttack(to, us, SingleSquare(from));
+  }
+  return !blockers.Test(from) || Ray(GetKingSquare(us), from).Test(to);
+}
 
 [[nodiscard]] bool Position::CanCastle(
     const CastlingSide castling_side) const {
@@ -535,6 +668,15 @@ bool Position::StaticExchangeEvaluation(const Move &move,
       break;
     }
 
+    ComputePins(color);
+    const auto color_idx = static_cast<size_t>(color);
+    if ((irreversible_data_.pinners[color_idx] & occupancy).Any()) {
+      our_attackers &= ~irreversible_data_.blockers[color_idx];
+      if (our_attackers.None()) {
+        break;
+      }
+    }
+
     Bitboard attacker_bitboard;
 
     next_victim = Piece::kKing;
@@ -607,55 +749,39 @@ Bitboard Position::Attackers(const BitIndex square,
           pieces_by_type_[static_cast<size_t>(Piece::kKing)]);
 }
 
-void Position::ComputePins(const Player us) {
+void Position::ComputePins(const Player us) const {
   const Player them = Flip(us);
 
   const auto us_idx = static_cast<size_t>(us);
+  if (irreversible_data_.pins_valid[us_idx]) {
+    return;
+  }
 
   irreversible_data_.blockers[us_idx] = kEmptyBoard;
   irreversible_data_.pinners[us_idx] = kEmptyBoard;
 
   const BitIndex king_square = GetKingSquare(us);
 
-  const Bitboard all_pieces = GetAllPieces();
+  Bitboard snipers =
+      (AttackTable<Piece::kBishop>::GetAttackMap(king_square, kEmptyBoard) &
+       (GetPiecesByType<Piece::kBishop>(them) |
+        GetPiecesByType<Piece::kQueen>(them))) |
+      (AttackTable<Piece::kRook>::GetAttackMap(king_square, kEmptyBoard) &
+       (GetPiecesByType<Piece::kRook>(them) |
+        GetPiecesByType<Piece::kQueen>(them)));
+  const Bitboard occupancy = GetAllPieces() ^ snipers;
 
-  const Bitboard diagonal_blockers =
-      AttackTable<Piece::kBishop>::GetAttackMap(king_square, all_pieces) &
-      all_pieces;
-  const Bitboard straight_blockers =
-      AttackTable<Piece::kRook>::GetAttackMap(king_square, all_pieces) &
-      all_pieces;
-
-  Bitboard diagonal_pinners = AttackTable<Piece::kBishop>::GetAttackMap(
-                                  king_square, all_pieces ^ diagonal_blockers) &
-                              (GetPiecesByType<Piece::kBishop>(them) |
-                               GetPiecesByType<Piece::kQueen>(them)) &
-                              ~diagonal_blockers;
-  Bitboard straight_pinners = AttackTable<Piece::kRook>::GetAttackMap(
-                                  king_square, all_pieces ^ straight_blockers) &
-                              (GetPiecesByType<Piece::kRook>(them) |
-                               GetPiecesByType<Piece::kQueen>(them)) &
-                              ~straight_blockers;
-
-  irreversible_data_.pinners[us_idx] = diagonal_pinners | straight_pinners;
-
-  Bitboard &blockers = irreversible_data_.blockers[us_idx];
-  while (diagonal_pinners.Any()) {
-    const BitIndex square = diagonal_pinners.PopFirstBit();
-
-    const auto blockers_between =
-        bishop_between[square][king_square] & diagonal_blockers;
-    assert(blockers_between.Any() && !blockers_between.MoreThanOne());
-    blockers |= blockers_between;
+  while (snipers.Any()) {
+    const BitIndex square = snipers.PopFirstBit();
+    const Bitboard blockers_between = Between(king_square, square) & occupancy;
+    if (blockers_between.Any() && !blockers_between.MoreThanOne()) {
+      irreversible_data_.blockers[us_idx] |= blockers_between;
+      if ((blockers_between & GetPieces(us)).Any()) {
+        irreversible_data_.pinners[us_idx] |= SingleSquare(square);
+      }
+    }
   }
-  while (straight_pinners.Any()) {
-    const BitIndex square = straight_pinners.PopFirstBit();
-
-    const auto blockers_between =
-        rook_between[square][king_square] & straight_blockers;
-    assert(blockers_between.Any() && !blockers_between.MoreThanOne());
-    blockers |= blockers_between;
-  }
+  irreversible_data_.pins_valid[us_idx] = true;
 }
 
 Position::IrreversibleData Position::GetIrreversibleData() const {
