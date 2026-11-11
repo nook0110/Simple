@@ -130,7 +130,7 @@ TEST(EvaluationTrendPruning, ReverseFutilityRespectsQuietTtMove) {
   for (const bool quiet_tt_move : {false, true}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
     if (quiet_tt_move) {
-      table->SetEntry(position, move, 0, 0, Bound::kUpper, 0);
+      table->SetEntry(position, move, ToTT(0, 0), 0, Bound::kUpper, 0);
     }
     Searcher searcher(position, table);
     const auto result = SearchNode<NodeType::kAll, DepthCondition>{
@@ -143,8 +143,7 @@ TEST(EvaluationTrendPruning, ReverseFutilityRespectsQuietTtMove) {
 TEST(EvaluationTrendPruning, ReverseFutilityDoesNotCutLosingTablebaseBounds) {
   const auto position = PositionFactory{}();
   DepthCondition condition{2};
-  const Eval loss_bound =
-      -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly);
+  const Eval loss_bound = -Score::kDecisive;
   for (const Eval beta : {loss_bound, loss_bound + 1}) {
     Searcher searcher(position);
     const auto result = SearchNode<NodeType::kAll, DepthCondition>{
@@ -387,7 +386,8 @@ TEST(StaticEvalPolicy, TtCutoffSkipsEvaluationAndPolicyTraining) {
   auto child = parent;
   child.DoMove(move);
   auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-  table->SetEntry(child, MoveFactory{}(child, "e7e5"), -1, 3, Bound::kUpper, 0);
+  table->SetEntry(child, MoveFactory{}(child, "e7e5"), ToTT(-1, 0), 3,
+                  Bound::kUpper, 0);
   Searcher searcher(parent, table);
   PolicyAccess::Play(searcher, 0, move, 20);
   searcher.SetPosition(child);
@@ -460,7 +460,7 @@ TEST(StaticEvalPolicy, SearchReplacesContextForLaterQuietSibling) {
        MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(parent)) {
     auto child = parent;
     child.DoMove(move);
-    table->SetEntry(child, MoveFactory{}(child, "e7e5"), -9999, 6,
+    table->SetEntry(child, MoveFactory{}(child, "e7e5"), ToTT(-9999, 0), 6,
                     Bound::kLower, 0);
   }
   Searcher searcher(parent, table);
@@ -486,4 +486,19 @@ TEST(StaticEvalPolicy, SearchReplacesContextForLaterQuietSibling) {
       searcher, {6, 3, 9999, 10000}, stop}()));
   EXPECT_TRUE(observed);
   EXPECT_EQ(searcher.GetPosition().GetHash(), parent.GetHash());
+}
+
+TEST(SingularExtensionStatistics, AbortedVerificationIsNotATtCut) {
+  const auto position = PositionFactory{}();
+  auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
+  table->SetEntry(position, MoveFactory{}(position, "e2e4"), ToTT(10000, 0), 4,
+                  Bound::kLower, 0);
+  Searcher searcher(position, table);
+  const PolicyStopCondition stop{
+      [&] { return searcher.GetSingularInfo().searches > 0; }};
+  EXPECT_FALSE((SearchNode<NodeType::kPV, PolicyStopCondition>{
+      searcher, {8, 7, -20000, 20000, 1}, stop}()));
+  EXPECT_EQ(searcher.GetSingularInfo().searches, 1u);
+  EXPECT_EQ(searcher.GetInfo().tt_cuts, 0u);
+  EXPECT_EQ(searcher.GetPosition().GetHash(), position.GetHash());
 }

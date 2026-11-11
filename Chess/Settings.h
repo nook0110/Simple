@@ -3,6 +3,7 @@
 #include <ostream>
 
 #include "Evaluation.h"
+#include "Score.h"
 #include "Utility.h"
 
 namespace SimpleChessEngine {
@@ -219,15 +220,20 @@ struct Settings {
     };
     struct NMPSettings {
       static constexpr bool kEnabled = true;
-      inline static Eval kStaticEvalBaseMarginNumerator = 365 * 82;
-      inline static Eval kStaticEvalDepthMarginNumerator = 13 * 82;
-      inline static Eval kStaticEvalImprovingMarginNumerator = 47 * 82;
-      inline static Eval kStaticEvalMarginDenominator = 208;
-      inline static Eval kMinBeta = -788;
-      inline static Eval kEvalDivisor = 101;
+      inline static SfMargin kStaticEvalBaseMargin{365};
+      inline static SfMargin kStaticEvalDepthMargin{13};
+      inline static SfMargin kStaticEvalImprovingMargin{47};
+      inline static SfMargin kMinBeta{-2000};
+      static constexpr SfMargin kEvalDivisor{256};
       inline static int kDepthDivisor = 3;
       inline static int kNullMoveReduction = 7;
       inline static Depth kVerificationDepth = 16;
+
+      [[nodiscard]] static SfMargin StaticEvalMargin(Depth depth,
+                                                     bool improving) {
+        return kStaticEvalBaseMargin - kStaticEvalDepthMargin * depth -
+               kStaticEvalImprovingMargin * improving;
+      }
     };
     struct IIRSettings {
       inline static Depth kBaseLimit = 2;
@@ -237,8 +243,8 @@ struct Settings {
     struct ProbCutSettings {
       inline static Depth kMinDepth = 5;
       inline static int kDepthReduction = 4;
-      inline static Eval kMargin = 95;
-      inline static Eval kImprovingMargin = 70;
+      static constexpr SfMargin kMargin{241};
+      static constexpr SfMargin kImprovingMargin = kMargin - SfMargin{64};
     };
     struct LMRSettings {
       static constexpr bool kEnabled = true;
@@ -285,10 +291,8 @@ struct Settings {
     static constexpr SEEPruningSettings kSEEPruningSettings = {};
   };
   struct SearchParameters {
-    inline static Eval kImprovingBetaMargin = 0;
+    static constexpr SfMargin kImprovingBetaMargin{0};
     struct StaticEvalPolicySettings {
-      inline static int kEvalNumerator = 208;
-      inline static int kEvalDenominator = 82;
       inline static int kMinDifference = -189;
       inline static int kMaxDifference = 194;
       inline static int kOffset = 60;
@@ -300,19 +304,26 @@ struct Settings {
       inline static std::int64_t kDecayDenominator = 1024;
     };
     struct SingularExtensionSettings {
+      static constexpr Eval kStockfishMarginNumerator = 59;
+      static constexpr Eval kStockfishMarginDenominator = 54;
+      static constexpr Eval kBigNetworkDefaultScale = 311;
+
       inline static Depth kDepthLimit = 6;
-      inline static Eval kMarginNumerator = 59 * 311;
-      inline static Eval kMarginDenominator = 54 * 1024;
+      inline static Eval kMarginNumerator =
+          kStockfishMarginNumerator * kBigNetworkDefaultScale;
+      inline static Eval kMarginDenominator =
+          kStockfishMarginDenominator * kNnueScaleDenominator;
       static constexpr int kNegativeExtension = -3;
+
+      [[nodiscard]] static Eval Margin(Depth depth) {
+        return kMarginNumerator * depth / kMarginDenominator;
+      }
     };
     struct AspirationWindowSettings {
-      static constexpr Eval kPawnValue =
-          kPieceValues[static_cast<size_t>(Piece::kPawn)]
-              .eval[static_cast<size_t>(GamePhase::kMiddleGame)];
-      inline static double kInitialDelta = 5.0 * kPawnValue / 208.0;
-      inline static double kThreadDelta = kPawnValue / 208.0;
+      inline static double kInitialDelta = SfMargin{5}.ToEngine();
+      inline static double kThreadDelta = SfMargin{1}.ToEngine();
       inline static double kMeanSquaredScoreDivisor =
-          10193.0 * kPawnValue / 208.0;
+          SfMargin{10193}.ToEngine();
       inline static double kDeltaGrowth = 47.0 / 128.0;
     };
     static constexpr AspirationWindowSettings kAspirationWindowSettings = {};

@@ -14,6 +14,7 @@
 #include "ExitCondition.h"
 #include "Move.h"
 #include "NodeType.h"
+#include "Score.h"
 #include "Searcher.h"
 #include "Settings.h"
 #include "Utility.h"
@@ -163,8 +164,8 @@ class ChessEngine {
     PrincipalVariationInfo pv{current_depth, principal_variation};
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
-    PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
-        (info.searched_nodes + info.quiescence_nodes) / search_time.count())});
+    PrintInfo(NodePerSecondInfo{
+        static_cast<std::size_t>(info.TotalNodes() / search_time.count())});
     for (const auto& [name, counter] : kDebugCounters) {
       if (counter != &DebugInfo::searched_nodes) {
         Output() << "info " << name << " " << info.*counter << "\n";
@@ -188,8 +189,6 @@ class ChessEngine {
   }
 
   static constexpr double kInitialTimeReduction = 0.85;
-  static constexpr double kStockfishUnitsPerEval =
-      208.0 / Settings::SearchParameters::AspirationWindowSettings::kPawnValue;
 
   std::ostream& o_stream_;
 
@@ -318,17 +317,16 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       last_best_move = iteration_best_move;
       last_best_move_depth = current_depth;
     }
-    const double total_nodes = static_cast<double>(std::max<std::size_t>(
-        1, info.searched_nodes + info.quiescence_nodes));
+    const double total_nodes =
+        static_cast<double>(std::max<std::size_t>(1, info.TotalNodes()));
     const double nodes_effort =
         static_cast<double>(searcher_.GetRootEffort(iteration_best_move)) *
         100000.0 / total_nodes;
     double falling_eval = 1.728;
     if (previous_score_) {
       falling_eval =
-          (11.48 +
-           2.30 * kStockfishUnitsPerEval * (*previous_score_ - eval) +
-           1.1 * kStockfishUnitsPerEval *
+          (11.48 + 2.30 * SfMargin::kPerEngineUnit * (*previous_score_ - eval) +
+           1.1 * SfMargin::kPerEngineUnit *
                (iteration_values[iteration_index] - eval)) /
           100.0;
     }
@@ -347,11 +345,11 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       time_scale = std::min(time_scale, 1.0);
     }
     const bool confirmed_mate =
-        IsMateScore(eval) > 0 && previous_iteration_eval &&
-        IsMateScore(*previous_iteration_eval) > 0 &&
+        Score::IsMateWin(eval) && previous_iteration_eval &&
+        Score::IsMateWin(*previous_iteration_eval) &&
         iteration_best_move == previous_iteration_best_move;
-    const bool proven_result = eval >= -kMateValue - 3 ||
-                               eval == kMateValue + 2 || confirmed_mate;
+    const bool proven_result =
+        eval >= Score::MateIn(3) || eval == Score::MatedIn(2) || confirmed_mate;
     condition.Update(IterationInfo{searcher_, eval, current_depth, time_scale,
                                    proven_result});
     previous_iteration_eval = eval;
@@ -409,13 +407,11 @@ inline std::ostream& operator<<(std::ostream& out,
 inline std::ostream& operator<<(std::ostream& out,
                                 const ScoreInfo& score_info) {
   const auto& eval = score_info.current_eval;
-  if (!IsMateScore(eval)) {
+  if (!Score::IsMate(eval)) {
     return out << "info score cp " << eval << std::endl;
   }
 
-  return out << "info score mate "
-             << IsMateScore(eval) * (-kMateValue - std::abs(eval) + 1) / 2
-             << std::endl;
+  return out << "info score mate " << Score::MovesToMate(eval) << std::endl;
 }
 
 inline std::ostream& operator<<(std::ostream& out,

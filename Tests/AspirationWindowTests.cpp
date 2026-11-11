@@ -80,8 +80,8 @@ TEST(AspirationWindow, ClampsInitialAndFailedBounds) {
 }
 
 TEST(AspirationWindow, WidensUntilMateAndTablebaseScoresFit) {
-  for (const Eval value : {kMateValue + 1, -kMateValue - 1, kTablebaseWinValue,
-                           -kTablebaseWinValue}) {
+  for (const Eval value :
+       {Score::MatedIn(1), Score::MateIn(1), Score::kTbWin, -Score::kTbWin}) {
     Window window{{0, 0}};
     int attempts = 0;
     while (
@@ -274,7 +274,7 @@ TEST(AspirationSearch, FindsQueenSacrificeMateAtCompletedDepthEight) {
   const auto root = table->GetNode(position);
   EXPECT_EQ(root.bound, Bound::kExact);
   EXPECT_GE(root.depth, 8);
-  EXPECT_EQ(root.score, -kMateValue - 5);
+  EXPECT_EQ(FromTT(root.score, 0), Score::MateIn(5));
   EXPECT_NE(output.str().find("info score mate 3"), std::string::npos);
 }
 
