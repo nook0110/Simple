@@ -306,13 +306,14 @@ struct Settings {
       static constexpr int kNegativeExtension = -3;
     };
     struct AspirationWindowSettings {
-      enum class Strategy { Linear, Exponential };
-      static constexpr bool kEnabled = false;
       static constexpr Eval kPawnValue =
           kPieceValues[static_cast<size_t>(Piece::kPawn)]
               .eval[static_cast<size_t>(GamePhase::kMiddleGame)];
-      static constexpr Eval kDelta = kPawnValue * 3 / 4;
-      static constexpr Strategy kStrategy = Strategy::Linear;
+      inline static double kInitialDelta = 5.0 * kPawnValue / 208.0;
+      inline static double kThreadDelta = kPawnValue / 208.0;
+      inline static double kMeanSquaredScoreDivisor =
+          10193.0 * kPawnValue / 208.0;
+      inline static double kDeltaGrowth = 47.0 / 128.0;
     };
     static constexpr AspirationWindowSettings kAspirationWindowSettings = {};
   };

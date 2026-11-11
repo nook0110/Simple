@@ -26,22 +26,13 @@ std::ostream& operator<<(std::ostream& out,
 }
 static std::ostream& operator<<(
     std::ostream& out,
-    Settings::SearchParameters::AspirationWindowSettings::Strategy strategy) {
-  return out << (strategy == Settings::SearchParameters::
-                                 AspirationWindowSettings::Strategy::Linear
-                     ? "Linear"
-                     : "Exponential");
-}
-
-static std::ostream& operator<<(
-    std::ostream& out,
     Settings::SearchParameters::AspirationWindowSettings settings) {
   out << "\tAspirationWindowSettings:\n";
-  out << "\t\tkEnabled: " << std::boolalpha << settings.kEnabled << "\n";
-  if constexpr (settings.kEnabled) {
-    out << "\t\tkDelta: " << settings.kDelta << "\n";
-    out << "\t\tkStrategy: " << settings.kStrategy << "\n";
-  }
+  out << "\t\tkInitialDelta: " << settings.kInitialDelta << "\n";
+  out << "\t\tkThreadDelta: " << settings.kThreadDelta << "\n";
+  out << "\t\tkDeltaGrowth: " << settings.kDeltaGrowth << "\n";
+  out << "\t\tkMeanSquaredScoreDivisor: "
+      << settings.kMeanSquaredScoreDivisor << "\n";
   return out;
 }
 

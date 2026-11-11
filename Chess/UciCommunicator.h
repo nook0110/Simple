@@ -1159,7 +1159,7 @@ inline ChessEngine& SearchThread::AddHelperEngine(const Info& info,
   if (helper_engines_.size() < worker) {
     helper_engines_.push_back(std::make_unique<ChessEngine>(
         info.position, std::cout, transposition_table_, false,
-        static_cast<Depth>(1 + worker % 2), tablebase_));
+        static_cast<Depth>(1 + worker % 2), tablebase_, worker));
   } else {
     helper_engines_[worker - 1]->SetPosition(info.position);
   }

@@ -551,9 +551,11 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
   // undo the move
   current_position.UndoMove(move, position_info_.irreversible_data);
   if (ply == 0) {
-    searcher_.AddRootEffort(move, searcher_.debug_info_.searched_nodes +
-                                      searcher_.debug_info_.quiescence_nodes -
-                                      nodes_before);
+    searcher_.AddRootEffort(
+        move,
+        searcher_.debug_info_.searched_nodes +
+            searcher_.debug_info_.quiescence_nodes - nodes_before,
+        eval_optional ? SearchResult{-*eval_optional} : std::nullopt);
   }
 
   if (!eval_optional) return std::nullopt;
@@ -729,9 +731,11 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     // undo the move
     current_position.UndoMove(move, position_info_.irreversible_data);
     if (ply == 0) {
-      searcher_.AddRootEffort(move, searcher_.debug_info_.searched_nodes +
-                                        searcher_.debug_info_.quiescence_nodes -
-                                        nodes_before);
+      searcher_.AddRootEffort(move,
+                              searcher_.debug_info_.searched_nodes +
+                                  searcher_.debug_info_.quiescence_nodes -
+                                  nodes_before,
+                              temp_eval);
     }
 
     if (temp_eval > iteration_status_.best_eval) {

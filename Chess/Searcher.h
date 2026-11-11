@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "AspirationWindow.h"
 #include "Concepts.h"
 #include "DebugInfo.h"
 #include "Evaluation.h"
@@ -133,6 +134,7 @@ class Searcher {
   }
   [[nodiscard]] std::int64_t GetQuietScore(const Move &move, Depth ply) const;
   [[nodiscard]] std::uint64_t GetRootEffort(const Move &move) const;
+  [[nodiscard]] RootScore GetRootScore(const Move &move) const;
 
   [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
       Depth max_depth, Position position) const;
@@ -177,14 +179,20 @@ class Searcher {
   void SetPlayedNullMove(Depth ply);
   void UpdateStaticEvalHistory(Depth ply, Eval child_eval);
   void UpdateQuietHistory(const Move &move, Depth ply, std::int64_t bonus);
-  void AddRootEffort(const Move &move, std::uint64_t nodes);
+  void AddRootEffort(const Move &move, std::uint64_t nodes,
+                     std::optional<Eval> score);
 
   std::vector<std::int32_t> continuation_history_ =
       std::vector<std::int32_t>(kPieceToSize * kPieceToSize);
   std::array<PlayedMove, kMaxSearchPly + 1> move_stack_{};
   StaticEvalHistory static_evals_;
 
-  std::vector<std::pair<Move, std::uint64_t>> root_effort_;
+  struct RootMoveInfo {
+    Move move;
+    std::uint64_t effort = 0;
+    RootScore score;
+  };
+  std::vector<RootMoveInfo> root_effort_;
 
   DebugInfo debug_info_;
   SingularInfo singular_info_;
@@ -316,19 +324,24 @@ inline void Searcher::UpdateQuietHistory(const Move &move, const Depth ply,
 }
 
 inline std::uint64_t Searcher::GetRootEffort(const Move &move) const {
-  const auto it = std::ranges::find(root_effort_, move,
-                                    &std::pair<Move, std::uint64_t>::first);
-  return it == root_effort_.end() ? 0 : it->second;
+  const auto it = std::ranges::find(root_effort_, move, &RootMoveInfo::move);
+  return it == root_effort_.end() ? 0 : it->effort;
 }
 
-inline void Searcher::AddRootEffort(const Move &move, std::uint64_t nodes) {
-  const auto it = std::ranges::find(root_effort_, move,
-                                    &std::pair<Move, std::uint64_t>::first);
+inline RootScore Searcher::GetRootScore(const Move &move) const {
+  const auto it = std::ranges::find(root_effort_, move, &RootMoveInfo::move);
+  return it == root_effort_.end() ? RootScore{} : it->score;
+}
+
+inline void Searcher::AddRootEffort(const Move &move, std::uint64_t nodes,
+                                    std::optional<Eval> score) {
+  auto it = std::ranges::find(root_effort_, move, &RootMoveInfo::move);
   if (it == root_effort_.end()) {
-    root_effort_.emplace_back(move, nodes);
-    return;
+    root_effort_.push_back({move, 0, {}});
+    it = root_effort_.end() - 1;
   }
-  it->second += nodes;
+  it->effort += nodes;
+  if (score) it->score.Update(*score);
 }
 
 inline void Searcher::InitStartOfSearch() {
