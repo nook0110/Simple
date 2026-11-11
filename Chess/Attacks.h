@@ -1,7 +1,6 @@
 #pragma once
 
-#include <memory>
-#include <utility>
+#include <array>
 
 #include "BitBoard.h"
 #include "Piece.h"
@@ -37,11 +36,9 @@ inline constexpr auto kKnightAttacks = MakeLeaperAttacks<Piece::kKnight>();
 
 template <Piece sliding_piece>
 constexpr size_t GetMagicShift() {
-  assert(IsWeakSlidingPiece(sliding_piece));
+  static_assert(IsWeakSlidingPiece(sliding_piece));
   if constexpr (sliding_piece == Piece::kBishop) return 64 - 9;
   if constexpr (sliding_piece == Piece::kRook) return 64 - 12;
-  assert(false);
-  std::unreachable();
 }
 
 /**
@@ -53,38 +50,31 @@ struct Magic {
   Bitboard magic;
   size_t base_offset;
   template <Piece sliding_piece>
-  size_t GetAddress(const Bitboard occupied) const {
-    assert(IsWeakSlidingPiece(sliding_piece));
+  constexpr size_t GetAddress(const Bitboard occupied) const {
+    static_assert(IsWeakSlidingPiece(sliding_piece));
     return base_offset + static_cast<size_t>((mask & occupied) * magic >>
                                              GetMagicShift<sliding_piece>());
   }
 };
 
-template <Piece sliding_piece>
+inline constexpr size_t kSliderTableSize = 88772;
+extern const std::array<Magic, kBoardArea> kBishopMagics;
+extern const std::array<Magic, kBoardArea> kRookMagics;
+extern const std::array<Bitboard, kSliderTableSize> kSliderAttacks;
+
+template <Piece piece>
+  requires(IsSlidingPiece(piece) || piece == Piece::kKnight ||
+           piece == Piece::kKing)
 class AttackTable {
  public:
-  static Bitboard GetAttackMap(BitIndex square, Bitboard occupied);
-
-  AttackTable();
-
- private:
-  static size_t GetAttackTableAddress(BitIndex square,
-                                      Bitboard occupied = kEmptyBoard);
-
-  Bitboard *table_ = nullptr;
-  std::array<Magic, kBoardArea> magic_ = {};
-
-  static const std::unique_ptr<AttackTable> self_;
+  AttackTable() = delete;
+  [[nodiscard]] static Bitboard GetAttackMap(BitIndex square,
+                                             Bitboard occupied);
 };
 
 template <Piece piece>
-size_t AttackTable<piece>::GetAttackTableAddress(const BitIndex square,
-                                                 const Bitboard occupied) {
-  assert(IsWeakSlidingPiece(piece));
-  return self_->magic_[square].template GetAddress<piece>(occupied);
-}
-
-template <Piece piece>
+  requires(IsSlidingPiece(piece) || piece == Piece::kKnight ||
+           piece == Piece::kKing)
 Bitboard AttackTable<piece>::GetAttackMap(const BitIndex square,
                                           const Bitboard occupied) {
   if constexpr (piece == Piece::kKnight) {
@@ -97,11 +87,12 @@ Bitboard AttackTable<piece>::GetAttackMap(const BitIndex square,
     return AttackTable<Piece::kBishop>::GetAttackMap(square, occupied) |
            AttackTable<Piece::kRook>::GetAttackMap(square, occupied);
   }
-  if constexpr (IsWeakSlidingPiece(piece)) {
-    return self_->table_[GetAttackTableAddress(square, occupied)];
+  if constexpr (piece == Piece::kBishop) {
+    return kSliderAttacks[kBishopMagics[square].GetAddress<piece>(occupied)];
   }
-  assert(false);
-  std::unreachable();
+  if constexpr (piece == Piece::kRook) {
+    return kSliderAttacks[kRookMagics[square].GetAddress<piece>(occupied)];
+  }
 }
 
 extern template class AttackTable<Piece::kKnight>;
@@ -111,6 +102,7 @@ extern template class AttackTable<Piece::kQueen>;
 extern template class AttackTable<Piece::kKing>;
 
 template <Piece sliding_piece>
+  requires(IsWeakSlidingPiece(sliding_piece))
 [[nodiscard]] Bitboard GenerateAttackMask(
     const BitIndex square, const Bitboard occupancy = kEmptyBoard);
 }  // namespace SimpleChessEngine
