@@ -11,8 +11,11 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <syncstream>
 #include <thread>
+#include <tuple>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -306,6 +309,41 @@ struct BooleanOption : public OptionBase {
 };
 
 using PonderOption = BooleanOption<false>;
+
+template <class>
+struct MemberPointerTraits;
+
+template <class Owner, class Value>
+struct MemberPointerTraits<Value Owner::*> {
+  using OwnerType = Owner;
+  using ValueType = Value;
+};
+
+template <auto kField>
+  requires std::is_member_object_pointer_v<decltype(kField)>
+struct TunableSpin {
+  using Group = MemberPointerTraits<decltype(kField)>::OwnerType;
+  using Value = MemberPointerTraits<decltype(kField)>::ValueType;
+
+  static constexpr Value kDefault = Group{}.*kField;
+
+  std::string_view name;
+  int min;
+  int max;
+
+  [[nodiscard]] constexpr bool IsConsistent() const {
+    return std::in_range<Value>(min) && std::in_range<Value>(max) &&
+           min <= kDefault && kDefault <= max;
+  }
+
+  [[nodiscard]] std::unique_ptr<SpinOption> MakeOption() const {
+    return std::make_unique<SpinOption>(
+        std::string{name}, kDefault, min, max, [](const int value) {
+          Settings::current<Group>.*kField = static_cast<Value>(value);
+        });
+  }
+};
+
 struct EngineOptions {
   EngineOptions() {
     auto threads = std::make_unique<SpinOption>("Threads", 1, 1, 256);
@@ -328,93 +366,11 @@ struct EngineOptions {
         [](const int value) {
           Settings::EvaluationParameters::nnue_scale = value;
         }));
-    options.emplace_back(
-        std::make_unique<SpinOption>("RFPDepth", 5, 1, 8, [](const int value) {
-          Settings::PruneParameters::RFPSettings::kDepthLimit =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "RFPThreshold", 100, 25, 200, [](const int value) {
-          Settings::PruneParameters::RFPSettings::kThreshold = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "NMPReduction",
-        Settings::PruneParameters::NMPSettings::kNullMoveReduction, 2, 10,
-        [](const int value) {
-          Settings::PruneParameters::NMPSettings::kNullMoveReduction = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "IIRBaseDepth", 2, 1, 8, [](const int value) {
-          Settings::PruneParameters::IIRSettings::kBaseLimit =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "IIRCutPenalty", 1, 0, 4, [](const int value) {
-          Settings::PruneParameters::IIRSettings::kCutNodePenalty =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "IIRReduction", 1, 1, 3, [](const int value) {
-          Settings::PruneParameters::IIRSettings::kReduction =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(
-        std::make_unique<SpinOption>("LMRDepth", 3, 2, 8, [](const int value) {
-          Settings::PruneParameters::LMRSettings::kDepthLimit = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "LMRInCheckPenalty", 1, 0, 3, [](const int value) {
-          Settings::PruneParameters::LMRSettings::kUnderCheckReductionPenalty =
-              value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "LMRGivesCheckPenalty", 2, 0, 3, [](const int value) {
-          Settings::PruneParameters::LMRSettings::kDoingCheckReductionPenalty =
-              value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "LMRCutNode", 2, 0, 4, [](const int value) {
-          Settings::PruneParameters::LMRSettings::kCutNodeReduction = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "LMRHistoryDivisor", 13000, 1000, 100000, [](const int value) {
-          Settings::PruneParameters::LMRSettings::kHistoryDivisor = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "FutilityDepth", 6, 0, 10, [](const int value) {
-          Settings::PruneParameters::FutilitySettings::kDepthLimit =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "FutilityBase", 90, 0, 400, [](const int value) {
-          Settings::PruneParameters::FutilitySettings::kBaseMargin = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "FutilityMargin", 60, 10, 300, [](const int value) {
-          Settings::PruneParameters::FutilitySettings::kDepthMargin = value;
-        }));
-    options.emplace_back(
-        std::make_unique<SpinOption>("LMPDepth", 8, 0, 12, [](const int value) {
-          Settings::PruneParameters::LMPSettings::kDepthLimit =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(
-        std::make_unique<SpinOption>("LMPBase", 3, 1, 20, [](const int value) {
-          Settings::PruneParameters::LMPSettings::kBaseCount = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "SEEPruneDepth", 8, 0, 12, [](const int value) {
-          Settings::PruneParameters::SEEPruningSettings::kDepthLimit =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "SEEQuietMargin", 60, 0, 200, [](const int value) {
-          Settings::PruneParameters::SEEPruningSettings::kQuietMargin = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "SEENoisyMargin", 20, 0, 200, [](const int value) {
-          Settings::PruneParameters::SEEPruningSettings::kNoisyMargin = value;
-        }));
+    std::apply(
+        [this](const auto&... tunables) {
+          (options.emplace_back(tunables.MakeOption()), ...);
+        },
+        kSearchTunables);
     AddMaterialOptions();
     AddPawnOptions();
     AddMobilityOptions();
@@ -466,6 +422,40 @@ struct EngineOptions {
   }
 
  private:
+  using RFP = Settings::PruneParameters::RFPSettings;
+  using NMP = Settings::PruneParameters::NMPSettings;
+  using IIR = Settings::PruneParameters::IIRSettings;
+  using LMR = Settings::PruneParameters::LMRSettings;
+  using Futility = Settings::PruneParameters::FutilitySettings;
+  using LMP = Settings::PruneParameters::LMPSettings;
+  using SEE = Settings::PruneParameters::SEEPruningSettings;
+  static constexpr std::tuple kSearchTunables{
+      TunableSpin<&RFP::depth_limit>{"RFPDepth", 1, 8},
+      TunableSpin<&RFP::threshold>{"RFPThreshold", 25, 200},
+      TunableSpin<&NMP::null_move_reduction>{"NMPReduction", 2, 10},
+      TunableSpin<&IIR::base_limit>{"IIRBaseDepth", 1, 8},
+      TunableSpin<&IIR::cut_node_penalty>{"IIRCutPenalty", 0, 4},
+      TunableSpin<&IIR::reduction>{"IIRReduction", 1, 3},
+      TunableSpin<&LMR::depth_limit>{"LMRDepth", 2, 8},
+      TunableSpin<&LMR::under_check_reduction_penalty>{"LMRInCheckPenalty", 0,
+                                                       3},
+      TunableSpin<&LMR::doing_check_reduction_penalty>{"LMRGivesCheckPenalty",
+                                                       0, 3},
+      TunableSpin<&LMR::cut_node_reduction>{"LMRCutNode", 0, 4},
+      TunableSpin<&LMR::history_divisor>{"LMRHistoryDivisor", 1000, 100000},
+      TunableSpin<&Futility::depth_limit>{"FutilityDepth", 0, 10},
+      TunableSpin<&Futility::base_margin>{"FutilityBase", 0, 400},
+      TunableSpin<&Futility::depth_margin>{"FutilityMargin", 10, 300},
+      TunableSpin<&LMP::depth_limit>{"LMPDepth", 0, 12},
+      TunableSpin<&LMP::base_count>{"LMPBase", 1, 20},
+      TunableSpin<&SEE::depth_limit>{"SEEPruneDepth", 0, 12},
+      TunableSpin<&SEE::quiet_margin>{"SEEQuietMargin", 0, 200},
+      TunableSpin<&SEE::noisy_margin>{"SEENoisyMargin", 0, 200},
+  };
+  static_assert(std::apply(
+      [](const auto&... tunables) { return (tunables.IsConsistent() && ...); },
+      kSearchTunables));
+
   StringOption* tablebase_path_{};
   StringOption* eval_file_{};
   StringOption* eval_file_small_{};

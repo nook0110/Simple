@@ -93,28 +93,24 @@ TEST(StaticEvalHistory, SupportsMaximumPly) {
   EXPECT_TRUE(last.opponent_worsening);
 }
 
-TEST(EvaluationTrendPruning, ReverseFutilityScalesBothDeductions) {
-  using RFP = Settings::PruneParameters::RFPSettings;
-  EXPECT_EQ(RFP::Margin(5, false, false, false), 500);
-  EXPECT_EQ(RFP::Margin(5, false, true, false), 300);
-  EXPECT_EQ(RFP::Margin(5, false, false, true), 467);
-  EXPECT_EQ(RFP::Margin(5, false, true, true), 267);
-  EXPECT_EQ(RFP::Margin(5, true, false, false), 385);
-  EXPECT_EQ(RFP::Margin(5, true, true, false), 231);
-  EXPECT_EQ(RFP::Margin(5, true, false, true), 360);
-  EXPECT_EQ(RFP::Margin(5, true, true, true), 206);
-  EXPECT_EQ(RFP::Margin(1, false, true, true), -133);
-}
+using RFP = Settings::PruneParameters::RFPSettings;
+static_assert(RFP{}.Margin(5, false, false, false) == 500);
+static_assert(RFP{}.Margin(5, false, true, false) == 300);
+static_assert(RFP{}.Margin(5, false, false, true) == 467);
+static_assert(RFP{}.Margin(5, false, true, true) == 267);
+static_assert(RFP{}.Margin(5, true, false, false) == 385);
+static_assert(RFP{}.Margin(5, true, true, false) == 231);
+static_assert(RFP{}.Margin(5, true, false, true) == 360);
+static_assert(RFP{}.Margin(5, true, true, true) == 206);
+static_assert(RFP{}.Margin(1, false, true, true) == -133);
 
-TEST(EvaluationTrendPruning, LateMoveCountUsesStockfishIntegerDivision) {
-  using LMP = Settings::PruneParameters::LMPSettings;
-  EXPECT_EQ(LMP::MoveCount(1, false), 2);
-  EXPECT_EQ(LMP::MoveCount(1, true), 4);
-  EXPECT_EQ(LMP::MoveCount(2, false), 3);
-  EXPECT_EQ(LMP::MoveCount(2, true), 7);
-  EXPECT_EQ(LMP::MoveCount(8, false), 33);
-  EXPECT_EQ(LMP::MoveCount(8, true), 67);
-}
+using LMP = Settings::PruneParameters::LMPSettings;
+static_assert(LMP{}.MoveCount(1, false) == 2);
+static_assert(LMP{}.MoveCount(1, true) == 4);
+static_assert(LMP{}.MoveCount(2, false) == 3);
+static_assert(LMP{}.MoveCount(2, true) == 7);
+static_assert(LMP{}.MoveCount(8, false) == 33);
+static_assert(LMP{}.MoveCount(8, true) == 67);
 
 using LMR = Settings::PruneParameters::LMRSettings;
 static_assert(LMR::ScaleReduction(4.0, true) == 4.0);
@@ -437,11 +433,12 @@ TEST(StaticEvalPolicy, NullSearchInvalidatesStaleQuietContext) {
     EXPECT_FALSE(context.parent_eval);
     return true;
   }};
-  const auto rfp_limit = Settings::PruneParameters::RFPSettings::kDepthLimit;
-  Settings::PruneParameters::RFPSettings::kDepthLimit = 0;
+  auto &rfp = Settings::current<RFP>;
+  const auto rfp_limit = rfp.depth_limit;
+  rfp.depth_limit = 0;
   EXPECT_FALSE((SearchNode<NodeType::kCut, PolicyStopCondition>{
       searcher, {12, 6, beta - 1, beta, 1}, stop}()));
-  Settings::PruneParameters::RFPSettings::kDepthLimit = rfp_limit;
+  rfp.depth_limit = rfp_limit;
   EXPECT_TRUE(observed);
   EXPECT_EQ(searcher.GetPosition().GetHash(), parent.GetHash());
 }

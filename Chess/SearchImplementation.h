@@ -256,7 +256,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
       using NMPSettings = Settings::PruneParameters::NMPSettings;
       const int reduction =
-          NMPSettings::kNullMoveReduction +
+          Settings::current<NMPSettings>.null_move_reduction +
           remaining_depth / NMPSettings::kDepthDivisor +
           std::max((GetStaticEval() - beta) /
                        NMPSettings::kEvalDivisor.RoundedToEngine(),
@@ -310,15 +310,14 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   // Internal Iterative Reduction
   if constexpr (node_type == NodeType::kPV || node_type == NodeType::kCut) {
+    const auto &iir = Settings::current<Settings::PruneParameters::IIRSettings>;
     if ((!iteration_status_.tt_info ||
          !iteration_status_.tt_info->move.IsValid()) &&
-        remaining_depth > Settings::PruneParameters::IIRSettings::kReduction &&
+        remaining_depth > iir.reduction &&
         remaining_depth >=
-            Settings::PruneParameters::IIRSettings::kBaseLimit +
-                (node_type == NodeType::kCut
-                     ? Settings::PruneParameters::IIRSettings::kCutNodePenalty
-                     : 0)) {
-      remaining_depth -= Settings::PruneParameters::IIRSettings::kReduction;
+            iir.base_limit +
+                (node_type == NodeType::kCut ? iir.cut_node_penalty : 0)) {
+      remaining_depth -= iir.reduction;
     }
   }
 
@@ -568,9 +567,10 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
   auto &current_position = GetCurrentPosition();
   auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
 
+  using LMRSettings = Settings::PruneParameters::LMRSettings;
+  const auto &lmr = Settings::current<LMRSettings>;
   const bool lmr_conditions_met =
-      Settings::PruneParameters::LMRSettings::kEnabled &&
-      remaining_depth >= Settings::PruneParameters::LMRSettings::kDepthLimit;
+      LMRSettings::kEnabled && remaining_depth >= lmr.depth_limit;
 
   const bool move_pruning_allowed =
       ply != 0 && !position_info_.is_under_check;
@@ -615,28 +615,26 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     int R = 0;
     if (lmr_conditions_met &&
         move_picker_.GetCurrentStage() >= MovePicker::Stage::kQuiet) {
-      using LMRSettings = Settings::PruneParameters::LMRSettings;
       double reduction_scale =
           std::log(remaining_depth) * std::log(move_picker_.MoveCount()) / 3.14;
       if (!Score::IsDecisive(alpha)) {
         reduction_scale = LMRSettings::ScaleReduction(
             reduction_scale, evaluation_trend_.improving);
       }
-      double reduction = 0.99 + reduction_scale -
-                         (position_info_.is_under_check
-                              ? LMRSettings::kUnderCheckReductionPenalty
-                              : 0) -
-                         (current_position.IsUnderCheck()
-                              ? LMRSettings::kDoingCheckReductionPenalty
-                              : 0);
+      double reduction =
+          0.99 + reduction_scale -
+          (position_info_.is_under_check ? lmr.under_check_reduction_penalty
+                                         : 0) -
+          (current_position.IsUnderCheck() ? lmr.doing_check_reduction_penalty
+                                           : 0);
       if constexpr (node_type == NodeType::kCut) {
-        reduction += LMRSettings::kCutNodeReduction;
+        reduction += lmr.cut_node_reduction;
       }
       if constexpr (kIsPrincipalVariation) {
         reduction -= 1;
       }
       reduction -= static_cast<double>(quiet_score) /
-                   static_cast<double>(LMRSettings::kHistoryDivisor);
+                   static_cast<double>(lmr.history_divisor);
       R = std::clamp(static_cast<int>(reduction), 0,
                      static_cast<int>(remaining_depth - 1));
     }
@@ -791,9 +789,9 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
 
   if constexpr (kIsPrincipalVariation) return false;
 
+  const auto &rfp = Settings::current<RFPSettings>;
   if (position_info_.is_under_check ||
-      state_.remaining_depth > RFPSettings::kDepthLimit ||
-      Score::IsLoss(state_.beta)) {
+      state_.remaining_depth > rfp.depth_limit || Score::IsLoss(state_.beta)) {
     return false;
   }
 
@@ -804,12 +802,11 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
     return false;
   }
 
-  return eval >= state_.beta +
-                     RFPSettings::Margin(state_.remaining_depth,
-                                         node_type == NodeType::kCut &&
-                                             !iteration_status_.tt_info,
-                                         evaluation_trend_.improving,
-                                         evaluation_trend_.opponent_worsening);
+  return eval >= state_.beta + rfp.Margin(state_.remaining_depth,
+                                          node_type == NodeType::kCut &&
+                                              !iteration_status_.tt_info,
+                                          evaluation_trend_.improving,
+                                          evaluation_trend_.opponent_worsening);
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -818,12 +815,12 @@ bool SearchNode<node_type, ExitCondition>::CanLateMovePrune() const {
   using LMPSettings = Settings::PruneParameters::LMPSettings;
   if constexpr (!LMPSettings::kEnabled) return false;
 
+  const auto &lmp = Settings::current<LMPSettings>;
   const int depth = state_.remaining_depth;
-  if (depth > LMPSettings::kDepthLimit) return false;
+  if (depth > lmp.depth_limit) return false;
 
   const auto move_count = move_picker_.MoveCount();
-  return move_count >=
-         LMPSettings::MoveCount(depth, evaluation_trend_.improving);
+  return move_count >= lmp.MoveCount(depth, evaluation_trend_.improving);
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -832,11 +829,12 @@ bool SearchNode<node_type, ExitCondition>::CanFutilityPrune() const {
   using FutilitySettings = Settings::PruneParameters::FutilitySettings;
   if constexpr (!FutilitySettings::kEnabled) return false;
 
+  const auto &futility = Settings::current<FutilitySettings>;
   const Eval depth = state_.remaining_depth;
-  if (depth > FutilitySettings::kDepthLimit) return false;
+  if (depth > futility.depth_limit) return false;
 
-  return GetStaticEval() + FutilitySettings::kBaseMargin +
-             FutilitySettings::kDepthMargin * depth <=
+  return GetStaticEval() + futility.base_margin +
+             futility.depth_margin * depth <=
          state_.alpha;
 }
 
@@ -847,12 +845,12 @@ bool SearchNode<node_type, ExitCondition>::PassesSEEPruning(
   using SEEPruningSettings = Settings::PruneParameters::SEEPruningSettings;
   if constexpr (!SEEPruningSettings::kEnabled) return true;
 
+  const auto &see = Settings::current<SEEPruningSettings>;
   const Eval depth = state_.remaining_depth;
-  if (depth > SEEPruningSettings::kDepthLimit) return true;
+  if (depth > see.depth_limit) return true;
 
   const Eval threshold =
-      is_quiet ? -SEEPruningSettings::kQuietMargin * depth
-               : -SEEPruningSettings::kNoisyMargin * depth * depth;
+      is_quiet ? -see.quiet_margin * depth : -see.noisy_margin * depth * depth;
   return searcher_.GetPosition().StaticExchangeEvaluation(move, threshold);
 }
 

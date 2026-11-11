@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <ostream>
+#include <type_traits>
 
 #include "Evaluation.h"
 #include "Score.h"
@@ -202,17 +203,18 @@ struct Settings {
   struct PruneParameters {
     struct RFPSettings {
       static constexpr bool kEnabled = true;
-      inline static Depth kDepthLimit = 5;
-      inline static Eval kThreshold = 100;
       static constexpr Eval kNoTtCutNodeDiscount = 23;
       static constexpr int kImprovingDepthDeduction = 2;
       static constexpr int kOpponentWorseningDivisor = 3;
 
-      [[nodiscard]] static Eval Margin(Depth depth, bool no_tt_cut_node,
-                                       bool improving,
-                                       bool opponent_worsening) {
+      Depth depth_limit = 5;
+      Eval threshold = 100;
+
+      [[nodiscard]] constexpr Eval Margin(Depth depth, bool no_tt_cut_node,
+                                          bool improving,
+                                          bool opponent_worsening) const {
         const Eval multiplier =
-            kThreshold - kNoTtCutNodeDiscount * no_tt_cut_node;
+            threshold - kNoTtCutNodeDiscount * no_tt_cut_node;
         return multiplier * depth -
                improving * multiplier * kImprovingDepthDeduction -
                opponent_worsening * multiplier / kOpponentWorseningDivisor;
@@ -226,8 +228,9 @@ struct Settings {
       static constexpr SfMargin kMinBeta{-2000};
       static constexpr SfMargin kEvalDivisor{256};
       static constexpr int kDepthDivisor = 3;
-      inline static int kNullMoveReduction = 7;
       static constexpr Depth kVerificationDepth = 16;
+
+      int null_move_reduction = 7;
 
       [[nodiscard]] static constexpr SfMargin StaticEvalMargin(Depth depth,
                                                                bool improving) {
@@ -236,9 +239,9 @@ struct Settings {
       }
     };
     struct IIRSettings {
-      inline static Depth kBaseLimit = 2;
-      inline static Depth kCutNodePenalty = 1;
-      inline static Depth kReduction = 1;
+      Depth base_limit = 2;
+      Depth cut_node_penalty = 1;
+      Depth reduction = 1;
     };
     struct ProbCutSettings {
       static constexpr Depth kMinDepth = 5;
@@ -249,12 +252,13 @@ struct Settings {
     };
     struct LMRSettings {
       static constexpr bool kEnabled = true;
-      inline static size_t kDepthLimit = 3;
-      inline static int kUnderCheckReductionPenalty = 1;
-      inline static int kDoingCheckReductionPenalty = 2;
-      inline static int kCutNodeReduction = 2;
-      inline static int kHistoryDivisor = 13000;
       static constexpr double kNotImprovingReductionScale = 191.0 / 512;
+
+      Depth depth_limit = 3;
+      int under_check_reduction_penalty = 1;
+      int doing_check_reduction_penalty = 2;
+      int cut_node_reduction = 2;
+      int history_divisor = 13000;
 
       [[nodiscard]] static constexpr double ScaleReduction(
           double reduction_scale, bool improving) {
@@ -264,32 +268,28 @@ struct Settings {
     };
     struct FutilitySettings {
       static constexpr bool kEnabled = true;
-      inline static Depth kDepthLimit = 6;
-      inline static Eval kBaseMargin = 90;
-      inline static Eval kDepthMargin = 60;
+
+      Depth depth_limit = 6;
+      Eval base_margin = 90;
+      Eval depth_margin = 60;
     };
     struct LMPSettings {
       static constexpr bool kEnabled = true;
-      inline static Depth kDepthLimit = 8;
-      inline static int kBaseCount = 3;
 
-      [[nodiscard]] static int MoveCount(Depth depth, bool improving) {
-        return (kBaseCount + depth * depth) / (2 - improving);
+      Depth depth_limit = 8;
+      int base_count = 3;
+
+      [[nodiscard]] constexpr int MoveCount(Depth depth, bool improving) const {
+        return (base_count + depth * depth) / (2 - improving);
       }
     };
     struct SEEPruningSettings {
       static constexpr bool kEnabled = true;
-      inline static Depth kDepthLimit = 8;
-      inline static Eval kQuietMargin = 60;
-      inline static Eval kNoisyMargin = 20;
+
+      Depth depth_limit = 8;
+      Eval quiet_margin = 60;
+      Eval noisy_margin = 20;
     };
-    static constexpr RFPSettings kRFPSettings = {};
-    static constexpr NMPSettings kNMPSettings = {};
-    static constexpr IIRSettings kIIRSettings = {};
-    static constexpr LMRSettings kLMRSettings = {};
-    static constexpr FutilitySettings kFutilitySettings = {};
-    static constexpr LMPSettings kLMPSettings = {};
-    static constexpr SEEPruningSettings kSEEPruningSettings = {};
   };
   struct SearchParameters {
     static constexpr SfMargin kImprovingBetaMargin{0};
@@ -334,6 +334,10 @@ struct Settings {
   };
   static constexpr PruneParameters kPruneParameters = {};
   static constexpr SearchParameters kSearchParameters = {};
+
+  template <class Group>
+    requires(!std::is_empty_v<Group>)
+  static constinit inline Group current{};
 };
 }  // namespace SimpleChessEngine
 
