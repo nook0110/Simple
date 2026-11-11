@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdlib>
@@ -187,7 +188,7 @@ class TranspositionTable {
     return static_cast<std::uint64_t>(node.move.Raw()) |
            (static_cast<std::uint64_t>(score) << 16) |
            (static_cast<std::uint64_t>(static_eval) << 34) |
-           (static_cast<std::uint64_t>(node.depth & 0x3F) << 48) |
+           (static_cast<std::uint64_t>(std::min<Depth>(node.depth, 63)) << 48) |
            (static_cast<std::uint64_t>(node.bound) << 54) |
            (static_cast<std::uint64_t>(node.age) << 56);
   }
