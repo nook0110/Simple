@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstdlib>
@@ -84,6 +85,27 @@ class Network {
     RefreshFromScratch<Player::kWhite>(position, *accumulator);
     RefreshFromScratch<Player::kBlack>(position, *accumulator);
     return Propagate(position, *accumulator);
+  }
+
+  bool VerifyAccumulators(const Position& position, AccumulatorStack& stack,
+                          std::uint32_t generation) const {
+    Evaluate(position, stack, generation);
+    const auto& actual = stack.template Accumulators<kL1>()[stack.Size() - 1];
+    auto expected = std::make_unique<Accumulator<kL1>>();
+    RefreshFromScratch<Player::kWhite>(position, *expected);
+    RefreshFromScratch<Player::kBlack>(position, *expected);
+    for (std::size_t side = 0; side < 2; ++side) {
+      if (!actual.computed[side] ||
+          !std::equal(actual.accumulation[side],
+                      actual.accumulation[side] + kL1,
+                      expected->accumulation[side]) ||
+          !std::equal(actual.psqt_accumulation[side],
+                      actual.psqt_accumulation[side] + kPsqtBuckets,
+                      expected->psqt_accumulation[side])) {
+        return false;
+      }
+    }
+    return true;
   }
 
  private:
@@ -385,5 +407,20 @@ NetworkOutput EvaluateFromScratch(const Position& position) {
   return SelectNetwork(position, [&](const auto& network) {
     return network.EvaluateFromScratch(position);
   });
+}
+
+bool VerifyAccumulators(const Position& position, AccumulatorStack& stack) {
+  stack.Synchronize(registry.generation);
+  switch (registry.type) {
+    case NetworkType::kSmall:
+      return registry.small->VerifyAccumulators(position, stack,
+                                                registry.generation);
+    case NetworkType::kBig:
+      return registry.big->VerifyAccumulators(position, stack,
+                                              registry.generation);
+    case NetworkType::kNone:
+      return true;
+  }
+  return false;
 }
 }  // namespace SimpleChessEngine::Nnue

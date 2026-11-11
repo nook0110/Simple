@@ -3,6 +3,9 @@ project(SimpleChessEngine LANGUAGES C CXX)
 
 # Добавляем опцию для включения/выключения тестов
 option(BUILD_TESTS "Build tests" OFF)
+option(SCE_TEST_TABLEBASE "Download tablebase fixtures and run tablebase UCI test" ON)
+option(SCE_WARNINGS_AS_ERRORS "Treat project warnings as errors" OFF)
+option(SCE_SANITIZE "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 set(SCE_TT_SIZE_MB 640 CACHE STRING "Shared transposition table size in MiB")
 set(SCE_EVALFILE "nn-37f18f62d772.nnue" CACHE STRING "Default NNUE network file")
 set(SCE_EVALFILE_SMALL "nn-37f18f62d772.nnue" CACHE STRING "Default small NNUE network file")
@@ -15,6 +18,10 @@ add_compile_definitions(SCE_EVALFILE="${SCE_EVALFILE}")
 add_compile_definitions(SCE_EVALFILE_SMALL="${SCE_EVALFILE_SMALL}")
 
 add_compile_options(-Wall -Wextra -Wpedantic)
+if(SCE_SANITIZE)
+  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address,undefined)
+endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_definitions(NDEBUG)
   add_compile_options(-Ofast -mtune=native -march=native -fno-stack-protector)
@@ -54,14 +61,26 @@ add_executable(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME} PRIVATE chess_lib)
 
+if(SCE_WARNINGS_AS_ERRORS)
+  target_compile_options(chess_lib PRIVATE -Werror)
+  target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
+endif()
+
 add_executable(SCE_tbprobe Tools/TablebaseProbe.cpp)
 target_link_libraries(SCE_tbprobe PRIVATE chess_lib)
+if(SCE_WARNINGS_AS_ERRORS)
+  target_compile_options(SCE_tbprobe PRIVATE -Werror)
+endif()
 
 add_executable(SCE_tbbench Tools/TablebaseBenchmark.cpp)
 target_link_libraries(SCE_tbbench PRIVATE chess_lib)
+if(SCE_WARNINGS_AS_ERRORS)
+  target_compile_options(SCE_tbbench PRIVATE -Werror)
+endif()
 
 # Тесты включаются только если BUILD_TESTS=ON
 if(BUILD_TESTS)
+  if(SCE_TEST_TABLEBASE)
     set(SYZYGY_FIXTURE_DIR ${CMAKE_CURRENT_BINARY_DIR}/syzygy-fixture)
     file(MAKE_DIRECTORY ${SYZYGY_FIXTURE_DIR})
     file(DOWNLOAD
@@ -76,6 +95,7 @@ if(BUILD_TESTS)
         EXPECTED_HASH SHA256=71ea9444fa5bd42897d781a0c356975ea6f23e0f65a4254e470897031c161c8c
         TLS_VERIFY ON
     )
+  endif()
     FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
@@ -93,6 +113,9 @@ if(BUILD_TESTS)
         gtest_main 
         chess_lib  # Используем основную библиотеку
     )
+    if(SCE_WARNINGS_AS_ERRORS)
+        target_compile_options(SCE_tests PRIVATE -Werror)
+    endif()
 
     # Настройки покрытия только для тестов
     if(CMAKE_BUILD_TYPE STREQUAL "Coverage" AND
@@ -131,14 +154,16 @@ if(BUILD_TESTS)
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Tests/texel_qscore_test.py
                 --engine $<TARGET_FILE:SimpleChessEngine>
     )
-    add_test(
-        NAME SyzygyTablebaseUciLifecycle
-        COMMAND ${Python3_EXECUTABLE}
-                ${CMAKE_SOURCE_DIR}/Tests/tablebase_uci_test.py
-                --engine $<TARGET_FILE:SimpleChessEngine>
-                --probe $<TARGET_FILE:SCE_tbprobe>
-                --tablebase ${SYZYGY_FIXTURE_DIR}
-    )
+    if(SCE_TEST_TABLEBASE)
+        add_test(
+            NAME SyzygyTablebaseUciLifecycle
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_SOURCE_DIR}/Tests/tablebase_uci_test.py
+                    --engine $<TARGET_FILE:SimpleChessEngine>
+                    --probe $<TARGET_FILE:SCE_tbprobe>
+                    --tablebase ${SYZYGY_FIXTURE_DIR}
+        )
+    endif()
     add_test(
         NAME SyzygySearchRegression
         COMMAND ${Python3_EXECUTABLE}
