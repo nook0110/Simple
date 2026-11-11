@@ -15,9 +15,6 @@
 #include "Utility.h"
 
 namespace SimpleChessEngine {
-namespace Tablebase {
-class PositionBuilder;
-}
 /**
  * \brief Class that represents a chess position.
  *
@@ -32,7 +29,6 @@ class PositionBuilder;
 class Position {
  public:
   friend struct PositionFactory;
-  friend class Tablebase::PositionBuilder;
   /**
    * \brief Struct to hold evaluation data for the position.
    *
