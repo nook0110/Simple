@@ -83,12 +83,16 @@ class SearchThread {
 
   void Stop();
   void NewGame() {
+    StopThread();
     original_time_adjust_ = -1;
     engine_.NewGame();
+    for (auto& helper : helper_engines_) helper->NewGame();
   }
   void SetThreadCount(std::size_t thread_count) {
     StopThread();
-    thread_count_ = std::max<std::size_t>(1, thread_count);
+    const auto new_count = std::max<std::size_t>(1, thread_count);
+    if (new_count != thread_count_) helper_engines_.clear();
+    thread_count_ = new_count;
   }
   [[nodiscard]] bool SetTablebasePath(const std::string& path);
 
@@ -321,6 +325,10 @@ struct EngineOptions {
         std::make_unique<StringOption>("EvalFile", Nnue::kDefaultEvalFile);
     eval_file_ = eval_file.get();
     options.emplace_back(std::move(eval_file));
+    auto eval_file_small = std::make_unique<StringOption>(
+        "EvalFileSmall", Nnue::kDefaultEvalFileSmall);
+    eval_file_small_ = eval_file_small.get();
+    options.emplace_back(std::move(eval_file_small));
     options.emplace_back(std::make_unique<SpinOption>(
         "NnueScale", Settings::EvaluationParameters::nnue_scale, 0, 4096,
         [](const int value) {
@@ -336,7 +344,9 @@ struct EngineOptions {
           Settings::PruneParameters::RFPSettings::kThreshold = value;
         }));
     options.emplace_back(std::make_unique<SpinOption>(
-        "NMPReduction", 3, 2, 5, [](const int value) {
+        "NMPReduction",
+        Settings::PruneParameters::NMPSettings::kNullMoveReduction, 2, 10,
+        [](const int value) {
           Settings::PruneParameters::NMPSettings::kNullMoveReduction = value;
         }));
     options.emplace_back(std::make_unique<SpinOption>(
@@ -457,24 +467,27 @@ struct EngineOptions {
   [[nodiscard]] const std::string& GetEvalFile() const {
     return eval_file_->GetValue();
   }
+  [[nodiscard]] const std::string& GetEvalFileSmall() const {
+    return eval_file_small_->GetValue();
+  }
 
  private:
   StringOption* tablebase_path_{};
   StringOption* eval_file_{};
+  StringOption* eval_file_small_{};
   void AddPsqtAdjustmentOptions() {
-    constexpr std::array piece_names = {"Knight", "Bishop", "Rook", "Queen",
-                                        "King"};
-    for (size_t piece_offset = 0; piece_offset < piece_names.size();
-         ++piece_offset) {
-      const auto piece = static_cast<Piece>(
-          static_cast<size_t>(Piece::kKnight) + piece_offset);
+    constexpr std::array piece_names{
+        std::pair{Piece::kKnight, "Knight"}, std::pair{Piece::kBishop, "Bishop"},
+        std::pair{Piece::kRook, "Rook"}, std::pair{Piece::kQueen, "Queen"},
+        std::pair{Piece::kKing, "King"}};
+    for (const auto& [piece, name] : piece_names) {
       for (size_t rank = 0; rank < 8; ++rank) {
         for (size_t file = 0; file < 4; ++file) {
           const std::string square =
               std::string{static_cast<char>('A' + file)} +
               std::to_string(rank + 1);
           options.emplace_back(std::make_unique<SpinOption>(
-              std::string{piece_names[piece_offset]} + "PSQT" + square + "MG",
+              std::string{name} + "PSQT" + square + "MG",
               Settings::EvaluationParameters::psqt_adjustment[piece][rank]
                                                              [file]
                                                                  .eval[0],
@@ -483,7 +496,7 @@ struct EngineOptions {
                     piece, rank, file, GamePhase::kMiddleGame, value);
               }));
           options.emplace_back(std::make_unique<SpinOption>(
-              std::string{piece_names[piece_offset]} + "PSQT" + square + "EG",
+              std::string{name} + "PSQT" + square + "EG",
               Settings::EvaluationParameters::psqt_adjustment[piece][rank]
                                                              [file]
                                                                  .eval[1],
@@ -683,6 +696,7 @@ class UciChessEngine {
                           std::ostream& o_stream = std::cout)
       : i_stream_(i_stream), o_stream_(o_stream), search_thread_(o_stream) {
     (void)search_thread_.SetTablebasePath(options_.GetTablebasePath());
+    LoadEvalFileSmall();
   }
 
   ~UciChessEngine();
@@ -709,6 +723,7 @@ class UciChessEngine {
   void ParseNnueEvaluate() const;
   void ParseQuiescenceEvaluate() const;
   void LoadEvalFile() const;
+  void LoadEvalFileSmall() const;
   void ParseGo(std::stringstream command);
   void ParsePonderhit(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
@@ -833,6 +848,23 @@ inline void UciChessEngine::ParseSetOption(std::stringstream command) {
   if (option->GetName() == "EvalFile") {
     LoadEvalFile();
   }
+  if (option->GetName() == "EvalFileSmall") {
+    LoadEvalFileSmall();
+  }
+}
+
+inline void UciChessEngine::LoadEvalFileSmall() const {
+  const auto& path = options_.GetEvalFileSmall();
+  if (path.empty() || path == "<empty>" || EqualsIgnoreCase(path, "none")) {
+    Nnue::UnloadSmall();
+    Send("info string small NNUE disabled");
+    return;
+  }
+  if (Nnue::LoadSmall(path)) {
+    Send("info string small NNUE evaluation using " + path);
+    return;
+  }
+  Send("info string failed to load small NNUE file " + path);
 }
 
 inline void UciChessEngine::LoadEvalFile() const {
@@ -843,6 +875,7 @@ inline void UciChessEngine::LoadEvalFile() const {
     return;
   }
   if (Nnue::Load(path)) {
+    LoadEvalFileSmall();
     Send("info string NNUE evaluation using " + Nnue::Description());
     return;
   }
@@ -1125,6 +1158,7 @@ inline bool SearchThread::SetTablebasePath(const std::string& path) {
   if (path == tablebase_path_ && tablebase_) return true;
   StopThread();
   engine_.SetTablebase({});
+  for (auto& helper : helper_engines_) helper->SetTablebase({});
   tablebase_.reset();
   tablebase_path_ = "<empty>";
   if (path.empty() || path == "<empty>") {
@@ -1136,6 +1170,7 @@ inline bool SearchThread::SetTablebasePath(const std::string& path) {
   tablebase_ = std::move(tablebase);
   tablebase_path_ = path;
   engine_.SetTablebase(tablebase_);
+  for (auto& helper : helper_engines_) helper->SetTablebase(tablebase_);
   return true;
 }
 
@@ -1169,10 +1204,14 @@ inline void SearchThread::Start(const Info& info) {
 
 inline ChessEngine& SearchThread::AddHelperEngine(const Info& info,
                                                   const std::size_t worker) {
-  helper_engines_.push_back(std::make_unique<ChessEngine>(
-      info.position, std::cout, transposition_table_, false,
-      static_cast<Depth>(1 + worker % 2), tablebase_));
-  return *helper_engines_.back();
+  if (helper_engines_.size() < worker) {
+    helper_engines_.push_back(std::make_unique<ChessEngine>(
+        info.position, std::cout, transposition_table_, false,
+        static_cast<Depth>(1 + worker % 2), tablebase_));
+  } else {
+    helper_engines_[worker - 1]->SetPosition(info.position);
+  }
+  return *helper_engines_[worker - 1];
 }
 
 inline void SearchThread::StartPonderHelpers(const Info& info) {
@@ -1199,7 +1238,6 @@ inline void SearchThread::StopThread() {
     if (helper_thread.joinable()) helper_thread.join();
   }
   helper_threads_.clear();
-  helper_engines_.clear();
   helper_pondering_.clear();
   pondering_ = std::nullopt;
 }

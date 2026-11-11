@@ -52,13 +52,18 @@ struct TaperedEval {
   return copy;
 }
 
-constexpr ByPiece<TaperedEval> kPieceValues = {{{{0, 0},
-                                                                {82, 94},
-                                                                {337, 281},
-                                                                {365, 297},
-                                                                {477, 512},
-                                                                {1025, 936},
-                                                                {0, 0}}}};
+inline constexpr ByPiece<TaperedEval> kPieceValues = {{{{0, 0},
+                                                        {82, 94},
+                                                        {337, 281},
+                                                        {365, 297},
+                                                        {477, 512},
+                                                        {1025, 936},
+                                                        {0, 0}}}};
+
+namespace Nnue {
+inline constexpr const auto& kPieceValues =
+    SimpleChessEngine::kPieceValues.values;
+}
 
 constexpr Eval kFullNonPawnMaterial =
     kPieceValues[Piece::kKnight]

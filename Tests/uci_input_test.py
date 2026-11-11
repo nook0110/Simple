@@ -6,6 +6,8 @@ import subprocess
 import sys
 
 CASES = [
+    ("disable small NNUE", ["setoption name EvalFileSmall value none"], "info string small NNUE disabled"),
+    ("small NNUE option is case insensitive", ["setoption name evalfilesmall value none"], "info string small NNUE disabled"),
     ("unknown option", ["setoption name Hash value 64"], "info string unknown option or invalid value"),
     ("option name with spaces", ["setoption name Clear Hash"], "info string unknown option or invalid value"),
     ("option name is case insensitive", ["setoption name threads value 2"], None),
