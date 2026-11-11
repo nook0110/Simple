@@ -215,9 +215,6 @@ class Position {
 
   [[nodiscard]] BitIndex GetKingSquare(Player player) const;
 
-  [[nodiscard]] BitIndex GetCastlingRookSquare(
-      Player player, CastlingSide side) const;
-
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
 
@@ -258,9 +255,6 @@ class Position {
 
   [[nodiscard]] const std::array<std::bitset<2>, kColors> &GetCastlingRights()
       const;
-
-  template <Piece piece>
-  [[nodiscard]] Bitboard GetCastlingSquares(CastlingSide side) const;
 
   [[nodiscard]] IrreversibleData GetIrreversibleData() const;
 

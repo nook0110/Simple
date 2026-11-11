@@ -549,21 +549,6 @@ Bitboard Position::GetPiecesByType(const Player player) const {
          pieces_by_type_[static_cast<size_t>(piece)];
 }
 
-template <Piece piece>
-Bitboard Position::GetCastlingSquares(CastlingSide side) const {
-  static_assert(piece == Piece::kRook || piece == Piece::kKing);
-  if constexpr (piece == Piece::kKing) {
-    return castling_squares_for_king_[static_cast<size_t>(side_to_move_)]
-                                     [static_cast<size_t>(side)];
-  }
-  if constexpr (piece == Piece::kRook) {
-    return castling_squares_for_rook_[static_cast<size_t>(side_to_move_)]
-                                     [static_cast<size_t>(side)];
-  }
-  assert(false);
-  return {};
-}
-
 Bitboard Position::GetAllPawnAttacks(const Player player) const {
   const auto us = static_cast<size_t>(player);
   const auto pawns = GetPiecesByType<Piece::kPawn>(player);
@@ -578,12 +563,6 @@ Piece Position::GetPieceAt(const BitIndex index) const {
 
 BitIndex Position::GetKingSquare(const Player player) const {
   return king_position_[static_cast<size_t>(player)];
-}
-
-BitIndex Position::GetCastlingRookSquare(Player player,
-                                         CastlingSide side) const {
-  return rook_positions_[static_cast<size_t>(player)]
-                        [static_cast<size_t>(side)];
 }
 
 bool Position::IsUnderAttack(const BitIndex square, const Player us,
