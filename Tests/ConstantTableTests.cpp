@@ -138,6 +138,9 @@ constexpr std::array kLegacyKnight = {132096ull,
                                       4679521487814656ull,
                                       9077567998918656ull};
 
+static_assert(kLegacyKing.size() == kBoardArea);
+static_assert(kLegacyKnight.size() == kBoardArea);
+
 constexpr std::array kDirections = {Compass::kNorthWest, Compass::kSouthWest,
                                     Compass::kSouthEast, Compass::kNorthEast,
                                     Compass::kNorth,     Compass::kWest,
@@ -174,7 +177,7 @@ TEST(ConstantTables, GeometryMatchesOriginalGenerators) {
     }
     for (BitIndex target = 0; target < 64; ++target) {
       EXPECT_EQ(Between(square, target), between[square][target]);
-      EXPECT_EQ(rook_between[square][target],
+      EXPECT_EQ(RookBetween(square, target),
                 rook_between_reference[square][target]);
       EXPECT_EQ(Ray(square, target), ray[square][target]);
     }
@@ -229,4 +232,30 @@ void CheckSliderSubsets() {
 TEST(ConstantTables, SliderSubsetsMatchOriginalGenerator) {
   CheckSliderSubsets<Piece::kBishop>();
   CheckSliderSubsets<Piece::kRook>();
+}
+
+TEST(ConstantTables, ZobristMatchesStandardGeneratorIncludingUnusedEntries) {
+  constexpr Hasher keys{Mt19937_64{0xb00b1e5}};
+  EXPECT_EQ(keys, kZobristKeys);
+  std::mt19937_64 expected{0xb00b1e5};
+  for (const auto& piece : keys.psqt_hash) {
+    for (const auto& color : piece) {
+      for (const auto key : color) EXPECT_EQ(key, expected());
+    }
+  }
+  for (const auto key : keys.en_croissant_hash) EXPECT_EQ(key, expected());
+  for (const auto& color : keys.cr_hash) {
+    for (const auto key : color) EXPECT_EQ(key, expected());
+  }
+  EXPECT_EQ(keys.stm_hash, expected());
+}
+
+TEST(ConstantTables, ConstexprMersenneTwisterMatchesStandardAcrossStateCycles) {
+  for (const Hash seed : {Hash{0}, Hash{0xb00b1e5}, ~Hash{0}}) {
+    Mt19937_64 actual{seed};
+    std::mt19937_64 expected{seed};
+    for (size_t i = 0; i < 5000; ++i) {
+      ASSERT_EQ(actual(), expected()) << "seed " << seed << ", output " << i;
+    }
+  }
 }

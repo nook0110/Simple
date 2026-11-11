@@ -39,33 +39,34 @@ Bitboard SimpleChessEngine::GenerateAttackMask(const BitIndex square,
   return result;
 }
 
-template <Piece sliding_piece>
-void SimpleChessEngine::InitBetween() {
-  assert(IsWeakSlidingPiece(sliding_piece));
-  for (BitIndex sq = 0; sq < static_cast<BitIndex>(kBoardArea); ++sq) {
-    for (auto direction : GetStepDelta<sliding_piece>()) {
-      Bitboard result{};
-      BitIndex temp = sq;
-      for (Bitboard step{~kEmptyBoard}; step.Any(); result |= step) {
-        if constexpr (sliding_piece == Piece::kBishop)
-          bishop_between[sq][temp] = result;
-        else
-          rook_between[sq][temp] = result;
-        step = DoShiftIfValid(temp, direction).value_or(Bitboard{});
+namespace {
+consteval GeometryTables MakeGeometryTables() {
+  GeometryTables tables{};
+  constexpr std::array directions = {Compass::kNorthWest, Compass::kSouthWest,
+                                     Compass::kSouthEast, Compass::kNorthEast,
+                                     Compass::kNorth,     Compass::kWest,
+                                     Compass::kSouth,     Compass::kEast};
+  for (BitIndex square = 0; square < static_cast<BitIndex>(kBoardArea);
+       ++square) {
+    for (const auto direction : directions) {
+      Bitboard between{};
+      auto target = square;
+      while (const auto step = DoShiftIfValid(target, direction)) {
+        between |= *step;
+        tables.between[square][target] = between;
       }
-      temp = sq;
-      while (DoShiftIfValid(temp, direction)) {
-        if constexpr (sliding_piece == Piece::kBishop)
-          bishop_ray[sq][temp] = result;
-        else
-          rook_ray[sq][temp] = result;
-      }
+      target = square;
+      while (DoShiftIfValid(target, direction))
+        tables.ray[square][target] = between;
     }
   }
+  return tables;
+}
 }
 
-template void SimpleChessEngine::InitBetween<Piece::kBishop>();
-template void SimpleChessEngine::InitBetween<Piece::kRook>();
+constinit const GeometryTables SimpleChessEngine::kGeometry =
+    MakeGeometryTables();
+
 template Bitboard SimpleChessEngine::GenerateAttackMask<Piece::kBishop>(
     BitIndex, Bitboard);
 template Bitboard SimpleChessEngine::GenerateAttackMask<Piece::kRook>(

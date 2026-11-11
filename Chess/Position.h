@@ -207,7 +207,7 @@ class Position {
   void SetSideToMove(const Player player) {
     if (side_to_move_ == player) return;
     side_to_move_ = player;
-    hash_ ^= hasher_.stm_hash;
+    hash_ ^= kZobristKeys.stm_hash;
     nnue_.InvalidateOutput();
   }
 
@@ -358,7 +358,6 @@ class Position {
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_king_{};
   std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
 
-  const static Hasher hasher_;
   Hash hash_{};
 
   mutable Nnue::AccumulatorStack nnue_;
