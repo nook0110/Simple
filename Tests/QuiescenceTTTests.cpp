@@ -42,11 +42,11 @@ TEST(QuiescenceTT, NonPvCutoffsRespectBoundsAndCountNodes) {
 TEST(QuiescenceTT, PvNodesDoNotCutOffOnDecisiveEntries) {
   auto position = PositionFactory{}();
   QTable table;
-  table.SetEntry(position, MoveFactory{}(position, "e2e4"), -kMateValue - 5, 12,
-                 Bound::kExact, 1);
+  table.SetEntry(position, MoveFactory{}(position, "e2e4"), Score::MateIn(5),
+                 12, Bound::kExact, 1);
   DepthCondition condition{4};
   Quiescence search{condition, &table, 1};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 3, true),
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 3, true),
             position.Evaluate());
   EXPECT_EQ(table.GetNode(position).depth, 12);
 }
@@ -54,17 +54,17 @@ TEST(QuiescenceTT, PvNodesDoNotCutOffOnDecisiveEntries) {
 TEST(QuiescenceTT, MainSearchPassesPvFlagAndCountsQuiescenceCutoffs) {
   const auto position = PositionFactory{}();
   auto table = std::make_shared<QTable>();
-  table->SetEntry(position, MoveFactory{}(position, "e2e4"), -kMateValue - 5,
+  table->SetEntry(position, MoveFactory{}(position, "e2e4"), Score::MateIn(5),
                   12, Bound::kExact, 1);
   DepthCondition condition{4};
   Searcher searcher{position, table};
   EXPECT_EQ(searcher.Search<NodeType::kCut>(condition, 0, 0, -1, 0),
-            -kMateValue - 5);
+            Score::MateIn(5));
   EXPECT_EQ(searcher.GetInfo().quiescence_nodes, 1u);
   EXPECT_EQ(searcher.GetInfo().searched_nodes, 0u);
-  EXPECT_EQ(
-      searcher.Search<NodeType::kPV>(condition, 0, 0, kMateValue, -kMateValue),
-      position.Evaluate());
+  EXPECT_EQ(searcher.Search<NodeType::kPV>(condition, 0, 0, -Score::kMate,
+                                           Score::kMate),
+            position.Evaluate());
 }
 
 TEST(QuiescenceTT, StoresMoveLessStandPatAndFailLowBounds) {
@@ -95,7 +95,7 @@ TEST(QuiescenceTT, QuietTtMoveIsIgnoredOutsideCheck) {
                  Bound::kLower, 1);
   DepthCondition condition{4};
   Quiescence search{condition, &table, 1};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 0),
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 0),
             position.Evaluate());
   EXPECT_EQ(search.GetSearchedNodes(), 1u);
 }
@@ -150,8 +150,8 @@ TEST(QuiescenceTT, QuietEvasionTtMoveIsSearchedFirstAndStored) {
 TEST(QuiescenceTT, InCheckEntriesCutOffWithPlyAdjustedMateScores) {
   auto position = PositionFactory{}("k3r3/8/8/8/8/8/P7/4K3 w - - 0 1");
   DepthCondition condition{4};
-  for (const Eval value : {kMateValue + 10, -kMateValue - 10,
-                           kTablebaseWinValue - 10, -kTablebaseWinValue + 10}) {
+  for (const Eval value : {Score::MatedIn(10), Score::MateIn(10),
+                           Score::TbWinIn(10), Score::TbLossIn(10)}) {
     QTable table;
     table.SetEntry(position, Move::None(), value, 0, Bound::kExact, 1);
     Quiescence search{condition, &table, 1};
@@ -166,14 +166,14 @@ TEST(QuiescenceTT, StoresMateIndependentOfRootPly) {
   QTable table;
   DepthCondition condition{4};
   Quiescence search{condition, &table, 1};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 5),
-            kMateValue + 5);
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 5),
+            Score::MatedIn(5));
   const auto node = table.GetNode(position);
   ASSERT_TRUE(node.IsOccupied());
-  EXPECT_EQ(node.score, kMateValue);
+  EXPECT_EQ(node.score, -Score::kMate);
   EXPECT_EQ(node.depth, 0);
   EXPECT_EQ(node.bound, Bound::kUpper);
-  EXPECT_EQ(search.Search<true>(position, -1, 0, 9, false), kMateValue + 9);
+  EXPECT_EQ(search.Search<true>(position, -1, 0, 9, false), Score::MatedIn(9));
   EXPECT_EQ(search.GetSearchedNodes(), 1u);
 }
 
@@ -216,7 +216,7 @@ TEST_F(QuiescenceTTNnue, ReusesStaticEvalWithMatchingContextOnly) {
     table.SetEntry(position, Move::None(), -20000, 0, Bound::kLower, 1, cached,
                    Context() + !matching);
     Quiescence search{condition, &table, 1};
-    EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 0),
+    EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 0),
               matching ? cached : value);
   }
 }
@@ -227,7 +227,8 @@ TEST_F(QuiescenceTTNnue, StoresUnrefinedStaticEvalForReuse) {
   QTable table;
   DepthCondition condition{4};
   Quiescence search{condition, &table, 1};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 0), value);
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 0),
+            value);
   const auto node = table.GetNode(position);
   ASSERT_TRUE(node.IsOccupied());
   EXPECT_EQ(table.GetStaticEval(node, Context()), value);
@@ -247,7 +248,7 @@ TEST_F(QuiescenceTTNnue, RefinesStandPatOnlyInBoundDirection) {
       const bool refine =
           bound == Bound::kExact ||
           (difference > 0 ? bound == Bound::kLower : bound == Bound::kUpper);
-      EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 0),
+      EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 0),
                 refine ? value + difference : value);
       EXPECT_EQ(table.GetStaticEval(table.GetNode(position), Context()), value);
     }
@@ -256,7 +257,7 @@ TEST_F(QuiescenceTTNnue, RefinesStandPatOnlyInBoundDirection) {
 
 TEST(QuiescenceTT, StoresPlyAdjustedMateAndTablebaseCaptureScores) {
   DepthCondition condition{4};
-  for (const Eval child_value : {kMateValue, -kTablebaseWinValue}) {
+  for (const Eval child_value : {-Score::kMate, -Score::kTbWin}) {
     auto position = PositionFactory{}("k7/8/8/3p4/3R3p/8/8/K7 w - - 0 1");
     const auto tt_move = MoveFactory{}(position, "d4h4");
     const Eval beta = position.Evaluate() + 1;
@@ -284,8 +285,8 @@ TEST(QuiescenceTT, MoveLessEntryDoesNotSuppressInternalIterativeReduction) {
   table->SetEntry(position, Move::None(), 0, 0, Bound::kUpper, 0);
   DepthCondition condition{2};
   Searcher searcher{position, table};
-  ASSERT_TRUE(
-      searcher.Search<NodeType::kPV>(condition, 2, 2, kMateValue, -kMateValue));
+  ASSERT_TRUE(searcher.Search<NodeType::kPV>(condition, 2, 2, -Score::kMate,
+                                             Score::kMate));
   EXPECT_EQ(table->GetNode(position).depth, 1);
 }
 
@@ -303,7 +304,7 @@ TEST(QuiescenceTT, CastlingTtMoveIsIgnoredInChess960) {
     QTable table;
     table.SetEntry(position, move, -20000, 0, Bound::kLower, 1);
     Quiescence search{condition, &table, 1};
-    EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 0),
+    EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 0),
               position.Evaluate());
     EXPECT_EQ(search.GetSearchedNodes(), 1u);
   }

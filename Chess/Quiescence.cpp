@@ -5,6 +5,7 @@
 #include "ExitCondition.h"
 #include "MovePicker.h"
 #include "Nnue/Nnue.h"
+#include "Score.h"
 
 namespace SimpleChessEngine {
 template <class ExitCondition>
@@ -87,8 +88,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
                          : kNoStaticEval;
   if (static_eval == kNoStaticEval) static_eval = current_position.Evaluate();
   Eval best_value = static_eval;
-  if (tt_node.IsOccupied() &&
-      std::abs(tt_value) < kTablebaseWinValue - kMaxSearchPly &&
+  if (tt_node.IsOccupied() && !Score::IsDecisive(tt_value) &&
       (tt_node.bound &
        (tt_value > best_value ? Bound::kLower : Bound::kUpper))) {
     best_value = tt_value;
@@ -151,11 +151,11 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
   picker.InitPicker(current_position, nullptr, current_depth, tt_move);
   auto move = picker.SelectNextMove();
   if (!move.IsValid()) {
-    return kMateValue +
-           static_cast<Eval>(std::min<size_t>(current_depth, kMaxSearchPly));
+    return Score::MatedIn(
+        static_cast<Depth>(std::min<size_t>(current_depth, kMaxSearchPly)));
   }
 
-  Eval best_value = kMateValue;
+  Eval best_value = -Score::kMate;
   for (; move.IsValid(); move = picker.SelectNextMove()) {
     const auto irreversible_data = current_position.GetIrreversibleData();
 

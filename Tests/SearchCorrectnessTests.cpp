@@ -21,7 +21,7 @@ TEST(QuiescenceDraws, ExpiredFiftyMoveClock) {
   auto position = PositionFactory{}("7k/8/6K1/8/8/8/8/1Q6 w - - 100 51");
   DepthCondition condition{4};
   Quiescence search{condition};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 1),
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 1),
             kDrawValue);
 }
 
@@ -34,7 +34,7 @@ TEST(QuiescenceDraws, RepetitionInGameHistory) {
   ASSERT_TRUE(position.DetectRepetition(0));
   DepthCondition condition{4};
   Quiescence search{condition};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 1),
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 1),
             kDrawValue);
 }
 
@@ -45,7 +45,7 @@ TEST(QuiescenceDraws, StalemateWithPinnedBishop) {
                   .empty());
   DepthCondition condition{4};
   Quiescence search{condition};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 1),
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 1),
             kDrawValue);
 }
 
@@ -53,8 +53,8 @@ TEST(QuiescenceDraws, MateOverridesExpiredFiftyMoveClock) {
   auto position = PositionFactory{}("7k/6Q1/6K1/8/8/8/8/8 b - - 100 51");
   DepthCondition condition{4};
   Quiescence search{condition};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 1),
-            kMateValue + 1);
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 1),
+            Score::MatedIn(1));
 }
 
 TEST(TranspositionTable, LaterMoveCutoffStoresCurrentScore) {
@@ -124,13 +124,12 @@ TEST(SingularExtensions, ExtendsOnlyEligibleLowerBounds) {
     Eval score;
     bool eligible;
   };
-  for (const auto test : {
-           Case{Bound::kLower, 4, 10000, true},
-           Case{Bound::kExact, 4, 10000, true},
-           Case{Bound::kUpper, 4, 10000, false},
-           Case{Bound::kLower, 3, 10000, false},
-           Case{Bound::kLower, 4, -kMateValue - 10, false},
-           Case{Bound::kLower, 4, kTablebaseWinValue - 10, false}}) {
+  for (const auto test : {Case{Bound::kLower, 4, 10000, true},
+                          Case{Bound::kExact, 4, 10000, true},
+                          Case{Bound::kUpper, 4, 10000, false},
+                          Case{Bound::kLower, 3, 10000, false},
+                          Case{Bound::kLower, 4, Score::MateIn(10), false},
+                          Case{Bound::kLower, 4, Score::TbWinIn(10), false}}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
     table->SetEntry(position, move, test.score, test.depth, test.bound, 0);
     Searcher searcher(position, table);
@@ -187,10 +186,10 @@ TEST(SingularExtensions, FindsMateInTwoAndThree) {
     SearchResult score;
     for (Depth depth = 1; depth <= 8; ++depth) {
       score = searcher.Search<NodeType::kPV>(condition, depth, depth,
-                                           kMateValue, -kMateValue);
+                                             -Score::kMate, Score::kMate);
       ASSERT_TRUE(score);
     }
-    EXPECT_EQ(*score, -kMateValue - distance) << fen;
+    EXPECT_EQ(*score, Score::MateIn(distance)) << fen;
   }
 }
 
@@ -213,7 +212,7 @@ TEST(SingularExtensions, ReportsTriggerCounts) {
     std::uint64_t nodes = 0, extensions = 0, multi_cuts = 0;
     for (Depth depth = 1; depth <= 11; ++depth) {
       const auto score = searcher.Search<NodeType::kPV>(
-          condition, depth, depth, kMateValue, -kMateValue);
+          condition, depth, depth, -Score::kMate, Score::kMate);
       ASSERT_TRUE(score);
       nodes += searcher.GetInfo().TotalNodes();
       extensions += searcher.GetSingularInfo().extensions;
@@ -327,11 +326,11 @@ TEST(ProbCut, SkipsRootPvCheckExclusionShallowAndDecisiveWindows) {
   const auto position = PositionFactory{}(kProbCutFen);
   DepthCondition condition{8};
   const auto excluded = MoveFactory{}(position, "d4d5");
-  constexpr Eval decisive = kTablebaseWinValue - kMaxSearchPly;
+  constexpr Eval decisive = Score::kDecisive;
   for (const auto state :
        {SearchState{8, 5, -96, -95, 0}, SearchState{8, 4, -96, -95, 1},
-        SearchState{8, 5, kMateValue, kMateValue + 1, 1},
-        SearchState{8, 5, -kMateValue - 2, -kMateValue - 1, 1},
+        SearchState{8, 5, -Score::kMate, Score::MatedIn(1), 1},
+        SearchState{8, 5, Score::MateIn(2), Score::MateIn(1), 1},
         SearchState{8, 5, decisive - 1, decisive, 1},
         SearchState{8, 5, -decisive - 1, -decisive, 1},
         SearchState{8, 5, decisive - 96, decisive - 95, 1},
@@ -366,9 +365,9 @@ TEST(ProbCut, TtVetoRespectsDepthThresholdScoreAndDecisiveBand) {
   };
   for (const auto test :
        {Case{1, -1, false}, Case{2, -1, true}, Case{2, 0, false},
-        Case{2, 1, false}, Case{2, kTablebaseWinValue - 10, false},
-        Case{2, -kTablebaseWinValue + 10, false},
-        Case{2, kMateValue + 10, false}}) {
+        Case{2, 1, false}, Case{2, Score::TbWinIn(10), false},
+        Case{2, Score::TbLossIn(10), false},
+        Case{2, Score::MatedIn(10), false}}) {
     for (const auto bound : {Bound::kLower, Bound::kUpper, Bound::kExact}) {
       auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
       table->SetEntry(position, Move::None(), ToTTScore(test.value, 1),

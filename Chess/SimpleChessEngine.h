@@ -14,6 +14,7 @@
 #include "ExitCondition.h"
 #include "Move.h"
 #include "NodeType.h"
+#include "Score.h"
 #include "Searcher.h"
 #include "Settings.h"
 #include "Utility.h"
@@ -347,11 +348,11 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       time_scale = std::min(time_scale, 1.0);
     }
     const bool confirmed_mate =
-        IsMateScore(eval) > 0 && previous_iteration_eval &&
-        IsMateScore(*previous_iteration_eval) > 0 &&
+        Score::IsMateWin(eval) && previous_iteration_eval &&
+        Score::IsMateWin(*previous_iteration_eval) &&
         iteration_best_move == previous_iteration_best_move;
-    const bool proven_result = eval >= -kMateValue - 3 ||
-                               eval == kMateValue + 2 || confirmed_mate;
+    const bool proven_result =
+        eval >= Score::MateIn(3) || eval == Score::MatedIn(2) || confirmed_mate;
     condition.Update(IterationInfo{searcher_, eval, current_depth, time_scale,
                                    proven_result});
     previous_iteration_eval = eval;
@@ -409,13 +410,11 @@ inline std::ostream& operator<<(std::ostream& out,
 inline std::ostream& operator<<(std::ostream& out,
                                 const ScoreInfo& score_info) {
   const auto& eval = score_info.current_eval;
-  if (!IsMateScore(eval)) {
+  if (!Score::IsMate(eval)) {
     return out << "info score cp " << eval << std::endl;
   }
 
-  return out << "info score mate "
-             << IsMateScore(eval) * (-kMateValue - std::abs(eval) + 1) / 2
-             << std::endl;
+  return out << "info score mate " << Score::MovesToMate(eval) << std::endl;
 }
 
 inline std::ostream& operator<<(std::ostream& out,

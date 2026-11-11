@@ -143,8 +143,7 @@ TEST(EvaluationTrendPruning, ReverseFutilityRespectsQuietTtMove) {
 TEST(EvaluationTrendPruning, ReverseFutilityDoesNotCutLosingTablebaseBounds) {
   const auto position = PositionFactory{}();
   DepthCondition condition{2};
-  const Eval loss_bound =
-      -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly);
+  const Eval loss_bound = -Score::kDecisive;
   for (const Eval beta : {loss_bound, loss_bound + 1}) {
     Searcher searcher(position);
     const auto result = SearchNode<NodeType::kAll, DepthCondition>{

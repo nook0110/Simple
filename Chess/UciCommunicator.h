@@ -969,7 +969,7 @@ inline void UciChessEngine::ParseQuiescenceEvaluate() const {
   const DepthCondition condition{kMaxSearchPly};
   Quiescence quiescence{condition};
   const auto score =
-      quiescence.Search<true>(position, kMateValue, -kMateValue, 0);
+      quiescence.Search<true>(position, -Score::kMate, Score::kMate, 0);
   if (!score) {
     std::osyncstream(o_stream_) << "qeval unavailable" << std::endl;
     return;

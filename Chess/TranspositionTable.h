@@ -14,6 +14,7 @@
 #include "Move.h"
 #include "Nnue/Nnue.h"
 #include "Position.h"
+#include "Score.h"
 #include "Settings.h"
 
 namespace SimpleChessEngine {
@@ -25,9 +26,7 @@ inline constexpr Eval kNoStaticEval = -8192;
 }
 
 inline Eval TTScorePlyAdjustment(const Eval value, const Depth ply) {
-  return std::abs(value) >= kTablebaseWinValue - kMaxSearchPly
-             ? ((value > 0) - (value < 0)) * ply
-             : 0;
+  return Score::IsDecisive(value) ? ((value > 0) - (value < 0)) * ply : 0;
 }
 
 inline Eval ToTTScore(const Eval value, const Depth ply) {

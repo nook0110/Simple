@@ -8,6 +8,7 @@
 #include "MovePicker.h"
 #include "NodeType.h"
 #include "Position.h"
+#include "Score.h"
 #include "StaticEvalHistory.h"
 #include "TranspositionTable.h"
 #include "Utility.h"
@@ -200,10 +201,10 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     if (const auto wdl =
             searcher_.tablebase_->ProbeWdl(GetCurrentPosition())) {
       if (*wdl == Tablebase::Wdl::kWin) {
-        return kTablebaseWinValue - ply;
+        return Score::TbWinIn(ply);
       }
       if (*wdl == Tablebase::Wdl::kLoss) {
-        return -kTablebaseWinValue + ply;
+        return Score::TbLossIn(ply);
       }
       return kDrawValue;
     }
@@ -273,8 +274,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
       if (!eval_optional) return std::nullopt;
 
       const auto &null_eval = -*eval_optional;
-      if (null_eval >= beta &&
-          null_eval < kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+      if (null_eval >= beta && !Score::IsWin(null_eval)) {
         if (searcher_.nmp_min_ply_ ||
             remaining_depth < NMPSettings::kVerificationDepth) {
           searcher_.debug_info_.nmp_cuts++;
@@ -359,25 +359,24 @@ SearchNode<node_type, ExitCondition>::CheckProbCut() {
   if constexpr (kIsPrincipalVariation) return std::nullopt;
 
   using ProbCutSettings = Settings::PruneParameters::ProbCutSettings;
-  constexpr Eval decisive = kTablebaseWinValue - kMaxSearchPly;
   if (state_.ply == 0 || position_info_.is_under_check || excluded_move_ ||
       state_.remaining_depth < ProbCutSettings::kMinDepth ||
-      state_.beta <= -decisive || state_.beta >= decisive)
+      Score::IsDecisive(state_.beta))
     return std::nullopt;
 
   const Eval probcut_beta =
       state_.beta + (evaluation_trend_.improving
                          ? ProbCutSettings::kImprovingMargin
                          : ProbCutSettings::kMargin);
-  if (probcut_beta >= decisive) return std::nullopt;
+  if (Score::IsWin(probcut_beta)) return std::nullopt;
 
   const auto child_depth = static_cast<Depth>(int{state_.remaining_depth} -
                                               ProbCutSettings::kDepthReduction);
   if (iteration_status_.tt_info) {
     const auto &entry = *iteration_status_.tt_info;
     const Eval value = FromTTScore(entry.score, state_.ply);
-    if (entry.depth >= child_depth + 1 && value > -decisive &&
-        value < decisive && value < probcut_beta)
+    if (entry.depth >= child_depth + 1 && !Score::IsDecisive(value) &&
+        value < probcut_beta)
       return std::nullopt;
   }
 
@@ -444,7 +443,7 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 Eval SearchNode<node_type, ExitCondition>::GetEndGameScore() const {
   if (position_info_.is_under_check) {
-    return kMateValue + static_cast<Eval>(state_.ply);
+    return Score::MatedIn(state_.ply);
   }
 
   return kDrawValue;
@@ -578,9 +577,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
        move = move_picker_.SelectNextMove()) {
     const bool is_quiet = move.IsQuiet(current_position);
     const bool can_prune =
-        move_pruning_allowed &&
-        iteration_status_.best_eval >
-            -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly);
+        move_pruning_allowed && !Score::IsLoss(iteration_status_.best_eval);
 
     if (can_prune && is_quiet && CanLateMovePrune()) {
       searcher_.debug_info_.lmp_prunes++;
@@ -619,8 +616,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
       using LMRSettings = Settings::PruneParameters::LMRSettings;
       double reduction_scale =
           std::log(remaining_depth) * std::log(move_picker_.MoveCount()) / 3.14;
-      if (alpha > -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly) &&
-          alpha < kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+      if (!Score::IsDecisive(alpha)) {
         reduction_scale = LMRSettings::ScaleReduction(
             reduction_scale, evaluation_trend_.improving);
       }
@@ -799,13 +795,12 @@ bool SearchNode<node_type, ExitCondition>::CanRFP() const {
 
   if (position_info_.is_under_check ||
       state_.remaining_depth > RFPSettings::kDepthLimit ||
-      state_.beta <= -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly)) {
+      Score::IsLoss(state_.beta)) {
     return false;
   }
 
   const Eval eval = GetStaticEval();
-  if (eval < state_.beta ||
-      eval >= kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly) ||
+  if (eval < state_.beta || Score::IsWin(eval) ||
       (iteration_status_.tt_info && iteration_status_.tt_info->move.IsValid() &&
        iteration_status_.tt_info->move.IsQuiet(searcher_.GetPosition()))) {
     return false;
@@ -887,10 +882,8 @@ SearchNode<node_type, ExitCondition>::CheckSingularExtension() {
   entry_score = FromTTScore(entry_score, ply);
   if (ply > 0 && ply < 2 * max_depth &&
       remaining_depth >= Singular::kDepthLimit + kIsPrincipalVariation &&
-      entry_depth >= remaining_depth - 3 &&
-      (entry_bound & Bound::kLower) &&
-      std::abs(entry_score) <
-          kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+      entry_depth >= remaining_depth - 3 && (entry_bound & Bound::kLower) &&
+      !Score::IsDecisive(entry_score)) {
     const Eval singular_beta =
         entry_score - Singular::kMarginNumerator * remaining_depth /
                           Singular::kMarginDenominator;

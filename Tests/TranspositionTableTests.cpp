@@ -51,8 +51,8 @@ TEST(SharedClusterTable, CachedEvalPayloadRoundTrips) {
   using Table = TranspositionTable<1>;
   constexpr Hash hash = 0x123456789ABCDEF0ULL;
   constexpr std::array scores = {
-      -131072, kMateValue - 64, kMateValue, -kTablebaseWinValue, -20000, -1, 0,
-      1, 20000, kTablebaseWinValue, -kMateValue, -kMateValue + 64, 131071};
+      -131072, -Score::kMate - 64, -Score::kMate, -Score::kTbWin, -20000, -1,
+      0, 1, 20000, Score::kTbWin, Score::kMate, Score::kMate + 64, 131071};
   for (const auto score : scores) {
     for (const auto eval : {kNoStaticEval, -8191, -1, 0, 1, 8191}) {
       const Node original{hash, Move{12, 28}, score, 63, Bound::kExact, 255,
