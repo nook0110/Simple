@@ -15,8 +15,6 @@ template MoveGenerator::Moves MoveGenerator::GenerateMoves<
     MoveGenerator::Type::kAll>(Position& position) const;
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<
     MoveGenerator::Type::kQuiescence>(Position& position) const;
-template MoveGenerator::Moves MoveGenerator::GenerateMoves<
-    MoveGenerator::Type::kAddChecks>(Position& position) const;
 
 MoveGenerator::~MoveGenerator() = default;
 
@@ -193,9 +191,6 @@ Move* MoveGenerator::GeneratePseudoLegal(Position& position,
     } else if constexpr (type == Type::kQuiets) {
       pawn_target &= ~(kRankBB[0] | kRankBB[7]);
     }
-    if constexpr (type == Type::kAddChecks) {
-      pawn_target |= GetPawnAttacks(king_square, us);
-    }
     if (checkers.Any()) {
       const auto attacker = checkers.GetFirstBit();
       const auto ray = Between(king_square, attacker) | SingleSquare(attacker);
@@ -221,13 +216,7 @@ Move* MoveGenerator::GeneratePseudoLegal(Position& position,
       *moves++ = *p;
     }
     auto generate = [&]<Piece piece>() {
-      auto piece_target = target;
-      if constexpr (type == Type::kAddChecks) {
-        piece_target |= AttackTable<piece>::GetAttackMap(
-            king_square, position.GetPieces(us));
-      }
-      GenerateMovesForPiece<piece>(moves, position,
-                                   piece_target & ~position.GetPieces(us));
+      GenerateMovesForPiece<piece>(moves, position, target);
     };
     generate.template operator()<Piece::kQueen>();
     generate.template operator()<Piece::kRook>();
