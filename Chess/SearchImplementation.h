@@ -94,7 +94,6 @@ struct SearchNode {
 
   void SetBestMove(Move move);
   void SetTTEntry(const Bound bound);
-  template <bool is_first_move>
   void UpdateQuietMove(const Move &move);
   void RecordSearchedQuiet(const Move &move);
 
@@ -239,7 +238,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
       if (entry_bound & Bound::kLower && entry_score >= beta) {
         if (hash_move.IsQuiet(searcher_.GetPosition())) {
-          UpdateQuietMove<true>(hash_move);
+          UpdateQuietMove(hash_move);
         }
 
         // TODO: update entry age
@@ -575,7 +574,7 @@ std::optional<bool> SearchNode<node_type, ExitCondition>::CheckFirstMove(
     if (iteration_status_.best_eval >= beta) {
       assert(iteration_status_.best_move);
       if (iteration_status_.best_move->IsQuiet(searcher_.GetPosition())) {
-        UpdateQuietMove<true>(*iteration_status_.best_move);
+        UpdateQuietMove(*iteration_status_.best_move);
       }
 
       return true;
@@ -739,7 +738,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
 
         if (move_picker_.GetCurrentStage() == MovePicker::Stage::kKillers ||
             move_picker_.GetCurrentStage() == MovePicker::Stage::kQuiet) {
-          UpdateQuietMove<false>(move);
+          UpdateQuietMove(move);
         }
 
         return beta;
@@ -794,14 +793,11 @@ bool SearchNode<node_type, ExitCondition>::CanNullMove() const {
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-template <bool is_first_move>
 void SearchNode<node_type, ExitCondition>::UpdateQuietMove(const Move &move) {
   const auto bonus = Searcher::HistoryBonus(state_.remaining_depth);
-  if constexpr (!is_first_move) {
-    for (size_t i = 0; i < searched_quiet_count_; ++i) {
-      if (searched_quiets_[i] != move) {
-        searcher_.UpdateQuietHistory(searched_quiets_[i], state_.ply, -bonus);
-      }
+  for (size_t i = 0; i < searched_quiet_count_; ++i) {
+    if (searched_quiets_[i] != move) {
+      searcher_.UpdateQuietHistory(searched_quiets_[i], state_.ply, -bonus);
     }
   }
   searcher_.UpdateQuietHistory(move, state_.ply, bonus);
