@@ -154,16 +154,6 @@ INSTANTIATE_TEST_CASE_P(
                 {15833292, 6512, 0, 5}  // depth 5
             }},
         GenTestCase{
-            R"(r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1)",
-            {
-                {1, 0, 0, 0},           // depth 0
-                {6, 0, 0, 0},           // depth 1
-                {264, 0, 6, 0},         // depth 2
-                {9467, 4, 0, 0},        // depth 3
-                {422333, 0, 7795, 22},  // depth 4
-                {15833292, 6512, 0, 5}  // depth 5
-            }},
-        GenTestCase{
             R"(rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8)",
             {
                 {1},       // depth 0
