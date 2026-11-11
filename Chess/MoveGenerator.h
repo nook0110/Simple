@@ -17,7 +17,6 @@ class MoveGenerator {
   enum class Type : std::uint8_t {
     kAll = 0,
     kQuiescence = 1,
-    kAddChecks = 2,
     kCaptures = 4,
     kQuiets = 8
   };

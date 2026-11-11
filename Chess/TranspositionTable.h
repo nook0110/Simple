@@ -257,10 +257,7 @@ class TranspositionTable {
     void* mapping = mmap(nullptr, kMemoryBytes, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
     if (mapping == MAP_FAILED) std::abort();
-    if (madvise(mapping, kMemoryBytes, MADV_HUGEPAGE) != 0) {
-      munmap(mapping, kMemoryBytes);
-      std::abort();
-    }
+    static_cast<void>(madvise(mapping, kMemoryBytes, MADV_HUGEPAGE));
     return std::unique_ptr<Cluster[], MappingDeleter>{
         ::new (mapping) Cluster[kClusterCount]};
   }

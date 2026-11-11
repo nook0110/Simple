@@ -309,8 +309,6 @@ struct BooleanOption : public OptionBase {
   bool value_ = default_value;
 };
 
-using PonderOption = BooleanOption<false>;
-
 template <class>
 struct MemberPointerTraits;
 
