@@ -5,12 +5,14 @@ project(SimpleChessEngine LANGUAGES C CXX)
 option(BUILD_TESTS "Build tests" OFF)
 set(SCE_TT_SIZE_MB 640 CACHE STRING "Shared transposition table size in MiB")
 set(SCE_EVALFILE "nn-37f18f62d772.nnue" CACHE STRING "Default NNUE network file")
+set(SCE_EVALFILE_SMALL "nn-37f18f62d772.nnue" CACHE STRING "Default small NNUE network file")
 
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_definitions(SCE_TT_SIZE_MB=${SCE_TT_SIZE_MB})
 add_compile_definitions(SCE_EVALFILE="${SCE_EVALFILE}")
+add_compile_definitions(SCE_EVALFILE_SMALL="${SCE_EVALFILE_SMALL}")
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -137,6 +139,15 @@ if(BUILD_TESTS)
                 --engine $<TARGET_FILE:SimpleChessEngine>
                 --probe $<TARGET_FILE:SCE_tbprobe>
                 --tablebase ${SYZYGY_FIXTURE_DIR}
+    )
+    add_test(
+        NAME SyzygySearchRegression
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/Tests/tablebase_search_test.py
+                --engine $<TARGET_FILE:SimpleChessEngine>
+    )
+    set_tests_properties(SyzygySearchRegression PROPERTIES
+        TIMEOUT 60 SKIP_RETURN_CODE 77
     )
 
     # Копирование тестовых данных
