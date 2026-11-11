@@ -38,7 +38,6 @@ struct PositionInfo {
   mutable std::optional<Eval> static_eval;
   const bool is_under_check = false;
   const Position::IrreversibleData irreversible_data;
-  const size_t side_to_move_idx;
 };
 
 template <NodeType node_type, class ExitCondition>
@@ -131,8 +130,7 @@ struct SearchNode {
 namespace SimpleChessEngine {
 inline PositionInfo::PositionInfo(const Position &position)
     : is_under_check(position.IsUnderCheck()),
-      irreversible_data(position.GetIrreversibleData()),
-      side_to_move_idx(static_cast<size_t>(position.GetSideToMove())) {}
+      irreversible_data(position.GetIrreversibleData()) {}
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
