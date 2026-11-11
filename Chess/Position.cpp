@@ -457,14 +457,14 @@ bool Position::IsLegal(const Move &move, Bitboard blockers) const {
   const auto obstacles = GetAllPieces() & ~SingleSquare(king_position) &
                          ~SingleSquare(rook_position);
 
-  auto king_path = castling_squares_for_king_[us_idx][cs_idx];
+  const auto king_path = castling_squares_for_king_[us_idx][cs_idx];
 
   if (((king_path | castling_squares_for_rook_[us_idx][cs_idx]) & obstacles)
           .Any())
     return false;
 
-  while (king_path.Any()) {
-    if (const auto square = king_path.PopFirstBit(); IsUnderAttack(square, us))
+  for (const auto square : king_path) {
+    if (IsUnderAttack(square, us))
       return false;
   }
 
@@ -768,7 +768,7 @@ void Position::ComputePins(const Player us) const {
 
   const BitIndex king_square = GetKingSquare(us);
 
-  Bitboard snipers =
+  const Bitboard snipers =
       (AttackTable<Piece::kBishop>::GetAttackMap(king_square, kEmptyBoard) &
        (GetPiecesByType<Piece::kBishop>(them) |
         GetPiecesByType<Piece::kQueen>(them))) |
@@ -777,8 +777,7 @@ void Position::ComputePins(const Player us) const {
         GetPiecesByType<Piece::kQueen>(them)));
   const Bitboard occupancy = GetAllPieces() ^ snipers;
 
-  while (snipers.Any()) {
-    const BitIndex square = snipers.PopFirstBit();
+  for (const auto square : snipers) {
     const Bitboard blockers_between = Between(king_square, square) & occupancy;
     if (blockers_between.Any() && !blockers_between.MoreThanOne()) {
       irreversible_data_.blockers[us_idx] |= blockers_between;

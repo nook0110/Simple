@@ -143,7 +143,7 @@ SearchNode<node_type, ExitCondition>::SearchNode(
     : state_(state), excluded_move_(excluded_move),
       exit_condition_(exit_condition),
       position_info_(searcher.GetPosition()), searcher_(searcher) {
-  assert(IsValidNodeType<kFirstChildNodeExpectedType>());
+  static_assert(IsValidNodeType<kFirstChildNodeExpectedType>());
 }
 
 template <NodeType node_type, class ExitCondition>
@@ -155,10 +155,12 @@ SearchResult SearchNode<node_type, ExitCondition>::StartSubsearch(
          (state.beta - state.alpha == 1));
   assert(state.alpha < state.beta);
 
-  assert(expected_node_type != NodeType::kPV || node_type == NodeType::kPV);
-  assert(expected_node_type != NodeType::kCut ||
-         (node_type == NodeType::kPV || node_type == NodeType::kAll));
-  assert(expected_node_type != NodeType::kAll || node_type == NodeType::kCut);
+  static_assert(expected_node_type != NodeType::kPV ||
+                node_type == NodeType::kPV);
+  static_assert(expected_node_type != NodeType::kCut ||
+                (node_type == NodeType::kPV || node_type == NodeType::kAll));
+  static_assert(expected_node_type != NodeType::kAll ||
+                node_type == NodeType::kCut);
 
   return SearchNode<expected_node_type, ExitCondition>{searcher_, state,
                                                        exit_condition_}();
@@ -274,52 +276,54 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   auto &current_position = GetCurrentPosition();
 
-  if (CanNullMove()) {
-    searcher_.debug_info_.nmp_tries++;
+  if constexpr (node_type == NodeType::kCut) {
+    if (CanNullMove()) {
+      searcher_.debug_info_.nmp_tries++;
 
-    using NMPSettings = Settings::PruneParameters::NMPSettings;
-    const int reduction =
-        NMPSettings::kNullMoveReduction +
-        remaining_depth / NMPSettings::kDepthDivisor +
-        std::max((GetStaticEval() - beta) / NMPSettings::kEvalDivisor, 0);
-    const auto null_depth =
-        static_cast<Depth>(std::max(0, remaining_depth - reduction));
+      using NMPSettings = Settings::PruneParameters::NMPSettings;
+      const int reduction =
+          NMPSettings::kNullMoveReduction +
+          remaining_depth / NMPSettings::kDepthDivisor +
+          std::max((GetStaticEval() - beta) / NMPSettings::kEvalDivisor, 0);
+      const auto null_depth =
+          static_cast<Depth>(std::max(0, remaining_depth - reduction));
 
-    searcher_.SetPlayedNullMove(ply);
-    current_position.DoMove(NullMove{});
+      searcher_.SetPlayedNullMove(ply);
+      current_position.DoMove(NullMove{});
 
-    const auto eval_optional =
-        StartSubsearch<NodeType::kAll>({max_depth, null_depth, -beta, -beta + 1,
-                                        static_cast<Depth>(ply + 1), true});
+      const auto eval_optional =
+          StartSubsearch<NodeType::kAll>({max_depth, null_depth, -beta, -beta + 1,
+                                          static_cast<Depth>(ply + 1), true});
 
-    current_position.UndoMove(NullMove{}, position_info_.irreversible_data);
+      current_position.UndoMove(NullMove{}, position_info_.irreversible_data);
 
-    if (!eval_optional) return std::nullopt;
+      if (!eval_optional) return std::nullopt;
 
-    const auto &null_eval = -*eval_optional;
-    if (null_eval >= beta &&
-        null_eval < kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
-      if (searcher_.nmp_min_ply_ ||
-          remaining_depth < NMPSettings::kVerificationDepth) {
-        searcher_.debug_info_.nmp_cuts++;
-        return beta;
+      const auto &null_eval = -*eval_optional;
+      if (null_eval >= beta &&
+          null_eval < kTablebaseWinValue - static_cast<Eval>(kMaxSearchPly)) {
+        if (searcher_.nmp_min_ply_ ||
+            remaining_depth < NMPSettings::kVerificationDepth) {
+          searcher_.debug_info_.nmp_cuts++;
+          return beta;
+        }
+
+        searcher_.nmp_min_ply_ = static_cast<Depth>(ply + 3 * null_depth / 4);
+        ++searcher_.null_move_info_.verifications;
+        const auto verification = SearchNode<NodeType::kAll, ExitCondition>{
+            searcher_,
+            {max_depth, null_depth, beta - 1, beta, ply,
+             state_.was_previous_move_a_null},
+            exit_condition_}();
+        searcher_.nmp_min_ply_ = 0;
+
+        if (!verification) return std::nullopt;
+        if (*verification >= beta) {
+          searcher_.debug_info_.nmp_cuts++;
+          return beta;
+        }
+        ++searcher_.null_move_info_.verification_fail_lows;
       }
-
-      searcher_.nmp_min_ply_ = static_cast<Depth>(ply + 3 * null_depth / 4);
-      ++searcher_.null_move_info_.verifications;
-      const auto verification = SearchNode<NodeType::kAll, ExitCondition>{
-          searcher_,
-          {max_depth, null_depth, beta - 1, beta, ply,
-           state_.was_previous_move_a_null},
-          exit_condition_}();
-      searcher_.nmp_min_ply_ = 0;
-
-      if (!verification) return std::nullopt;
-      if (*verification >= beta) {
-        searcher_.debug_info_.nmp_cuts++;
-        return beta;
-      }
-      ++searcher_.null_move_info_.verification_fail_lows;
     }
   }
 
@@ -708,19 +712,20 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     }
 
     assert(kIsPrincipalVariation || (beta - alpha == 1));
-    if (kIsPrincipalVariation &&
-        temp_eval > alpha) /* make a research (ZWS failed) */
-    {
-      searcher_.debug_info_.zws_researches++;
-      temp_eval_optional = StartSubsearch<NodeType::kPV>(
-          {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha,
-           static_cast<Depth>(ply + 1)});
-      if (!temp_eval_optional) {
-        current_position.UndoMove(move, position_info_.irreversible_data);
-        return std::nullopt;
-      }
+    if constexpr (kIsPrincipalVariation) {
+      if (temp_eval > alpha) /* make a research (ZWS failed) */
+      {
+        searcher_.debug_info_.zws_researches++;
+        temp_eval_optional = StartSubsearch<NodeType::kPV>(
+            {max_depth, static_cast<Depth>(remaining_depth - 1), -beta, -alpha,
+             static_cast<Depth>(ply + 1)});
+        if (!temp_eval_optional) {
+          current_position.UndoMove(move, position_info_.irreversible_data);
+          return std::nullopt;
+        }
 
-      temp_eval = -*temp_eval_optional;
+        temp_eval = -*temp_eval_optional;
+      }
     }
 
     if (temp_eval > alpha) {
