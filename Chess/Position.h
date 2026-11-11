@@ -3,12 +3,9 @@
 #include <bitset>
 #include <cassert>
 #include <cstddef>
-#include <iosfwd>
 
 #include "BitBoard.h"
 #include "Evaluation.h"
-#include "Concepts.h"
-#include "NodeType.h"
 #include "Hasher.h"
 #include "TypedMove.h"
 #include "Nnue/Accumulator.h"
@@ -18,18 +15,6 @@
 #include "Utility.h"
 
 namespace SimpleChessEngine {
-class Position;
-template <bool print>
-size_t Perft(std::ostream&, Position&, Depth);
-template <NodeType node_type, class ExitCondition>
-  requires StopSearchCondition<ExitCondition>
-struct SearchNode;
-template <class ExitCondition>
-  requires StopSearchCondition<ExitCondition>
-class Quiescence;
-namespace Tablebase {
-class PositionBuilder;
-}
 /**
  * \brief Class that represents a chess position.
  *
@@ -45,7 +30,6 @@ class Position {
  public:
   friend struct PositionFactory;
   friend struct PositionStateTestAccess;
-  friend class Tablebase::PositionBuilder;
   /**
    * \brief Struct to hold evaluation data for the position.
    *
@@ -78,7 +62,7 @@ class Position {
         castling_rights{};  //!< Castling rights for each color.
 
     mutable std::array<Bitboard, kColors>
-        pinners{};  //!< Pieces that are pinning opponent's pieces.
+        pinners{};  //!< Enemy sliders pinning this color's pieces to its king.
     mutable std::array<Bitboard, kColors>
         blockers{};  //!< Pieces that are blocking attacks on the king.
     
@@ -245,9 +229,6 @@ class Position {
 
   [[nodiscard]] BitIndex GetKingSquare(Player player) const;
 
-  [[nodiscard]] BitIndex GetCastlingRookSquare(
-      Player player, CastlingSide side) const;
-
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
 
@@ -288,9 +269,6 @@ class Position {
 
   [[nodiscard]] const std::array<std::bitset<2>, kColors> &GetCastlingRights()
       const;
-
-  template <Piece piece>
-  [[nodiscard]] Bitboard GetCastlingSquares(CastlingSide side) const;
 
   [[nodiscard]] IrreversibleData GetIrreversibleData() const;
 

@@ -169,8 +169,8 @@ class Searcher {
   static constexpr std::array<Depth, 2> kContinuationOffsets = {1, 2};
 
   [[nodiscard]] static std::int64_t HistoryBonus(Depth depth);
-  [[nodiscard]] static std::int64_t StaticEvalHistoryBonus(Eval parent_eval,
-                                                           Eval child_eval);
+  [[nodiscard]] static constexpr std::int64_t StaticEvalHistoryBonus(
+      Eval parent_eval, Eval child_eval);
   [[nodiscard]] static size_t ContinuationIndex(PieceTo previous,
                                                 PieceTo current);
   [[nodiscard]] PieceTo GetPieceTo(const Move &move) const;
@@ -251,8 +251,8 @@ inline Searcher::PieceTo Searcher::GetPieceTo(const Move &move) const {
   return {current_position_.GetPieceAt(move.From()), move.To()};
 }
 
-inline std::int64_t Searcher::StaticEvalHistoryBonus(const Eval parent_eval,
-                                                     const Eval child_eval) {
+constexpr std::int64_t Searcher::StaticEvalHistoryBonus(const Eval parent_eval,
+                                                        const Eval child_eval) {
   using Policy = Settings::SearchParameters::StaticEvalPolicySettings;
   const auto gain = -(static_cast<std::int64_t>(parent_eval) + child_eval);
   const auto difference =
