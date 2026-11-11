@@ -61,7 +61,7 @@ class Position {
         castling_rights{};  //!< Castling rights for each color.
 
     mutable std::array<Bitboard, kColors>
-        pinners{};  //!< Pieces that are pinning opponent's pieces.
+        pinners{};  //!< Enemy sliders pinning this color's pieces to its king.
     mutable std::array<Bitboard, kColors>
         blockers{};  //!< Pieces that are blocking attacks on the king.
     
