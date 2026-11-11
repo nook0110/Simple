@@ -215,8 +215,7 @@ TEST(SingularExtensions, ReportsTriggerCounts) {
       const auto score = searcher.Search<NodeType::kPV>(
           condition, depth, depth, kMateValue, -kMateValue);
       ASSERT_TRUE(score);
-      nodes += searcher.GetInfo().searched_nodes +
-               searcher.GetInfo().quiescence_nodes;
+      nodes += searcher.GetInfo().TotalNodes();
       extensions += searcher.GetSingularInfo().extensions;
       multi_cuts += searcher.GetSingularInfo().multi_cuts;
     }

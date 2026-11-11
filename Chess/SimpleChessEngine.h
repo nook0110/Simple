@@ -163,8 +163,8 @@ class ChessEngine {
     PrincipalVariationInfo pv{current_depth, principal_variation};
     PrintInfo(pv);
     PrintInfo(NodesInfo{info.searched_nodes});
-    PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
-        (info.searched_nodes + info.quiescence_nodes) / search_time.count())});
+    PrintInfo(NodePerSecondInfo{
+        static_cast<std::size_t>(info.TotalNodes() / search_time.count())});
     for (const auto& [name, counter] : kDebugCounters) {
       if (counter != &DebugInfo::searched_nodes) {
         Output() << "info " << name << " " << info.*counter << "\n";
@@ -318,8 +318,8 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       last_best_move = iteration_best_move;
       last_best_move_depth = current_depth;
     }
-    const double total_nodes = static_cast<double>(std::max<std::size_t>(
-        1, info.searched_nodes + info.quiescence_nodes));
+    const double total_nodes =
+        static_cast<double>(std::max<std::size_t>(1, info.TotalNodes()));
     const double nodes_effort =
         static_cast<double>(searcher_.GetRootEffort(iteration_best_move)) *
         100000.0 / total_nodes;

@@ -29,6 +29,10 @@ struct DebugInfo {
   std::size_t see_prunes{};
   std::size_t futility_prunes{};
 
+  [[nodiscard]] std::size_t TotalNodes() const {
+    return searched_nodes + quiescence_nodes;
+  }
+
   DebugInfo &operator+=(const DebugInfo &other);
 };
 

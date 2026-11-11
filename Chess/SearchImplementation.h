@@ -412,14 +412,12 @@ SearchNode<node_type, ExitCondition>::CheckProbCut() {
     SearchResult value = qvalue;
     if (qvalue && -*qvalue >= probcut_beta) {
       ++searcher_.debug_info_.probcut_qsearch_passes;
-      const auto nodes_before = searcher_.debug_info_.searched_nodes +
-                                searcher_.debug_info_.quiescence_nodes;
+      const auto nodes_before = searcher_.debug_info_.TotalNodes();
       value = StartSubsearch<kZWSNodeType>(
           {state_.max_depth, child_depth, -probcut_beta, -probcut_beta + 1,
            static_cast<Depth>(state_.ply + 1)});
       searcher_.debug_info_.probcut_verification_nodes +=
-          searcher_.debug_info_.searched_nodes +
-          searcher_.debug_info_.quiescence_nodes - nodes_before;
+          searcher_.debug_info_.TotalNodes() - nodes_before;
     }
 
     position.UndoMove(move, position_info_.irreversible_data);
@@ -518,8 +516,7 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
   }
   searcher_.SetPlayedMove(
       ply, move, excluded_move_ ? std::nullopt : position_info_.static_eval);
-  const auto nodes_before = searcher_.debug_info_.searched_nodes +
-                            searcher_.debug_info_.quiescence_nodes;
+  const auto nodes_before = searcher_.debug_info_.TotalNodes();
 
   // make the move and search the tree
   current_position.DoMove(move);
@@ -536,9 +533,7 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
   current_position.UndoMove(move, position_info_.irreversible_data);
   if (ply == 0) {
     searcher_.AddRootEffort(
-        move,
-        searcher_.debug_info_.searched_nodes +
-            searcher_.debug_info_.quiescence_nodes - nodes_before,
+        move, searcher_.debug_info_.TotalNodes() - nodes_before,
         eval_optional ? SearchResult{-*eval_optional} : std::nullopt);
   }
 
@@ -619,8 +614,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
 
     searcher_.SetPlayedMove(
         ply, move, excluded_move_ ? std::nullopt : position_info_.static_eval);
-    const auto nodes_before = searcher_.debug_info_.searched_nodes +
-                              searcher_.debug_info_.quiescence_nodes;
+    const auto nodes_before = searcher_.debug_info_.TotalNodes();
     current_position.DoMove(move);  // make the move and search the tree
 
     if (can_futility_prune && !current_position.IsUnderCheck()) {
@@ -713,11 +707,8 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
     // undo the move
     current_position.UndoMove(move, position_info_.irreversible_data);
     if (ply == 0) {
-      searcher_.AddRootEffort(move,
-                              searcher_.debug_info_.searched_nodes +
-                                  searcher_.debug_info_.quiescence_nodes -
-                                  nodes_before,
-                              temp_eval);
+      searcher_.AddRootEffort(
+          move, searcher_.debug_info_.TotalNodes() - nodes_before, temp_eval);
     }
 
     if (temp_eval > iteration_status_.best_eval) {
