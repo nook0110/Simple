@@ -7,6 +7,10 @@
 #include "BitBoard.h"
 
 namespace SimpleChessEngine {
+template <>
+void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(
+    Move*& moves, Position& position, Bitboard target) const;
+
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<
     MoveGenerator::Type::kAll>(Position& position) const;
 template MoveGenerator::Moves MoveGenerator::GenerateMoves<
@@ -167,15 +171,6 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
   }
 }
 
-template <>
-void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(Move*& moves,
-                                                        Position& position,
-                                                        Bitboard target) const {
-  GenerateMovesFromSquare<Piece::kKing>(
-      moves, position, position.GetKingSquare(position.GetSideToMove()),
-      target);
-}
-
 template <MoveGenerator::Type type>
 Move* MoveGenerator::GeneratePseudoLegal(Position& position,
                                          Move* moves) const {
@@ -276,6 +271,15 @@ template Move* MoveGenerator::GeneratePseudoLegal<MoveGenerator::Type::kQuiets>(
     Position&, Move*) const;
 template Move* MoveGenerator::GeneratePseudoLegal<
     MoveGenerator::Type::kQuiescence>(Position&, Move*) const;
+
+template <>
+void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(Move*& moves,
+                                                        Position& position,
+                                                        Bitboard target) const {
+  GenerateMovesFromSquare<Piece::kKing>(
+      moves, position, position.GetKingSquare(position.GetSideToMove()),
+      target);
+}
 
 template <Piece piece>
 void MoveGenerator::GenerateMovesFromSquare(Move*& moves, Position& position,

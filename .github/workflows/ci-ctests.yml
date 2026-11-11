@@ -44,7 +44,20 @@ jobs:
         cmake -DBUILD_TESTS=True -DCMAKE_BUILD_TYPE=Release -B build
         cmake --build build -t SCE_tests
 
+    - name: Download and verify NNUE
+      working-directory: ${{ github.workspace }}
+      run: |
+        for network in nn-37f18f62d772.nnue nn-1c0000000000.nnue; do
+          wget -q "https://tests.stockfishchess.org/api/nn/$network" -O "build/$network"
+          hash=$(sha256sum "build/$network" | cut -c1-12)
+          expected=${network#nn-}
+          test "$hash" = "${expected%.nnue}"
+        done
+
     - name: Run tests
+      env:
+        SCE_NNUE_SMALL: ${{ github.workspace }}/build/nn-37f18f62d772.nnue
+        SCE_NNUE_BIG: ${{ github.workspace }}/build/nn-1c0000000000.nnue
       working-directory: ${{runner.workspace}}/Simple/build
       run: |
         ulimit -s unlimited

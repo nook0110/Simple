@@ -108,6 +108,23 @@ void MovePicker::Generate(bool quiet) {
   }
 }
 
+void MovePicker::InitProbCut(Position& position, const Searcher* searcher,
+                             Depth ply) {
+  InitPicker(position, searcher, ply);
+  Generate(false);
+}
+
+Move MovePicker::SelectProbCutMove(Eval see_threshold) {
+  while (current_ < end_) {
+    const auto move = moves_[current_++].move;
+    if (move.IsPromotion() && move.PromotionPiece() != Piece::kQueen) continue;
+    if (position_->IsLegal(move, blockers_) &&
+        position_->StaticExchangeEvaluation(move, see_threshold))
+      return Emit(move);
+  }
+  return Move::None();
+}
+
 Move MovePicker::Emit(Move move) {
   ++move_count_;
   return move;
