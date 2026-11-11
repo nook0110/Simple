@@ -5,7 +5,6 @@
 #include "ExitCondition.h"
 #include "MovePicker.h"
 #include "Nnue/Nnue.h"
-#include "Settings.h"
 
 namespace SimpleChessEngine {
 template <class ExitCondition>
@@ -14,9 +13,7 @@ Quiescence<ExitCondition>::Quiescence(const ExitCondition& exit_condition,
                                       Table* table, Age age)
     : exit_condition_(exit_condition), table_(table), age_(age),
       cache_static_eval_(table && Nnue::IsLoaded()),
-      eval_context_((static_cast<std::uint64_t>(Nnue::Generation()) << 32) |
-                    static_cast<std::uint32_t>(
-                        Settings::EvaluationParameters::nnue_scale)) {}
+      eval_context_(StaticEvalContext()) {}
 
 template <class ExitCondition>
   requires StopSearchCondition<ExitCondition>

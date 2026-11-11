@@ -465,12 +465,8 @@ Eval SearchNode<node_type, ExitCondition>::GetStaticEval() const {
   if (!position_info_.static_eval) {
     Eval cached_eval = kNoStaticEval;
     if (iteration_status_.tt_info && Nnue::IsLoaded()) {
-      const auto context =
-          (static_cast<std::uint64_t>(Nnue::Generation()) << 32) |
-          static_cast<std::uint32_t>(
-              Settings::EvaluationParameters::nnue_scale);
       cached_eval = searcher_.best_moves_->GetStaticEval(
-          *iteration_status_.tt_info, context);
+          *iteration_status_.tt_info, StaticEvalContext());
     }
     position_info_.static_eval = cached_eval != kNoStaticEval
                                      ? cached_eval
@@ -499,9 +495,7 @@ void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
       state_.remaining_depth, bound, searcher_.age_,
       Nnue::IsLoaded() ? position_info_.static_eval.value_or(kNoStaticEval)
                        : kNoStaticEval,
-      (static_cast<std::uint64_t>(Nnue::Generation()) << 32) |
-          static_cast<std::uint32_t>(
-              Settings::EvaluationParameters::nnue_scale));
+      StaticEvalContext());
 }
 
 template <NodeType node_type, class ExitCondition>

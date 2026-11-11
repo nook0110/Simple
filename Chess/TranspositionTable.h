@@ -1,20 +1,28 @@
 #pragma once
 
+#include <sys/mman.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <cstdlib>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <new>
-#include <sys/mman.h>
 
 #include "Hasher.h"
 #include "Move.h"
+#include "Nnue/Nnue.h"
 #include "Position.h"
+#include "Settings.h"
 
 namespace SimpleChessEngine {
 inline constexpr Eval kNoStaticEval = -8192;
+
+[[nodiscard]] inline std::uint64_t StaticEvalContext() {
+  return (static_cast<std::uint64_t>(Nnue::Generation()) << 32) |
+         static_cast<std::uint32_t>(Settings::EvaluationParameters::nnue_scale);
+}
 
 inline Eval TTScorePlyAdjustment(const Eval value, const Depth ply) {
   return std::abs(value) >= kTablebaseWinValue - kMaxSearchPly

@@ -10,7 +10,6 @@
 #include "PositionFactory.h"
 #include "Quiescence.h"
 #include "Searcher.h"
-#include "Settings.h"
 
 using namespace SimpleChessEngine;
 
@@ -204,11 +203,7 @@ class QuiescenceTTNnue : public ::testing::Test {
 
   void TearDown() override { Nnue::Unload(); }
 
-  static std::uint64_t Context() {
-    return (static_cast<std::uint64_t>(Nnue::Generation()) << 32) |
-           static_cast<std::uint32_t>(
-               Settings::EvaluationParameters::nnue_scale);
-  }
+  static std::uint64_t Context() { return StaticEvalContext(); }
 };
 
 TEST_F(QuiescenceTTNnue, ReusesStaticEvalWithMatchingContextOnly) {
