@@ -397,9 +397,7 @@ SearchNode<node_type, ExitCondition>::CheckProbCut() {
   for (auto move = move_picker_.SelectProbCutMove(see_threshold);
        move.IsValid(); move = move_picker_.SelectProbCutMove(see_threshold)) {
     ++searcher_.debug_info_.probcut_candidates;
-    searcher_.SetPlayedMove(
-        state_.ply, move,
-        excluded_move_ ? std::nullopt : position_info_.static_eval);
+    searcher_.SetPlayedMove(state_.ply, move, position_info_.static_eval);
     position.DoMove(move);
 
     auto quiescence = Quiescence{exit_condition_, searcher_.best_moves_.get(),
@@ -543,8 +541,6 @@ SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
             searcher_.debug_info_.quiescence_nodes - nodes_before,
         eval_optional ? SearchResult{-*eval_optional} : std::nullopt);
   }
-
-  if (!eval_optional) return std::nullopt;
 
   return eval_optional;
 }
