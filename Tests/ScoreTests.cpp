@@ -9,6 +9,8 @@ static_assert(Eval{41} >= SfMargin{104});
 static_assert(Eval{40} < SfMargin{104});
 static_assert(Eval{-41} <= SfMargin{-104});
 static_assert(Eval{-40} > SfMargin{-104});
+static_assert(Eval{-788} >= SfMargin{-2000});
+static_assert(Eval{-789} < SfMargin{-2000});
 static_assert(SfMargin{365} - SfMargin{13} * 2 == SfMargin{339});
 static_assert(SfMargin::RoundedFromEngine(41) == 104);
 static_assert(SfMargin::RoundedFromEngine(-41) == -104);

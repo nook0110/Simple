@@ -223,7 +223,7 @@ struct Settings {
       inline static SfMargin kStaticEvalBaseMargin{365};
       inline static SfMargin kStaticEvalDepthMargin{13};
       inline static SfMargin kStaticEvalImprovingMargin{47};
-      inline static Eval kMinBeta = -788;
+      inline static SfMargin kMinBeta{-2000};
       inline static Eval kEvalDivisor = 101;
       inline static int kDepthDivisor = 3;
       inline static int kNullMoveReduction = 7;
