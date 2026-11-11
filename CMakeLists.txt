@@ -90,7 +90,7 @@ if(BUILD_TESTS)
     add_dependencies(SCE_tests SCE_tbbench)
     target_link_libraries(SCE_tests 
         PRIVATE 
-        gtest_main 
+        gtest
         chess_lib  # Use the main library
     )
 
