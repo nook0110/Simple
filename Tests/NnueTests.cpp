@@ -3,34 +3,37 @@
 #include <algorithm>
 #include <array>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <random>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "MoveFactory.h"
 #include "MoveGenerator.h"
-#include "Nnue/FeatureTransformer.h"
 #include "Nnue/Nnue.h"
 #include "Position.h"
 #include "PositionFactory.h"
 
+namespace SimpleChessEngine {
+struct NnueTestAccess {
+  static bool Verify(const Position& position) {
+    return Nnue::VerifyAccumulators(position, position.nnue_);
+  }
+};
+}  // namespace SimpleChessEngine
 using namespace SimpleChessEngine;
 
 namespace NnueTests {
 class NnueIncremental : public ::testing::TestWithParam<const char*> {
  protected:
   void SetUp() override {
-    const bool dual = std::string(GetParam()) == "SCE_NNUE_DUAL";
-    const char* path = std::getenv(dual ? "SCE_NNUE_BIG" : GetParam());
-    if (path == nullptr || !Nnue::Load(path)) {
-      GTEST_SKIP() << GetParam() << " does not point to a loadable network";
-    }
-    if (dual) {
-      const char* small = std::getenv("SCE_NNUE_SMALL");
-      ASSERT_NE(small, nullptr);
-      ASSERT_TRUE(Nnue::LoadSmall(small));
-    }
+    const char* path = std::getenv("SCE_NNUE");
+    if (path == nullptr) GTEST_SKIP() << "SCE_NNUE is not set";
+    ASSERT_TRUE(Nnue::Load(path));
   }
 
   void TearDown() override { Nnue::Unload(); }
@@ -39,7 +42,7 @@ class NnueIncremental : public ::testing::TestWithParam<const char*> {
 [[nodiscard]] bool MatchesFullRefresh(const Position& position) {
   const auto incremental = position.EvaluateNetwork();
   const auto scratch = Nnue::EvaluateFromScratch(position);
-  return incremental.psqt == scratch.psqt &&
+  return NnueTestAccess::Verify(position) && incremental.psqt == scratch.psqt &&
          incremental.positional == scratch.positional;
 }
 
@@ -105,6 +108,7 @@ TEST_P(NnueIncremental, RandomGamesMatchFullRefresh) {
       }
     }
   }
+  RecordProperty("positions_checked", static_cast<int>(checked));
   EXPECT_GT(checked, 5000u);
 }
 
@@ -119,248 +123,114 @@ TEST_P(NnueIncremental, EvaluationIsSideRelative) {
   EXPECT_EQ(white_output.positional, black_output.positional);
 }
 
-INSTANTIATE_TEST_SUITE_P(Networks, NnueIncremental,
-                         ::testing::Values("SCE_NNUE_SMALL", "SCE_NNUE_BIG",
-                                           "SCE_NNUE_DUAL"));
-
-class NnueDual : public ::testing::Test {
- protected:
-  void SetUp() override {
-    big_ = std::getenv("SCE_NNUE_BIG");
-    small_ = std::getenv("SCE_NNUE_SMALL");
-    if (!big_ || !small_) GTEST_SKIP() << "Both NNUE fixtures are required";
-    ASSERT_TRUE(Nnue::Load(big_));
-    ASSERT_TRUE(Nnue::LoadSmall(small_));
-  }
-
-  void TearDown() override { Nnue::Unload(); }
-
-  const char* big_ = nullptr;
-  const char* small_ = nullptr;
-};
-
-TEST(NnueMaterial, UsesMiddlegameMaterialRelativeToSideToMove) {
-  EXPECT_EQ(PositionFactory{}().SimpleMaterialEval(), 0);
-  EXPECT_EQ(PositionFactory{}("4k3/8/8/8/8/8/PP6/R3K3 w - - 0 1")
-                .SimpleMaterialEval(), 477 + 2 * 82);
-  EXPECT_EQ(PositionFactory{}("4k3/8/8/8/8/8/PP6/R3K3 b - - 0 1")
-                .SimpleMaterialEval(), -477 - 2 * 82);
-}
-
-TEST_F(NnueDual, KeepsUnusedAccumulatorsLazyAndUpdatesAcrossGaps) {
-  auto position = PositionFactory{}();
-  Nnue::AccumulatorStack stack;
-  auto output = Nnue::Evaluate(position, stack);
-  auto scratch = Nnue::EvaluateFromScratch(position);
-  EXPECT_EQ(output.psqt, scratch.psqt);
-  EXPECT_EQ(output.positional, scratch.positional);
-  EXPECT_FALSE(stack.Accumulators<Nnue::kSmallDimensions>()[0].computed[0]);
-  EXPECT_TRUE(stack.Accumulators<Nnue::kBigDimensions>()[0].computed[0]);
-  const std::array<Move, 4> moves = {Move{12, 28}, Move{52, 36},
-                                    Move{6, 21}, Move{57, 42}};
-  for (const auto& move : moves) {
-    auto& dirty = stack.Push();
-    dirty.Add(position.GetPieceAt(move.From()), position.GetSideToMove(),
-              move.From(), move.To());
+TEST_P(NnueIncremental, SpecialMovesMatchFullRefresh) {
+  const std::pair<const char*, const char*> cases[] = {
+      {"r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", "e1g1"},
+      {"r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", "e1c1"},
+      {"r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1", "e8g8"},
+      {"r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1", "e8c8"},
+      {"rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3", "e5f6"},
+      {"7k/8/8/8/3pP3/8/8/K7 b - e3 37 42", "d4e3"},
+      {"1r2k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7b8q"},
+      {"1r2k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7b8r"},
+      {"1r2k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7b8b"},
+      {"1r2k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7b8n"},
+      {"4k3/P7/8/8/8/8/7p/4K3 w - - 0 1", "a7a8q"},
+      {"4k3/P7/8/8/8/8/7p/4K3 w - - 0 1", "a7a8n"},
+      {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R w KQkq - 0 1", "e1f1"},
+      {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1", "e1d1"},
+  };
+  for (const auto& [fen, coordinate] : cases) {
+    Position position = PositionFactory{}(fen);
+    ASSERT_TRUE(MatchesFullRefresh(position)) << fen;
+    const auto move = MoveFactory{}(position, coordinate);
+    ASSERT_TRUE(position.IsLegal(move)) << fen << " " << coordinate;
+    const auto data = position.GetIrreversibleData();
     position.DoMove(move);
-  }
-  output = Nnue::Evaluate(position, stack);
-  scratch = Nnue::EvaluateFromScratch(position);
-  EXPECT_EQ(output.psqt, scratch.psqt);
-  EXPECT_EQ(output.positional, scratch.positional);
-  for (std::size_t i = 0; i < stack.Size(); ++i) {
-    EXPECT_TRUE(stack.Accumulators<Nnue::kBigDimensions>()[i].computed[0]);
-    EXPECT_FALSE(stack.Accumulators<Nnue::kSmallDimensions>()[i].computed[0]);
-  }
-
-  auto winning = PositionFactory{}("4k3/8/8/8/8/8/8/R2QK3 w - - 0 1");
-  Nnue::AccumulatorStack winning_stack;
-  output = Nnue::Evaluate(winning, winning_stack);
-  scratch = Nnue::EvaluateFromScratch(winning);
-  EXPECT_EQ(output.psqt, scratch.psqt);
-  EXPECT_EQ(output.positional, scratch.positional);
-  EXPECT_TRUE(winning_stack.Accumulators<Nnue::kSmallDimensions>()[0].computed[0]);
-  EXPECT_FALSE(winning_stack.Accumulators<Nnue::kBigDimensions>()[0].computed[0]);
-  for (int i = 0; i < 3; ++i) {
-    winning_stack.Push();
-    winning.DoMove(NullMove{});
-  }
-  output = Nnue::Evaluate(winning, winning_stack);
-  scratch = Nnue::EvaluateFromScratch(winning);
-  EXPECT_EQ(output.psqt, scratch.psqt);
-  EXPECT_EQ(output.positional, scratch.positional);
-  for (std::size_t i = 0; i < winning_stack.Size(); ++i) {
-    EXPECT_TRUE(winning_stack.Accumulators<Nnue::kSmallDimensions>()[i].computed[0]);
-    EXPECT_FALSE(winning_stack.Accumulators<Nnue::kBigDimensions>()[i].computed[0]);
+    ASSERT_TRUE(MatchesFullRefresh(position)) << fen << " " << coordinate;
+    position.UndoMove(move, data);
+    ASSERT_TRUE(MatchesFullRefresh(position)) << fen << " undo " << coordinate;
   }
 }
 
-TEST_F(NnueDual, SwitchingNetworksReusesSameNetworkAncestor) {
-  auto position = PositionFactory{}("r3k3/8/8/8/8/8/8/R3K3 w - - 0 1");
-  Nnue::AccumulatorStack stack;
-  static_cast<void>(Nnue::Evaluate(position, stack));
-  const std::array<Move, 4> moves = {Move{0, 56}, Move{60, 51},
-                                    Move{56, 59}, Move{51, 59}};
-  for (std::size_t i = 0; i < moves.size(); ++i) {
-    const auto move = moves[i];
-    auto& dirty = stack.Push();
-    dirty.Add(position.GetPieceAt(move.From()), position.GetSideToMove(),
-              move.From(), move.To());
-    const auto captured = position.GetPieceAt(move.To());
-    if (captured != Piece::kNone) {
-      dirty.Add(captured, Flip(position.GetSideToMove()), move.To(),
-                Nnue::kNoSquare);
+TEST_P(NnueIncremental, MatchesStockfish19Oracle) {
+  std::ifstream input("Stockfish19Nnue.test");
+  ASSERT_TRUE(input.good());
+  int checked = 0;
+  for (std::string line; std::getline(input, line);) {
+    const auto separator = line.find(" # ");
+    ASSERT_NE(separator, std::string::npos);
+    const auto fen = line.substr(0, separator);
+    std::istringstream expected(line.substr(separator + 3));
+    int psqt, positional;
+    std::string processed;
+    ASSERT_TRUE(bool(expected >> psqt >> positional >> processed));
+    const auto position = PositionFactory{}(fen);
+    const auto output = position.EvaluateNetwork();
+    EXPECT_EQ(output.psqt, psqt) << fen;
+    EXPECT_EQ(output.positional, positional) << fen;
+    if (processed != "check") {
+      EXPECT_EQ(Nnue::PostProcess(position, output), std::stoi(processed))
+          << fen;
     }
-    position.DoMove(move);
-    const auto output = Nnue::Evaluate(position, stack);
-    const auto scratch = Nnue::EvaluateFromScratch(position);
-    EXPECT_EQ(output.psqt, scratch.psqt);
-    EXPECT_EQ(output.positional, scratch.positional);
-    const bool last = i + 1 == moves.size();
-    EXPECT_EQ(stack.Accumulators<Nnue::kBigDimensions>()[i + 1].computed[0],
-              last);
-    EXPECT_EQ(stack.Accumulators<Nnue::kSmallDimensions>()[i + 1].computed[0],
-              !last);
+    ASSERT_TRUE(MatchesFullRefresh(position)) << fen;
+    ++checked;
   }
-  for (std::size_t i = 0; i < stack.Size(); ++i) {
-    EXPECT_TRUE(stack.Accumulators<Nnue::kBigDimensions>()[i].computed[0]);
-  }
+  EXPECT_EQ(checked, 148);
 }
 
-TEST_F(NnueDual, SelectsSmallAndFallsBackOnlyOnMagnitude) {
-  std::vector<Position> positions;
-  positions.reserve(256);
-  std::vector<Nnue::NetworkOutput> small_outputs;
-  ASSERT_TRUE(Nnue::Load(small_));
-  std::mt19937_64 random(9171);
-  auto position = PositionFactory{}("4k3/8/8/8/8/8/8/R2QK3 w - - 0 1");
-  for (int i = 0; i < 256; ++i) {
-    positions.push_back(position);
-    small_outputs.push_back(position.EvaluateNetwork());
+TEST_P(NnueIncremental, LazyUpdatesReloadAndFailedLoad) {
+  Position position = PositionFactory{}();
+  std::mt19937_64 random(20261111);
+  std::vector<std::pair<Move, Position::IrreversibleData>> history;
+  for (int ply = 0; ply < 120; ++ply) {
+    if (ply % 11 == 0) {
+      ASSERT_TRUE(MatchesFullRefresh(position));
+    }
     const auto moves =
         MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
-    if (moves.empty() || i % 32 == 31) {
-      position = PositionFactory{}(
-          "3rk3/8/8/8/8/8/8/3QK3 w - - 0 1");
-    } else {
-      position.DoMove(moves[random() % moves.size()]);
-    }
+    if (moves.empty()) break;
+    const auto move = moves[random() % moves.size()];
+    history.emplace_back(move, position.GetIrreversibleData());
+    position.DoMove(move);
   }
-  ASSERT_TRUE(Nnue::Load(big_));
-  ASSERT_TRUE(Nnue::LoadSmall(small_));
-  int small_count = 0;
-  int fallback_count = 0;
-  int big_count = 0;
-  for (std::size_t i = 0; i < positions.size(); ++i) {
-    Nnue::AccumulatorStack stack;
-    const auto output = Nnue::Evaluate(positions[i], stack);
-    const auto expected = small_outputs[i];
-    const bool try_small = std::abs(positions[i].SimpleMaterialEval()) > 379;
-    const bool fallback = std::abs(expected.psqt + expected.positional) < 236;
-    EXPECT_EQ(stack.Accumulators<Nnue::kSmallDimensions>()[0].computed[0],
-              try_small);
-    EXPECT_EQ(stack.Accumulators<Nnue::kBigDimensions>()[0].computed[0],
-              !try_small || fallback);
-    if (try_small && !fallback) {
-      ++small_count;
-      EXPECT_EQ(output.psqt, expected.psqt);
-      EXPECT_EQ(output.positional, expected.positional);
-    } else {
-      if (try_small) {
-        ++fallback_count;
-      } else {
-        ++big_count;
-      }
-      const auto scratch = Nnue::EvaluateFromScratch(positions[i]);
-      EXPECT_EQ(output.psqt, scratch.psqt);
-      EXPECT_EQ(output.positional, scratch.positional);
-    }
+  ASSERT_TRUE(MatchesFullRefresh(position));
+  const auto generation = Nnue::Generation();
+  const auto before = position.EvaluateNetwork();
+  EXPECT_FALSE(Nnue::Load("/no-such-nnue19-network"));
+  EXPECT_EQ(generation, Nnue::Generation());
+  EXPECT_EQ(before.positional, position.EvaluateNetwork().positional);
+  ASSERT_TRUE(Nnue::Load(std::getenv("SCE_NNUE")));
+  ASSERT_TRUE(MatchesFullRefresh(position));
+  while (!history.empty()) {
+    position.UndoMove(history.back().first, history.back().second);
+    history.pop_back();
+    ASSERT_TRUE(MatchesFullRefresh(position));
   }
-  EXPECT_GT(small_count, 0);
-  EXPECT_GT(fallback_count, 0);
-  EXPECT_GT(big_count, 0);
-}
-
-TEST_F(NnueDual, DisablingSmallPreservesBigOutputAndFailedLoadKeepsNetworks) {
-  const auto position = PositionFactory{}("4k3/8/8/8/8/8/8/R2QK3 w - - 0 1");
-  const auto small = position.EvaluateNetwork();
-  ASSERT_FALSE(Nnue::LoadSmall(big_));
-  EXPECT_EQ(position.EvaluateNetwork().psqt, small.psqt);
-  EXPECT_EQ(position.EvaluateNetwork().positional, small.positional);
-  Nnue::UnloadSmall();
-  const auto big = position.EvaluateNetwork();
-  ASSERT_TRUE(Nnue::Load(big_));
-  const auto reference = position.EvaluateNetwork();
-  EXPECT_EQ(big.psqt, reference.psqt);
-  EXPECT_EQ(big.positional, reference.positional);
-  EXPECT_NE(big.psqt + big.positional, small.psqt + small.positional);
-}
-
-template <Nnue::IndexType kDimensions>
-void CheckFeatureCounts() {
-  auto transformer = std::make_unique<Nnue::FeatureTransformer<kDimensions>>();
-  alignas(Nnue::kCacheLineSize) std::int16_t input[kDimensions];
-  alignas(Nnue::kCacheLineSize) std::int16_t output[kDimensions];
-  std::array<std::int32_t, Nnue::kPsqtBuckets> psqt_input{};
-  std::array<std::int32_t, Nnue::kPsqtBuckets> psqt_output{};
-  for (Nnue::IndexType i = 0; i < kDimensions; ++i) {
-    input[i] = static_cast<std::int16_t>(i * 997);
-    for (Nnue::IndexType feature = 0; feature < 3; ++feature) {
-      transformer->weights[feature * kDimensions + i] =
-          static_cast<std::int16_t>(i * 317 + feature * 1709);
-    }
+  Nnue::Unload();
+  for (int ply = 0; ply < 8; ++ply) {
+    const auto moves =
+        MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+    const auto move = moves[random() % moves.size()];
+    history.emplace_back(move, position.GetIrreversibleData());
+    position.DoMove(move);
   }
-  for (Nnue::IndexType i = 0; i < Nnue::kPsqtBuckets; ++i) {
-    psqt_input[i] = static_cast<int>(i) * 107;
-    for (Nnue::IndexType feature = 0; feature < 3; ++feature) {
-      transformer->psqt_weights[feature * Nnue::kPsqtBuckets + i] =
-          static_cast<int>(i * 137 + feature * 2017);
-    }
-  }
-  for (Nnue::IndexType r = 0; r <= 3; ++r) {
-    for (Nnue::IndexType a = 0; a <= 3; ++a) {
-      Nnue::Features::ChangedIndexList removed, added;
-      for (Nnue::IndexType i = 0; i < r; ++i) removed.push_back(i);
-      for (Nnue::IndexType i = 0; i < a; ++i) added.push_back(2 - i);
-      transformer->ApplyUpdate(input, output, psqt_input.data(),
-                               psqt_output.data(), removed, added);
-      for (Nnue::IndexType i = 0; i < kDimensions; ++i) {
-        int expected = input[i];
-        for (const auto feature : removed) {
-          expected -= transformer->weights[feature * kDimensions + i];
-        }
-        for (const auto feature : added) {
-          expected += transformer->weights[feature * kDimensions + i];
-        }
-        ASSERT_EQ(output[i], static_cast<std::int16_t>(expected))
-            << r << "," << a << " dimension " << i;
-      }
-      for (Nnue::IndexType i = 0; i < Nnue::kPsqtBuckets; ++i) {
-        int expected = psqt_input[i];
-        for (const auto feature : removed) {
-          expected -= transformer->psqt_weights[feature * Nnue::kPsqtBuckets + i];
-        }
-        for (const auto feature : added) {
-          expected += transformer->psqt_weights[feature * Nnue::kPsqtBuckets + i];
-        }
-        ASSERT_EQ(psqt_output[i], expected);
-      }
-      alignas(Nnue::kCacheLineSize) std::int16_t aliased[kDimensions];
-      std::copy_n(input, kDimensions, aliased);
-      auto aliased_psqt = psqt_input;
-      transformer->ApplyUpdate(aliased, aliased, aliased_psqt.data(),
-                               aliased_psqt.data(), removed, added);
-      EXPECT_TRUE(std::equal(aliased, aliased + kDimensions, output));
-      EXPECT_EQ(aliased_psqt, psqt_output);
-    }
+  ASSERT_TRUE(Nnue::Load(std::getenv("SCE_NNUE")));
+  ASSERT_TRUE(MatchesFullRefresh(position));
+  while (!history.empty()) {
+    position.UndoMove(history.back().first, history.back().second);
+    history.pop_back();
+    ASSERT_TRUE(MatchesFullRefresh(position));
   }
 }
 
-TEST(NnueUpdates, SmallAllFeatureCounts) {
-  CheckFeatureCounts<Nnue::kSmallDimensions>();
+TEST(NnueScale, UsesStockfish19MaterialAnchor) {
+  constexpr double pawn =
+      -142.72052667 + 372.35176398 - 340.71073572 + 415.23490212;
+  EXPECT_EQ(Nnue::DefaultScale(), static_cast<int>(82.0 * 1024 / pawn + 0.5));
+  EXPECT_NEAR(pawn * Nnue::DefaultScale() / 1024, 82.0, 0.03);
 }
 
-TEST(NnueUpdates, BigAllFeatureCounts) {
-  CheckFeatureCounts<Nnue::kBigDimensions>();
-}
+INSTANTIATE_TEST_SUITE_P(Networks, NnueIncremental,
+                         ::testing::Values("SCE_NNUE"));
 }  // namespace NnueTests

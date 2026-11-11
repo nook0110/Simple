@@ -7,15 +7,13 @@ option(SCE_TEST_TABLEBASE "Download tablebase fixtures and run tablebase UCI tes
 option(SCE_WARNINGS_AS_ERRORS "Treat project warnings as errors" OFF)
 option(SCE_SANITIZE "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 set(SCE_TT_SIZE_MB 640 CACHE STRING "Shared transposition table size in MiB")
-set(SCE_EVALFILE "nn-37f18f62d772.nnue" CACHE STRING "Default NNUE network file")
-set(SCE_EVALFILE_SMALL "nn-37f18f62d772.nnue" CACHE STRING "Default small NNUE network file")
+set(SCE_EVALFILE "nn-1a298aa575a0.nnue" CACHE STRING "Default NNUE network file")
 
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_definitions(SCE_TT_SIZE_MB=${SCE_TT_SIZE_MB})
 add_compile_definitions(SCE_EVALFILE="${SCE_EVALFILE}")
-add_compile_definitions(SCE_EVALFILE_SMALL="${SCE_EVALFILE_SMALL}")
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 if(SCE_SANITIZE)
@@ -47,6 +45,19 @@ target_compile_definitions(fathom PRIVATE TB_NO_HELPER_API)
 target_link_libraries(fathom PRIVATE Threads::Threads)
 
 FILE(GLOB CHESS_SOURCES CONFIGURE_DEPENDS Chess/*.cpp Chess/Nnue/*.cpp)
+list(APPEND CHESS_SOURCES
+    Chess/Nnue/Stockfish/attacks.cpp
+    Chess/Nnue/Stockfish/position.cpp
+    Chess/Nnue/Stockfish/nnue/nnue_accumulator.cpp
+    Chess/Nnue/Stockfish/nnue/features/full_threats.cpp
+    Chess/Nnue/Stockfish/nnue/features/pp_3wide.cpp
+    Chess/Nnue/Stockfish/nnue/features/half_ka_v2_hm.cpp
+)
+set_source_files_properties(
+    Chess/Nnue/Stockfish/nnue/features/full_threats.cpp
+    PROPERTIES COMPILE_OPTIONS
+    "$<$<CXX_COMPILER_ID:GNU>:-fconstexpr-ops-limit=500000000>;$<$<CXX_COMPILER_ID:Clang>:-fconstexpr-steps=500000000>"
+)
 list(REMOVE_ITEM CHESS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Chess/main.cpp)
 
 set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Chess/Attacks.cpp APPEND PROPERTY COMPILE_OPTIONS

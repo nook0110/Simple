@@ -6,9 +6,9 @@ the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version. See the LICENSE file for the full text.
 
-The NNUE evaluation in Chess/Nnue/ is derived from Stockfish 17.1
-(https://github.com/official-stockfish/Stockfish, tag sf_17.1),
-Copyright (C) 2004-2025 The Stockfish developers (see the AUTHORS file in the
+The NNUE evaluation in Chess/Nnue/ is derived from Stockfish 19
+(https://github.com/official-stockfish/Stockfish, tag sf_19),
+Copyright (C) 2004-2026 The Stockfish developers (see the AUTHORS file in the
 Stockfish repository), licensed under the GNU General Public License version 3.
 It was ported to SimpleChessEngine and modified in November 2026.
 
