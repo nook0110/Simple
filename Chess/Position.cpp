@@ -615,8 +615,6 @@ bool Position::StaticExchangeEvaluation(const Move &move,
 
   if (move.IsPromotion()) {
     balance += EstimatePiece(move.PromotionPiece()) - EstimatePiece(Piece::kPawn);
-  } else if (move.IsEnPassant()) {
-    balance = EstimatePiece(Piece::kPawn);
   }
 
   balance -= threshold;
