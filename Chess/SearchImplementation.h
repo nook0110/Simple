@@ -738,13 +738,9 @@ bool SearchNode<node_type, ExitCondition>::CanNullMove() const
 
   if (position_info_.is_under_check) return false;
 
-  if ((GetStaticEval() - state_.beta) *
-          NMPSettings::kStaticEvalMarginDenominator <
-      NMPSettings::kStaticEvalBaseMarginNumerator -
-          NMPSettings::kStaticEvalDepthMarginNumerator *
-              state_.remaining_depth -
-          NMPSettings::kStaticEvalImprovingMarginNumerator *
-              evaluation_trend_.improving)
+  if (GetStaticEval() - state_.beta <
+      NMPSettings::StaticEvalMargin(state_.remaining_depth,
+                                    evaluation_trend_.improving))
     return false;
 
   const auto &current_position = searcher_.GetPosition();

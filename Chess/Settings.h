@@ -3,6 +3,7 @@
 #include <ostream>
 
 #include "Evaluation.h"
+#include "Score.h"
 #include "Utility.h"
 
 namespace SimpleChessEngine {
@@ -219,15 +220,20 @@ struct Settings {
     };
     struct NMPSettings {
       static constexpr bool kEnabled = true;
-      inline static Eval kStaticEvalBaseMarginNumerator = 365 * 82;
-      inline static Eval kStaticEvalDepthMarginNumerator = 13 * 82;
-      inline static Eval kStaticEvalImprovingMarginNumerator = 47 * 82;
-      inline static Eval kStaticEvalMarginDenominator = 208;
+      inline static SfMargin kStaticEvalBaseMargin{365};
+      inline static SfMargin kStaticEvalDepthMargin{13};
+      inline static SfMargin kStaticEvalImprovingMargin{47};
       inline static Eval kMinBeta = -788;
       inline static Eval kEvalDivisor = 101;
       inline static int kDepthDivisor = 3;
       inline static int kNullMoveReduction = 7;
       inline static Depth kVerificationDepth = 16;
+
+      [[nodiscard]] static SfMargin StaticEvalMargin(Depth depth,
+                                                     bool improving) {
+        return kStaticEvalBaseMargin - kStaticEvalDepthMargin * depth -
+               kStaticEvalImprovingMargin * improving;
+      }
     };
     struct IIRSettings {
       inline static Depth kBaseLimit = 2;
@@ -287,8 +293,6 @@ struct Settings {
   struct SearchParameters {
     inline static Eval kImprovingBetaMargin = 0;
     struct StaticEvalPolicySettings {
-      inline static int kEvalNumerator = 208;
-      inline static int kEvalDenominator = 82;
       inline static int kMinDifference = -189;
       inline static int kMaxDifference = 194;
       inline static int kOffset = 60;
@@ -306,13 +310,10 @@ struct Settings {
       static constexpr int kNegativeExtension = -3;
     };
     struct AspirationWindowSettings {
-      static constexpr Eval kPawnValue =
-          kPieceValues[static_cast<size_t>(Piece::kPawn)]
-              .eval[static_cast<size_t>(GamePhase::kMiddleGame)];
-      inline static double kInitialDelta = 5.0 * kPawnValue / 208.0;
-      inline static double kThreadDelta = kPawnValue / 208.0;
+      inline static double kInitialDelta = SfMargin{5}.ToEngine();
+      inline static double kThreadDelta = SfMargin{1}.ToEngine();
       inline static double kMeanSquaredScoreDivisor =
-          10193.0 * kPawnValue / 208.0;
+          SfMargin{10193}.ToEngine();
       inline static double kDeltaGrowth = 47.0 / 128.0;
     };
     static constexpr AspirationWindowSettings kAspirationWindowSettings = {};

@@ -189,8 +189,6 @@ class ChessEngine {
   }
 
   static constexpr double kInitialTimeReduction = 0.85;
-  static constexpr double kStockfishUnitsPerEval =
-      208.0 / Settings::SearchParameters::AspirationWindowSettings::kPawnValue;
 
   std::ostream& o_stream_;
 
@@ -327,9 +325,8 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     double falling_eval = 1.728;
     if (previous_score_) {
       falling_eval =
-          (11.48 +
-           2.30 * kStockfishUnitsPerEval * (*previous_score_ - eval) +
-           1.1 * kStockfishUnitsPerEval *
+          (11.48 + 2.30 * SfMargin::kPerEngineUnit * (*previous_score_ - eval) +
+           1.1 * SfMargin::kPerEngineUnit *
                (iteration_values[iteration_index] - eval)) /
           100.0;
     }

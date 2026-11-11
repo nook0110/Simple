@@ -253,19 +253,13 @@ inline Searcher::PieceTo Searcher::GetPieceTo(const Move &move) const {
 inline std::int64_t Searcher::StaticEvalHistoryBonus(const Eval parent_eval,
                                                      const Eval child_eval) {
   using Policy = Settings::SearchParameters::StaticEvalPolicySettings;
-  const auto round_ratio = [](std::int64_t numerator,
-                              std::int64_t denominator) {
-    return numerator < 0 ? -((-numerator + denominator / 2) / denominator)
-                         : (numerator + denominator / 2) / denominator;
-  };
   const auto gain = -(static_cast<std::int64_t>(parent_eval) + child_eval);
   const auto difference =
-      std::clamp<std::int64_t>(
-          round_ratio(gain * Policy::kEvalNumerator, Policy::kEvalDenominator),
-          Policy::kMinDifference, Policy::kMaxDifference) +
+      std::clamp<std::int64_t>(SfMargin::RoundedFromEngine(gain),
+                               Policy::kMinDifference, Policy::kMaxDifference) +
       Policy::kOffset;
-  return round_ratio(difference * Policy::kBonusMultiplier * kHistoryMax,
-                     Policy::kStockfishHistoryMax);
+  return DivideRounded(difference * Policy::kBonusMultiplier * kHistoryMax,
+                       Policy::kStockfishHistoryMax);
 }
 
 inline void Searcher::SetPlayedMove(const Depth ply, const Move &move,
