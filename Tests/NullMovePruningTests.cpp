@@ -14,14 +14,13 @@ using namespace SimpleChessEngine;
 namespace {
 class NullMovePruning : public testing::Test {
  protected:
-  NullMovePruning() { Settings::PruneParameters::RFPSettings::kDepthLimit = 0; }
-  ~NullMovePruning() override {
-    Settings::PruneParameters::RFPSettings::kDepthLimit = rfp_depth_limit_;
-  }
+  NullMovePruning() { rfp_.depth_limit = 0; }
+  ~NullMovePruning() override { rfp_.depth_limit = rfp_depth_limit_; }
 
  private:
-  const Depth rfp_depth_limit_ =
-      Settings::PruneParameters::RFPSettings::kDepthLimit;
+  Settings::PruneParameters::RFPSettings &rfp_ =
+      Settings::current<Settings::PruneParameters::RFPSettings>;
+  const Depth rfp_depth_limit_ = rfp_.depth_limit;
 };
 
 struct SearchTestCondition {
