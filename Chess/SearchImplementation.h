@@ -330,7 +330,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   const auto first_move = move_picker_.SelectNextMove();
   if (first_move.IsValid() && first_move == tt_move) {
     if (auto result = CheckSingularExtension()) {
-      searcher_.debug_info_.tt_cuts++;
+      if (*result) searcher_.debug_info_.tt_cuts++;
       return *result;
     }
   }

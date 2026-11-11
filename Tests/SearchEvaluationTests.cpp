@@ -487,3 +487,18 @@ TEST(StaticEvalPolicy, SearchReplacesContextForLaterQuietSibling) {
   EXPECT_TRUE(observed);
   EXPECT_EQ(searcher.GetPosition().GetHash(), parent.GetHash());
 }
+
+TEST(SingularExtensionStatistics, AbortedVerificationIsNotATtCut) {
+  const auto position = PositionFactory{}();
+  auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
+  table->SetEntry(position, MoveFactory{}(position, "e2e4"), 10000, 4,
+                  Bound::kLower, 0);
+  Searcher searcher(position, table);
+  const PolicyStopCondition stop{
+      [&] { return searcher.GetSingularInfo().searches > 0; }};
+  EXPECT_FALSE((SearchNode<NodeType::kPV, PolicyStopCondition>{
+      searcher, {8, 7, -20000, 20000, 1}, stop}()));
+  EXPECT_EQ(searcher.GetSingularInfo().searches, 1u);
+  EXPECT_EQ(searcher.GetInfo().tt_cuts, 0u);
+  EXPECT_EQ(searcher.GetPosition().GetHash(), position.GetHash());
+}
