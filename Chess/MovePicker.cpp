@@ -108,6 +108,23 @@ void MovePicker::Generate(bool quiet) {
   }
 }
 
+void MovePicker::InitProbCut(Position& position, const Searcher* searcher,
+                             Depth ply) {
+  InitPicker(position, searcher, ply);
+  Generate(false);
+}
+
+MaybeLegalMove MovePicker::SelectProbCutMove(Eval see_threshold) {
+  while (current_ < end_) {
+    const auto move = moves_[current_++].move;
+    if (move.IsPromotion() && move.PromotionPiece() != Piece::kQueen) continue;
+    if (position_->IsLegal(move, blockers_) &&
+        position_->StaticExchangeEvaluation(move, see_threshold))
+      return Emit(Position::AssumeLegal(move));
+  }
+  return MaybeLegalMove::None();
+}
+
 LegalMove MovePicker::Emit(LegalMove move) {
   ++move_count_;
   return move;
@@ -170,7 +187,8 @@ MaybeLegalMove MovePicker::SelectNextMove() {
       case Stage::kQuiet:
         while (current_ < end_) {
           const auto move = moves_[current_++].move;
-          if (position_->IsLegal(move, blockers_)) return Emit(Position::AssumeLegal(move));
+          if (position_->IsLegal(move, blockers_))
+            return Emit(Position::AssumeLegal(move));
         }
         current_ = 0;
         end_ = bad_end_;

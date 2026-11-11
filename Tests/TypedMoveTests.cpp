@@ -35,6 +35,9 @@ static_assert(!CanUndoMove<Move>);
 static_assert(!CanUndoMove<PseudoLegalMove>);
 static_assert(!CanUndoMove<MaybeLegalMove>);
 static_assert(std::is_same_v<decltype(std::declval<MovePicker&>().SelectNextMove()), MaybeLegalMove>);
+static_assert(std::is_same_v<
+              decltype(std::declval<MovePicker&>().SelectProbCutMove(Eval{})),
+              MaybeLegalMove>);
 static_assert(!CanConstructLegalMove<Move>);
 static_assert(!CanConstructLegalMove<PseudoLegalMove>);
 static_assert(!std::is_constructible_v<MaybeLegalMove, Move>);
