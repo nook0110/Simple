@@ -880,9 +880,7 @@ SearchNode<node_type, ExitCondition>::CheckSingularExtension() {
       remaining_depth >= Singular::kDepthLimit + kIsPrincipalVariation &&
       entry.depth >= remaining_depth - 3 && (entry.bound & Bound::kLower) &&
       !Score::IsDecisive(entry_score)) {
-    const Eval singular_beta =
-        entry_score - Singular::kMarginNumerator * remaining_depth /
-                          Singular::kMarginDenominator;
+    const Eval singular_beta = entry_score - Singular::Margin(remaining_depth);
     constexpr auto verification_type =
         node_type == NodeType::kCut ? NodeType::kCut : NodeType::kAll;
     ++searcher_.singular_info_.searches;

@@ -304,10 +304,20 @@ struct Settings {
       inline static std::int64_t kDecayDenominator = 1024;
     };
     struct SingularExtensionSettings {
+      static constexpr Eval kStockfishMarginNumerator = 59;
+      static constexpr Eval kStockfishMarginDenominator = 54;
+      static constexpr Eval kBigNetworkDefaultScale = 311;
+
       inline static Depth kDepthLimit = 6;
-      inline static Eval kMarginNumerator = 59 * 311;
-      inline static Eval kMarginDenominator = 54 * 1024;
+      inline static Eval kMarginNumerator =
+          kStockfishMarginNumerator * kBigNetworkDefaultScale;
+      inline static Eval kMarginDenominator =
+          kStockfishMarginDenominator * kNnueScaleDenominator;
       static constexpr int kNegativeExtension = -3;
+
+      [[nodiscard]] static Eval Margin(Depth depth) {
+        return kMarginNumerator * depth / kMarginDenominator;
+      }
     };
     struct AspirationWindowSettings {
       inline static double kInitialDelta = SfMargin{5}.ToEngine();
