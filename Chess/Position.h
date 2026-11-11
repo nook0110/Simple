@@ -240,6 +240,8 @@ class Position {
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const;
 
+  [[nodiscard]] bool HasLegalKings() const;
+
   [[nodiscard]] bool DetectRepetition(Depth depth) const {
     if (history_stack_.history.size() < 3) {
       return false;

@@ -257,6 +257,12 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     PrintBestMove(bm_info);
   };
 
+  if (!position_.HasLegalKings()) {
+    if (reporting_) Output() << "info string invalid position: illegal kings\n";
+    finish(BestMoveInfo{Move::None(), std::nullopt});
+    return;
+  }
+
   const auto legal_moves =
       MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position_);
   if (legal_moves.empty()) {

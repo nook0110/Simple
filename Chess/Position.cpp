@@ -600,6 +600,12 @@ bool Position::IsUnderCheck(const Player player) const {
   return IsUnderAttack(GetKingSquare(player), player);
 }
 
+bool Position::HasLegalKings() const {
+  return GetPiecesByType<Piece::kKing>(Player::kWhite).Count() == 1 &&
+         GetPiecesByType<Piece::kKing>(Player::kBlack).Count() == 1 &&
+         !IsUnderCheck(Flip(side_to_move_));
+}
+
 Eval Position::EstimatePiece(const Piece piece) const {
   const auto piece_type_idx = static_cast<size_t>(piece);
   return kPieceValues[piece_type_idx](evaluation_data_.non_pawn_material);

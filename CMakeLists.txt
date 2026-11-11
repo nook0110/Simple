@@ -139,6 +139,15 @@ if(BUILD_TESTS)
                 --probe $<TARGET_FILE:SCE_tbprobe>
                 --tablebase ${SYZYGY_FIXTURE_DIR}
     )
+    add_test(
+        NAME SyzygySearchRegression
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/Tests/tablebase_search_test.py
+                --engine $<TARGET_FILE:SimpleChessEngine>
+    )
+    set_tests_properties(SyzygySearchRegression PROPERTIES
+        TIMEOUT 60 SKIP_RETURN_CODE 77
+    )
 
     # Копирование тестовых данных
     file(GLOB TEST_DATA_FILES ${CMAKE_SOURCE_DIR}/Tests/*.test)
