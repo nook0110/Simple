@@ -281,6 +281,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   EBFsInfo ebfs;
   Window window{};
   Depth current_depth = initial_depth_;
+  Depth completed_depth = 0;
   Depth last_best_move_depth = 0;
   Move last_best_move = Move::None();
   std::optional<Eval> previous_iteration_eval;
@@ -311,6 +312,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       continue;
     }
 
+    completed_depth = current_depth;
     ebfs.Update(searcher_.GetInfo().searched_nodes);
     info += searcher_.GetInfo();
 
@@ -392,7 +394,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     window.SetNewEval(eval);
   }
 
-  PrintInfo(info, eval, current_depth,
+  PrintInfo(info, eval, completed_depth,
             std::chrono::duration<double>{std::chrono::steady_clock::now() -
                                           start_time});
 
@@ -451,7 +453,7 @@ inline std::ostream& operator<<(std::ostream& out,
 
 inline std::ostream& operator<<(
     std::ostream& out, const PrincipalVariationInfo& principal_variation) {
-  out << "info depth " << principal_variation.moves.size() << " pv";
+  out << "info depth " << principal_variation.current_depth << " pv";
   for (const auto move : principal_variation.moves) {
     out << " " << move;
   }
