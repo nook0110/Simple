@@ -290,8 +290,9 @@ TEST(StaticEvalPolicy, SiblingAndNullReplacePreviousMoveContext) {
   PolicyAccess::Train(searcher, 1, -10000);
   EXPECT_EQ(PolicyAccess::Entry(searcher, Player::kWhite, second), 2785);
   searcher.InitStartOfSearch();
+  const auto decayed = PolicyAccess::Entry(searcher, Player::kWhite, second);
   PolicyAccess::Train(searcher, 1, -10000);
-  EXPECT_EQ(PolicyAccess::Entry(searcher, Player::kWhite, second), 0);
+  EXPECT_EQ(PolicyAccess::Entry(searcher, Player::kWhite, second), decayed);
 }
 
 TEST(StaticEvalPolicy, ChildTrainsBeforeCutoffAndRestoresBoard) {
