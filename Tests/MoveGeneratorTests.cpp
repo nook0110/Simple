@@ -1,6 +1,8 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+
 #include "MoveGenerator.h"
 #include "PositionFactory.h"
 
@@ -104,10 +106,15 @@ TEST_P(GenerateMovesTest, Perft) {
 
     EXPECT_EQ(position, GetPosition());
     EXPECT_EQ(position.GetHash(), GetPosition().GetHash());
-    if (possible_games_answer)
+    if (possible_games_answer) {
       EXPECT_EQ(*possible_games, *possible_games_answer);
-    if (en_croissants_answer) EXPECT_EQ(*en_croissants, *en_croissants_answer);
-    if (castlings_answer) EXPECT_EQ(*castlings, *castlings_answer);
+    }
+    if (en_croissants_answer) {
+      EXPECT_EQ(*en_croissants, *en_croissants_answer);
+    }
+    if (castlings_answer) {
+      EXPECT_EQ(*castlings, *castlings_answer);
+    }
   }
 }
 
@@ -161,7 +168,10 @@ INSTANTIATE_TEST_CASE_P(
                 {1486},    // depth 2
                 {62379},   // depth 3
                 {2103487}  // depth 4
-            }}));
+            }}),
+    [](const testing::TestParamInfo<GenTestCase> &info) {
+      return "Position" + std::to_string(info.index);
+    });
 
 TEST(GenerateMoves, ShannonNumberCheck) {
   auto start_position = PositionFactory{}();
