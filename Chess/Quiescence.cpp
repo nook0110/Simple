@@ -8,29 +8,6 @@
 #include "Settings.h"
 
 namespace SimpleChessEngine {
-template class Quiescence<TimeCondition>;
-template class Quiescence<DepthCondition>;
-template class Quiescence<Pondering>;
-
-template SearchResult Quiescence<TimeCondition>::Search<false>(
-    Position& current_position, Eval alpha, const Eval beta,
-    const Depth current_depth, bool pv_node);
-template SearchResult Quiescence<TimeCondition>::Search<true>(
-    Position& current_position, Eval alpha, const Eval beta,
-    const Depth current_depth, bool pv_node);
-template SearchResult Quiescence<DepthCondition>::Search<false>(
-    Position& current_position, Eval alpha, const Eval beta,
-    const Depth current_depth, bool pv_node);
-template SearchResult Quiescence<DepthCondition>::Search<true>(
-    Position& current_position, Eval alpha, const Eval beta,
-    const Depth current_depth, bool pv_node);
-template SearchResult Quiescence<Pondering>::Search<false>(
-    Position& current_position, Eval alpha, const Eval beta,
-    const Depth current_depth, bool pv_node);
-template SearchResult Quiescence<Pondering>::Search<true>(
-    Position& current_position, Eval alpha, const Eval beta,
-    const Depth current_depth, bool pv_node);
-
 template <class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 Quiescence<ExitCondition>::Quiescence(const ExitCondition& exit_condition,
@@ -226,4 +203,27 @@ template <class ExitCondition>
 bool Quiescence<ExitCondition>::IsTimeToExit() {
   return exit_condition_.IsTimeToExit();
 }
+
+template class Quiescence<TimeCondition>;
+template class Quiescence<DepthCondition>;
+template class Quiescence<Pondering>;
+
+template SearchResult Quiescence<TimeCondition>::Search<false>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<TimeCondition>::Search<true>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<DepthCondition>::Search<false>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<DepthCondition>::Search<true>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<Pondering>::Search<false>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<Pondering>::Search<true>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
 }  // namespace SimpleChessEngine
