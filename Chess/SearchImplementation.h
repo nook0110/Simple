@@ -39,7 +39,7 @@ struct IterationStatus {
 
 struct PositionInfo {
   explicit PositionInfo(const Position &position);
-  mutable std::optional<Eval> static_eval;
+  std::optional<Eval> static_eval;
   const bool is_under_check = false;
   const Position::IrreversibleData irreversible_data;
 };
@@ -87,6 +87,7 @@ struct SearchNode {
 
   SearchResult QuiescenceSearch();
   Eval GetEndGameScore() const;
+  [[nodiscard]] Eval ComputeStaticEval() const;
   Eval GetStaticEval() const;
 
   void SetBestMove(Move move);
@@ -188,7 +189,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   }
 
   if (ply >= kMaxSearchPly - 1) {
-    return GetStaticEval();
+    return ComputeStaticEval();
   }
 
   if (!excluded_move_ && position_info_.is_under_check && ply < 2 * max_depth) {
@@ -245,10 +246,12 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     }
   }
 
-  evaluation_trend_ = searcher_.static_evals_.Update(
-      ply, position_info_.is_under_check ? std::nullopt
-                                         : std::optional{GetStaticEval()});
-  if (!excluded_move_ && !position_info_.is_under_check) {
+  position_info_.static_eval = position_info_.is_under_check
+                                   ? std::nullopt
+                                   : std::optional{ComputeStaticEval()};
+  evaluation_trend_ =
+      searcher_.static_evals_.Update(ply, position_info_.static_eval);
+  if (!excluded_move_ && position_info_.static_eval) {
     searcher_.UpdateStaticEvalHistory(ply, *position_info_.static_eval);
   }
 
@@ -405,17 +408,20 @@ Eval SearchNode<node_type, ExitCondition>::GetEndGameScore() const {
 
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
-Eval SearchNode<node_type, ExitCondition>::GetStaticEval() const {
-  if (!position_info_.static_eval) {
-    Eval cached_eval = kNoStaticEval;
-    if (iteration_status_.tt_info && Nnue::IsLoaded()) {
-      cached_eval = searcher_.best_moves_->GetStaticEval(
-          *iteration_status_.tt_info, StaticEvalContext());
-    }
-    position_info_.static_eval = cached_eval != kNoStaticEval
-                                     ? cached_eval
-                                     : searcher_.GetPosition().Evaluate();
+Eval SearchNode<node_type, ExitCondition>::ComputeStaticEval() const {
+  Eval cached_eval = kNoStaticEval;
+  if (iteration_status_.tt_info && Nnue::IsLoaded()) {
+    cached_eval = searcher_.best_moves_->GetStaticEval(
+        *iteration_status_.tt_info, StaticEvalContext());
   }
+  return cached_eval != kNoStaticEval ? cached_eval
+                                      : searcher_.GetPosition().Evaluate();
+}
+
+template <NodeType node_type, class ExitCondition>
+  requires StopSearchCondition<ExitCondition>
+Eval SearchNode<node_type, ExitCondition>::GetStaticEval() const {
+  assert(position_info_.static_eval);
   return *position_info_.static_eval;
 }
 

@@ -240,7 +240,10 @@ struct ProbCutTestAccess {
                                               excluded};
     node.ProbeTranspositionTable();
     node.evaluation_trend_.improving = improving;
-    node.position_info_.static_eval = static_eval;
+    if (!node.position_info_.is_under_check) {
+      node.position_info_.static_eval =
+          static_eval ? *static_eval : node.ComputeStaticEval();
+    }
     return node.TryProbCut();
   }
 };
