@@ -274,7 +274,7 @@ TEST(Quiescence, StopAtFirstNodePreservesPosition) {
 TEST(TranspositionTable, IllegalStoredMoveIsIgnored) {
   auto position = PositionFactory{}();
   auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-  table->SetEntry(position, MoveFactory{}(position, "a1a8"), 0, 20,
+  table->SetEntry(position, MoveFactory{}(position, "a1a8"), ToTT(0, 0), 20,
                   Bound::kExact, Age{});
   Searcher searcher(position, table);
   searcher.InitStartOfSearch();

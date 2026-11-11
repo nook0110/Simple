@@ -44,6 +44,7 @@ class PositionBuilder;
 class Position {
  public:
   friend struct PositionFactory;
+  friend struct PositionStateTestAccess;
   friend class Tablebase::PositionBuilder;
   /**
    * \brief Struct to hold evaluation data for the position.
@@ -348,6 +349,9 @@ class Position {
   void RemovePiece(const BitIndex square, const Player color);
 
   void MovePiece(const BitIndex from, const BitIndex to, const Player color);
+
+  [[nodiscard]] bool VerifyIncrementalState() const;
+  [[nodiscard]] bool VerifyPinCache() const;
 
 
   void SetCastlingRights(const std::array<std::bitset<2>, 2> &castling_rights);
