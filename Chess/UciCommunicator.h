@@ -306,7 +306,6 @@ struct BooleanOption : public OptionBase {
   bool value_ = default_value;
 };
 
-using PonderOption = BooleanOption<false>;
 struct EngineOptions {
   EngineOptions() {
     auto threads = std::make_unique<SpinOption>("Threads", 1, 1, 256);

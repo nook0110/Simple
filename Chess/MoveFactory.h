@@ -25,17 +25,6 @@ struct MoveFactory {
 
 inline Move MoveFactory::operator()(const Position &position,
                                     const std::string &move) const {
-  if (move == "O-O") {
-    return Move::Make<MoveType::kCastling>(
-        position.GetKingSquare(position.GetSideToMove()), 
-        position.GetKingSquare(position.GetSideToMove()) + 2);
-  }
-  if (move == "O-O-O") {
-    return Move::Make<MoveType::kCastling>(
-        position.GetKingSquare(position.GetSideToMove()),
-        position.GetKingSquare(position.GetSideToMove()) - 2);
-  }
-
   const auto [from, to] = ParseDefaultMove(move);
 
   const auto piece_to_move = position.GetPieceAt(from);
