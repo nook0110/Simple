@@ -26,7 +26,7 @@ jobs:
           cmake --build build -j2
       - name: Download and verify NNUE
         run: |
-          for network in nn-37f18f62d772.nnue nn-1c0000000000.nnue; do
+          for network in nn-1a298aa575a0.nnue; do
             wget -q "https://tests.stockfishchess.org/api/nn/$network" -O "build/$network"
             hash=$(sha256sum "build/$network" | cut -c1-12)
             expected=${network#nn-}
@@ -34,8 +34,7 @@ jobs:
           done
       - name: Run tests
         env:
-          SCE_NNUE_SMALL: ${{ github.workspace }}/build/nn-37f18f62d772.nnue
-          SCE_NNUE_BIG: ${{ github.workspace }}/build/nn-1c0000000000.nnue
+          SCE_NNUE: ${{ github.workspace }}/build/nn-1a298aa575a0.nnue
         run: |
           ulimit -s unlimited
           ctest --test-dir build -j1 --output-on-failure --timeout 300 -E 'SharedClusterTable.ConcurrentEntriesStayConsistent|LazySmpUciLifecycle|WinAtChess|StopRestoresPosition'
@@ -71,7 +70,7 @@ jobs:
           cmake --build build-sanitize -j2
       - name: Download and verify NNUE
         run: |
-          for network in nn-37f18f62d772.nnue nn-1c0000000000.nnue; do
+          for network in nn-1a298aa575a0.nnue; do
             wget -q "https://tests.stockfishchess.org/api/nn/$network" -O "build-sanitize/$network"
             hash=$(sha256sum "build-sanitize/$network" | cut -c1-12)
             expected=${network#nn-}
@@ -79,13 +78,12 @@ jobs:
           done
       - name: Run tests
         env:
-          SCE_NNUE_SMALL: ${{ github.workspace }}/build-sanitize/nn-37f18f62d772.nnue
-          SCE_NNUE_BIG: ${{ github.workspace }}/build-sanitize/nn-1c0000000000.nnue
+          SCE_NNUE: ${{ github.workspace }}/build-sanitize/nn-1a298aa575a0.nnue
         run: |
           ctest --test-dir build-sanitize -j1 --output-on-failure --timeout 300 -E 'SharedClusterTable.ConcurrentEntriesStayConsistent|LazySmpUciLifecycle|WinAtChess|StopRestoresPosition|BestMoveTest.FindBestMove|PerftTests/GenerateMovesTest.Perft/Position[1-4]|SyzygySearchRegression'
       - name: Check tablebase search under sanitizers
         env:
-          SCE_NNUE_SMALL: ${{ github.workspace }}/build-sanitize/nn-37f18f62d772.nnue
+          SCE_NNUE: ${{ github.workspace }}/build-sanitize/nn-1a298aa575a0.nnue
         run: ctest --test-dir build-sanitize -R '^SyzygySearchRegression$' --output-on-failure --timeout 300
       - name: Search three positions
         run: python3 Tests/sanitizer_smoke.py --engine build-sanitize/SimpleChessEngine
