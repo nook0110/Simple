@@ -53,8 +53,8 @@ SearchTestCondition ObserveVerification(const Searcher &searcher,
 void StoreNullBound(Searcher::SearcherTranspositionTable &table,
                     Position position, Eval beta, Depth depth) {
   position.DoMove(NullMove{});
-  table.SetEntry(position, MoveFactory{}(position, "e7e5"), -beta, depth,
-                 Bound::kUpper, 0);
+  table.SetEntry(position, MoveFactory{}(position, "e7e5"), ToTT(-beta, 0),
+                 depth, Bound::kUpper, 0);
 }
 }
 
@@ -188,8 +188,8 @@ TEST_F(NullMovePruning, StaticEvalAtBetaSetsImprovingForLaterPruning) {
     for (const auto &move : moves) {
       auto child = position;
       child.DoMove(move);
-      table->SetEntry(child, MoveFactory{}(child, "e7e5"), -beta + 1, 1,
-                      Bound::kLower, 0);
+      table->SetEntry(child, MoveFactory{}(child, "e7e5"), ToTT(-beta + 1, 0),
+                      1, Bound::kLower, 0);
     }
     Searcher searcher(position, table);
     const auto stop = StopAfterNodes(searcher, 21);
@@ -220,7 +220,7 @@ TEST_F(NullMovePruning, AdaptiveReductionUsesDepthMinusR) {
       auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
       StoreNullBound(*table, position, beta,
                      static_cast<Depth>(test.child_depth - !sufficient_depth));
-      table->SetEntry(position, MoveFactory{}(position, "e2e4"), beta,
+      table->SetEntry(position, MoveFactory{}(position, "e2e4"), ToTT(beta, 0),
                       test.child_depth, Bound::kLower, 0);
       Searcher searcher(position, table);
       const auto stop = StopAfterNodes(searcher, sufficient_depth ? 3u : 2u);
@@ -286,7 +286,7 @@ TEST_F(NullMovePruning, VerificationMustConfirmTheNullCutoff) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
     StoreNullBound(*table, position, beta, 3);
     table->SetEntry(position, MoveFactory{}(position, "e2e4"),
-                    confirmed ? beta : beta - 1, 3,
+                    ToTT(confirmed ? beta : beta - 1, 0), 3,
                     confirmed ? Bound::kLower : Bound::kUpper, 0);
     Searcher searcher(position, table);
     const auto stop = StopAfterNodes(searcher, 3);
@@ -310,7 +310,7 @@ TEST_F(NullMovePruning, VerificationPlyLimitIsLocalNonrecursiveAndRestored) {
   const auto beta = position.Evaluate() - 101;
   auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
   StoreNullBound(*table, position, beta, 3);
-  table->SetEntry(position, MoveFactory{}(position, "e2e4"), beta, 3,
+  table->SetEntry(position, MoveFactory{}(position, "e2e4"), ToTT(beta, 0), 3,
                   Bound::kLower, 0);
   Searcher searcher(position, table);
   bool observed = false;

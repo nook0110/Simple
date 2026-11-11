@@ -27,9 +27,10 @@ TEST(SharedClusterTable, ConcurrentEntriesStayConsistent) {
       const Node node = table.GetNode(position);
       if (!node.IsOccupied()) continue;
       ASSERT_EQ(node.true_hash, position.GetHash());
-      ASSERT_GE(node.score, 0);
-      ASSERT_LT(node.score, static_cast<Eval>(moves.size()));
-      EXPECT_EQ(node.move, moves[static_cast<std::size_t>(node.score)]);
+      ASSERT_GE(FromTT(node.score, 0), 0);
+      ASSERT_LT(FromTT(node.score, 0), static_cast<Eval>(moves.size()));
+      EXPECT_EQ(node.move,
+                moves[static_cast<std::size_t>(FromTT(node.score, 0))]);
     }
   });
 
@@ -37,8 +38,9 @@ TEST(SharedClusterTable, ConcurrentEntriesStayConsistent) {
   for (std::size_t worker = 0; worker < moves.size(); ++worker) {
     writers.emplace_back([&, worker] {
       for (int iteration = 0; iteration < 20'000; ++iteration) {
-        table.SetEntry(position, moves[worker], static_cast<Eval>(worker), 12,
-                       Bound::kExact, static_cast<Age>(iteration));
+        table.SetEntry(position, moves[worker],
+                       ToTT(static_cast<Eval>(worker), 0), 12, Bound::kExact,
+                       static_cast<Age>(iteration));
       }
     });
   }
@@ -55,8 +57,8 @@ TEST(SharedClusterTable, CachedEvalPayloadRoundTrips) {
       0, 1, 20000, Score::kTbWin, Score::kMate, Score::kMate + 64, 131071};
   for (const auto score : scores) {
     for (const auto eval : {kNoStaticEval, -8191, -1, 0, 1, 8191}) {
-      const Node original{hash, Move{12, 28}, score, 63, Bound::kExact, 255,
-                          eval};
+      const Node original{hash, Move{12, 28}, ToTT(score, 0), 63, Bound::kExact,
+                          255,  eval};
       const auto unpacked = Table::Unpack(hash, Table::Pack(original));
       EXPECT_EQ(unpacked.true_hash, original.true_hash);
       EXPECT_EQ(unpacked.move, original.move);
@@ -68,7 +70,8 @@ TEST(SharedClusterTable, CachedEvalPayloadRoundTrips) {
     }
   }
   for (const auto eval : {-20000, -8193, 8192, 20000}) {
-    const Node original{hash, Move{12, 28}, 17, 12, Bound::kLower, 7, eval};
+    const Node original{hash, Move{12, 28}, ToTT(17, 0), 12, Bound::kLower,
+                        7,    eval};
     const auto unpacked = Table::Unpack(hash, Table::Pack(original));
     EXPECT_EQ(unpacked.score, original.score);
     EXPECT_EQ(unpacked.static_eval, kNoStaticEval);
@@ -79,16 +82,16 @@ TEST(SharedClusterTable, CachedEvalRejectsDifferentContext) {
   TranspositionTable<1> table;
   const Position position = PositionFactory{}();
   constexpr Move move{12, 28};
-  table.SetEntry(position, move, 321, 12, Bound::kExact, 1, -57, 11);
+  table.SetEntry(position, move, ToTT(321, 0), 12, Bound::kExact, 1, -57, 11);
   const auto node = table.GetNode(position);
   EXPECT_EQ(table.GetStaticEval(node, 11), -57);
   EXPECT_EQ(table.GetStaticEval(node, 12), kNoStaticEval);
-  table.SetEntry(position, move, 432, 13, Bound::kExact, 1, 100, 12);
+  table.SetEntry(position, move, ToTT(432, 0), 13, Bound::kExact, 1, 100, 12);
   const auto changed = table.GetNode(position);
-  EXPECT_EQ(changed.score, 432);
+  EXPECT_EQ(FromTT(changed.score, 0), 432);
   EXPECT_EQ(table.GetStaticEval(changed, 12), kNoStaticEval);
   EXPECT_EQ(table.GetStaticEval(changed, 11), kNoStaticEval);
-  table.SetEntry(position, move, 543, 14, Bound::kExact, 1, 7, 11);
+  table.SetEntry(position, move, ToTT(543, 0), 14, Bound::kExact, 1, 7, 11);
   EXPECT_EQ(table.GetStaticEval(table.GetNode(position), 11), 7);
 }
 
@@ -97,12 +100,12 @@ TEST(SharedClusterTable, StoredDepthSaturatesWithoutWrapping) {
   const Position position = PositionFactory{}();
   constexpr Move move{12, 28};
   for (const auto depth : {0, 1, 12, 62, 63, 64, 70, 127, 128, 255}) {
-    table.SetEntry(position, move, 321, static_cast<Depth>(depth),
+    table.SetEntry(position, move, ToTT(321, 0), static_cast<Depth>(depth),
                    Bound::kExact, 255, -57);
     const auto node = table.GetNode(position);
     EXPECT_EQ(node.depth, std::min(depth, 63));
     EXPECT_EQ(node.move, move);
-    EXPECT_EQ(node.score, 321);
+    EXPECT_EQ(FromTT(node.score, 0), 321);
     EXPECT_EQ(node.bound, Bound::kExact);
     EXPECT_EQ(node.age, 255);
     EXPECT_EQ(node.static_eval, -57);
@@ -113,14 +116,14 @@ TEST(SharedClusterTable, SaturatedDepthRetainsReplacementRules) {
   TranspositionTable<1> table;
   const Position position = PositionFactory{}();
   constexpr Move move{12, 28};
-  table.SetEntry(position, move, 321, 70, Bound::kLower, 255);
-  table.SetEntry(position, move, 123, 59, Bound::kUpper, 255);
+  table.SetEntry(position, move, ToTT(321, 0), 70, Bound::kLower, 255);
+  table.SetEntry(position, move, ToTT(123, 0), 59, Bound::kUpper, 255);
   EXPECT_EQ(table.GetNode(position).depth, 63);
-  EXPECT_EQ(table.GetNode(position).score, 321);
+  EXPECT_EQ(FromTT(table.GetNode(position).score, 0), 321);
   EXPECT_EQ(table.GetNode(position).bound, Bound::kLower);
-  table.SetEntry(position, move, 123, 59, Bound::kUpper, 256);
+  table.SetEntry(position, move, ToTT(123, 0), 59, Bound::kUpper, 256);
   EXPECT_EQ(table.GetNode(position).depth, 59);
-  EXPECT_EQ(table.GetNode(position).score, 123);
+  EXPECT_EQ(FromTT(table.GetNode(position).score, 0), 123);
   EXPECT_EQ(table.GetNode(position).bound, Bound::kUpper);
   EXPECT_EQ(table.GetNode(position).age, 0);
 }
@@ -129,14 +132,14 @@ TEST(SharedClusterTable, MoveLessQuiescenceEntriesRoundTripAndKeepOldMove) {
   TranspositionTable<1> table;
   const Position position = PositionFactory{}();
   EXPECT_FALSE(table.GetNode(position).IsOccupied());
-  table.SetEntry(position, Move::None(), 123, 0, Bound::kLower, 7);
+  table.SetEntry(position, Move::None(), ToTT(123, 0), 0, Bound::kLower, 7);
   ASSERT_TRUE(table.Contains(position));
-  EXPECT_EQ(table.GetNode(position).score, 123);
+  EXPECT_EQ(FromTT(table.GetNode(position).score, 0), 123);
   EXPECT_FALSE(table.GetNode(position).move.IsValid());
   constexpr Move move{12, 28};
-  table.SetEntry(position, move, 321, 0, Bound::kUpper, 7);
-  table.SetEntry(position, Move::None(), 234, 0, Bound::kUpper, 7);
-  EXPECT_EQ(table.GetNode(position).score, 234);
+  table.SetEntry(position, move, ToTT(321, 0), 0, Bound::kUpper, 7);
+  table.SetEntry(position, Move::None(), ToTT(234, 0), 0, Bound::kUpper, 7);
+  EXPECT_EQ(FromTT(table.GetNode(position).score, 0), 234);
   EXPECT_EQ(table.GetNode(position).move, move);
 }
 
@@ -145,16 +148,16 @@ TEST(SharedClusterTable, QuiescencePreservesDeepEntriesUntilTheyAge) {
     TranspositionTable<1> table;
     const Position position = PositionFactory{}();
     constexpr Move move{12, 28};
-    table.SetEntry(position, move, 123, 12, bound, 7);
+    table.SetEntry(position, move, ToTT(123, 0), 12, bound, 7);
     for (const auto shallow_bound : {Bound::kLower, Bound::kUpper}) {
-      table.SetEntry(position, Move::None(), 234, 0, shallow_bound, 7);
+      table.SetEntry(position, Move::None(), ToTT(234, 0), 0, shallow_bound, 7);
       EXPECT_EQ(table.GetNode(position).depth, 12);
-      EXPECT_EQ(table.GetNode(position).score, 123);
+      EXPECT_EQ(FromTT(table.GetNode(position).score, 0), 123);
       EXPECT_EQ(table.GetNode(position).bound, bound);
     }
-    table.SetEntry(position, Move::None(), 234, 0, Bound::kUpper, 8);
+    table.SetEntry(position, Move::None(), ToTT(234, 0), 0, Bound::kUpper, 8);
     EXPECT_EQ(table.GetNode(position).depth, 0);
-    EXPECT_EQ(table.GetNode(position).score, 234);
+    EXPECT_EQ(FromTT(table.GetNode(position).score, 0), 234);
     EXPECT_EQ(table.GetNode(position).move, move);
   }
 }

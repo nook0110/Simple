@@ -71,7 +71,7 @@ TEST(TranspositionTable, LaterMoveCutoffStoresCurrentScore) {
     const auto node = table->GetNode(position);
     if (node.IsOccupied() && node.bound == Bound::kLower) {
       ++cutoffs;
-      EXPECT_GE(node.score, beta) << "beta=" << beta;
+      EXPECT_GE(FromTT(node.score, 0), beta) << "beta=" << beta;
     }
   }
   EXPECT_GT(cutoffs, 0u);
@@ -83,7 +83,7 @@ TEST(SingularExtensions, ExclusionIgnoresBoundsAndPreservesFullNodeEntry) {
   DepthCondition condition{8};
   for (const auto bound : {Bound::kLower, Bound::kExact, Bound::kUpper}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-    table->SetEntry(position, excluded, 10000, 3, bound, 0);
+    table->SetEntry(position, excluded, ToTT(10000, 0), 3, bound, 0);
     Searcher searcher(position, table);
     const auto result = SearchNode<NodeType::kAll, DepthCondition>{
         searcher, {8, 3, 499, 500, 1}, condition, excluded}();
@@ -92,7 +92,7 @@ TEST(SingularExtensions, ExclusionIgnoresBoundsAndPreservesFullNodeEntry) {
     EXPECT_GT(searcher.GetInfo().searched_nodes, 1u);
     const auto node = table->GetNode(position);
     EXPECT_EQ(node.move, excluded);
-    EXPECT_EQ(node.score, 10000);
+    EXPECT_EQ(FromTT(node.score, 0), 10000);
     EXPECT_EQ(node.depth, 3);
     EXPECT_EQ(node.bound, bound);
     EXPECT_EQ(searcher.GetPosition().GetHash(), position.GetHash());
@@ -131,7 +131,8 @@ TEST(SingularExtensions, ExtendsOnlyEligibleLowerBounds) {
                           Case{Bound::kLower, 4, Score::MateIn(10), false},
                           Case{Bound::kLower, 4, Score::TbWinIn(10), false}}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-    table->SetEntry(position, move, test.score, test.depth, test.bound, 0);
+    table->SetEntry(position, move, ToTT(test.score, 0), test.depth, test.bound,
+                    0);
     Searcher searcher(position, table);
     const auto result = SearchNode<NodeType::kPV, DepthCondition>{
         searcher, {8, 7, -20000, 20000, 1}, condition}();
@@ -146,7 +147,7 @@ TEST(SingularExtensions, MultiCutAndNegativeExtension) {
   DepthCondition condition{8};
   for (const Eval beta : {-11000, -10001}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-    table->SetEntry(position, move, -10000, 4, Bound::kLower, 0);
+    table->SetEntry(position, move, ToTT(-10000, 0), 4, Bound::kLower, 0);
     Searcher searcher(position, table);
     const auto result = SearchNode<NodeType::kPV, DepthCondition>{
         searcher, {8, 7, beta - 1, beta, 1}, condition}();
@@ -165,13 +166,13 @@ TEST(SingularExtensions, CancelledSearchPreservesEntryAndPosition) {
   const auto position = PositionFactory{}();
   const auto move = MoveFactory{}(position, "e2e4");
   auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-  table->SetEntry(position, move, 10000, 4, Bound::kLower, 0);
+  table->SetEntry(position, move, ToTT(10000, 0), 4, Bound::kLower, 0);
   Searcher searcher(position, table);
   const auto result = SearchNode<NodeType::kPV, DepthCondition>{
       searcher, {8, 7, -20000, 20000, 1}, condition}();
   EXPECT_FALSE(result);
   EXPECT_EQ(searcher.GetSingularInfo().searches, 0u);
-  EXPECT_EQ(table->GetNode(position).score, 10000);
+  EXPECT_EQ(FromTT(table->GetNode(position).score, 0), 10000);
   EXPECT_EQ(table->GetNode(position).depth, 4);
   EXPECT_EQ(searcher.GetPosition().GetHash(), position.GetHash());
 }
@@ -370,12 +371,12 @@ TEST(ProbCut, TtVetoRespectsDepthThresholdScoreAndDecisiveBand) {
         Case{2, Score::MatedIn(10), false}}) {
     for (const auto bound : {Bound::kLower, Bound::kUpper, Bound::kExact}) {
       auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-      table->SetEntry(position, Move::None(), ToTTScore(test.value, 1),
-                      test.depth, bound, 0);
+      table->SetEntry(position, Move::None(), ToTT(test.value, 1), test.depth,
+                      bound, 0);
       Searcher searcher(position, table);
       ProbCutTestAccess::Run(searcher, condition);
       EXPECT_EQ(searcher.GetInfo().probcut_tries, test.veto ? 0u : 1u);
-      EXPECT_EQ(table->GetNode(position).score, ToTTScore(test.value, 1));
+      EXPECT_EQ(table->GetNode(position).score, ToTT(test.value, 1));
       ExpectProbCutPositionRestored(searcher.GetPosition(), position);
     }
   }

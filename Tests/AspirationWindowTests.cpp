@@ -274,7 +274,7 @@ TEST(AspirationSearch, FindsQueenSacrificeMateAtCompletedDepthEight) {
   const auto root = table->GetNode(position);
   EXPECT_EQ(root.bound, Bound::kExact);
   EXPECT_GE(root.depth, 8);
-  EXPECT_EQ(root.score, Score::MateIn(5));
+  EXPECT_EQ(FromTT(root.score, 0), Score::MateIn(5));
   EXPECT_NE(output.str().find("info score mate 3"), std::string::npos);
 }
 

@@ -31,6 +31,7 @@ struct IterationStatus {
   bool has_raised_alpha = false;
   std::optional<Move> best_move;
   std::optional<Node> tt_info;
+  Eval tt_value = {};
   Eval best_eval = {};
 };
 
@@ -214,19 +215,18 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   if (ProbeTranspositionTable()) {
     searcher_.debug_info_.tt_hits++;
-    auto [hash, hash_move, entry_score, entry_depth, entry_bound, _, cached_eval] =
-        *iteration_status_.tt_info;
-    entry_score = FromTTScore(entry_score, ply);
+    const auto &entry = *iteration_status_.tt_info;
+    const Eval entry_score = iteration_status_.tt_value;
 
     if (!excluded_move_ && !kIsPrincipalVariation &&
-        entry_depth >= remaining_depth) {
-      if (entry_bound & Bound::kUpper && entry_score <= alpha) {
+        entry.depth >= remaining_depth) {
+      if (entry.bound & Bound::kUpper && entry_score <= alpha) {
         return alpha;
       }
 
-      if (entry_bound & Bound::kLower && entry_score >= beta) {
-        if (hash_move.IsQuiet(searcher_.GetPosition())) {
-          UpdateQuietMove(hash_move);
+      if (entry.bound & Bound::kLower && entry_score >= beta) {
+        if (entry.move.IsQuiet(searcher_.GetPosition())) {
+          UpdateQuietMove(entry.move);
         }
 
         // TODO: update entry age
@@ -374,7 +374,7 @@ SearchNode<node_type, ExitCondition>::CheckProbCut() {
                                               ProbCutSettings::kDepthReduction);
   if (iteration_status_.tt_info) {
     const auto &entry = *iteration_status_.tt_info;
-    const Eval value = FromTTScore(entry.score, state_.ply);
+    const Eval value = iteration_status_.tt_value;
     if (entry.depth >= child_depth + 1 && !Score::IsDecisive(value) &&
         value < probcut_beta)
       return std::nullopt;
@@ -481,8 +481,8 @@ void SearchNode<node_type, ExitCondition>::SetTTEntry(const Bound bound) {
   assert(iteration_status_.best_move);
   searcher_.best_moves_->SetEntry(
       GetCurrentPosition(), *iteration_status_.best_move,
-      ToTTScore(iteration_status_.best_eval, state_.ply),
-      state_.remaining_depth, bound, searcher_.age_,
+      ToTT(iteration_status_.best_eval, state_.ply), state_.remaining_depth,
+      bound, searcher_.age_,
       Nnue::IsLoaded() ? position_info_.static_eval.value_or(kNoStaticEval)
                        : kNoStaticEval,
       StaticEvalContext());
@@ -863,6 +863,7 @@ template <NodeType node_type, class ExitCondition>
 bool SearchNode<node_type, ExitCondition>::ProbeTranspositionTable() {
   if (auto node = searcher_.best_moves_->GetNode(GetCurrentPosition());
       node.IsOccupied()) {
+    iteration_status_.tt_value = FromTT(node.score, state_.ply);
     iteration_status_.tt_info = std::move(node);
     return true;
   }
@@ -875,14 +876,13 @@ template <NodeType node_type, class ExitCondition>
 std::optional<SearchResult>
 SearchNode<node_type, ExitCondition>::CheckSingularExtension() {
   auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
-  auto [hash, hash_move, entry_score, entry_depth, entry_bound, _, cached_eval] =
-      *iteration_status_.tt_info;
+  const auto &entry = *iteration_status_.tt_info;
+  const Eval entry_score = iteration_status_.tt_value;
 
   using Singular = Settings::SearchParameters::SingularExtensionSettings;
-  entry_score = FromTTScore(entry_score, ply);
   if (ply > 0 && ply < 2 * max_depth &&
       remaining_depth >= Singular::kDepthLimit + kIsPrincipalVariation &&
-      entry_depth >= remaining_depth - 3 && (entry_bound & Bound::kLower) &&
+      entry.depth >= remaining_depth - 3 && (entry.bound & Bound::kLower) &&
       !Score::IsDecisive(entry_score)) {
     const Eval singular_beta =
         entry_score - Singular::kMarginNumerator * remaining_depth /
@@ -895,7 +895,8 @@ SearchNode<node_type, ExitCondition>::CheckSingularExtension() {
         {max_depth, static_cast<Depth>((remaining_depth - 1) / 2),
          singular_beta - 1, singular_beta, ply,
          state_.was_previous_move_a_null},
-        exit_condition_, hash_move}();
+        exit_condition_,
+        entry.move}();
     if (!result) return SearchResult{std::nullopt};
     if (*result < singular_beta) {
       tt_move_extension_ = 1;

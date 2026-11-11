@@ -51,7 +51,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   }
 
   const auto tt_node = table_ ? table_->GetNode(current_position) : Node{};
-  const auto tt_value = FromTTScore(tt_node.score, current_depth);
+  const auto tt_value = FromTT(tt_node.score, current_depth);
   if (!pv_node && tt_node.IsOccupied() && tt_node.depth >= kTTDepth &&
       (tt_node.bound & (tt_value >= beta ? Bound::kLower : Bound::kUpper))) {
     return tt_value;
@@ -190,7 +190,7 @@ void Quiescence<ExitCondition>::Store(const Position& position, const Move move,
                                       const Eval value, const Bound bound,
                                       const Depth ply, const Eval static_eval) {
   if (!table_) return;
-  table_->SetEntry(position, move, ToTTScore(value, ply), kTTDepth, bound, age_,
+  table_->SetEntry(position, move, ToTT(value, ply), kTTDepth, bound, age_,
                    cache_static_eval_ ? static_eval : kNoStaticEval,
                    eval_context_);
 }
