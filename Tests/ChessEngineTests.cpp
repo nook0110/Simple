@@ -81,7 +81,7 @@ TEST(FiftyMoveRule, MateOnTheLastMoveStillCounts) {
       condition, 2, 2, std::numeric_limits<Eval>::min() / 2,
       std::numeric_limits<Eval>::max() / 2);
   ASSERT_TRUE(result.has_value());
-  EXPECT_GT(*result, kTablebaseWinValue);
+  EXPECT_GT(*result, Score::kTbWin);
 }
 
 TEST(TimeManagement, ReturnsLegalMoveWithoutTime) {

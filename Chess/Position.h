@@ -15,9 +15,6 @@
 #include "Utility.h"
 
 namespace SimpleChessEngine {
-namespace Tablebase {
-class PositionBuilder;
-}
 /**
  * \brief Class that represents a chess position.
  *
@@ -32,7 +29,7 @@ class PositionBuilder;
 class Position {
  public:
   friend struct PositionFactory;
-  friend class Tablebase::PositionBuilder;
+  friend struct PositionStateTestAccess;
   /**
    * \brief Struct to hold evaluation data for the position.
    *
@@ -65,7 +62,7 @@ class Position {
         castling_rights{};  //!< Castling rights for each color.
 
     mutable std::array<Bitboard, kColors>
-        pinners{};  //!< Pieces that are pinning opponent's pieces.
+        pinners{};  //!< Enemy sliders pinning this color's pieces to its king.
     mutable std::array<Bitboard, kColors>
         blockers{};  //!< Pieces that are blocking attacks on the king.
     
@@ -215,9 +212,6 @@ class Position {
 
   [[nodiscard]] BitIndex GetKingSquare(Player player) const;
 
-  [[nodiscard]] BitIndex GetCastlingRookSquare(
-      Player player, CastlingSide side) const;
-
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
 
@@ -240,6 +234,8 @@ class Position {
    */
   [[nodiscard]] bool IsUnderCheck(Player player) const;
 
+  [[nodiscard]] bool HasLegalKings() const;
+
   [[nodiscard]] bool DetectRepetition(Depth depth) const {
     if (history_stack_.history.size() < 3) {
       return false;
@@ -256,9 +252,6 @@ class Position {
 
   [[nodiscard]] const std::array<std::bitset<2>, kColors> &GetCastlingRights()
       const;
-
-  template <Piece piece>
-  [[nodiscard]] Bitboard GetCastlingSquares(CastlingSide side) const;
 
   [[nodiscard]] IrreversibleData GetIrreversibleData() const;
 
@@ -314,6 +307,9 @@ class Position {
   void RemovePiece(const BitIndex square, const Player color);
 
   void MovePiece(const BitIndex from, const BitIndex to, const Player color);
+
+  [[nodiscard]] bool VerifyIncrementalState() const;
+  [[nodiscard]] bool VerifyPinCache() const;
 
 
   void SetCastlingRights(const std::array<std::bitset<2>, 2> &castling_rights);

@@ -17,6 +17,7 @@
 #include <variant>
 #include <vector>
 
+#include "Bench.h"
 #include "MoveFactory.h"
 #include "Nnue/Nnue.h"
 #include "Perft.h"
@@ -305,7 +306,6 @@ struct BooleanOption : public OptionBase {
   bool value_ = default_value;
 };
 
-using PonderOption = BooleanOption<false>;
 struct EngineOptions {
   EngineOptions() {
     auto threads = std::make_unique<SpinOption>("Threads", 1, 1, 256);
@@ -799,6 +799,19 @@ inline void UciChessEngine::ParseCommand(std::stringstream command) {
     return ParseDebug(std::move(command));
   }
   if (command_name == "bench") {
+    std::string token;
+    command >> token;
+    const auto depth =
+        token.empty() ? std::optional<int>{9} : ParseNumber<int>(token);
+    if (!depth || *depth < 1 || *depth > 30) {
+      Send("Invalid bench depth");
+      return;
+    }
+    StopSearch();
+    RunSearchBench(o_stream_, *depth);
+    return;
+  }
+  if (command_name == "perftbench") {
     ParsePosition(std::stringstream{std::string{"startpos"}});
     const auto result = PerftBench(info_.position, 6);
     std::osyncstream(o_stream_)
@@ -969,7 +982,7 @@ inline void UciChessEngine::ParseQuiescenceEvaluate() const {
   const DepthCondition condition{kMaxSearchPly};
   Quiescence quiescence{condition};
   const auto score =
-      quiescence.Search<true>(position, kMateValue, -kMateValue, 0);
+      quiescence.Search<true>(position, -Score::kMate, Score::kMate, 0);
   if (!score) {
     std::osyncstream(o_stream_) << "qeval unavailable" << std::endl;
     return;
@@ -1159,7 +1172,7 @@ inline ChessEngine& SearchThread::AddHelperEngine(const Info& info,
   if (helper_engines_.size() < worker) {
     helper_engines_.push_back(std::make_unique<ChessEngine>(
         info.position, std::cout, transposition_table_, false,
-        static_cast<Depth>(1 + worker % 2), tablebase_));
+        static_cast<Depth>(1 + worker % 2), tablebase_, worker));
   } else {
     helper_engines_[worker - 1]->SetPosition(info.position);
   }
