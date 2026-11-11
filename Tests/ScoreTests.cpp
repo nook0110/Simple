@@ -16,6 +16,12 @@ static_assert(SfMargin::RoundedFromEngine(41) == 104);
 static_assert(SfMargin::RoundedFromEngine(-41) == -104);
 static_assert(SfMargin::RoundedFromEngine(1) == 3);
 static_assert(SfMargin{208}.ToEngine() == 82.0);
+static_assert(SfMargin{256}.RoundedToEngine() == 101);
+static_assert(SfMargin{241}.RoundedToEngine() == 95);
+static_assert((SfMargin{241} - SfMargin{64}).RoundedToEngine() == 70);
+static_assert(SfMargin{-241}.RoundedToEngine() == -95);
+static_assert(SfMargin{52}.RoundedToEngine() == 21);
+static_assert(SfMargin{-52}.RoundedToEngine() == -21);
 
 TEST(SfMargin, MatchesTheEngineValuesItReplaced) {
   EXPECT_EQ(SfMargin{5}.ToEngine(), 5.0 * 82 / 208.0);

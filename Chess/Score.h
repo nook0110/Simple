@@ -73,6 +73,11 @@ class SfMargin {
     return value_ * kEnginePawn / static_cast<double>(kStockfishPawn);
   }
 
+  [[nodiscard]] constexpr Eval RoundedToEngine() const {
+    return static_cast<Eval>(DivideRounded(
+        static_cast<std::int64_t>(value_) * kEnginePawn, kStockfishPawn));
+  }
+
   friend constexpr bool operator==(SfMargin, SfMargin) = default;
 
   [[nodiscard]] friend constexpr SfMargin operator+(const SfMargin lhs,

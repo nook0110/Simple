@@ -258,7 +258,9 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
       const int reduction =
           NMPSettings::kNullMoveReduction +
           remaining_depth / NMPSettings::kDepthDivisor +
-          std::max((GetStaticEval() - beta) / NMPSettings::kEvalDivisor, 0);
+          std::max((GetStaticEval() - beta) /
+                       NMPSettings::kEvalDivisor.RoundedToEngine(),
+                   0);
       const auto null_depth =
           static_cast<Depth>(std::max(0, remaining_depth - reduction));
 
@@ -302,8 +304,8 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
 
   if (!position_info_.is_under_check) {
     evaluation_trend_.improving |=
-        GetStaticEval() >=
-        beta + Settings::SearchParameters::kImprovingBetaMargin;
+        GetStaticEval() - beta >=
+        Settings::SearchParameters::kImprovingBetaMargin;
   }
 
   // Internal Iterative Reduction
@@ -367,7 +369,7 @@ SearchNode<node_type, ExitCondition>::CheckProbCut() {
   const Eval probcut_beta =
       state_.beta + (evaluation_trend_.improving
                          ? ProbCutSettings::kImprovingMargin
-                         : ProbCutSettings::kMargin);
+                         : ProbCutSettings::kMargin).RoundedToEngine();
   if (Score::IsWin(probcut_beta)) return std::nullopt;
 
   const auto child_depth = static_cast<Depth>(int{state_.remaining_depth} -

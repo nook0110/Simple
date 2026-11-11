@@ -224,7 +224,7 @@ struct Settings {
       inline static SfMargin kStaticEvalDepthMargin{13};
       inline static SfMargin kStaticEvalImprovingMargin{47};
       inline static SfMargin kMinBeta{-2000};
-      inline static Eval kEvalDivisor = 101;
+      static constexpr SfMargin kEvalDivisor{256};
       inline static int kDepthDivisor = 3;
       inline static int kNullMoveReduction = 7;
       inline static Depth kVerificationDepth = 16;
@@ -243,8 +243,8 @@ struct Settings {
     struct ProbCutSettings {
       inline static Depth kMinDepth = 5;
       inline static int kDepthReduction = 4;
-      inline static Eval kMargin = 95;
-      inline static Eval kImprovingMargin = 70;
+      static constexpr SfMargin kMargin{241};
+      static constexpr SfMargin kImprovingMargin = kMargin - SfMargin{64};
     };
     struct LMRSettings {
       static constexpr bool kEnabled = true;
@@ -291,7 +291,7 @@ struct Settings {
     static constexpr SEEPruningSettings kSEEPruningSettings = {};
   };
   struct SearchParameters {
-    inline static Eval kImprovingBetaMargin = 0;
+    static constexpr SfMargin kImprovingBetaMargin{0};
     struct StaticEvalPolicySettings {
       inline static int kMinDifference = -189;
       inline static int kMaxDifference = 194;
