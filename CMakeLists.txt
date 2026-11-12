@@ -8,6 +8,11 @@ option(SCE_WARNINGS_AS_ERRORS "Treat project warnings as errors" OFF)
 option(SCE_SANITIZE "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 set(SCE_TT_SIZE_MB 640 CACHE STRING "Shared transposition table size in MiB")
 set(SCE_EVALFILE "nn-1a298aa575a0.nnue" CACHE STRING "Default NNUE network file")
+set(SCE_TARGET_ARCH "native" CACHE STRING "Target architecture for release builds")
+
+if(NOT SCE_TT_SIZE_MB MATCHES "^[1-9][0-9]*$" OR SCE_TT_SIZE_MB LESS 16)
+  message(FATAL_ERROR "SCE_TT_SIZE_MB must be a decimal integer of at least 16 MiB for the default bench signature")
+endif()
 
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,7 +27,7 @@ if(SCE_SANITIZE)
 endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_definitions(NDEBUG)
-  add_compile_options(-Ofast -mtune=native -march=native -fno-stack-protector)
+  add_compile_options(-Ofast -mtune=native -march=${SCE_TARGET_ARCH} -fno-stack-protector)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-flto=auto>
                       $<$<COMPILE_LANGUAGE:CXX>:-frename-registers>)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
@@ -44,6 +49,11 @@ target_include_directories(fathom PUBLIC ${fathom_SOURCE_DIR}/src)
 target_compile_definitions(fathom PRIVATE TB_NO_HELPER_API)
 target_link_libraries(fathom PRIVATE Threads::Threads)
 
+set_source_files_properties(
+    Chess/NodeReportingSearch.cpp
+    PROPERTIES COMPILE_OPTIONS -fno-lto
+)
+
 FILE(GLOB CHESS_SOURCES CONFIGURE_DEPENDS Chess/*.cpp Chess/Nnue/*.cpp)
 list(APPEND CHESS_SOURCES
     Chess/Nnue/Stockfish/attacks.cpp
@@ -59,6 +69,12 @@ set_source_files_properties(
     "$<$<CXX_COMPILER_ID:GNU>:-fconstexpr-ops-limit=500000000>;$<$<CXX_COMPILER_ID:Clang>:-fconstexpr-steps=500000000>"
 )
 list(REMOVE_ITEM CHESS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Chess/main.cpp)
+
+set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Chess/Attacks.cpp APPEND PROPERTY COMPILE_OPTIONS
+    "$<$<CXX_COMPILER_ID:GNU>:-fconstexpr-ops-limit=100000000>"
+    "$<$<CXX_COMPILER_ID:GNU>:-fconstexpr-cache-depth=0>"
+    "$<$<CXX_COMPILER_ID:Clang>:-fconstexpr-steps=20000000>"
+)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Chess)
 

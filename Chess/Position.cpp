@@ -1,5 +1,6 @@
 #include "Position.h"
 
+#include <algorithm>
 #include <numeric>
 
 #include "Attacks.h"
@@ -20,7 +21,6 @@ template Bitboard Position::GetPiecesByType<Piece::kRook>(Player player) const;
 template Bitboard Position::GetPiecesByType<Piece::kQueen>(Player player) const;
 template Bitboard Position::GetPiecesByType<Piece::kKing>(Player player) const;
 
-const Hasher Position::hasher_{std::mt19937_64(0xb00b1e5)};
 
 Eval Position::SimpleMaterialEval() const {
   return evaluation_data_.material[static_cast<size_t>(side_to_move_)].eval[0] -
@@ -51,7 +51,7 @@ void Position::PlacePiece(const BitIndex square, const Piece piece,
   evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][square];
   if (piece != Piece::kPawn)
     evaluation_data_.non_pawn_material += kPieceValues[piece_idx].eval[0];
-  hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][square];
+  hash_ ^= kZobristKeys.psqt_hash[piece_idx][color_idx][square];
   if (threats)
     Stockfish::Position{*this}.update_piece_threats(
         Stockfish::make_piece(static_cast<Stockfish::Color>(color),
@@ -87,7 +87,7 @@ void Position::RemovePiece(const BitIndex square, const Player color,
   evaluation_data_.psqt[color_idx] -= kPSQT[color_idx][piece_idx][square];
   if (piece != Piece::kPawn)
     evaluation_data_.non_pawn_material -= kPieceValues[piece_idx].eval[0];
-  hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][square];
+  hash_ ^= kZobristKeys.psqt_hash[piece_idx][color_idx][square];
 }
 
 void Position::MovePiece(const BitIndex from, const BitIndex to,
@@ -117,8 +117,8 @@ void Position::MovePiece(const BitIndex from, const BitIndex to,
   board_[to] = piece;
   evaluation_data_.psqt[color_idx] -= kPSQT[color_idx][piece_idx][from];
   evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][to];
-  hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][from];
-  hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][to];
+  hash_ ^= kZobristKeys.psqt_hash[piece_idx][color_idx][from];
+  hash_ ^= kZobristKeys.psqt_hash[piece_idx][color_idx][to];
   if (threats)
     Stockfish::Position{*this}.update_piece_threats(
         sf_piece, true, static_cast<Stockfish::Square>(to), threats, from_to);
@@ -150,7 +150,7 @@ bool Position::VerifyIncrementalState() const {
   std::array<BitIndex, kColors> king_position{};
   std::array<int, kColors> king_count{};
   EvaluationData evaluation;
-  Hash hash = side_to_move_ == Player::kBlack ? hasher_.stm_hash : 0;
+  Hash hash = side_to_move_ == Player::kBlack ? kZobristKeys.stm_hash : 0;
   for (std::size_t index = 0; index < kBoardArea; ++index) {
     const auto square = static_cast<BitIndex>(index);
     const auto piece = board_[square];
@@ -176,16 +176,18 @@ bool Position::VerifyIncrementalState() const {
       king_position[color_idx] = square;
       ++king_count[color_idx];
     }
-    hash ^= hasher_.psqt_hash[piece_idx][color_idx][square];
+    hash ^= kZobristKeys.psqt_hash[piece_idx][color_idx][square];
   }
   for (std::size_t color = 0; color < kColors; ++color) {
-    hash ^= hasher_.cr_hash[color][0];
-    hash ^= hasher_.cr_hash[color]
-                           [irreversible_data_.castling_rights[color].to_ulong()];
+    hash ^= kZobristKeys.cr_hash[color][0];
+    hash ^= kZobristKeys
+                .cr_hash[color]
+                        [irreversible_data_.castling_rights[color].to_ulong()];
   }
   if (irreversible_data_.en_croissant_square) {
-    hash ^= hasher_.en_croissant_hash[GetCoordinates(
-        *irreversible_data_.en_croissant_square).first];
+    hash ^=
+        kZobristKeys.en_croissant_hash
+            [GetCoordinates(*irreversible_data_.en_croissant_square).first];
   }
   if (pieces_by_type != pieces_by_type_ ||
       pieces_by_color != pieces_by_color_ ||
@@ -208,11 +210,12 @@ void Position::DoMove(const LegalMove &move) {
   irreversible_data_.pins_valid = {};
   if (const auto &ep_square = irreversible_data_.en_croissant_square;
       ep_square.has_value()) {
-    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
+    hash_ ^=
+        kZobristKeys.en_croissant_hash[GetCoordinates(ep_square.value()).first];
     irreversible_data_.en_croissant_square.reset();
   }
   for (const auto color : {Player::kWhite, Player::kBlack}) {
-    hash_ ^= hasher_.cr_hash[static_cast<size_t>(
+    hash_ ^= kZobristKeys.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
                     .to_ulong()];
   }
@@ -327,7 +330,7 @@ void Position::DoMove(const LegalMove &move) {
     if (piece_to_move == Piece::kPawn && std::abs(from - to) == 16) {
       const BitIndex passed_square = std::midpoint(from, to);
       if ((GetAllPawnAttacks(them) & SingleSquare(passed_square)).Any()) {
-        hash_ ^= hasher_.en_croissant_hash[GetCoordinates(from).first];
+        hash_ ^= kZobristKeys.en_croissant_hash[GetCoordinates(from).first];
         irreversible_data_.en_croissant_square = passed_square;
       }
     }
@@ -365,12 +368,12 @@ void Position::DoMove(const LegalMove &move) {
         static_cast<std::uint64_t>(GetPiecesOf(color, Piece::kPawn));
 
   for (const auto color : {Player::kWhite, Player::kBlack}) {
-    hash_ ^= hasher_.cr_hash[static_cast<size_t>(
+    hash_ ^= kZobristKeys.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
                     .to_ulong()];
   }
   side_to_move_ = Flip(side_to_move_);
-  hash_ ^= hasher_.stm_hash;
+  hash_ ^= kZobristKeys.stm_hash;
 
   // 50-move rule: reset counter if it's a pawn move or a capture
   const bool resets_fifty_move =
@@ -383,11 +386,12 @@ void Position::DoMove(const LegalMove &move) {
 void SimpleChessEngine::Position::DoMove(NullMove) {
   if (const auto &ep_square = irreversible_data_.en_croissant_square;
       ep_square.has_value()) {
-    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
+    hash_ ^=
+        kZobristKeys.en_croissant_hash[GetCoordinates(ep_square.value()).first];
     irreversible_data_.en_croissant_square.reset();
   }
   side_to_move_ = Flip(side_to_move_);
-  hash_ ^= hasher_.stm_hash;
+  hash_ ^= kZobristKeys.stm_hash;
   auto &dirties = nnue_.Push();
   for (const auto color : {Player::kWhite, Player::kBlack}) {
     const auto pawns =
@@ -404,12 +408,13 @@ void SimpleChessEngine::Position::DoMove(NullMove) {
 void Position::UndoMove(const LegalMove &move, const IrreversibleData &data) {
   const auto &ep_square = irreversible_data_.en_croissant_square;
   for (const auto color : {Player::kWhite, Player::kBlack}) {
-    hash_ ^= hasher_.cr_hash[static_cast<size_t>(
+    hash_ ^= kZobristKeys.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
                     .to_ulong()];
   }
   if (ep_square.has_value()) {
-    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
+    hash_ ^=
+        kZobristKeys.en_croissant_hash[GetCoordinates(ep_square.value()).first];
   }
   
   const auto from = move.From();
@@ -421,14 +426,16 @@ void Position::UndoMove(const LegalMove &move, const IrreversibleData &data) {
   
   irreversible_data_ = data;
   for (const auto color : {Player::kWhite, Player::kBlack}) {
-    hash_ ^= hasher_.cr_hash[static_cast<size_t>(
+    hash_ ^= kZobristKeys.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
                     .to_ulong()];
   }
   if (irreversible_data_.en_croissant_square.has_value()) {
-    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(irreversible_data_.en_croissant_square.value()).first];
+    hash_ ^= kZobristKeys.en_croissant_hash
+                 [GetCoordinates(irreversible_data_.en_croissant_square.value())
+                      .first];
   }
-  hash_ ^= hasher_.stm_hash;
+  hash_ ^= kZobristKeys.stm_hash;
   side_to_move_ = Flip(side_to_move_);
 
   if (move.IsEnPassant()) {
@@ -481,9 +488,10 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
   irreversible_data_ = data;
   const auto &ep_square = irreversible_data_.en_croissant_square;
   if (ep_square.has_value()) {
-    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(ep_square.value()).first];
+    hash_ ^=
+        kZobristKeys.en_croissant_hash[GetCoordinates(ep_square.value()).first];
   }
-  hash_ ^= hasher_.stm_hash;
+  hash_ ^= kZobristKeys.stm_hash;
   side_to_move_ = Flip(side_to_move_);
   nnue_.Pop();
 
@@ -509,11 +517,10 @@ bool Position::IsPseudoLegal(const Move &move) {
   const auto to = move.To();
   if (!GetPieces(side_to_move_).Test(from)) return false;
   if (!move.IsNormal()) {
-    std::array<PseudoLegalMove, MoveGenerator::kMaxMovesPerPosition> moves;
-    const auto *end =
-        MoveGenerator{}.GeneratePseudoLegal<MoveGenerator::Type::kAll>(
-            *this, moves.data());
-    return std::find(static_cast<const PseudoLegalMove *>(moves.data()), end, move) != end;
+    return std::ranges::contains(
+        MoveGenerator{}.GeneratePseudoLegalMoves<MoveGenerator::Type::kAll>(
+            *this),
+        move);
   }
   if ((move.Raw() & 0x3000) || from == to || GetPieces(side_to_move_).Test(to))
     return false;
@@ -615,14 +622,14 @@ bool Position::IsLegal(const Move &move, Bitboard blockers) const {
   const auto obstacles = GetAllPieces() & ~SingleSquare(king_position) &
                          ~SingleSquare(rook_position);
 
-  auto king_path = castling_squares_for_king_[us_idx][cs_idx];
+  const auto king_path = castling_squares_for_king_[us_idx][cs_idx];
 
   if (((king_path | castling_squares_for_rook_[us_idx][cs_idx]) & obstacles)
           .Any())
     return false;
 
-  while (king_path.Any()) {
-    if (const auto square = king_path.PopFirstBit(); IsUnderAttack(square, us))
+  for (const auto square : king_path) {
+    if (IsUnderAttack(square, us))
       return false;
   }
 
@@ -632,9 +639,10 @@ bool Position::IsLegal(const Move &move, Bitboard blockers) const {
 void Position::SetCastlingRights(
     const std::array<std::bitset<2>, 2> &castling_rights) {
   for (size_t color = 0; color < kColors; ++color) {
-    hash_ ^= hasher_.cr_hash[color][irreversible_data_.castling_rights[color]
-                                        .to_ulong()];
-    hash_ ^= hasher_.cr_hash[color][castling_rights[color].to_ulong()];
+    hash_ ^= kZobristKeys
+                 .cr_hash[color]
+                         [irreversible_data_.castling_rights[color].to_ulong()];
+    hash_ ^= kZobristKeys.cr_hash[color][castling_rights[color].to_ulong()];
   }
   irreversible_data_.castling_rights = castling_rights;
 }
@@ -645,12 +653,13 @@ void Position::SetEnCroissantSquare(std::optional<BitIndex> square) {
     square.reset();
   }
   if (irreversible_data_.en_croissant_square.has_value()) {
-    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(
-        *irreversible_data_.en_croissant_square).first];
+    hash_ ^=
+        kZobristKeys.en_croissant_hash
+            [GetCoordinates(*irreversible_data_.en_croissant_square).first];
   }
   irreversible_data_.en_croissant_square = square;
   if (square.has_value()) {
-    hash_ ^= hasher_.en_croissant_hash[GetCoordinates(*square).first];
+    hash_ ^= kZobristKeys.en_croissant_hash[GetCoordinates(*square).first];
   }
 }
 
@@ -903,7 +912,7 @@ void Position::ComputePins(const Player us) const {
 
   const BitIndex king_square = GetKingSquare(us);
 
-  Bitboard snipers =
+  const Bitboard snipers =
       (AttackTable<Piece::kBishop>::GetAttackMap(king_square, kEmptyBoard) &
        (GetPiecesByType<Piece::kBishop>(them) |
         GetPiecesByType<Piece::kQueen>(them))) |
@@ -912,8 +921,7 @@ void Position::ComputePins(const Player us) const {
         GetPiecesByType<Piece::kQueen>(them)));
   const Bitboard occupancy = GetAllPieces() ^ snipers;
 
-  while (snipers.Any()) {
-    const BitIndex square = snipers.PopFirstBit();
+  for (const auto square : snipers) {
     const Bitboard blockers_between = Between(king_square, square) & occupancy;
     if (blockers_between.Any() && !blockers_between.MoreThanOne()) {
       irreversible_data_.blockers[us_idx] |= blockers_between;

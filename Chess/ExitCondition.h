@@ -49,7 +49,7 @@ struct TimeCondition {
     return !stop_now_ && Elapsed() <= deepen_limit && Elapsed() < hard_limit_;
   }
 
-  [[gnu::always_inline]] bool IsTimeToExit() const {
+  bool IsTimeToExit() const {
     return IsStopped() || (managed_ && stop_now_) || Elapsed() >= hard_limit_;
   }
 

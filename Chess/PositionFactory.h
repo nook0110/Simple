@@ -276,15 +276,15 @@ inline std::optional<Position> PositionFactory::TryParse(
   position.SetKingPositions(kings);
   position.SetRookPositions(rook_squares);
   std::array<std::array<Bitboard, 2>, kColors> cs_king = {
-      {{rook_between[kings[0]][kKingCastlingDestination[0][0]],
-        rook_between[kings[0]][kKingCastlingDestination[0][1]]},
-       {rook_between[kings[1]][kKingCastlingDestination[1][0]],
-        rook_between[kings[1]][kKingCastlingDestination[1][1]]}}};
+      {{RookBetween(kings[0], kKingCastlingDestination[0][0]),
+        RookBetween(kings[0], kKingCastlingDestination[0][1])},
+       {RookBetween(kings[1], kKingCastlingDestination[1][0]),
+        RookBetween(kings[1], kKingCastlingDestination[1][1])}}};
   std::array<std::array<Bitboard, 2>, kColors> cs_rook = {
-      {{rook_between[rook_squares[0][0]][kRookCastlingDestination[0][0]],
-        rook_between[rook_squares[0][1]][kRookCastlingDestination[0][1]]},
-       {rook_between[rook_squares[1][0]][kRookCastlingDestination[1][0]],
-        rook_between[rook_squares[1][1]][kRookCastlingDestination[1][1]]}}};
+      {{RookBetween(rook_squares[0][0], kRookCastlingDestination[0][0]),
+        RookBetween(rook_squares[0][1], kRookCastlingDestination[0][1])},
+       {RookBetween(rook_squares[1][0], kRookCastlingDestination[1][0]),
+        RookBetween(rook_squares[1][1], kRookCastlingDestination[1][1])}}};
   position.SetCastlingSquares(cs_king, cs_rook);
 
   position.Init(*halfmove_clock, std::max<std::size_t>(*fullmove_number, 1));
