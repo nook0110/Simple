@@ -1,5 +1,9 @@
 #pragma once
+#include <array>
+#include <cstddef>
 #include <cstdint>
+
+#include "EnumArray.h"
 
 namespace SimpleChessEngine
 {
@@ -21,4 +25,14 @@ enum class Piece : uint8_t
 {
   return piece == Piece::kNone;
 }
+
+template <>
+inline constexpr std::size_t kEnumSize<Piece> = 7;
+
+template <class Value>
+using ByPiece = EnumArray<Piece, Value>;
+
+inline constexpr std::array kPiecesByValue{Piece::kPawn, Piece::kKnight,
+                                           Piece::kBishop, Piece::kRook,
+                                           Piece::kQueen};
 }  // namespace SimpleChessEngine

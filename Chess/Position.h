@@ -41,12 +41,9 @@ class Position {
     bool operator==(const EvaluationData &) const = default;
 
     Eval non_pawn_material{};  //!< Total material value excluding pawns.
-    std::array<TaperedEval, kColors>
-        material{};  //!< Material value for each color.
-    std::array<TaperedEval, kColors>
-        psqt{};  //!< Piece-square table scores for each color.
-    std::array<std::array<std::uint8_t, kPieceTypes>, kColors>
-        piece_counts{};
+    ByPlayer<TaperedEval> material{};  //!< Material value for each color.
+    ByPlayer<TaperedEval> psqt{};  //!< Piece-square table scores for each color.
+    ByPlayer<ByPiece<std::uint8_t>> piece_counts{};
   };
 
   /**
@@ -59,17 +56,14 @@ class Position {
     std::optional<BitIndex>
         en_croissant_square{};  //!< Optional square for en passant.
 
-    std::array<std::bitset<2>, kColors>
-        castling_rights{};  //!< Castling rights for each color.
+    ByPlayer<std::bitset<2>> castling_rights{};  //!< Castling rights for each color.
 
-    mutable std::array<Bitboard, kColors>
-        pinners{};  //!< Enemy sliders pinning this color's pieces to its king.
-    mutable std::array<Bitboard, kColors>
-        blockers{};  //!< Pieces that are blocking attacks on the king.
+    mutable ByPlayer<Bitboard> pinners{};  //!< Enemy sliders pinning this color's pieces to its king.
+    mutable ByPlayer<Bitboard> blockers{};  //!< Pieces that are blocking attacks on the king.
     
     Piece captured_piece{Piece::kNone};  //!< Piece captured by the last move
 
-    mutable std::array<bool, kColors> pins_valid{};
+    mutable ByPlayer<bool> pins_valid{};
 
     bool operator==(const IrreversibleData &other) const {
       return std::tie(en_croissant_square, castling_rights, captured_piece) ==
@@ -194,8 +188,8 @@ class Position {
 
   [[nodiscard]] Bitboard GetPiecesOf(const Player player,
                                      const Piece piece) const {
-    return pieces_by_color_[static_cast<size_t>(player)] &
-           pieces_by_type_[static_cast<size_t>(piece)];
+    return pieces_by_color_[player] &
+           pieces_by_type_[piece];
   }
 
   /**
@@ -268,8 +262,7 @@ class Position {
 
   [[nodiscard]] const std::optional<BitIndex> &GetEnCroissantSquare() const;
 
-  [[nodiscard]] const std::array<std::bitset<2>, kColors> &GetCastlingRights()
-      const;
+  [[nodiscard]] const ByPlayer<std::bitset<2>> &GetCastlingRights() const;
 
   [[nodiscard]] IrreversibleData GetIrreversibleData() const;
 
@@ -336,18 +329,18 @@ class Position {
   [[nodiscard]] bool VerifyPinCache() const;
 
 
-  void SetCastlingRights(const std::array<std::bitset<2>, 2> &castling_rights);
+  void SetCastlingRights(const ByPlayer<std::bitset<2>> &castling_rights);
 
   void SetEnCroissantSquare(std::optional<BitIndex> square);
 
-  void SetKingPositions(const std::array<BitIndex, 2> &king_position);
+  void SetKingPositions(const ByPlayer<BitIndex> &king_position);
 
   void SetRookPositions(
-      const std::array<std::array<BitIndex, 2>, kColors> &rook_positions);
+      const ByPlayer<ByCastlingSide<BitIndex>> &rook_positions);
 
   void SetCastlingSquares(
-      const std::array<std::array<Bitboard, 2>, kColors> &cs_king,
-      const std::array<std::array<Bitboard, 2>, kColors> &cs_rook);
+      const ByPlayer<ByCastlingSide<Bitboard>> &cs_king,
+      const ByPlayer<ByCastlingSide<Bitboard>> &cs_rook);
 
   [[nodiscard]] Eval EstimatePiece(Piece piece) const;
 
@@ -362,19 +355,17 @@ class Position {
 
   Player side_to_move_{};  //!< Whose side to move.
 
-  std::array<Bitboard, kPieceTypes>
-      pieces_by_type_{};  //!< Bitboard of pieces of certain type
-  std::array<Bitboard, kColors>
-      pieces_by_color_{};  //!< Bitboard of pieces for each player
+  ByPiece<Bitboard> pieces_by_type_{};  //!< Bitboard of pieces of certain type
+  ByPlayer<Bitboard> pieces_by_color_{};  //!< Bitboard of pieces for each player
 
   std::array<Piece, kBoardArea> board_{};  //!< Current position of pieces
 
-  std::array<BitIndex, kColors> king_position_{};
-  std::array<std::array<BitIndex, 2>, kColors>
+  ByPlayer<BitIndex> king_position_{};
+  ByPlayer<ByCastlingSide<BitIndex>>
       rook_positions_{};  // doesn't need to be updated
 
-  std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_king_{};
-  std::array<std::array<Bitboard, 2>, kColors> castling_squares_for_rook_{};
+  ByPlayer<ByCastlingSide<Bitboard>> castling_squares_for_king_{};
+  ByPlayer<ByCastlingSide<Bitboard>> castling_squares_for_rook_{};
 
   Hash hash_{};
 

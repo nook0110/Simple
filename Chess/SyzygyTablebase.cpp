@@ -54,8 +54,8 @@ struct FathomPosition {
   result.rule50 = static_cast<unsigned>(std::min<std::size_t>(
       position.GetHalfMoveClock(), std::numeric_limits<std::uint8_t>::max()));
   const auto& rights = position.GetCastlingRights();
-  result.castling = rights[static_cast<std::size_t>(Player::kWhite)].any() ||
-                            rights[static_cast<std::size_t>(Player::kBlack)].any()
+  result.castling = rights[Player::kWhite].any() ||
+                            rights[Player::kBlack].any()
                         ? 1U
                         : 0U;
   result.ep = position.GetEnCroissantSquare().has_value()
@@ -131,8 +131,8 @@ bool Syzygy::CanProbe(const Position& position) const {
   if (position.GetAllPieces().Count() > max_pieces_) return false;
   if (!position.HasLegalKings()) return false;
   const auto& rights = position.GetCastlingRights();
-  return rights[static_cast<std::size_t>(Player::kWhite)].none() &&
-         rights[static_cast<std::size_t>(Player::kBlack)].none();
+  return rights[Player::kWhite].none() &&
+         rights[Player::kBlack].none();
 }
 
 std::optional<ProbeResult> Syzygy::Probe(const Position& position) const {

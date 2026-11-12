@@ -164,11 +164,12 @@ struct SearchEvaluationTestAccess {
     searcher.UpdateStaticEvalHistory(ply, eval);
   }
   static auto &Entry(Searcher &searcher, Player side, const Move &move) {
-    return searcher.history_[static_cast<size_t>(side)][move.From()][move.To()];
+    return searcher.history_[side][move.From()][move.To()];
   }
   static bool ContinuationsEmpty(const Searcher &searcher) {
-    return std::ranges::all_of(searcher.continuation_history_,
-                               [](auto entry) { return entry == 0; });
+    const auto entries = searcher.GetContinuationHistory() | std::views::join |
+                         std::views::join | std::views::join;
+    return std::ranges::all_of(entries, [](auto entry) { return entry == 0; });
   }
   static const auto &Context(const Searcher &searcher, Depth ply) {
     return searcher.move_stack_[ply];

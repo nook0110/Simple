@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <ranges>
 #include <sstream>
 #include <string>
 
@@ -12,6 +13,11 @@
 using namespace SimpleChessEngine;
 
 namespace {
+auto ContinuationEntries(const Searcher& searcher) {
+  return searcher.GetContinuationHistory() | std::views::join |
+         std::views::join | std::views::join;
+}
+
 std::uint64_t TotalNodes(const std::string& output) {
   std::istringstream lines(output);
   std::string line;
@@ -38,8 +44,8 @@ TEST(HistoryPersistence, SecondGoDecaysButterflyAndPreservesContinuation) {
   const auto& searcher = engine.GetSearcher();
   auto expected = searcher.GetHistory();
   const auto continuation = searcher.GetContinuationHistory();
-  EXPECT_TRUE(
-      std::ranges::any_of(continuation, [](auto entry) { return entry != 0; }));
+  EXPECT_TRUE(std::ranges::any_of(ContinuationEntries(searcher),
+                                  [](auto entry) { return entry != 0; }));
 
   bool positive = false;
   bool negative = false;
@@ -73,9 +79,10 @@ TEST(HistoryPersistence, SecondGoDecaysButterflyAndPreservesContinuation) {
       EXPECT_EQ(searcher.GetKillers().AvailableKillerCount(ply), 0u);
     }
     auto position = searcher.GetPosition();
-    const auto side = static_cast<std::size_t>(position.GetSideToMove());
+    const auto side = position.GetSideToMove();
     for (const auto move :
-         MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position)) {
+         MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(
+             position)) {
       EXPECT_EQ(searcher.GetQuietScore(move, 2),
                 expected[side][move.From()][move.To()]);
     }
@@ -88,7 +95,7 @@ TEST(HistoryPersistence, NewGameClearsBothTables) {
   DepthCondition condition{5};
   engine.ComputeBestMove(condition);
   const auto& searcher = engine.GetSearcher();
-  EXPECT_TRUE(std::ranges::any_of(searcher.GetContinuationHistory(),
+  EXPECT_TRUE(std::ranges::any_of(ContinuationEntries(searcher),
                                   [](auto entry) { return entry != 0; }));
 
   engine.NewGame();
@@ -98,7 +105,7 @@ TEST(HistoryPersistence, NewGameClearsBothTables) {
           std::ranges::all_of(from, [](auto entry) { return entry == 0; }));
     }
   }
-  EXPECT_TRUE(std::ranges::all_of(searcher.GetContinuationHistory(),
+  EXPECT_TRUE(std::ranges::all_of(ContinuationEntries(searcher),
                                   [](auto entry) { return entry == 0; }));
 }
 

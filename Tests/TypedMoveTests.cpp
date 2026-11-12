@@ -79,7 +79,7 @@ TEST(TypedMoves, RejectsExposingKing) {
   const auto pseudo = position.TryPseudoLegal(MoveFactory{}(position, "e2f2"));
   ASSERT_TRUE(pseudo);
   EXPECT_FALSE(position.TryLegal(*pseudo));
-  EXPECT_FALSE(position.TryLegal(*pseudo, position.GetIrreversibleData().blockers[0]));
+  EXPECT_FALSE(position.TryLegal(*pseudo, position.GetIrreversibleData().blockers[Player::kWhite]));
 }
 
 TEST(TypedMoves, AcceptsEveryGeneratedLegalMove) {
@@ -106,7 +106,7 @@ TEST(TypedMoves, AcceptsEveryGeneratedLegalMove) {
       ASSERT_TRUE(legal);
       EXPECT_EQ(*legal, move);
       const auto explicit_blockers = position.TryLegal(
-          *pseudo, position.GetIrreversibleData().blockers[static_cast<size_t>(position.GetSideToMove())]);
+          *pseudo, position.GetIrreversibleData().blockers[position.GetSideToMove()]);
       ASSERT_TRUE(explicit_blockers);
       EXPECT_EQ(*explicit_blockers, move);
     }

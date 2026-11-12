@@ -66,10 +66,10 @@ struct Hasher {
 
   constexpr bool operator==(const Hasher&) const = default;
 
-  std::array<std::array<std::array<Hash, kBoardArea>, kColors>, kPieceTypes>
+  ByPiece<ByPlayer<std::array<Hash, kBoardArea>>>
       psqt_hash{};
   std::array<Hash, kLineSize> en_croissant_hash{};
-  std::array<std::array<Hash, 4>, kColors> cr_hash{};
+  ByPlayer<std::array<Hash, 4>> cr_hash{};
   Hash stm_hash;
 };
 extern const Hasher kZobristKeys;
