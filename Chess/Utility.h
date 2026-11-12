@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <chrono>
@@ -7,6 +8,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 
 #include "BitBoard.h"
 #include "Piece.h"
@@ -60,11 +62,15 @@ using Coordinates = std::pair<File, Rank>;
   return rank << 3 | file;
 }
 
-[[nodiscard]] inline int KingDistance(const BitIndex first,
-                                      const BitIndex second) {
+[[nodiscard]] constexpr int KingDistance(const BitIndex first,
+                                         const BitIndex second) {
   const auto [x_first, y_first] = GetCoordinates(first);
   const auto [x_second, y_second] = GetCoordinates(second);
-  return std::max(std::abs(x_first - x_second), std::abs(y_first - y_second));
+  const int file_distance =
+      x_first > x_second ? x_first - x_second : x_second - x_first;
+  const int rank_distance =
+      y_first > y_second ? y_first - y_second : y_second - y_first;
+  return std::max(file_distance, rank_distance);
 }
 
 enum class CastlingRights : std::uint8_t {
@@ -92,8 +98,8 @@ constexpr Compass Invert(const Compass direction) {
   return static_cast<Compass>(-static_cast<std::int8_t>(direction));
 }
 
-[[nodiscard]] inline Bitboard Shift(const Bitboard bb,
-                                    const Compass direction) {
+[[nodiscard]] constexpr Bitboard Shift(const Bitboard bb,
+                                       const Compass direction) {
   switch (direction) {
     case Compass::kNorth:
       return bb << kLineSize;
@@ -178,25 +184,25 @@ consteval PawnSpanTables MakePawnSpanTables() {
 
 inline constexpr PawnSpanTables kPawnSpans = MakePawnSpanTables();
 
-[[nodiscard]] inline bool IsOk(const BitIndex square) {
+[[nodiscard]] constexpr bool IsOk(const BitIndex square) {
   return 0 <= square && square < static_cast<BitIndex>(kBoardArea);
 }
 
-[[nodiscard]] inline Bitboard SingleSquare(const BitIndex square_index) {
+[[nodiscard]] constexpr Bitboard SingleSquare(const BitIndex square_index) {
   return Bitboard{1ull << square_index};
 }
 
-[[nodiscard]] inline bool IsAdjacent(const BitIndex sq_first,
-                                     const BitIndex sq_second) {
+[[nodiscard]] constexpr bool IsAdjacent(const BitIndex sq_first,
+                                        const BitIndex sq_second) {
   return KingDistance(sq_first, sq_second) == 1;
 }
 
-[[nodiscard]] inline bool IsShiftValid(const BitIndex shifted_square,
-                                       const BitIndex square) {
+[[nodiscard]] constexpr bool IsShiftValid(const BitIndex shifted_square,
+                                          const BitIndex square) {
   return IsOk(shifted_square) && IsAdjacent(square, shifted_square);
 }
 
-[[nodiscard]] inline std::optional<Bitboard> GetShiftIfValid(
+[[nodiscard]] constexpr std::optional<Bitboard> GetShiftIfValid(
     const BitIndex square, const Compass shift) {
   const BitIndex new_square = Shift(square, shift);
   return IsShiftValid(new_square, square)
@@ -204,7 +210,7 @@ inline constexpr PawnSpanTables kPawnSpans = MakePawnSpanTables();
              : std::nullopt;
 }
 
-[[nodiscard]] inline std::optional<Bitboard> DoShiftIfValid(
+[[nodiscard]] constexpr std::optional<Bitboard> DoShiftIfValid(
     BitIndex& square, const Compass shift) {
   const BitIndex copy = square;
   square += static_cast<int>(shift);
@@ -230,39 +236,50 @@ inline constexpr PawnSpanTables kPawnSpans = MakePawnSpanTables();
   return piece == Piece::kRook || piece == Piece::kQueen;
 }
 
-inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea>
-    bishop_between{};
-inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_between{};
-inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> bishop_ray{};
-inline std::array<std::array<Bitboard, kBoardArea>, kBoardArea> rook_ray{};
+using SquareTable = std::array<std::array<Bitboard, kBoardArea>, kBoardArea>;
 
-inline Bitboard Between(const BitIndex from, const BitIndex to) {
-  return bishop_between[from][to] | rook_between[from][to];
+struct GeometryTables {
+  SquareTable between{};
+  SquareTable ray{};
+};
+
+extern const GeometryTables kGeometry;
+
+[[nodiscard]] inline Bitboard Between(const BitIndex from, const BitIndex to) {
+  return kGeometry.between[from][to];
 }
 
-inline Bitboard Ray(const BitIndex from, const BitIndex to) {
-  return bishop_ray[from][to] | rook_ray[from][to];
+[[nodiscard]] inline Bitboard RookBetween(const BitIndex from,
+                                          const BitIndex to) {
+  const auto [from_file, from_rank] = GetCoordinates(from);
+  const auto [to_file, to_rank] = GetCoordinates(to);
+  if (from_file != to_file && from_rank != to_rank) return kEmptyBoard;
+  return Between(from, to);
 }
 
-inline std::array<std::array<Bitboard, kBoardArea>, kColors> pawn_attacks{};
+[[nodiscard]] inline Bitboard Ray(const BitIndex from, const BitIndex to) {
+  return kGeometry.ray[from][to];
+}
 
-inline void InitPawnAttacks() {
-  for (auto color : {Player::kWhite, Player::kBlack}) {
+consteval auto MakePawnAttacks() {
+  std::array<std::array<Bitboard, kBoardArea>, kColors> attacks{};
+  for (size_t color = 0; color < kColors; ++color) {
     for (BitIndex square = 0; square < static_cast<BitIndex>(kBoardArea);
          ++square) {
-      Bitboard res{};
-      for (const auto step :
-           kPawnAttackDirections[static_cast<size_t>(color)]) {
-        res |= GetShiftIfValid(square, step).value_or(Bitboard{});
+      for (const auto direction : kPawnAttackDirections[color]) {
+        attacks[color][square] |=
+            GetShiftIfValid(square, direction).value_or(Bitboard{});
       }
-      pawn_attacks[static_cast<size_t>(color)][square] = res;
     }
   }
+  return attacks;
 }
 
-[[nodiscard]] inline Bitboard GetPawnAttacks(const BitIndex square,
-                                             const Player side) {
-  return pawn_attacks[static_cast<size_t>(side)][square];
+inline constexpr auto kPawnAttacks = MakePawnAttacks();
+
+[[nodiscard]] constexpr Bitboard GetPawnAttacks(const BitIndex square,
+                                                const Player side) {
+  return kPawnAttacks[static_cast<size_t>(side)][square];
 }
 
 [[nodiscard]] inline std::string DrawBitboard(const Bitboard b) {

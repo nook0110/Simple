@@ -9,9 +9,7 @@
 #include <thread>
 #include <vector>
 
-#include "Attacks.h"
 #include "MoveGenerator.h"
-#include "PSQT.h"
 #include "PositionFactory.h"
 #include "SyzygyTablebase.h"
 
@@ -56,10 +54,6 @@ int main(int argc, char** argv) {
   const std::size_t threads = argc >= 4 ? std::stoull(argv[3]) : 1;
   if (probes == 0 || threads == 0) return 2;
 
-  InitBetween<Piece::kBishop>();
-  InitBetween<Piece::kRook>();
-  InitPawnAttacks();
-  InitPSQT();
   const auto tablebase =
       Tablebase::Syzygy::Open(std::filesystem::path{argv[1]});
   if (!tablebase) return 1;
