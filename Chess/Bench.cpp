@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 
+#include "Nnue/Nnue.h"
 #include "PositionFactory.h"
 #include "SimpleChessEngine.h"
 
@@ -56,6 +57,10 @@ constexpr std::array kPositions = {
 }
 
 void RunSearchBench(std::ostream& output, int depth) {
+  if (!Nnue::IsLoaded()) {
+    output << "info string Bench requires a loaded NNUE network" << std::endl;
+    return;
+  }
   std::ostringstream search_output;
   ChessEngine engine(PositionFactory{}(), search_output);
   engine.NewGame();
