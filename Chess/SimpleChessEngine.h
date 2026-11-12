@@ -7,12 +7,14 @@
 #include <limits>
 #include <numeric>
 #include <optional>
+#include <span>
 #include <syncstream>
 
 #include "Evaluation.h"
 #include "ExitCondition.h"
 #include "Move.h"
 #include "NodeType.h"
+#include "Score.h"
 #include "Searcher.h"
 #include "Settings.h"
 #include "Utility.h"
@@ -36,7 +38,7 @@ struct NodePerSecondInfo {
 
 struct PrincipalVariationInfo {
   size_t current_depth = 0;
-  Searcher::PrincipalVariation moves;
+  std::span<const LegalMove> moves;
 };
 
 struct BestMoveInfo {
@@ -67,6 +69,64 @@ std::ostream& operator<<(std::ostream& out,
 std::ostream& operator<<(std::ostream& out, const BestMoveInfo& bm_info);
 std::ostream& operator<<(std::ostream& out, const EBFInfo& ebf_info);
 
+struct TimeManagementParameters {
+  struct Line {
+    double from_x;
+    double to_x;
+    double from_y;
+    double to_y;
+    double min;
+    double max;
+  };
+
+  template <Line kLine>
+  struct ClampedLine {
+    static_assert(kLine.min <= kLine.max);
+
+    [[nodiscard]] static constexpr double operator()(const double x) {
+      return std::clamp(kLine.from_y + (kLine.to_y - kLine.from_y) *
+                                           (x - kLine.from_x) /
+                                           (kLine.to_x - kLine.from_x),
+                        kLine.min, kLine.max);
+    }
+  };
+
+  static constexpr double kInitialTimeReduction = 0.85;
+  static constexpr double kNodesEffortScale = 100000.0;
+
+  static constexpr double kFallingEvalBase = 11.48;
+  static constexpr double kPreviousScoreDropWeight = 2.30;
+  static constexpr double kIterationScoreDropWeight = 1.1;
+  static constexpr double kFallingEvalDivisor = 100.0;
+  static constexpr double kFallingEvalMin = 0.576;
+  static constexpr double kFallingEvalMax = 1.728;
+
+  static constexpr ClampedLine<Line{
+      .from_x = 4.96,
+      .to_x = 18.79,
+      .from_y = 0.639,
+      .to_y = 1.712,
+      .min = 0.629,
+      .max = 1.544,
+  }>
+      kStableBestMoveReduction{};
+  static constexpr double kPreviousReductionOffset = 1.468;
+  static constexpr double kReductionDivisor = 2.284;
+
+  static constexpr ClampedLine<Line{
+      .from_x = 75800.0,
+      .to_x = 104510.0,
+      .from_y = 0.969,
+      .to_y = 0.714,
+      .min = 0.693,
+      .max = 0.838,
+  }>
+      kBestMoveEffortScale{};
+  static constexpr double kSingleLegalMoveMaxScale = 1.0;
+
+  static_assert(kFallingEvalMin <= kFallingEvalMax);
+};
+
 /**
  * \brief Class that represents a chess engine.
  *
@@ -84,11 +144,11 @@ class ChessEngine {
       SharedTranspositionTable transposition_table =
           std::make_shared<Searcher::SearcherTranspositionTable>(),
       bool reporting = true, Depth initial_depth = 1,
-      SharedTablebase tablebase = {})
-      : o_stream_(o_stream),
-        searcher_(position, std::move(transposition_table), std::move(tablebase)),
-        reporting_(reporting),
-        initial_depth_(initial_depth) {
+      SharedTablebase tablebase = {}, std::size_t thread_index = 0)
+      : o_stream_(o_stream), searcher_(position, std::move(transposition_table),
+                                       std::move(tablebase)),
+        reporting_(reporting), initial_depth_(initial_depth),
+        thread_index_(thread_index) {
     SetPosition(std::move(position));
   }
 
@@ -105,7 +165,7 @@ class ChessEngine {
   void NewGame() {
     searcher_.ClearHistories();
     previous_score_.reset();
-    previous_time_reduction_ = kInitialTimeReduction;
+    previous_time_reduction_ = TimeManagementParameters::kInitialTimeReduction;
   }
 
   void ComputeBestMove(SearchCondition auto& conditions);
@@ -155,15 +215,15 @@ class ChessEngine {
   };
 
   void PrintInfo(const DebugInfo& info, Eval eval, Depth current_depth,
+                 const Searcher::PrincipalVariation& principal_variation,
                  std::chrono::duration<double> search_time) {
     if (!reporting_) return;
     PrintInfo(ScoreInfo{eval});
-    PrincipalVariationInfo pv{current_depth, searcher_.GetPrincipalVariation(
-                                                 current_depth, position_)};
+    PrincipalVariationInfo pv{current_depth, principal_variation};
     PrintInfo(pv);
-    PrintInfo(NodesInfo{info.searched_nodes + info.quiescence_nodes});
-    PrintInfo(NodePerSecondInfo{static_cast<std::size_t>(
-        (info.searched_nodes + info.quiescence_nodes) / search_time.count())});
+    PrintInfo(NodesInfo{info.TotalNodes()});
+    PrintInfo(NodePerSecondInfo{
+        static_cast<std::size_t>(info.TotalNodes() / search_time.count())});
     for (const auto& [name, counter] : kDebugCounters) {
       if (counter != &DebugInfo::searched_nodes &&
           counter != &DebugInfo::quiescence_nodes) {
@@ -175,61 +235,12 @@ class ChessEngine {
   template <class Info>
   void PrintInfo(const Info& info);
 
-  struct Window {
-    static constexpr auto neg_inf = std::numeric_limits<Eval>::min() / 2;
-    static constexpr auto pos_inf = std::numeric_limits<Eval>::max() / 2;
-
-    Eval GetLowerBound() const {
-      if constexpr (Settings::SearchParameters::AspirationWindowSettings::
-                        kEnabled) {
-        return lower_bound;
-      }
-      return neg_inf;
-    }
-    Eval GetUpperBound() const {
-      if constexpr (Settings::SearchParameters::AspirationWindowSettings::
-                        kEnabled) {
-        return upper_bound;
-      }
-      return pos_inf;
-    }
-
-    void FailedUpper() {
-      upper_bound +=
-          Settings::SearchParameters::AspirationWindowSettings::kDelta / 3;
-    }
-    void FailedLower() {
-      lower_bound -=
-          Settings::SearchParameters::AspirationWindowSettings::kDelta / 3;
-    }
-
-    void SetNewEval(Eval eval) {
-      lower_bound =
-          eval - Settings::SearchParameters::AspirationWindowSettings::kDelta;
-      upper_bound =
-          eval + Settings::SearchParameters::AspirationWindowSettings::kDelta;
-    }
-
-   private:
-    Eval lower_bound = neg_inf;
-    Eval upper_bound = pos_inf;
-  };
-
   std::optional<Eval> MakeIteration(Window window, Depth depth,
                                     const StopSearchCondition auto& end);
 
   [[nodiscard]] std::osyncstream Output() const {
     return std::osyncstream(o_stream_);
   }
-
-  static double Interpolate(double x, double x0, double x1, double y0,
-                            double y1) {
-    return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
-  }
-
-  static constexpr double kInitialTimeReduction = 0.85;
-  static constexpr double kStockfishUnitsPerEval =
-      208.0 / Settings::SearchParameters::AspirationWindowSettings::kPawnValue;
 
   std::ostream& o_stream_;
 
@@ -240,8 +251,10 @@ class ChessEngine {
   std::optional<Move> ponder_move_;
   bool reporting_;
   Depth initial_depth_;
+  std::size_t thread_index_;
   std::optional<Eval> previous_score_;
-  double previous_time_reduction_ = kInitialTimeReduction;
+  double previous_time_reduction_ =
+      TimeManagementParameters::kInitialTimeReduction;
 };
 }  // namespace SimpleChessEngine
 
@@ -270,7 +283,8 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     finish(BestMoveInfo{Move::None(), std::nullopt});
     return;
   }
-  best_move_ = legal_moves.front();
+  auto legal_best_move = legal_moves.front();
+  best_move_ = legal_best_move;
   ponder_move_.reset();
   if (!condition.ShouldContinueIteration()) {
     finish(BestMoveInfo{best_move_, std::nullopt});
@@ -288,9 +302,10 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   DebugInfo info;
   Eval eval = position_.Evaluate();
   EBFsInfo ebfs;
-  Window window{};
+  Searcher::PrincipalVariation principal_variation;
+  principal_variation.unchecked_push_back(legal_best_move);
+  Depth trusted_depth = 0;
   Depth current_depth = initial_depth_;
-  Depth completed_depth = 0;
   Depth last_best_move_depth = 0;
   Move last_best_move = Move::None();
   std::optional<Eval> previous_iteration_eval;
@@ -305,72 +320,100 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
        current_depth < kMaxSearchPly;
        ++current_depth) {
     PrintInfo(DepthInfo{current_depth});
-    const auto eval_optional = MakeIteration(window, current_depth, condition);
-    if (!eval_optional) {
+    Window window{searcher_.GetRootScore(best_move_), thread_index_};
+    bool completed = false;
+    std::size_t iteration_nodes = 0;
+    while (!condition.IsTimeToExit()) {
+      const Depth searched_depth = window.AdjustedDepth(current_depth);
+      const auto eval_optional =
+          MakeIteration(window, searched_depth, condition);
+      info += searcher_.GetInfo();
+      iteration_nodes += searcher_.GetInfo().searched_nodes;
+      if (!eval_optional || condition.IsTimeToExit()) break;
+
+      const Eval value = *eval_optional;
+      if (value <= window.GetLowerBound()) {
+        window.FailedLower(value);
+        continue;
+      }
+
+      if (value < window.GetUpperBound() && searched_depth < current_depth) {
+        window.ResetDepthReduction();
+        continue;
+      }
+
+      const auto move = searcher_.GetCurrentBestMove();
+      if (const auto found = std::ranges::find(legal_moves, move);
+          found != legal_moves.end()) {
+        legal_best_move = *found;
+        best_move_ = legal_best_move;
+      }
+      eval = value;
+      trusted_depth = searched_depth;
+      Position pv_position = position_;
+      pv_position.DoMove(legal_best_move);
+      principal_variation = searcher_.GetPrincipalVariation(
+          static_cast<Depth>(searched_depth - 1), std::move(pv_position));
+      principal_variation.unchecked_push_front(legal_best_move);
+      ponder_move_ = principal_variation.size() > 1
+                         ? std::optional<Move>{principal_variation[1]}
+                         : std::nullopt;
+
+      if (value >= window.GetUpperBound()) {
+        window.FailedUpper(value);
+        continue;
+      }
+      completed = true;
       break;
     }
-    eval = *eval_optional;
-    if (eval >= window.GetUpperBound()) {
-      window.FailedUpper();
-      --current_depth;
-      continue;
-    }
-    if (eval <= window.GetLowerBound()) {
-      window.FailedLower();
-      --current_depth;
-      continue;
-    }
-
-    completed_depth = current_depth;
-    ebfs.Update(searcher_.GetInfo().searched_nodes);
-    info += searcher_.GetInfo();
+    if (!completed) break;
+    ebfs.Update(iteration_nodes);
 
     const Move& iteration_best_move = searcher_.GetCurrentBestMove();
     if (iteration_best_move != last_best_move) {
       last_best_move = iteration_best_move;
       last_best_move_depth = current_depth;
     }
-    const double total_nodes = static_cast<double>(std::max<std::size_t>(
-        1, info.searched_nodes + info.quiescence_nodes));
+    using Tm = TimeManagementParameters;
+    const double total_nodes =
+        static_cast<double>(std::max<std::size_t>(1, info.TotalNodes()));
     const double nodes_effort =
         static_cast<double>(searcher_.GetRootEffort(iteration_best_move)) *
-        100000.0 / total_nodes;
-    double falling_eval = 1.728;
+        Tm::kNodesEffortScale / total_nodes;
+    double falling_eval = Tm::kFallingEvalMax;
     if (previous_score_) {
-      falling_eval =
-          (11.48 +
-           2.30 * kStockfishUnitsPerEval * (*previous_score_ - eval) +
-           1.1 * kStockfishUnitsPerEval *
-               (iteration_values[iteration_index] - eval)) /
-          100.0;
+      falling_eval = (Tm::kFallingEvalBase +
+                      Tm::kPreviousScoreDropWeight * SfMargin::kPerEngineUnit *
+                          (*previous_score_ - eval) +
+                      Tm::kIterationScoreDropWeight * SfMargin::kPerEngineUnit *
+                          (iteration_values[iteration_index] - eval)) /
+                     Tm::kFallingEvalDivisor;
     }
-    falling_eval = std::clamp(falling_eval, 0.576, 1.728);
-    time_reduction = std::clamp(
-        Interpolate(static_cast<double>(current_depth - last_best_move_depth),
-                    4.96, 18.79, 0.639, 1.712),
-        0.629, 1.544);
+    falling_eval =
+        std::clamp(falling_eval, Tm::kFallingEvalMin, Tm::kFallingEvalMax);
+    time_reduction = Tm::kStableBestMoveReduction(
+        static_cast<double>(current_depth - last_best_move_depth));
     const double reduction =
-        (1.468 + previous_time_reduction_) / (2.284 * time_reduction);
-    const double high_best_move_effort = std::clamp(
-        Interpolate(nodes_effort, 75800.0, 104510.0, 0.969, 0.714), 0.693,
-        0.838);
+        (Tm::kPreviousReductionOffset + previous_time_reduction_) /
+        (Tm::kReductionDivisor * time_reduction);
+    const double high_best_move_effort = Tm::kBestMoveEffortScale(nodes_effort);
     double time_scale = falling_eval * reduction * high_best_move_effort;
     if (legal_moves.size() == 1) {
-      time_scale = std::min(time_scale, 1.0);
+      time_scale = std::min(time_scale, Tm::kSingleLegalMoveMaxScale);
     }
     const bool confirmed_mate =
-        IsMateScore(eval) > 0 && previous_iteration_eval &&
-        IsMateScore(*previous_iteration_eval) > 0 &&
+        Score::IsMateWin(eval) && previous_iteration_eval &&
+        Score::IsMateWin(*previous_iteration_eval) &&
         iteration_best_move == previous_iteration_best_move;
-    const bool proven_result = eval >= -kMateValue - 3 ||
-                               eval == kMateValue + 2 || confirmed_mate;
+    const bool proven_result =
+        eval >= Score::MateIn(3) || eval == Score::MatedIn(2) || confirmed_mate;
     condition.Update(IterationInfo{searcher_, eval, current_depth, time_scale,
                                    proven_result});
     previous_iteration_eval = eval;
     previous_iteration_best_move = iteration_best_move;
     iteration_values[iteration_index] = eval;
     iteration_index = (iteration_index + 1) % iteration_values.size();
-    PrintInfo(info, eval, current_depth,
+    PrintInfo(info, eval, trusted_depth, principal_variation,
               std::chrono::duration<double>{std::chrono::steady_clock::now() -
                                             start_time});
     PrintInfo(ebfs.GetInfo());
@@ -381,29 +424,9 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
                       .count()
                << "\n";
     }
-
-    if (std::ranges::find(legal_moves, searcher_.GetCurrentBestMove()) !=
-        legal_moves.end()) {
-      best_move_ = searcher_.GetCurrentBestMove();
-    }
-    ponder_move_.reset();
-    Position ponder_position = position_;
-    const auto legal_root_moves =
-        MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(
-            ponder_position);
-    if (const auto found = std::ranges::find(legal_root_moves, best_move_);
-        found != legal_root_moves.end()) {
-      ponder_position.DoMove(*found);
-      if (auto ponder_pv =
-              searcher_.GetPrincipalVariation(1, std::move(ponder_position));
-          !ponder_pv.empty()) {
-        ponder_move_ = ponder_pv.front();
-      }
-    }
-    window.SetNewEval(eval);
   }
 
-  PrintInfo(info, eval, completed_depth,
+  PrintInfo(info, eval, trusted_depth, principal_variation,
             std::chrono::duration<double>{std::chrono::steady_clock::now() -
                                           start_time});
 
@@ -441,13 +464,11 @@ inline std::ostream& operator<<(std::ostream& out,
 inline std::ostream& operator<<(std::ostream& out,
                                 const ScoreInfo& score_info) {
   const auto& eval = score_info.current_eval;
-  if (!IsMateScore(eval)) {
+  if (!Score::IsMate(eval)) {
     return out << "info score cp " << eval << std::endl;
   }
 
-  return out << "info score mate "
-             << IsMateScore(eval) * (-kMateValue - std::abs(eval) + 1) / 2
-             << std::endl;
+  return out << "info score mate " << Score::MovesToMate(eval) << std::endl;
 }
 
 inline std::ostream& operator<<(std::ostream& out,

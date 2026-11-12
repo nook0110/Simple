@@ -3,12 +3,9 @@
 #include <bitset>
 #include <cassert>
 #include <cstddef>
-#include <iosfwd>
 
 #include "BitBoard.h"
 #include "Evaluation.h"
-#include "Concepts.h"
-#include "NodeType.h"
 #include "Hasher.h"
 #include "TypedMove.h"
 #include "Nnue/Accumulator.h"
@@ -18,18 +15,6 @@
 #include "Utility.h"
 
 namespace SimpleChessEngine {
-class Position;
-template <bool print>
-size_t Perft(std::ostream&, Position&, Depth);
-template <NodeType node_type, class ExitCondition>
-  requires StopSearchCondition<ExitCondition>
-struct SearchNode;
-template <class ExitCondition>
-  requires StopSearchCondition<ExitCondition>
-class Quiescence;
-namespace Tablebase {
-class PositionBuilder;
-}
 /**
  * \brief Class that represents a chess position.
  *
@@ -44,7 +29,8 @@ class PositionBuilder;
 class Position {
  public:
   friend struct PositionFactory;
-  friend class Tablebase::PositionBuilder;
+  friend struct PositionStateTestAccess;
+  friend struct NnueTestAccess;
   /**
    * \brief Struct to hold evaluation data for the position.
    *
@@ -72,7 +58,7 @@ class Position {
 
     ByPlayer<std::bitset<2>> castling_rights{};  //!< Castling rights for each color.
 
-    mutable ByPlayer<Bitboard> pinners{};  //!< Pieces that are pinning opponent's pieces.
+    mutable ByPlayer<Bitboard> pinners{};  //!< Enemy sliders pinning this color's pieces to its king.
     mutable ByPlayer<Bitboard> blockers{};  //!< Pieces that are blocking attacks on the king.
     
     Piece captured_piece{Piece::kNone};  //!< Piece captured by the last move
@@ -238,9 +224,6 @@ class Position {
 
   [[nodiscard]] BitIndex GetKingSquare(Player player) const;
 
-  [[nodiscard]] BitIndex GetCastlingRookSquare(
-      Player player, CastlingSide side) const;
-
   [[nodiscard]] Bitboard Attackers(BitIndex square,
                                    Bitboard transparent = kEmptyBoard) const;
 
@@ -280,9 +263,6 @@ class Position {
   [[nodiscard]] const std::optional<BitIndex> &GetEnCroissantSquare() const;
 
   [[nodiscard]] const ByPlayer<std::bitset<2>> &GetCastlingRights() const;
-
-  template <Piece piece>
-  [[nodiscard]] Bitboard GetCastlingSquares(CastlingSide side) const;
 
   [[nodiscard]] IrreversibleData GetIrreversibleData() const;
 
@@ -329,7 +309,8 @@ class Position {
    * \param color Color of the piece.
    *
    */
-  void PlacePiece(const BitIndex square, const Piece piece, const Player color);
+  void PlacePiece(const BitIndex square, const Piece piece, const Player color,
+                  Stockfish::DirtyThreats *threats = nullptr);
 
   /**
    * \brief Removes a piece from a chosen square.
@@ -338,9 +319,14 @@ class Position {
    * \param color Color of the piece.
    *
    */
-  void RemovePiece(const BitIndex square, const Player color);
+  void RemovePiece(const BitIndex square, const Player color,
+                   Stockfish::DirtyThreats *threats = nullptr);
 
-  void MovePiece(const BitIndex from, const BitIndex to, const Player color);
+  void MovePiece(const BitIndex from, const BitIndex to, const Player color,
+                 Stockfish::DirtyThreats *threats = nullptr);
+
+  [[nodiscard]] bool VerifyIncrementalState() const;
+  [[nodiscard]] bool VerifyPinCache() const;
 
 
   void SetCastlingRights(const ByPlayer<std::bitset<2>> &castling_rights);

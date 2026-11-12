@@ -5,7 +5,7 @@
 #include "ExitCondition.h"
 #include "MovePicker.h"
 #include "Nnue/Nnue.h"
-#include "Settings.h"
+#include "Score.h"
 
 namespace SimpleChessEngine {
 template <class ExitCondition>
@@ -14,9 +14,7 @@ Quiescence<ExitCondition>::Quiescence(const ExitCondition& exit_condition,
                                       Table* table, Age age)
     : exit_condition_(exit_condition), table_(table), age_(age),
       cache_static_eval_(table && Nnue::IsLoaded()),
-      eval_context_((static_cast<std::uint64_t>(Nnue::Generation()) << 32) |
-                    static_cast<std::uint32_t>(
-                        Settings::EvaluationParameters::nnue_scale)) {}
+      eval_context_(StaticEvalContext()) {}
 
 template <class ExitCondition>
   requires StopSearchCondition<ExitCondition>
@@ -54,7 +52,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
   }
 
   const auto tt_node = table_ ? table_->GetNode(current_position) : Node{};
-  const auto tt_value = FromTTScore(tt_node.score, current_depth);
+  const auto tt_value = FromTT(tt_node.score, current_depth);
   if (!pv_node && tt_node.IsOccupied() && tt_node.depth >= kTTDepth &&
       (tt_node.bound & (tt_value >= beta ? Bound::kLower : Bound::kUpper))) {
     return tt_value;
@@ -91,8 +89,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
                          : kNoStaticEval;
   if (static_eval == kNoStaticEval) static_eval = current_position.Evaluate();
   Eval best_value = static_eval;
-  if (tt_node.IsOccupied() &&
-      std::abs(tt_value) < kTablebaseWinValue - kMaxSearchPly &&
+  if (tt_node.IsOccupied() && !Score::IsDecisive(tt_value) &&
       (tt_node.bound &
        (tt_value > best_value ? Bound::kLower : Bound::kUpper))) {
     best_value = tt_value;
@@ -156,11 +153,11 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
   picker.InitPicker(current_position, nullptr, current_depth, tt_move);
   auto next = picker.SelectNextMove();
   if (!next.IsValid()) {
-    return kMateValue +
-           static_cast<Eval>(std::min<size_t>(current_depth, kMaxSearchPly));
+    return Score::MatedIn(
+        static_cast<Depth>(std::min<size_t>(current_depth, kMaxSearchPly)));
   }
 
-  Eval best_value = kMateValue;
+  Eval best_value = -Score::kMate;
   for (; next.IsValid(); next = picker.SelectNextMove()) {
     const auto& move = *next;
     const auto irreversible_data = current_position.GetIrreversibleData();
@@ -196,7 +193,7 @@ void Quiescence<ExitCondition>::Store(const Position& position, const Move move,
                                       const Eval value, const Bound bound,
                                       const Depth ply, const Eval static_eval) {
   if (!table_) return;
-  table_->SetEntry(position, move, ToTTScore(value, ply), kTTDepth, bound, age_,
+  table_->SetEntry(position, move, ToTT(value, ply), kTTDepth, bound, age_,
                    cache_static_eval_ ? static_eval : kNoStaticEval,
                    eval_context_);
 }
@@ -210,6 +207,7 @@ bool Quiescence<ExitCondition>::IsTimeToExit() {
 template class Quiescence<TimeCondition>;
 template class Quiescence<DepthCondition>;
 template class Quiescence<Pondering>;
+template class Quiescence<NodeCondition>;
 
 template SearchResult Quiescence<TimeCondition>::Search<false>(
     Position& current_position, Eval alpha, const Eval beta,
@@ -221,6 +219,12 @@ template SearchResult Quiescence<DepthCondition>::Search<false>(
     Position& current_position, Eval alpha, const Eval beta,
     const Depth current_depth, bool pv_node);
 template SearchResult Quiescence<DepthCondition>::Search<true>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<NodeCondition>::Search<false>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<NodeCondition>::Search<true>(
     Position& current_position, Eval alpha, const Eval beta,
     const Depth current_depth, bool pv_node);
 template SearchResult Quiescence<Pondering>::Search<false>(

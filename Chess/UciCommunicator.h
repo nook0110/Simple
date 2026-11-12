@@ -14,10 +14,13 @@
 #include <string_view>
 #include <syncstream>
 #include <thread>
+#include <tuple>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
+#include "Bench.h"
 #include "MoveFactory.h"
 #include "Nnue/Nnue.h"
 #include "Perft.h"
@@ -172,7 +175,7 @@ class SearchThread {
       return DepthCondition{max_depth->depth, stop_signal_};
     }
     if (const auto max_nodes = std::get_if<MaxNodes>(&info.time_control)) {
-      return DepthCondition{static_cast<Depth>(kMaxSearchPly - 1), stop_signal_,
+      return NodeCondition{static_cast<Depth>(kMaxSearchPly - 1), stop_signal_,
                             max_nodes->budget};
     }
     assert(false);
@@ -311,7 +314,40 @@ struct BooleanOption : public OptionBase {
   bool value_ = default_value;
 };
 
-using PonderOption = BooleanOption<false>;
+template <class>
+struct MemberPointerTraits;
+
+template <class Owner, class Value>
+struct MemberPointerTraits<Value Owner::*> {
+  using OwnerType = Owner;
+  using ValueType = Value;
+};
+
+template <auto kField>
+  requires std::is_member_object_pointer_v<decltype(kField)>
+struct TunableSpin {
+  using Group = MemberPointerTraits<decltype(kField)>::OwnerType;
+  using Value = MemberPointerTraits<decltype(kField)>::ValueType;
+
+  static constexpr Value kDefault = Group{}.*kField;
+
+  std::string_view name;
+  int min;
+  int max;
+
+  [[nodiscard]] constexpr bool IsConsistent() const {
+    return std::in_range<Value>(min) && std::in_range<Value>(max) &&
+           min <= kDefault && kDefault <= max;
+  }
+
+  [[nodiscard]] std::unique_ptr<SpinOption> MakeOption() const {
+    return std::make_unique<SpinOption>(
+        std::string{name}, kDefault, min, max, [](const int value) {
+          Settings::current<Group>.*kField = static_cast<Value>(value);
+        });
+  }
+};
+
 struct EngineOptions {
   EngineOptions() {
     auto threads = std::make_unique<SpinOption>("Threads", 1, 1, 256);
@@ -325,102 +361,17 @@ struct EngineOptions {
         std::make_unique<StringOption>("EvalFile", Nnue::kDefaultEvalFile);
     eval_file_ = eval_file.get();
     options.emplace_back(std::move(eval_file));
-    auto eval_file_small = std::make_unique<StringOption>(
-        "EvalFileSmall", Nnue::kDefaultEvalFileSmall);
-    eval_file_small_ = eval_file_small.get();
-    options.emplace_back(std::move(eval_file_small));
+
     options.emplace_back(std::make_unique<SpinOption>(
         "NnueScale", Settings::EvaluationParameters::nnue_scale, 0, 4096,
         [](const int value) {
           Settings::EvaluationParameters::nnue_scale = value;
         }));
-    options.emplace_back(
-        std::make_unique<SpinOption>("RFPDepth", 5, 1, 8, [](const int value) {
-          Settings::PruneParameters::RFPSettings::kDepthLimit =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "RFPThreshold", 100, 25, 200, [](const int value) {
-          Settings::PruneParameters::RFPSettings::kThreshold = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "NMPReduction",
-        Settings::PruneParameters::NMPSettings::kNullMoveReduction, 2, 10,
-        [](const int value) {
-          Settings::PruneParameters::NMPSettings::kNullMoveReduction = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "IIRBaseDepth", 2, 1, 8, [](const int value) {
-          Settings::PruneParameters::IIRSettings::kBaseLimit =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "IIRCutPenalty", 1, 0, 4, [](const int value) {
-          Settings::PruneParameters::IIRSettings::kCutNodePenalty =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "IIRReduction", 1, 1, 3, [](const int value) {
-          Settings::PruneParameters::IIRSettings::kReduction =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(
-        std::make_unique<SpinOption>("LMRDepth", 3, 2, 8, [](const int value) {
-          Settings::PruneParameters::LMRSettings::kDepthLimit = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "LMRInCheckPenalty", 1, 0, 3, [](const int value) {
-          Settings::PruneParameters::LMRSettings::kUnderCheckReductionPenalty =
-              value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "LMRGivesCheckPenalty", 2, 0, 3, [](const int value) {
-          Settings::PruneParameters::LMRSettings::kDoingCheckReductionPenalty =
-              value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "LMRCutNode", 2, 0, 4, [](const int value) {
-          Settings::PruneParameters::LMRSettings::kCutNodeReduction = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "LMRHistoryDivisor", 13000, 1000, 100000, [](const int value) {
-          Settings::PruneParameters::LMRSettings::kHistoryDivisor = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "FutilityDepth", 6, 0, 10, [](const int value) {
-          Settings::PruneParameters::FutilitySettings::kDepthLimit =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "FutilityBase", 90, 0, 400, [](const int value) {
-          Settings::PruneParameters::FutilitySettings::kBaseMargin = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "FutilityMargin", 60, 10, 300, [](const int value) {
-          Settings::PruneParameters::FutilitySettings::kDepthMargin = value;
-        }));
-    options.emplace_back(
-        std::make_unique<SpinOption>("LMPDepth", 8, 0, 12, [](const int value) {
-          Settings::PruneParameters::LMPSettings::kDepthLimit =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(
-        std::make_unique<SpinOption>("LMPBase", 3, 1, 20, [](const int value) {
-          Settings::PruneParameters::LMPSettings::kBaseCount = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "SEEPruneDepth", 8, 0, 12, [](const int value) {
-          Settings::PruneParameters::SEEPruningSettings::kDepthLimit =
-              static_cast<Depth>(value);
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "SEEQuietMargin", 60, 0, 200, [](const int value) {
-          Settings::PruneParameters::SEEPruningSettings::kQuietMargin = value;
-        }));
-    options.emplace_back(std::make_unique<SpinOption>(
-        "SEENoisyMargin", 20, 0, 200, [](const int value) {
-          Settings::PruneParameters::SEEPruningSettings::kNoisyMargin = value;
-        }));
+    std::apply(
+        [this](const auto&... tunables) {
+          (options.emplace_back(tunables.MakeOption()), ...);
+        },
+        kSearchTunables);
     AddMaterialOptions();
     AddPawnOptions();
     AddMobilityOptions();
@@ -467,14 +418,44 @@ struct EngineOptions {
   [[nodiscard]] const std::string& GetEvalFile() const {
     return eval_file_->GetValue();
   }
-  [[nodiscard]] const std::string& GetEvalFileSmall() const {
-    return eval_file_small_->GetValue();
-  }
 
  private:
+  using RFP = Settings::PruneParameters::RFPSettings;
+  using NMP = Settings::PruneParameters::NMPSettings;
+  using IIR = Settings::PruneParameters::IIRSettings;
+  using LMR = Settings::PruneParameters::LMRSettings;
+  using Futility = Settings::PruneParameters::FutilitySettings;
+  using LMP = Settings::PruneParameters::LMPSettings;
+  using SEE = Settings::PruneParameters::SEEPruningSettings;
+  static constexpr std::tuple kSearchTunables{
+      TunableSpin<&RFP::depth_limit>{"RFPDepth", 1, 8},
+      TunableSpin<&RFP::threshold>{"RFPThreshold", 25, 200},
+      TunableSpin<&NMP::null_move_reduction>{"NMPReduction", 2, 10},
+      TunableSpin<&IIR::base_limit>{"IIRBaseDepth", 1, 8},
+      TunableSpin<&IIR::cut_node_penalty>{"IIRCutPenalty", 0, 4},
+      TunableSpin<&IIR::reduction>{"IIRReduction", 1, 3},
+      TunableSpin<&LMR::depth_limit>{"LMRDepth", 2, 8},
+      TunableSpin<&LMR::under_check_reduction_penalty>{"LMRInCheckPenalty", 0,
+                                                       3},
+      TunableSpin<&LMR::doing_check_reduction_penalty>{"LMRGivesCheckPenalty",
+                                                       0, 3},
+      TunableSpin<&LMR::cut_node_reduction>{"LMRCutNode", 0, 4},
+      TunableSpin<&LMR::history_divisor>{"LMRHistoryDivisor", 1000, 100000},
+      TunableSpin<&Futility::depth_limit>{"FutilityDepth", 0, 10},
+      TunableSpin<&Futility::base_margin>{"FutilityBase", 0, 400},
+      TunableSpin<&Futility::depth_margin>{"FutilityMargin", 10, 300},
+      TunableSpin<&LMP::depth_limit>{"LMPDepth", 0, 12},
+      TunableSpin<&LMP::base_count>{"LMPBase", 1, 20},
+      TunableSpin<&SEE::depth_limit>{"SEEPruneDepth", 0, 12},
+      TunableSpin<&SEE::quiet_margin>{"SEEQuietMargin", 0, 200},
+      TunableSpin<&SEE::noisy_margin>{"SEENoisyMargin", 0, 200},
+  };
+  static_assert(std::apply(
+      [](const auto&... tunables) { return (tunables.IsConsistent() && ...); },
+      kSearchTunables));
+
   StringOption* tablebase_path_{};
   StringOption* eval_file_{};
-  StringOption* eval_file_small_{};
   void AddPsqtAdjustmentOptions() {
     constexpr std::array piece_names{
         std::pair{Piece::kKnight, "Knight"}, std::pair{Piece::kBishop, "Bishop"},
@@ -696,7 +677,6 @@ class UciChessEngine {
                           std::ostream& o_stream = std::cout)
       : i_stream_(i_stream), o_stream_(o_stream), search_thread_(o_stream) {
     (void)search_thread_.SetTablebasePath(options_.GetTablebasePath());
-    LoadEvalFileSmall();
   }
 
   ~UciChessEngine();
@@ -723,7 +703,6 @@ class UciChessEngine {
   void ParseNnueEvaluate() const;
   void ParseQuiescenceEvaluate() const;
   void LoadEvalFile() const;
-  void LoadEvalFileSmall() const;
   void ParseGo(std::stringstream command);
   void ParsePonderhit(std::stringstream command);
   void ParseMoveTime(std::stringstream command);
@@ -803,6 +782,19 @@ inline void UciChessEngine::ParseCommand(std::stringstream command) {
     return ParseDebug(std::move(command));
   }
   if (command_name == "bench") {
+    std::string token;
+    command >> token;
+    const auto depth =
+        token.empty() ? std::optional<int>{9} : ParseNumber<int>(token);
+    if (!depth || *depth < 1 || *depth > 30) {
+      Send("Invalid bench depth");
+      return;
+    }
+    StopSearch();
+    RunSearchBench(o_stream_, *depth);
+    return;
+  }
+  if (command_name == "perftbench") {
     ParsePosition(std::stringstream{std::string{"startpos"}});
     const auto result = PerftBench(info_.position, 6);
     std::osyncstream(o_stream_)
@@ -848,23 +840,6 @@ inline void UciChessEngine::ParseSetOption(std::stringstream command) {
   if (option->GetName() == "EvalFile") {
     LoadEvalFile();
   }
-  if (option->GetName() == "EvalFileSmall") {
-    LoadEvalFileSmall();
-  }
-}
-
-inline void UciChessEngine::LoadEvalFileSmall() const {
-  const auto& path = options_.GetEvalFileSmall();
-  if (path.empty() || path == "<empty>" || EqualsIgnoreCase(path, "none")) {
-    Nnue::UnloadSmall();
-    Send("info string small NNUE disabled");
-    return;
-  }
-  if (Nnue::LoadSmall(path)) {
-    Send("info string small NNUE evaluation using " + path);
-    return;
-  }
-  Send("info string failed to load small NNUE file " + path);
 }
 
 inline void UciChessEngine::LoadEvalFile() const {
@@ -875,7 +850,6 @@ inline void UciChessEngine::LoadEvalFile() const {
     return;
   }
   if (Nnue::Load(path)) {
-    LoadEvalFileSmall();
     Send("info string NNUE evaluation using " + Nnue::Description());
     return;
   }
@@ -910,7 +884,6 @@ inline void UciChessEngine::ParseStartPos() {
 }
 
 inline bool IsUciMoveText(std::string_view text) {
-  if (text == "O-O" || text == "O-O-O") return true;
   const auto is_file = [](char c) { return c >= 'a' && c <= 'h'; };
   const auto is_rank = [](char c) { return c >= '1' && c <= '8'; };
   const auto is_promotion = [](char c) {
@@ -1006,7 +979,7 @@ inline void UciChessEngine::ParseQuiescenceEvaluate() const {
   const DepthCondition condition{kMaxSearchPly};
   Quiescence quiescence{condition};
   const auto score =
-      quiescence.Search<true>(position, kMateValue, -kMateValue, 0);
+      quiescence.Search<true>(position, -Score::kMate, Score::kMate, 0);
   if (!score) {
     std::osyncstream(o_stream_) << "qeval unavailable" << std::endl;
     return;
@@ -1207,7 +1180,7 @@ inline ChessEngine& SearchThread::AddHelperEngine(const Info& info,
   if (helper_engines_.size() < worker) {
     helper_engines_.push_back(std::make_unique<ChessEngine>(
         info.position, std::cout, transposition_table_, false,
-        static_cast<Depth>(1 + worker % 2), tablebase_));
+        static_cast<Depth>(1 + worker % 2), tablebase_, worker));
   } else {
     helper_engines_[worker - 1]->SetPosition(info.position);
   }

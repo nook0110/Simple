@@ -22,7 +22,6 @@ static_assert(!IndexedBy<ByPiece<int>, Player>);
 static_assert(!IndexedBy<ByCastlingSide<int>, std::size_t>);
 static_assert(sizeof(ByPlayer<int>) == sizeof(std::array<int, kColors>));
 static_assert(sizeof(ByPiece<int>) == sizeof(std::array<int, kPieceTypes>));
-static_assert(&Nnue::kPieceValues == &SimpleChessEngine::kPieceValues.values);
 using ContinuationHistory = std::remove_cvref_t<
     decltype(std::declval<const Searcher&>().GetContinuationHistory())>;
 static_assert(IndexedBy<ContinuationHistory, Piece>);

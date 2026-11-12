@@ -7,6 +7,7 @@
 #include "MoveGenerator.h"
 #include "MovePicker.h"
 #include "PositionFactory.h"
+#include "ScopedMove.h"
 #include "TypedMove.h"
 
 using namespace SimpleChessEngine;
@@ -26,6 +27,12 @@ concept CanConstructLegalMove = requires(M move) {
   LegalMove(move);
 };
 
+static_assert(ReversibleMove<LegalMove>);
+static_assert(ReversibleMove<NullMove>);
+static_assert(!ReversibleMove<Move>);
+static_assert(!ReversibleMove<PseudoLegalMove>);
+static_assert(!ReversibleMove<MaybeLegalMove>);
+static_assert(!ReversibleMove<MaybePseudoLegalMove>);
 static_assert(CanDoMove<LegalMove>);
 static_assert(CanUndoMove<LegalMove>);
 static_assert(!CanDoMove<Move>);

@@ -366,7 +366,7 @@ void AddKingTropism(const Position& position, const Player attacker,
 
 [[nodiscard]] Eval Position::EvaluateNnue() const {
   const auto [psqt, positional] = Nnue::Evaluate(*this, nnue_);
-  const Eval raw = psqt + positional;
+  const Eval raw = Nnue::PostProcess(*this, {psqt, positional});
   const Eval scale = Settings::EvaluationParameters::nnue_scale > 0
                          ? Settings::EvaluationParameters::nnue_scale
                          : Nnue::DefaultScale();
