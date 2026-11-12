@@ -10,13 +10,13 @@ using namespace SimpleChessEngine;
 namespace EvaluationTests {
 TEST(PawnSpans, FrontAndRearAreColorRelative) {
   const auto d4 = GetSquareIndex(3, 3);
-  EXPECT_EQ(kPawnSpans.front[static_cast<size_t>(Player::kWhite)][d4],
+  EXPECT_EQ(kPawnSpans.front[Player::kWhite][d4],
             kFileBB[3] & (kRankBB[4] | kRankBB[5] | kRankBB[6] | kRankBB[7]));
-  EXPECT_EQ(kPawnSpans.rear[static_cast<size_t>(Player::kWhite)][d4],
+  EXPECT_EQ(kPawnSpans.rear[Player::kWhite][d4],
             kFileBB[3] & (kRankBB[0] | kRankBB[1] | kRankBB[2]));
-  EXPECT_EQ(kPawnSpans.front[static_cast<size_t>(Player::kBlack)][d4],
+  EXPECT_EQ(kPawnSpans.front[Player::kBlack][d4],
             kFileBB[3] & (kRankBB[0] | kRankBB[1] | kRankBB[2]));
-  EXPECT_EQ(kPawnSpans.rear[static_cast<size_t>(Player::kBlack)][d4],
+  EXPECT_EQ(kPawnSpans.rear[Player::kBlack][d4],
             kFileBB[3] & (kRankBB[4] | kRankBB[5] | kRankBB[6] | kRankBB[7]));
 }
 
@@ -51,11 +51,11 @@ TEST(PawnSpans, EveryPrecompiledSpanMatchesReference) {
         }
       }
 
-      EXPECT_EQ(kPawnSpans.front[side_index][square], expected_front)
+      EXPECT_EQ(kPawnSpans.front[side][square], expected_front)
           << "side=" << side_index << " square=" << static_cast<int>(square);
-      EXPECT_EQ(kPawnSpans.rear[side_index][square], expected_rear)
+      EXPECT_EQ(kPawnSpans.rear[side][square], expected_rear)
           << "side=" << side_index << " square=" << static_cast<int>(square);
-      EXPECT_EQ(kPawnSpans.passed[side_index][square], expected_passed)
+      EXPECT_EQ(kPawnSpans.passed[side][square], expected_passed)
           << "side=" << side_index << " square=" << static_cast<int>(square);
       EXPECT_EQ(kPawnSpans.adjacent_files[square], expected_adjacent_files)
           << "side=" << side_index << " square=" << static_cast<int>(square);
@@ -149,8 +149,7 @@ TEST(Material, RawPawnEndgameValue) {
   const auto position = PositionFactory{}("7k/8/8/3P4/8/8/8/K7 w - - 0 1");
   const Eval baseline = position.Evaluate();
   const Eval original =
-      Settings::EvaluationParameters::material_value[static_cast<size_t>(
-                                                         Piece::kPawn)]
+      Settings::EvaluationParameters::material_value[Piece::kPawn]
           .eval[1];
 
   Settings::EvaluationParameters::SetMaterialValue(
@@ -162,7 +161,7 @@ TEST(Material, RawPawnEndgameValue) {
 
 TEST(Mobility, KnightExcludesSquaresAttackedByEnemyPawns) {
   const auto position = PositionFactory{}("7k/8/4p3/8/3N4/8/8/K7 w - - 0 1");
-  const auto piece = static_cast<size_t>(Piece::kKnight);
+  const auto piece = Piece::kKnight;
   const TaperedEval original = Settings::EvaluationParameters::mobility[piece];
   const Eval baseline = position.Evaluate();
 
@@ -179,7 +178,7 @@ TEST(Mobility, KnightExcludesSquaresAttackedByEnemyPawns) {
 
 TEST(Mobility, BishopExcludesSquaresAttackedByEnemyPawns) {
   const auto position = PositionFactory{}("k7/8/1p6/8/3B4/8/8/7K w - - 0 1");
-  const auto piece = static_cast<size_t>(Piece::kBishop);
+  const auto piece = Piece::kBishop;
   const TaperedEval original = Settings::EvaluationParameters::mobility[piece];
   const Eval baseline = position.Evaluate();
 
@@ -196,7 +195,7 @@ TEST(Mobility, BishopExcludesSquaresAttackedByEnemyPawns) {
 
 TEST(Mobility, RookKeepsSquaresAttackedByEnemyPawns) {
   const auto position = PositionFactory{}("7k/8/4p3/8/3R4/8/8/K7 w - - 0 1");
-  const auto piece = static_cast<size_t>(Piece::kRook);
+  const auto piece = Piece::kRook;
   const TaperedEval original = Settings::EvaluationParameters::mobility[piece];
   const Eval baseline = position.Evaluate();
 
@@ -213,7 +212,7 @@ TEST(Mobility, RookKeepsSquaresAttackedByEnemyPawns) {
 
 TEST(Mobility, QueenKeepsSquaresAttackedByEnemyPawns) {
   const auto position = PositionFactory{}("7k/8/4p3/8/3Q4/8/8/K7 w - - 0 1");
-  const auto piece = static_cast<size_t>(Piece::kQueen);
+  const auto piece = Piece::kQueen;
   const TaperedEval original = Settings::EvaluationParameters::mobility[piece];
   const Eval baseline = position.Evaluate();
 
@@ -266,8 +265,7 @@ TEST(KingSafety, MultipleZoneAttackersUsePieceWeights) {
       "rnbq2kr/pppp1ppp/5n2/7Q/2B5/8/PPPPPPPP/RNB1K1NR w KQ - 0 1");
   const Eval baseline = position.Evaluate();
   const Eval original =
-      Settings::EvaluationParameters::king_attack[static_cast<size_t>(
-          Piece::kQueen)];
+      Settings::EvaluationParameters::king_attack[Piece::kQueen];
 
   Settings::EvaluationParameters::SetKingAttack<Piece::kQueen>(original + 10);
   EXPECT_GT(position.Evaluate(), baseline);

@@ -427,8 +427,8 @@ TEST(ProbCut, TtVetoRespectsDepthThresholdScoreAndDecisiveBand) {
 TEST(ProbCut, SeeBoundaryUsesImprovingMarginInLocalUnits) {
   const auto position = PositionFactory{}(kProbCutFen);
   const auto move = MoveFactory{}(position, "d4d5");
-  const auto pawn = kPieceValues[static_cast<size_t>(Piece::kPawn)];
-  const auto rook = kPieceValues[static_cast<size_t>(Piece::kRook)];
+  const auto pawn = kPieceValues[Piece::kPawn];
+  const auto rook = kPieceValues[Piece::kRook];
   const Eval gain = pawn(rook.eval[0]);
   ASSERT_TRUE(position.StaticExchangeEvaluation(move, gain));
   ASSERT_FALSE(position.StaticExchangeEvaluation(move, gain + 1));

@@ -10,7 +10,7 @@ struct PositionStateTestAccess {
   }
 
   static void ClearBlackPins(Position& position) {
-    const auto side = static_cast<std::size_t>(Player::kBlack);
+    const auto side = Player::kBlack;
     position.irreversible_data_.blockers[side] = kEmptyBoard;
     position.irreversible_data_.pinners[side] = kEmptyBoard;
   }
@@ -53,7 +53,7 @@ TEST(PositionState, DetectsCorruptValidPinCacheWithoutRepairingIt) {
   PositionStateTestAccess::ClearBlackPins(position);
   EXPECT_FALSE(PositionStateTestAccess::VerifyPinCache(position));
   const auto after = position.GetIrreversibleData();
-  const auto black = static_cast<std::size_t>(Player::kBlack);
+  const auto black = Player::kBlack;
   EXPECT_TRUE(after.pins_valid[black]);
   EXPECT_EQ(after.blockers[black], kEmptyBoard);
   EXPECT_EQ(after.pinners[black], kEmptyBoard);

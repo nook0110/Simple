@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <unordered_map>
 #include <vector>
 
@@ -29,8 +30,8 @@ struct PositionFactory {
   static constexpr int kMaxPiecesPerSide = 16;
   static constexpr int kMaxPawnsPerSide = 8;
 
-  using CastlingRightsBySide = std::array<std::bitset<2>, kColors>;
-  using RookSquares = std::array<std::array<std::optional<BitIndex>, 2>, kColors>;
+  using CastlingRightsBySide = ByPlayer<std::bitset<2>>;
+  using RookSquares = ByPlayer<ByCastlingSide<std::optional<BitIndex>>>;
 
   struct Fields {
     std::string board;
@@ -42,8 +43,8 @@ struct PositionFactory {
   };
 
   struct Placement {
-    std::array<BitIndex, kColors> kings{};
-    std::array<std::array<bool, kFiles>, kColors> back_rank_rooks{};
+    ByPlayer<BitIndex> kings{};
+    ByPlayer<std::array<bool, kFiles>> back_rank_rooks{};
   };
 
   [[nodiscard]] static constexpr Rank BackRank(Player color) {
@@ -90,9 +91,9 @@ inline std::optional<PositionFactory::Fields> PositionFactory::Split(
 inline std::optional<PositionFactory::Placement> PositionFactory::PlacePieces(
     std::string_view board, Position &position) {
   Placement placement;
-  std::array<int, kColors> kings{};
-  std::array<int, kColors> pawns{};
-  std::array<int, kColors> pieces{};
+  ByPlayer<int> kings{};
+  ByPlayer<int> pawns{};
+  ByPlayer<int> pieces{};
 
   Rank rank = kRanks - 1;
   File file = 0;
@@ -112,27 +113,26 @@ inline std::optional<PositionFactory::Placement> PositionFactory::PlacePieces(
     const auto entry = kCharToPiece.find(symbol);
     if (entry == kCharToPiece.end() || file == kFiles) return std::nullopt;
     const auto [piece, color] = entry->second;
-    const auto us = static_cast<size_t>(color);
     const auto square = GetSquareIndex(file, rank);
 
-    if (++pieces[us] > kMaxPiecesPerSide) return std::nullopt;
+    if (++pieces[color] > kMaxPiecesPerSide) return std::nullopt;
     if (piece == Piece::kKing) {
-      if (++kings[us] > 1) return std::nullopt;
-      placement.kings[us] = square;
+      if (++kings[color] > 1) return std::nullopt;
+      placement.kings[color] = square;
     }
-    if (piece == Piece::kPawn &&
-        (rank == 0 || rank == kRanks - 1 || ++pawns[us] > kMaxPawnsPerSide)) {
+    if (piece == Piece::kPawn && (rank == 0 || rank == kRanks - 1 ||
+                                  ++pawns[color] > kMaxPawnsPerSide)) {
       return std::nullopt;
     }
     if (piece == Piece::kRook && rank == BackRank(color)) {
-      placement.back_rank_rooks[us][file] = true;
+      placement.back_rank_rooks[color][file] = true;
     }
 
     position.PlacePiece(square, piece, color);
     ++file;
   }
 
-  if (rank != 0 || file != kFiles || kings != std::array{1, 1}) {
+  if (rank != 0 || file != kFiles || kings != ByPlayer<int>{{1, 1}}) {
     return std::nullopt;
   }
   return placement;
@@ -148,20 +148,19 @@ inline std::optional<Player> PositionFactory::ParseSideToMove(
 inline PositionFactory::RookSquares PositionFactory::FindCastlingRooks(
     const Placement &placement) {
   RookSquares rooks{};
-  for (const auto color : {Player::kWhite, Player::kBlack}) {
-    const auto us = static_cast<size_t>(color);
-    const auto &back_rank_rooks = placement.back_rank_rooks[us];
-    const auto king_file = static_cast<File>(placement.kings[us] % kFiles);
+  for (const auto color : kPlayers) {
+    const auto &back_rank_rooks = placement.back_rank_rooks[color];
+    const auto king_file = static_cast<File>(placement.kings[color] % kFiles);
     for (File file = 0; file < king_file; ++file) {
       if (back_rank_rooks[file]) {
-        rooks[us][static_cast<size_t>(CastlingSide::k000)] =
+        rooks[color][CastlingSide::k000] =
             GetSquareIndex(file, BackRank(color));
         break;
       }
     }
     for (File file = kFiles - 1; file > king_file; --file) {
       if (back_rank_rooks[file]) {
-        rooks[us][static_cast<size_t>(CastlingSide::k00)] =
+        rooks[color][CastlingSide::k00] =
             GetSquareIndex(file, BackRank(color));
         break;
       }
@@ -190,14 +189,13 @@ PositionFactory::ParseCastlingRights(std::string_view text,
 
     const auto color = index < 2 ? Player::kWhite : Player::kBlack;
     const auto side = index % 2 == 0 ? CastlingSide::k00 : CastlingSide::k000;
-    const auto us = static_cast<size_t>(color);
-    const auto bit = static_cast<size_t>(side);
+    const auto bit = std::to_underlying(side);
     const bool king_on_back_rank =
-        placement.kings[us] / kFiles == BackRank(color);
-    if (rights[us].test(bit) || !king_on_back_rank || !rooks[us][bit]) {
+        placement.kings[color] / kFiles == BackRank(color);
+    if (rights[color].test(bit) || !king_on_back_rank || !rooks[color][side]) {
       return std::nullopt;
     }
-    rights[us].set(bit);
+    rights[color].set(bit);
   }
   return rights;
 }
@@ -267,24 +265,20 @@ inline std::optional<Position> PositionFactory::TryParse(
   if (!halfmove_clock || !fullmove_number) return std::nullopt;
 
   const auto &kings = placement->kings;
-  std::array<std::array<BitIndex, 2>, kColors> rook_squares{};
-  for (size_t us = 0; us < kColors; ++us) {
-    for (size_t side = 0; side < 2; ++side) {
-      rook_squares[us][side] = rooks[us][side].value_or(BitIndex{0});
+  ByPlayer<ByCastlingSide<BitIndex>> rook_squares{};
+  ByPlayer<ByCastlingSide<Bitboard>> cs_king{};
+  ByPlayer<ByCastlingSide<Bitboard>> cs_rook{};
+  for (const auto color : kPlayers) {
+    for (const auto side : kCastlingSides) {
+      rook_squares[color][side] = rooks[color][side].value_or(BitIndex{0});
+      cs_king[color][side] =
+          RookBetween(kings[color], kKingCastlingDestination[color][side]);
+      cs_rook[color][side] = RookBetween(rook_squares[color][side],
+                                         kRookCastlingDestination[color][side]);
     }
   }
   position.SetKingPositions(kings);
   position.SetRookPositions(rook_squares);
-  std::array<std::array<Bitboard, 2>, kColors> cs_king = {
-      {{RookBetween(kings[0], kKingCastlingDestination[0][0]),
-        RookBetween(kings[0], kKingCastlingDestination[0][1])},
-       {RookBetween(kings[1], kKingCastlingDestination[1][0]),
-        RookBetween(kings[1], kKingCastlingDestination[1][1])}}};
-  std::array<std::array<Bitboard, 2>, kColors> cs_rook = {
-      {{RookBetween(rook_squares[0][0], kRookCastlingDestination[0][0]),
-        RookBetween(rook_squares[0][1], kRookCastlingDestination[0][1])},
-       {RookBetween(rook_squares[1][0], kRookCastlingDestination[1][0]),
-        RookBetween(rook_squares[1][1], kRookCastlingDestination[1][1])}}};
   position.SetCastlingSquares(cs_king, cs_rook);
 
   position.Init(*halfmove_clock, std::max<std::size_t>(*fullmove_number, 1));
@@ -326,25 +320,24 @@ inline std::string SimpleChessEngine::FenFactory::operator()(
 
   const auto castling_rights = position.GetCastlingRights();
 
-  if (castling_rights[static_cast<size_t>(Player::kWhite)].test(
-          static_cast<size_t>(CastlingSide::k00))) {
+  if (castling_rights[Player::kWhite].test(
+          std::to_underlying(CastlingSide::k00))) {
     ss << 'K';
   }
-  if (castling_rights[static_cast<size_t>(Player::kWhite)].test(
-          static_cast<size_t>(CastlingSide::k000))) {
+  if (castling_rights[Player::kWhite].test(
+          std::to_underlying(CastlingSide::k000))) {
     ss << 'Q';
   }
-  if (castling_rights[static_cast<size_t>(Player::kBlack)].test(
-          static_cast<size_t>(CastlingSide::k00))) {
+  if (castling_rights[Player::kBlack].test(
+          std::to_underlying(CastlingSide::k00))) {
     ss << 'k';
   }
-  if (castling_rights[static_cast<size_t>(Player::kBlack)].test(
-          static_cast<size_t>(CastlingSide::k000))) {
+  if (castling_rights[Player::kBlack].test(
+          std::to_underlying(CastlingSide::k000))) {
     ss << 'q';
   }
 
-  if ((castling_rights[static_cast<size_t>(Player::kWhite)] |
-       castling_rights[static_cast<size_t>(Player::kBlack)])
+  if ((castling_rights[Player::kWhite] | castling_rights[Player::kBlack])
           .none()) {
     ss << '-';
   }

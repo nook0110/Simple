@@ -22,10 +22,10 @@ inline static std::unordered_map<char, std::pair<Piece, Player>> kCharToPiece =
      {'k', {Piece::kKing, Player::kBlack}},
      {'K', {Piece::kKing, Player::kWhite}}};
 
-inline constexpr std::array kPiecesChars = {' ', 'p', 'n', 'b', 'r', 'q', 'k'};
+inline constexpr ByPiece<char> kPiecesChars = {{' ', 'p', 'n', 'b', 'r', 'q', 'k'}};
 
 inline char GetPieceChar(Piece piece, Player color) {
-  char piece_name = kPiecesChars[static_cast<size_t>(piece)];
+  char piece_name = kPiecesChars[piece];
   return color == Player::kWhite ? toupper(piece_name) : piece_name;
 }
 
@@ -57,7 +57,7 @@ inline std::ostream& operator<<(std::ostream& stream, const Move& move) {
   PrintCoordinates(to, stream);
 
   if (move.IsPromotion()) {
-    stream << kPiecesChars[static_cast<size_t>(move.PromotionPiece())];
+    stream << kPiecesChars[move.PromotionPiece()];
   }
 
   return stream;

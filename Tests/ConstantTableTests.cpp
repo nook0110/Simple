@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <random>
+#include <type_traits>
 
 #include "Attacks.h"
 #include "Hasher.h"
@@ -9,6 +11,14 @@
 using namespace SimpleChessEngine;
 
 namespace {
+static_assert(std::is_same_v<decltype(kPawnAttacks),
+                             const ByPlayer<std::array<Bitboard, kBoardArea>>>);
+static_assert(std::is_same_v<
+              decltype(kPSQT),
+              const ByPlayer<ByPiece<std::array<TaperedEval, kBoardArea>>>>);
+static_assert(std::is_same_v<decltype(Hasher::psqt_hash),
+                             ByPiece<ByPlayer<std::array<Hash, kBoardArea>>>>);
+
 constexpr std::array kLegacyKing = {770ull,
                                     1797ull,
                                     3594ull,
@@ -188,8 +198,7 @@ TEST(ConstantTables, PawnsMatchOriginalGenerator) {
   for (auto color : {Player::kWhite, Player::kBlack}) {
     for (BitIndex square = 0; square < 64; ++square) {
       Bitboard expected{};
-      for (const auto direction :
-           kPawnAttackDirections[static_cast<size_t>(color)]) {
+      for (const auto direction : kPawnAttackDirections[color]) {
         expected |= GetShiftIfValid(square, direction).value_or(Bitboard{});
       }
       EXPECT_EQ(GetPawnAttacks(square, color), expected);
@@ -198,11 +207,13 @@ TEST(ConstantTables, PawnsMatchOriginalGenerator) {
 }
 
 TEST(ConstantTables, PsqtMatchesOriginalMirror) {
-  for (size_t piece = 0; piece < kPieceTypes; ++piece) {
+  for (const auto piece :
+       {Piece::kNone, Piece::kPawn, Piece::kKnight, Piece::kBishop,
+        Piece::kRook, Piece::kQueen, Piece::kKing}) {
     for (BitIndex square = 0; square < 64; ++square) {
       const auto [file, rank] = GetCoordinates(square);
-      EXPECT_EQ(kPSQT[1][piece][GetSquareIndex(file, 7 - rank)],
-                kPSQT[0][piece][square]);
+      EXPECT_EQ(kPSQT[Player::kBlack][piece][GetSquareIndex(file, 7 - rank)],
+                kPSQT[Player::kWhite][piece][square]);
     }
   }
 }

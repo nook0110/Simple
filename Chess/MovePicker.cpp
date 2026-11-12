@@ -51,7 +51,7 @@ void MovePicker::InitPicker(Position& position, const Searcher* searcher,
   evasions_ = position.IsUnderCheck();
   position.ComputePins(position.GetSideToMove());
   blockers_ = position.GetIrreversibleData()
-                  .blockers[static_cast<size_t>(position.GetSideToMove())];
+                  .blockers[position.GetSideToMove()];
   excluded_move_ = excluded_move;
   tt_move_ = position.IsPseudoLegal(tt_move) ? tt_move : Move::None();
   stage_ = Stage::kTT;

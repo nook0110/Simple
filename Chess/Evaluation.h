@@ -11,6 +11,12 @@ using SearchResult = std::optional<Eval>;
 
 enum class GamePhase : std::uint8_t { kMiddleGame, kEndGame };
 
+template <>
+inline constexpr std::size_t kEnumSize<GamePhase> = 2;
+
+template <class Value>
+using ByGamePhase = EnumArray<GamePhase, Value>;
+
 constexpr size_t kGamePhases = 2;
 
 using PhaseValue = int;
@@ -46,32 +52,33 @@ struct TaperedEval {
   return copy;
 }
 
-constexpr std::array<TaperedEval, kPieceTypes> kPieceValues = {{{0, 0},
-                                                                {82, 94},
-                                                                {337, 281},
-                                                                {365, 297},
-                                                                {477, 512},
-                                                                {1025, 936},
-                                                                {0, 0}}};
+inline constexpr ByPiece<TaperedEval> kPieceValues = {{{{0, 0},
+                                                        {82, 94},
+                                                        {337, 281},
+                                                        {365, 297},
+                                                        {477, 512},
+                                                        {1025, 936},
+                                                        {0, 0}}}};
 
 constexpr Eval kFullNonPawnMaterial =
-    kPieceValues[static_cast<size_t>(Piece::kKnight)]
+    kPieceValues[Piece::kKnight]
             .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
         4 +
-    kPieceValues[static_cast<size_t>(Piece::kBishop)]
+    kPieceValues[Piece::kBishop]
             .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
         4 +
-    kPieceValues[static_cast<size_t>(Piece::kRook)]
+    kPieceValues[Piece::kRook]
             .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
         4 +
-    kPieceValues[static_cast<size_t>(Piece::kQueen)]
+    kPieceValues[Piece::kQueen]
             .eval[static_cast<size_t>(GamePhase::kMiddleGame)] *
         2;
 
-constexpr std::array kPhaseValueLimits = {kFullNonPawnMaterial, 0};
+constexpr ByGamePhase<PhaseValue> kPhaseValueLimits = {{kFullNonPawnMaterial, 0}};
 
 constexpr PhaseValue kLimitsDifference =
-    kPhaseValueLimits[0] - kPhaseValueLimits[1];
+    kPhaseValueLimits[GamePhase::kMiddleGame] -
+    kPhaseValueLimits[GamePhase::kEndGame];
 
 constexpr Eval kTempoBonus = 20;
 

@@ -78,7 +78,7 @@ TEST(StaticExchangeEvaluation, TracksMultiplePinnersOnKingRay) {
       PositionFactory{}("4k3/4n3/8/3p4/8/8/4R3/3QR1K1 w - - 0 1");
   ExpectSeeValue(position, "d1d5", 89);
   const auto pins = position.GetIrreversibleData();
-  const auto black = static_cast<size_t>(Player::kBlack);
+  const auto black = Player::kBlack;
   EXPECT_EQ(pins.pinners[black],
             SingleSquare(GetSquareIndex(4, 0)) |
                 SingleSquare(GetSquareIndex(4, 1)));

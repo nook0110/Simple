@@ -30,11 +30,9 @@
 
 namespace SimpleChessEngine {
 struct TournamentTime {
-  std::array<std::chrono::milliseconds, 2> player_time = {
-      std::chrono::milliseconds{0}, std::chrono::milliseconds{0}};
+  ByPlayer<std::chrono::milliseconds> player_time{};
 
-  std::array<std::chrono::milliseconds, 2> player_inc = {
-      std::chrono::milliseconds{0}, std::chrono::milliseconds{0}};
+  ByPlayer<std::chrono::milliseconds> player_inc{};
 
   std::optional<int> moves_to_go;
 };
@@ -111,11 +109,10 @@ class SearchThread {
       constexpr double kSingleMoveTime = 500;
 
       const auto side = info.position.GetSideToMove();
-      const auto side_idx = static_cast<size_t>(side);
       const double time =
-          static_cast<double>(tournament->player_time[side_idx].count());
+          static_cast<double>(tournament->player_time[side].count());
       const double inc =
-          static_cast<double>(tournament->player_inc[side_idx].count());
+          static_cast<double>(tournament->player_inc[side].count());
       const double ply =
           2.0 * (static_cast<double>(info.position.GetFullMoveNumber()) - 1.0) +
           (side == Player::kBlack ? 1.0 : 0.0);
@@ -461,21 +458,19 @@ struct EngineOptions {
   StringOption* tablebase_path_{};
   StringOption* eval_file_{};
   void AddPsqtAdjustmentOptions() {
-    constexpr std::array piece_names = {"Knight", "Bishop", "Rook", "Queen",
-                                        "King"};
-    for (size_t piece_offset = 0; piece_offset < piece_names.size();
-         ++piece_offset) {
-      const auto piece = static_cast<Piece>(
-          static_cast<size_t>(Piece::kKnight) + piece_offset);
+    constexpr std::array piece_names{
+        std::pair{Piece::kKnight, "Knight"}, std::pair{Piece::kBishop, "Bishop"},
+        std::pair{Piece::kRook, "Rook"}, std::pair{Piece::kQueen, "Queen"},
+        std::pair{Piece::kKing, "King"}};
+    for (const auto& [piece, name] : piece_names) {
       for (size_t rank = 0; rank < 8; ++rank) {
         for (size_t file = 0; file < 4; ++file) {
           const std::string square =
               std::string{static_cast<char>('A' + file)} +
               std::to_string(rank + 1);
-          const auto piece_index = static_cast<size_t>(piece);
           options.emplace_back(std::make_unique<SpinOption>(
-              std::string{piece_names[piece_offset]} + "PSQT" + square + "MG",
-              Settings::EvaluationParameters::psqt_adjustment[piece_index][rank]
+              std::string{name} + "PSQT" + square + "MG",
+              Settings::EvaluationParameters::psqt_adjustment[piece][rank]
                                                              [file]
                                                                  .eval[0],
               -100, 100, [piece, rank, file](const int value) {
@@ -483,8 +478,8 @@ struct EngineOptions {
                     piece, rank, file, GamePhase::kMiddleGame, value);
               }));
           options.emplace_back(std::make_unique<SpinOption>(
-              std::string{piece_names[piece_offset]} + "PSQT" + square + "EG",
-              Settings::EvaluationParameters::psqt_adjustment[piece_index][rank]
+              std::string{name} + "PSQT" + square + "EG",
+              Settings::EvaluationParameters::psqt_adjustment[piece][rank]
                                                              [file]
                                                                  .eval[1],
               -100, 100, [piece, rank, file](const int value) {
@@ -506,17 +501,16 @@ struct EngineOptions {
   template <Piece piece>
   void AddMobilityOptions(const std::string& piece_name, const int minimum,
                           const int maximum) {
-    constexpr auto piece_index = static_cast<size_t>(piece);
     options.emplace_back(std::make_unique<SpinOption>(
         piece_name + "MobilityMG",
-        Settings::EvaluationParameters::mobility[piece_index].eval[0], minimum,
+        Settings::EvaluationParameters::mobility[piece].eval[0], minimum,
         maximum, [](const int value) {
           Settings::EvaluationParameters::SetMobility(
               piece, GamePhase::kMiddleGame, value);
         }));
     options.emplace_back(std::make_unique<SpinOption>(
         piece_name + "MobilityEG",
-        Settings::EvaluationParameters::mobility[piece_index].eval[1], minimum,
+        Settings::EvaluationParameters::mobility[piece].eval[1], minimum,
         maximum, [](const int value) {
           Settings::EvaluationParameters::SetMobility(
               piece, GamePhase::kEndGame, value);
@@ -534,10 +528,9 @@ struct EngineOptions {
   template <Piece piece>
   void AddMaterialValueOptions(const std::string& piece_name, const int minimum,
                                const int maximum) {
-    constexpr auto piece_index = static_cast<size_t>(piece);
     options.emplace_back(std::make_unique<SpinOption>(
         piece_name + "ValueMG",
-        Settings::EvaluationParameters::material_value[piece_index]
+        Settings::EvaluationParameters::material_value[piece]
             .eval[static_cast<size_t>(GamePhase::kMiddleGame)],
         minimum, maximum, [](const int value) {
           Settings::EvaluationParameters::SetMaterialValue(
@@ -545,7 +538,7 @@ struct EngineOptions {
         }));
     options.emplace_back(std::make_unique<SpinOption>(
         piece_name + "ValueEG",
-        Settings::EvaluationParameters::material_value[piece_index]
+        Settings::EvaluationParameters::material_value[piece]
             .eval[static_cast<size_t>(GamePhase::kEndGame)],
         minimum, maximum, [](const int value) {
           Settings::EvaluationParameters::SetMaterialValue(
@@ -670,7 +663,7 @@ struct EngineOptions {
   void AddKingAttackOption(const std::string& piece_name) {
     options.emplace_back(std::make_unique<SpinOption>(
         piece_name + "KingAttackMG",
-        Settings::EvaluationParameters::king_attack[static_cast<size_t>(piece)],
+        Settings::EvaluationParameters::king_attack[piece],
         0, 50, [](const int value) {
           Settings::EvaluationParameters::SetKingAttack<piece>(value);
         }));
@@ -1076,19 +1069,19 @@ inline void UciChessEngine::ParsePlayersTime(std::stringstream command) {
     std::size_t time;
     command >> time;
     if (token == "wtime") {
-      tournament_time.player_time[static_cast<size_t>(kWhite)] =
+      tournament_time.player_time[kWhite] =
           std::chrono::milliseconds{time};
     }
     if (token == "btime") {
-      tournament_time.player_time[static_cast<size_t>(kBlack)] =
+      tournament_time.player_time[kBlack] =
           std::chrono::milliseconds{time};
     }
     if (token == "winc") {
-      tournament_time.player_inc[static_cast<size_t>(kWhite)] =
+      tournament_time.player_inc[kWhite] =
           std::chrono::milliseconds{time};
     }
     if (token == "binc") {
-      tournament_time.player_inc[static_cast<size_t>(kBlack)] =
+      tournament_time.player_inc[kBlack] =
           std::chrono::milliseconds{time};
     }
     if (token == "movestogo" && time > 0) {

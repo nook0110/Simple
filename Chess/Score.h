@@ -56,7 +56,7 @@ class SfMargin {
  public:
   static constexpr Eval kStockfishPawn = 208;
   static constexpr Eval kEnginePawn =
-      kPieceValues[static_cast<std::size_t>(Piece::kPawn)]
+      kPieceValues[Piece::kPawn]
           .eval[static_cast<std::size_t>(GamePhase::kMiddleGame)];
   static constexpr double kPerEngineUnit =
       static_cast<double>(kStockfishPawn) / kEnginePawn;

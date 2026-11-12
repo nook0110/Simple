@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "BitBoard.h"
+#include "Move.h"
 #include "Piece.h"
 #include "Player.h"
 
@@ -42,10 +43,10 @@ constexpr std::array kFileBB = {kFileA,      kFileA << 1, kFileA << 2,
                                 kFileA << 3, kFileA << 4, kFileA << 5,
                                 kFileA << 6, kFileA << 7};
 
-constexpr std::array<std::array<BitIndex, 2>, kColors>
-    kKingCastlingDestination = {{{6, 2}, {62, 58}}};
-constexpr std::array<std::array<BitIndex, 2>, kColors>
-    kRookCastlingDestination = {{{5, 3}, {61, 59}}};
+constexpr ByPlayer<ByCastlingSide<BitIndex>> kKingCastlingDestination = {
+    {{{{{6, 2}}}, {{{62, 58}}}}}};
+constexpr ByPlayer<ByCastlingSide<BitIndex>> kRookCastlingDestination = {
+    {{{{{5, 3}}}, {{{61, 59}}}}}};
 
 using Rank = std::int8_t;
 using File = std::int8_t;
@@ -80,8 +81,8 @@ enum class CastlingRights : std::uint8_t {
   kAll = k00 | k000
 };
 
-constexpr std::array kCastlingRightsForSide = {CastlingRights::k00,
-                                               CastlingRights::k000};
+constexpr ByCastlingSide<CastlingRights> kCastlingRightsForSide = {
+    {CastlingRights::k00, CastlingRights::k000}};
 
 enum class Compass : std::int8_t {
   kNorth = kLineSize,
@@ -127,23 +128,23 @@ constexpr Compass Invert(const Compass direction) {
   return square + static_cast<BitIndex>(direction);
 }
 
-constexpr std::array kPawnMoveDirection = {Compass::kNorth, Compass::kSouth};
-constexpr std::array<std::array<Compass, 2>, kColors> kPawnAttackDirections = {
-    {{Compass::kNorthWest, Compass::kNorthEast},
-     {Compass::kSouthWest, Compass::kSouthEast}}};
+constexpr ByPlayer<Compass> kPawnMoveDirection = {
+    {Compass::kNorth, Compass::kSouth}};
+constexpr ByPlayer<std::array<Compass, 2>> kPawnAttackDirections = {
+    {{{Compass::kNorthWest, Compass::kNorthEast},
+      {Compass::kSouthWest, Compass::kSouthEast}}}};
 
 struct PawnSpanTables {
-  std::array<std::array<Bitboard, kBoardArea>, kColors> front{};
-  std::array<std::array<Bitboard, kBoardArea>, kColors> rear{};
-  std::array<std::array<Bitboard, kBoardArea>, kColors> passed{};
+  ByPlayer<std::array<Bitboard, kBoardArea>> front{};
+  ByPlayer<std::array<Bitboard, kBoardArea>> rear{};
+  ByPlayer<std::array<Bitboard, kBoardArea>> passed{};
   std::array<Bitboard, kBoardArea> adjacent_files{};
 };
 
 consteval PawnSpanTables MakePawnSpanTables() {
   PawnSpanTables tables{};
-  for (size_t side = 0; side < kColors; ++side) {
-    const int forward =
-        side == static_cast<size_t>(Player::kWhite) ? 1 : -1;
+  for (const auto side : kPlayers) {
+    const int forward = side == Player::kWhite ? 1 : -1;
     for (size_t square = 0; square < kBoardArea; ++square) {
       const int file = static_cast<int>(square % kLineSize);
       const int rank = static_cast<int>(square / kLineSize);
@@ -174,7 +175,7 @@ consteval PawnSpanTables MakePawnSpanTables() {
       tables.front[side][square] = Bitboard{front};
       tables.rear[side][square] = Bitboard{rear};
       tables.passed[side][square] = Bitboard{passed};
-      if (side == 0) {
+      if (side == Player::kWhite) {
         tables.adjacent_files[square] = Bitboard{adjacent_files};
       }
     }
@@ -262,8 +263,8 @@ extern const GeometryTables kGeometry;
 }
 
 consteval auto MakePawnAttacks() {
-  std::array<std::array<Bitboard, kBoardArea>, kColors> attacks{};
-  for (size_t color = 0; color < kColors; ++color) {
+  ByPlayer<std::array<Bitboard, kBoardArea>> attacks{};
+  for (const auto color : kPlayers) {
     for (BitIndex square = 0; square < static_cast<BitIndex>(kBoardArea);
          ++square) {
       for (const auto direction : kPawnAttackDirections[color]) {
@@ -279,7 +280,7 @@ inline constexpr auto kPawnAttacks = MakePawnAttacks();
 
 [[nodiscard]] constexpr Bitboard GetPawnAttacks(const BitIndex square,
                                                 const Player side) {
-  return kPawnAttacks[static_cast<size_t>(side)][square];
+  return kPawnAttacks[side][square];
 }
 
 [[nodiscard]] inline std::string DrawBitboard(const Bitboard b) {
