@@ -8,6 +8,11 @@ option(SCE_WARNINGS_AS_ERRORS "Treat project warnings as errors" OFF)
 option(SCE_SANITIZE "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 set(SCE_TT_SIZE_MB 640 CACHE STRING "Shared transposition table size in MiB")
 set(SCE_EVALFILE "nn-1a298aa575a0.nnue" CACHE STRING "Default NNUE network file")
+set(SCE_TARGET_ARCH "native" CACHE STRING "Target architecture for release builds")
+
+if(NOT SCE_TT_SIZE_MB MATCHES "^[1-9][0-9]*$" OR SCE_TT_SIZE_MB LESS 16)
+  message(FATAL_ERROR "SCE_TT_SIZE_MB must be a decimal integer of at least 16 MiB for the default bench signature")
+endif()
 
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,7 +27,7 @@ if(SCE_SANITIZE)
 endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_definitions(NDEBUG)
-  add_compile_options(-Ofast -mtune=native -march=native -fno-stack-protector)
+  add_compile_options(-Ofast -mtune=native -march=${SCE_TARGET_ARCH} -fno-stack-protector)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-flto=auto>
                       $<$<COMPILE_LANGUAGE:CXX>:-frename-registers>)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
