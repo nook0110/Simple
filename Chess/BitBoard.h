@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 
 using BitIndex = std::int8_t;
 
@@ -32,27 +33,27 @@ class Bitboard {
     return !static_cast<bool>(value_);
   }
 
-  Bitboard &Set(const size_t pos) {
+  constexpr Bitboard &Set(const size_t pos) {
     value_ |= 1ull << pos;
     return *this;
   }
 
-  Bitboard &Set() {
+  constexpr Bitboard &Set() {
     value_ = ~0ull;
     return *this;
   }
 
-  Bitboard &Reset(const size_t pos) {
+  constexpr Bitboard &Reset(const size_t pos) {
     value_ &= ~(1ull << pos);
     return *this;
   }
 
-  Bitboard &Reset() {
+  constexpr Bitboard &Reset() {
     value_ = 0ull;
     return *this;
   }
 
-  Bitboard &Flip(const size_t pos) {
+  constexpr Bitboard &Flip(const size_t pos) {
     value_ ^= 1ull << pos;
     return *this;
   }
@@ -63,63 +64,98 @@ class Bitboard {
 
   constexpr bool operator==(const Bitboard &other) const = default;
 
-  [[nodiscard]] size_t Count() const;
+  [[nodiscard]] constexpr size_t Count() const;
 
-  [[nodiscard]] BitIndex GetFirstBit() const;
+  [[nodiscard]] constexpr BitIndex GetFirstBit() const;
 
-  BitIndex PopFirstBit();
+  constexpr BitIndex PopFirstBit();
 
-  [[nodiscard]] bool MoreThanOne() const;
+  [[nodiscard]] constexpr bool MoreThanOne() const;
 
   constexpr Bitboard operator-() const;
 
   constexpr Bitboard operator-(const Bitboard &other) const;
-  Bitboard &operator-=(const Bitboard &other);
+  constexpr Bitboard &operator-=(const Bitboard &other);
 
   constexpr Bitboard operator*(const Bitboard &other) const;
-  Bitboard &operator*=(const Bitboard &other);
+  constexpr Bitboard &operator*=(const Bitboard &other);
 
   constexpr Bitboard operator&(const Bitboard &other) const;
-  Bitboard &operator&=(const Bitboard &other);
+  constexpr Bitboard &operator&=(const Bitboard &other);
 
   constexpr Bitboard operator|(const Bitboard &other) const;
-  Bitboard &operator|=(const Bitboard &other);
+  constexpr Bitboard &operator|=(const Bitboard &other);
 
   constexpr Bitboard operator^(const Bitboard &other) const;
-  Bitboard &operator^=(const Bitboard &other);
+  constexpr Bitboard &operator^=(const Bitboard &other);
 
   constexpr Bitboard operator~() const;
 
   constexpr Bitboard operator<<(size_t pos) const;
-  Bitboard &operator<<=(size_t pos);
+  constexpr Bitboard &operator<<=(size_t pos);
 
   constexpr Bitboard operator>>(size_t pos) const;
-  Bitboard &operator>>=(size_t pos);
+  constexpr Bitboard &operator>>=(size_t pos);
 
   [[nodiscard]] explicit constexpr operator std::uint64_t() const noexcept {
     return value_;
   }
 
+  class Iterator {
+   public:
+    using value_type = BitIndex;
+    using difference_type = std::ptrdiff_t;
+    using iterator_concept = std::forward_iterator_tag;
+
+    constexpr Iterator() = default;
+    constexpr explicit Iterator(std::uint64_t remaining) : remaining_(remaining) {}
+
+    [[nodiscard]] constexpr BitIndex operator*() const {
+      assert(remaining_ != 0);
+      return static_cast<BitIndex>(std::countr_zero(remaining_));
+    }
+
+    constexpr Iterator& operator++() {
+      assert(remaining_ != 0);
+      remaining_ &= remaining_ - 1;
+      return *this;
+    }
+
+    constexpr Iterator operator++(int) {
+      auto previous = *this;
+      ++*this;
+      return previous;
+    }
+
+    constexpr bool operator==(const Iterator&) const = default;
+
+   private:
+    std::uint64_t remaining_{};
+  };
+
+  [[nodiscard]] constexpr Iterator begin() const { return Iterator{value_}; }
+  [[nodiscard]] constexpr Iterator end() const { return Iterator{}; }
+
  private:
   std::uint64_t value_{};
 };
 
-inline size_t Bitboard::Count() const {
+constexpr size_t Bitboard::Count() const {
   return std::popcount(value_);
 }
 
-inline BitIndex Bitboard::GetFirstBit() const {
+constexpr BitIndex Bitboard::GetFirstBit() const {
   assert(Any());
   return std::countr_zero(value_);
 }
 
-inline BitIndex Bitboard::PopFirstBit() {
+constexpr BitIndex Bitboard::PopFirstBit() {
   const BitIndex bit = GetFirstBit();
-  Reset(bit);
+  value_ &= value_ - 1;
   return bit;
 }
 
-inline bool Bitboard::MoreThanOne() const {
+constexpr bool Bitboard::MoreThanOne() const {
   return value_ & (value_ - 1); // more effective than std::has_single_bit(value) && Any()
 }
 
@@ -129,7 +165,7 @@ constexpr Bitboard Bitboard::operator-(const Bitboard &other) const {
   return Bitboard{value_ - other.value_};  // may (and will) overflow
 }
 
-inline Bitboard &Bitboard::operator-=(const Bitboard &other) {
+constexpr Bitboard &Bitboard::operator-=(const Bitboard &other) {
   value_ -= other.value_;
   return *this;
 }
@@ -138,7 +174,7 @@ constexpr Bitboard Bitboard::operator*(const Bitboard &other) const {
   return Bitboard{value_ * other.value_};  // may (and will) overflow
 }
 
-inline Bitboard &Bitboard::operator*=(const Bitboard &other) {
+constexpr Bitboard &Bitboard::operator*=(const Bitboard &other) {
   value_ *= other.value_;
   return *this;
 }
@@ -147,7 +183,7 @@ constexpr Bitboard Bitboard::operator&(const Bitboard &other) const {
   return Bitboard{value_ & other.value_};
 }
 
-inline Bitboard &Bitboard::operator&=(const Bitboard &other) {
+constexpr Bitboard &Bitboard::operator&=(const Bitboard &other) {
   value_ &= other.value_;
   return *this;
 }
@@ -156,7 +192,7 @@ constexpr Bitboard Bitboard::operator|(const Bitboard &other) const {
   return Bitboard{value_ | other.value_};
 }
 
-inline Bitboard &Bitboard::operator|=(const Bitboard &other) {
+constexpr Bitboard &Bitboard::operator|=(const Bitboard &other) {
   value_ |= other.value_;
   return *this;
 }
@@ -165,7 +201,7 @@ constexpr Bitboard Bitboard::operator^(const Bitboard &other) const {
   return Bitboard{value_ ^ other.value_};
 }
 
-inline Bitboard &Bitboard::operator^=(const Bitboard &other) {
+constexpr Bitboard &Bitboard::operator^=(const Bitboard &other) {
   value_ ^= other.value_;
   return *this;
 }
@@ -176,7 +212,7 @@ constexpr Bitboard Bitboard::operator<<(const size_t pos) const {
   return Bitboard{value_ << pos};
 }
 
-inline Bitboard &Bitboard::operator<<=(const size_t pos) {
+constexpr Bitboard &Bitboard::operator<<=(const size_t pos) {
   value_ <<= pos;
   return *this;
 }
@@ -185,7 +221,7 @@ constexpr Bitboard Bitboard::operator>>(const size_t pos) const {
   return Bitboard{value_ >> pos};
 }
 
-inline Bitboard &Bitboard::operator>>=(const size_t pos) {
+constexpr Bitboard &Bitboard::operator>>=(const size_t pos) {
   value_ >>= pos;
   return *this;
 }

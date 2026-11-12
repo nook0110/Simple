@@ -45,10 +45,7 @@ void MoveGenerator::GenerateMovesForPiece(PseudoLegalMove*& moves, Position& pos
   static_assert(piece != Piece::kPawn && piece != Piece::kKing);
 
   const auto us = position.GetSideToMove();
-  Bitboard pieces = position.GetPiecesByType<piece>(us);
-
-  while (pieces.Any()) {
-    const auto from = pieces.PopFirstBit();
+  for (const auto from : position.GetPiecesByType<piece>(us)) {
     GenerateMovesFromSquare<piece>(moves, position, from, target);
   }
 }
