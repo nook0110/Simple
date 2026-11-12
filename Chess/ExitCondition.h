@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -101,22 +102,14 @@ class NodeBudget {
 };
 
 struct DepthCondition {
-  explicit DepthCondition(Depth max_depth, StopSignal stop_signal = {},
-                          std::shared_ptr<NodeBudget> node_budget = {})
-      : max_depth_(max_depth),
-        stop_signal_(std::move(stop_signal)),
-        node_budget_(std::move(node_budget)) {}
+  explicit DepthCondition(Depth max_depth, StopSignal stop_signal = {})
+      : max_depth_(max_depth), stop_signal_(std::move(stop_signal)) {}
   bool ShouldContinueIteration() const {
     return !IsTimeToExit() && cur_depth < max_depth_;
   }
 
-  [[gnu::always_inline]] bool IsTimeToExit() const {
-    return (stop_signal_ && stop_signal_->load(std::memory_order_relaxed)) ||
-           (node_budget_ && node_budget_->IsSpent());
-  }
-
-  [[gnu::always_inline]] void CountNode() const {
-    if (node_budget_) node_budget_->Spend();
+  bool IsTimeToExit() const {
+    return stop_signal_ && stop_signal_->load(std::memory_order_relaxed);
   }
 
   void Update(const IterationInfo& info) { cur_depth = info.depth; }
@@ -124,11 +117,41 @@ struct DepthCondition {
   Depth cur_depth = 0;
   Depth max_depth_;
   StopSignal stop_signal_;
-  std::shared_ptr<NodeBudget> node_budget_;
 };
 static_assert(SearchCondition<DepthCondition>);
 
-using Condition = std::variant<TimeCondition, DepthCondition>;
+class NodeCondition {
+ public:
+  NodeCondition(Depth max_depth, StopSignal stop_signal,
+                std::shared_ptr<NodeBudget> node_budget)
+      : depth_condition_(max_depth, std::move(stop_signal)),
+        node_budget_(std::move(node_budget)) {
+    assert(node_budget_);
+  }
+
+  bool ShouldContinueIteration() const {
+    return !node_budget_->IsSpent() &&
+           depth_condition_.ShouldContinueIteration();
+  }
+
+  [[gnu::always_inline]] bool IsTimeToExit() const {
+    return depth_condition_.IsTimeToExit() || node_budget_->IsSpent();
+  }
+
+  [[gnu::always_inline]] void CountNode() const { node_budget_->Spend(); }
+
+  void Update(const IterationInfo& info) { depth_condition_.Update(info); }
+
+ private:
+  DepthCondition depth_condition_;
+  std::shared_ptr<NodeBudget> node_budget_;
+};
+static_assert(SearchCondition<NodeCondition>);
+static_assert(CountsNodes<NodeCondition>);
+static_assert(!CountsNodes<DepthCondition>);
+static_assert(!CountsNodes<TimeCondition>);
+
+using Condition = std::variant<TimeCondition, DepthCondition, NodeCondition>;
 
 struct Pondering {
   explicit Pondering(StopSignal signal = {})

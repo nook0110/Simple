@@ -104,8 +104,7 @@ def run(executable: str) -> None:
     try:
         engine.send("uci")
         engine.wait_for("uciok", timeout=10)
-        for option, variable in (("EvalFile", "SCE_NNUE_BIG"),
-                                 ("EvalFileSmall", "SCE_NNUE_SMALL")):
+        for option, variable in (("EvalFile", "SCE_NNUE"),):
             if path := os.environ.get(variable):
                 engine.send(f"setoption name {option} value {path}")
         for threads in (1, 2):

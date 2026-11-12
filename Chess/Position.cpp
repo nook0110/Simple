@@ -5,6 +5,7 @@
 #include "Attacks.h"
 #include "BitBoard.h"
 #include "MoveGenerator.h"
+#include "Nnue/Stockfish/position.h"
 #include "PSQT.h"
 #include "Piece.h"
 
@@ -35,7 +36,8 @@ Eval Position::SimpleMaterialEval() const {
  *
  */
 void Position::PlacePiece(const BitIndex square, const Piece piece,
-                          const Player color) {
+                          const Player color,
+                          Stockfish::DirtyThreats *threats) {
   assert(IsOk(square));
   assert(!board_[square]);
   assert(piece);
@@ -50,6 +52,11 @@ void Position::PlacePiece(const BitIndex square, const Piece piece,
   if (piece != Piece::kPawn)
     evaluation_data_.non_pawn_material += kPieceValues[piece_idx].eval[0];
   hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][square];
+  if (threats)
+    Stockfish::Position{*this}.update_piece_threats(
+        Stockfish::make_piece(static_cast<Stockfish::Color>(color),
+                              static_cast<Stockfish::PieceType>(piece)),
+        true, static_cast<Stockfish::Square>(square), threats);
 }
 
 /**
@@ -60,12 +67,18 @@ void Position::PlacePiece(const BitIndex square, const Piece piece,
  *
  */
 
-void Position::RemovePiece(const BitIndex square, const Player color) {
+void Position::RemovePiece(const BitIndex square, const Player color,
+                           Stockfish::DirtyThreats *threats) {
   assert(IsOk(square));
   const auto piece = board_[square];
   assert(!!piece);
   const auto piece_idx = static_cast<size_t>(piece);
   const auto color_idx = static_cast<size_t>(color);
+  if (threats)
+    Stockfish::Position{*this}.update_piece_threats(
+        Stockfish::make_piece(static_cast<Stockfish::Color>(color),
+                              static_cast<Stockfish::PieceType>(piece)),
+        false, static_cast<Stockfish::Square>(square), threats);
   pieces_by_type_[piece_idx].Reset(square);
   pieces_by_color_[color_idx].Reset(square);
   --evaluation_data_.piece_counts[color_idx][piece_idx];
@@ -78,7 +91,7 @@ void Position::RemovePiece(const BitIndex square, const Player color) {
 }
 
 void Position::MovePiece(const BitIndex from, const BitIndex to,
-                         const Player color) {
+                         const Player color, Stockfish::DirtyThreats *threats) {
   assert(IsOk(from));
   assert(IsOk(to));
   const auto piece = board_[from];
@@ -86,6 +99,16 @@ void Position::MovePiece(const BitIndex from, const BitIndex to,
   assert(!board_[to]);
   const auto piece_idx = static_cast<size_t>(piece);
   const auto color_idx = static_cast<size_t>(color);
+  const auto sf_piece =
+      Stockfish::make_piece(static_cast<Stockfish::Color>(color),
+                            static_cast<Stockfish::PieceType>(piece));
+  const auto from_to =
+      Stockfish::square_bb(static_cast<Stockfish::Square>(from)) |
+      Stockfish::square_bb(static_cast<Stockfish::Square>(to));
+  if (threats)
+    Stockfish::Position{*this}.update_piece_threats(
+        sf_piece, false, static_cast<Stockfish::Square>(from), threats,
+        from_to);
   pieces_by_type_[piece_idx].Reset(from);
   pieces_by_color_[color_idx].Reset(from);
   pieces_by_type_[piece_idx].Set(to);
@@ -96,6 +119,89 @@ void Position::MovePiece(const BitIndex from, const BitIndex to,
   evaluation_data_.psqt[color_idx] += kPSQT[color_idx][piece_idx][to];
   hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][from];
   hash_ ^= hasher_.psqt_hash[piece_idx][color_idx][to];
+  if (threats)
+    Stockfish::Position{*this}.update_piece_threats(
+        sf_piece, true, static_cast<Stockfish::Square>(to), threats, from_to);
+}
+
+bool Position::VerifyPinCache() const {
+  const auto cached = irreversible_data_;
+  bool valid = true;
+  for (const auto player : {Player::kWhite, Player::kBlack}) {
+    const auto side = static_cast<std::size_t>(player);
+    if (!cached.pins_valid[side]) continue;
+    irreversible_data_.pins_valid[side] = false;
+    ComputePins(player);
+    valid &= irreversible_data_.blockers[side] == cached.blockers[side] &&
+             irreversible_data_.pinners[side] == cached.pinners[side];
+    irreversible_data_.blockers[side] = cached.blockers[side];
+    irreversible_data_.pinners[side] = cached.pinners[side];
+    irreversible_data_.pins_valid[side] = cached.pins_valid[side];
+  }
+  return valid;
+}
+
+bool Position::VerifyIncrementalState() const {
+  static thread_local std::uint64_t checks = 0;
+  if ((checks++ & 4095u) != 0) return true;
+
+  std::array<Bitboard, kPieceTypes> pieces_by_type{};
+  std::array<Bitboard, kColors> pieces_by_color{};
+  std::array<BitIndex, kColors> king_position{};
+  std::array<int, kColors> king_count{};
+  EvaluationData evaluation;
+  Hash hash = side_to_move_ == Player::kBlack ? hasher_.stm_hash : 0;
+  for (std::size_t index = 0; index < kBoardArea; ++index) {
+    const auto square = static_cast<BitIndex>(index);
+    const auto piece = board_[square];
+    const bool white = pieces_by_color_[0].Test(square);
+    const bool black = pieces_by_color_[1].Test(square);
+    if (piece == Piece::kNone) {
+      if (white || black) return false;
+      continue;
+    }
+    if (white == black) return false;
+    const auto color = white ? Player::kWhite : Player::kBlack;
+    const auto color_idx = static_cast<std::size_t>(color);
+    const auto piece_idx = static_cast<std::size_t>(piece);
+    pieces_by_type[piece_idx].Set(square);
+    pieces_by_color[color_idx].Set(square);
+    ++evaluation.piece_counts[color_idx][piece_idx];
+    evaluation.material[color_idx] += kPieceValues[piece_idx];
+    evaluation.psqt[color_idx] += kPSQT[color_idx][piece_idx][square];
+    if (piece != Piece::kPawn) {
+      evaluation.non_pawn_material += kPieceValues[piece_idx].eval[0];
+    }
+    if (piece == Piece::kKing) {
+      king_position[color_idx] = square;
+      ++king_count[color_idx];
+    }
+    hash ^= hasher_.psqt_hash[piece_idx][color_idx][square];
+  }
+  for (std::size_t color = 0; color < kColors; ++color) {
+    hash ^= hasher_.cr_hash[color][0];
+    hash ^= hasher_.cr_hash[color]
+                           [irreversible_data_.castling_rights[color].to_ulong()];
+  }
+  if (irreversible_data_.en_croissant_square) {
+    hash ^= hasher_.en_croissant_hash[GetCoordinates(
+        *irreversible_data_.en_croissant_square).first];
+  }
+  if (pieces_by_type != pieces_by_type_ ||
+      pieces_by_color != pieces_by_color_ ||
+      (pieces_by_color[0] | pieces_by_color[1]) != GetAllPieces() ||
+      king_count[0] != 1 || king_count[1] != 1 ||
+      king_position != king_position_ || evaluation != evaluation_data_ ||
+      hash != hash_) {
+    return false;
+  }
+  if (!VerifyPinCache()) return false;
+  if (!Nnue::IsLoaded()) return true;
+  if (!Nnue::VerifyAccumulators(*this, nnue_)) return false;
+  const auto incremental = EvaluateNetwork();
+  const auto scratch = Nnue::EvaluateFromScratch(*this);
+  return incremental.psqt == scratch.psqt &&
+         incremental.positional == scratch.positional;
 }
 
 void Position::DoMove(const LegalMove &move) {
@@ -119,25 +225,59 @@ void Position::DoMove(const LegalMove &move) {
   
   // Store captured piece for undo
   irreversible_data_.captured_piece = board_[to];
-  auto &dirty = nnue_.Push();
+  auto &dirties = nnue_.Push();
+  auto &dirty = dirties.dirtyPiece;
+  auto *threats = Nnue::IsLoaded() ? &dirties.dirtyThreats : nullptr;
+  const auto sf_piece = [](Piece piece, Player color) {
+    return Stockfish::make_piece(static_cast<Stockfish::Color>(color),
+                                 static_cast<Stockfish::PieceType>(piece));
+  };
+  dirty = {sf_piece(moving_piece, us),
+           static_cast<Stockfish::Square>(from),
+           static_cast<Stockfish::Square>(to),
+           Stockfish::SQ_NONE,
+           Stockfish::SQ_NONE,
+           Stockfish::NO_PIECE,
+           Stockfish::NO_PIECE};
+  const auto swap_piece = [&](BitIndex square, Piece replacement) {
+    const auto old = sf_piece(board_[square], them);
+    RemovePiece(square, them);
+    if (threats)
+      Stockfish::Position{*this}.update_piece_threats<false>(
+          old, false, static_cast<Stockfish::Square>(square), threats);
+    PlacePiece(square, replacement, us);
+    if (threats)
+      Stockfish::Position{*this}.update_piece_threats<false>(
+          sf_piece(replacement, us), true,
+          static_cast<Stockfish::Square>(square), threats);
+  };
+  for (const auto color : {Player::kWhite, Player::kBlack})
+    dirties.dirtyPawnPairs.before[static_cast<size_t>(color)] =
+        static_cast<std::uint64_t>(GetPiecesOf(color, Piece::kPawn));
 
   if (move.IsEnPassant()) {
     const auto capture_square = Shift(to, kPawnMoveDirection[static_cast<size_t>(them)]);
     irreversible_data_.captured_piece = Piece::kPawn;  // En passant always captures a pawn
-    dirty.Add(Piece::kPawn, us, from, to);
-    dirty.Add(Piece::kPawn, them, capture_square, Nnue::kNoSquare);
-    RemovePiece(capture_square, them);
-    MovePiece(from, to, us);
+    dirty.remove_pc = sf_piece(Piece::kPawn, them);
+    dirty.remove_sq = static_cast<Stockfish::Square>(capture_square);
+    RemovePiece(capture_square, them, threats);
+    MovePiece(from, to, us, threats);
   } else if (move.IsPromotion()) {
     const auto promoted_to = move.PromotionPiece();
     const auto captured_piece = board_[to];
-    dirty.Add(Piece::kPawn, us, from, Nnue::kNoSquare);
-    if (!!captured_piece) dirty.Add(captured_piece, them, to, Nnue::kNoSquare);
-    dirty.Add(promoted_to, us, Nnue::kNoSquare, to);
-    RemovePiece(from, us);
-    if (!!captured_piece) RemovePiece(to, them);
-    PlacePiece(to, promoted_to, us);
-    
+    dirty.to = Stockfish::SQ_NONE;
+    dirty.add_pc = sf_piece(promoted_to, us);
+    dirty.add_sq = static_cast<Stockfish::Square>(to);
+    if (!!captured_piece) {
+      dirty.remove_pc = sf_piece(captured_piece, them);
+      dirty.remove_sq = static_cast<Stockfish::Square>(to);
+    }
+    RemovePiece(from, us, threats);
+    if (!!captured_piece)
+      swap_piece(to, promoted_to);
+    else
+      PlacePiece(to, promoted_to, us, threats);
+
     for (const auto castling_side : {CastlingSide::k00, CastlingSide::k000}) {
       const auto their_rook = rook_positions_[static_cast<size_t>(them)][static_cast<size_t>(castling_side)];
       if (to == their_rook) {
@@ -165,15 +305,17 @@ void Position::DoMove(const LegalMove &move) {
     }
     
     const auto side_idx = static_cast<size_t>(side);
-    dirty.Add(Piece::kKing, us, king_from,
-              kKingCastlingDestination[color_idx][side_idx]);
-    dirty.Add(Piece::kRook, us, rook_from,
-              kRookCastlingDestination[color_idx][side_idx]);
-    RemovePiece(king_from, us);
-    RemovePiece(rook_from, us);
-    PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us);
-    PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us);
-    
+    dirty.remove_pc = dirty.add_pc = sf_piece(Piece::kRook, us);
+    dirty.remove_sq = static_cast<Stockfish::Square>(rook_from);
+    dirty.add_sq = static_cast<Stockfish::Square>(
+        kRookCastlingDestination[color_idx][side_idx]);
+    RemovePiece(king_from, us, threats);
+    RemovePiece(rook_from, us, threats);
+    PlacePiece(kKingCastlingDestination[color_idx][side_idx], Piece::kKing, us,
+               threats);
+    PlacePiece(kRookCastlingDestination[color_idx][side_idx], Piece::kRook, us,
+               threats);
+
     king_position_[color_idx] = kKingCastlingDestination[color_idx][side_idx];
     irreversible_data_.castling_rights[color_idx] = 0;
   } else {
@@ -190,13 +332,15 @@ void Position::DoMove(const LegalMove &move) {
       }
     }
     
-    dirty.Add(piece_to_move, us, from, to);
     if (!!captured_piece) {
-      dirty.Add(captured_piece, them, to, Nnue::kNoSquare);
-      RemovePiece(to, them);
+      dirty.remove_pc = sf_piece(captured_piece, them);
+      dirty.remove_sq = static_cast<Stockfish::Square>(to);
+      RemovePiece(from, us, threats);
+      swap_piece(to, piece_to_move);
+    } else {
+      MovePiece(from, to, us, threats);
     }
-    MovePiece(from, to, us);
-    
+
     if (piece_to_move == Piece::kKing) {
       king_position_[static_cast<size_t>(us)] = to;
       irreversible_data_.castling_rights[static_cast<size_t>(us)] = 0;
@@ -216,6 +360,10 @@ void Position::DoMove(const LegalMove &move) {
     }
   }
 
+  for (const auto color : {Player::kWhite, Player::kBlack})
+    dirties.dirtyPawnPairs.after[static_cast<size_t>(color)] =
+        static_cast<std::uint64_t>(GetPiecesOf(color, Piece::kPawn));
+
   for (const auto color : {Player::kWhite, Player::kBlack}) {
     hash_ ^= hasher_.cr_hash[static_cast<size_t>(
         color)][irreversible_data_.castling_rights[static_cast<size_t>(color)]
@@ -229,6 +377,7 @@ void Position::DoMove(const LegalMove &move) {
       (moving_piece == Piece::kPawn) ||  // Moving piece is a pawn
       (irreversible_data_.captured_piece != Piece::kNone);  // Any capture
   history_stack_.Push(hash_, resets_fifty_move);
+  assert(VerifyIncrementalState());
 }
 
 void SimpleChessEngine::Position::DoMove(NullMove) {
@@ -239,9 +388,16 @@ void SimpleChessEngine::Position::DoMove(NullMove) {
   }
   side_to_move_ = Flip(side_to_move_);
   hash_ ^= hasher_.stm_hash;
-  nnue_.Push();
+  auto &dirties = nnue_.Push();
+  for (const auto color : {Player::kWhite, Player::kBlack}) {
+    const auto pawns =
+        static_cast<std::uint64_t>(GetPiecesOf(color, Piece::kPawn));
+    dirties.dirtyPawnPairs.before[static_cast<size_t>(color)] = pawns;
+    dirties.dirtyPawnPairs.after[static_cast<size_t>(color)] = pawns;
+  }
 
   history_stack_.Push(hash_, false);
+  assert(VerifyIncrementalState());
 }
 
 
@@ -317,6 +473,7 @@ void Position::UndoMove(const LegalMove &move, const IrreversibleData &data) {
 
   nnue_.Pop();
   history_stack_.Pop();
+  assert(VerifyIncrementalState());
 }
 
 void SimpleChessEngine::Position::UndoMove(NullMove,
@@ -331,6 +488,7 @@ void SimpleChessEngine::Position::UndoMove(NullMove,
   nnue_.Pop();
 
   history_stack_.Pop();
+  assert(VerifyIncrementalState());
 }
 
 bool Position::CanPseudoCastle(CastlingSide side) const {
@@ -549,21 +707,6 @@ Bitboard Position::GetPiecesByType(const Player player) const {
          pieces_by_type_[static_cast<size_t>(piece)];
 }
 
-template <Piece piece>
-Bitboard Position::GetCastlingSquares(CastlingSide side) const {
-  static_assert(piece == Piece::kRook || piece == Piece::kKing);
-  if constexpr (piece == Piece::kKing) {
-    return castling_squares_for_king_[static_cast<size_t>(side_to_move_)]
-                                     [static_cast<size_t>(side)];
-  }
-  if constexpr (piece == Piece::kRook) {
-    return castling_squares_for_rook_[static_cast<size_t>(side_to_move_)]
-                                     [static_cast<size_t>(side)];
-  }
-  assert(false);
-  return {};
-}
-
 Bitboard Position::GetAllPawnAttacks(const Player player) const {
   const auto us = static_cast<size_t>(player);
   const auto pawns = GetPiecesByType<Piece::kPawn>(player);
@@ -578,12 +721,6 @@ Piece Position::GetPieceAt(const BitIndex index) const {
 
 BitIndex Position::GetKingSquare(const Player player) const {
   return king_position_[static_cast<size_t>(player)];
-}
-
-BitIndex Position::GetCastlingRookSquare(Player player,
-                                         CastlingSide side) const {
-  return rook_positions_[static_cast<size_t>(player)]
-                        [static_cast<size_t>(side)];
 }
 
 bool Position::IsUnderAttack(const BitIndex square, const Player us,
@@ -636,8 +773,6 @@ bool Position::StaticExchangeEvaluation(const Move &move,
 
   if (move.IsPromotion()) {
     balance += EstimatePiece(move.PromotionPiece()) - EstimatePiece(Piece::kPawn);
-  } else if (move.IsEnPassant()) {
-    balance = EstimatePiece(Piece::kPawn);
   }
 
   balance -= threshold;

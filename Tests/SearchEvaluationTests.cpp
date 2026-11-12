@@ -94,35 +94,29 @@ TEST(StaticEvalHistory, SupportsMaximumPly) {
   EXPECT_TRUE(last.opponent_worsening);
 }
 
-TEST(EvaluationTrendPruning, ReverseFutilityScalesBothDeductions) {
-  using RFP = Settings::PruneParameters::RFPSettings;
-  EXPECT_EQ(RFP::Margin(5, false, false, false), 500);
-  EXPECT_EQ(RFP::Margin(5, false, true, false), 300);
-  EXPECT_EQ(RFP::Margin(5, false, false, true), 467);
-  EXPECT_EQ(RFP::Margin(5, false, true, true), 267);
-  EXPECT_EQ(RFP::Margin(5, true, false, false), 385);
-  EXPECT_EQ(RFP::Margin(5, true, true, false), 231);
-  EXPECT_EQ(RFP::Margin(5, true, false, true), 360);
-  EXPECT_EQ(RFP::Margin(5, true, true, true), 206);
-  EXPECT_EQ(RFP::Margin(1, false, true, true), -133);
-}
+using RFP = Settings::PruneParameters::RFPSettings;
+static_assert(RFP{}.Margin(5, false, false, false) == 500);
+static_assert(RFP{}.Margin(5, false, true, false) == 300);
+static_assert(RFP{}.Margin(5, false, false, true) == 467);
+static_assert(RFP{}.Margin(5, false, true, true) == 267);
+static_assert(RFP{}.Margin(5, true, false, false) == 385);
+static_assert(RFP{}.Margin(5, true, true, false) == 231);
+static_assert(RFP{}.Margin(5, true, false, true) == 360);
+static_assert(RFP{}.Margin(5, true, true, true) == 206);
+static_assert(RFP{}.Margin(1, false, true, true) == -133);
 
-TEST(EvaluationTrendPruning, LateMoveCountUsesStockfishIntegerDivision) {
-  using LMP = Settings::PruneParameters::LMPSettings;
-  EXPECT_EQ(LMP::MoveCount(1, false), 2);
-  EXPECT_EQ(LMP::MoveCount(1, true), 4);
-  EXPECT_EQ(LMP::MoveCount(2, false), 3);
-  EXPECT_EQ(LMP::MoveCount(2, true), 7);
-  EXPECT_EQ(LMP::MoveCount(8, false), 33);
-  EXPECT_EQ(LMP::MoveCount(8, true), 67);
-}
+using LMP = Settings::PruneParameters::LMPSettings;
+static_assert(LMP{}.MoveCount(1, false) == 2);
+static_assert(LMP{}.MoveCount(1, true) == 4);
+static_assert(LMP{}.MoveCount(2, false) == 3);
+static_assert(LMP{}.MoveCount(2, true) == 7);
+static_assert(LMP{}.MoveCount(8, false) == 33);
+static_assert(LMP{}.MoveCount(8, true) == 67);
 
-TEST(EvaluationTrendPruning, LateMoveReductionScalesOnlyLogarithmicTerm) {
-  using LMR = Settings::PruneParameters::LMRSettings;
-  EXPECT_DOUBLE_EQ(LMR::ScaleReduction(4.0, true), 4.0);
-  EXPECT_DOUBLE_EQ(LMR::ScaleReduction(4.0, false), 5.4921875);
-  EXPECT_DOUBLE_EQ(LMR::ScaleReduction(0.0, false), 0.0);
-}
+using LMR = Settings::PruneParameters::LMRSettings;
+static_assert(LMR::ScaleReduction(4.0, true) == 4.0);
+static_assert(LMR::ScaleReduction(4.0, false) == 5.4921875);
+static_assert(LMR::ScaleReduction(0.0, false) == 0.0);
 
 TEST(EvaluationTrendPruning, ReverseFutilityRespectsQuietTtMove) {
   const auto position = PositionFactory{}();
@@ -131,7 +125,7 @@ TEST(EvaluationTrendPruning, ReverseFutilityRespectsQuietTtMove) {
   for (const bool quiet_tt_move : {false, true}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
     if (quiet_tt_move) {
-      table->SetEntry(position, move, 0, 0, Bound::kUpper, 0);
+      table->SetEntry(position, move, ToTT(0, 0), 0, Bound::kUpper, 0);
     }
     Searcher searcher(position, table);
     const auto result = SearchNode<NodeType::kAll, DepthCondition>{
@@ -144,8 +138,7 @@ TEST(EvaluationTrendPruning, ReverseFutilityRespectsQuietTtMove) {
 TEST(EvaluationTrendPruning, ReverseFutilityDoesNotCutLosingTablebaseBounds) {
   const auto position = PositionFactory{}();
   DepthCondition condition{2};
-  const Eval loss_bound =
-      -kTablebaseWinValue + static_cast<Eval>(kMaxSearchPly);
+  const Eval loss_bound = -Score::kDecisive;
   for (const Eval beta : {loss_bound, loss_bound + 1}) {
     Searcher searcher(position);
     const auto result = SearchNode<NodeType::kAll, DepthCondition>{
@@ -157,7 +150,7 @@ TEST(EvaluationTrendPruning, ReverseFutilityDoesNotCutLosingTablebaseBounds) {
 
 namespace SimpleChessEngine {
 struct SearchEvaluationTestAccess {
-  static auto Bonus(Eval parent, Eval child) {
+  static constexpr auto Bonus(Eval parent, Eval child) {
     return Searcher::StaticEvalHistoryBonus(parent, child);
   }
   static void Play(Searcher &searcher, Depth ply, const Move &move,
@@ -224,25 +217,21 @@ void ProbePolicyNode(Searcher &searcher, Depth ply = 1,
 }
 }  // namespace
 
-TEST(StaticEvalPolicy, ConvertsOppositePerspectiveGainAndTempoOffset) {
-  EXPECT_EQ(PolicyAccess::Bonus(20, -40), 2785);
-  EXPECT_EQ(PolicyAccess::Bonus(20, 0), 226);
-  EXPECT_EQ(PolicyAccess::Bonus(20, -20), 1505);
-  EXPECT_EQ(PolicyAccess::Bonus(-20, 0), 2785);
-  EXPECT_EQ(PolicyAccess::Bonus(0, 0), 1505);
-  EXPECT_EQ(PolicyAccess::Bonus(kTempoBonus, kTempoBonus), -1029);
-  EXPECT_EQ(PolicyAccess::Bonus(0, -1), 1581);
-  EXPECT_EQ(PolicyAccess::Bonus(0, 1), 1430);
-}
+static_assert(PolicyAccess::Bonus(20, -40) == 2785);
+static_assert(PolicyAccess::Bonus(20, 0) == 226);
+static_assert(PolicyAccess::Bonus(20, -20) == 1505);
+static_assert(PolicyAccess::Bonus(-20, 0) == 2785);
+static_assert(PolicyAccess::Bonus(0, 0) == 1505);
+static_assert(PolicyAccess::Bonus(kTempoBonus, kTempoBonus) == -1029);
+static_assert(PolicyAccess::Bonus(0, -1) == 1581);
+static_assert(PolicyAccess::Bonus(0, 1) == 1430);
 
-TEST(StaticEvalPolicy, ClampsInStockfishUnitsBeforeScalingHistory) {
-  EXPECT_EQ(PolicyAccess::Bonus(0, 74), -3212);
-  EXPECT_EQ(PolicyAccess::Bonus(0, 75), -3237);
-  EXPECT_EQ(PolicyAccess::Bonus(0, 10000), -3237);
-  EXPECT_EQ(PolicyAccess::Bonus(0, -76), 6348);
-  EXPECT_EQ(PolicyAccess::Bonus(0, -77), 6373);
-  EXPECT_EQ(PolicyAccess::Bonus(0, -10000), 6373);
-}
+static_assert(PolicyAccess::Bonus(0, 74) == -3212);
+static_assert(PolicyAccess::Bonus(0, 75) == -3237);
+static_assert(PolicyAccess::Bonus(0, 10000) == -3237);
+static_assert(PolicyAccess::Bonus(0, -76) == 6348);
+static_assert(PolicyAccess::Bonus(0, -77) == 6373);
+static_assert(PolicyAccess::Bonus(0, -10000) == 6373);
 
 TEST(StaticEvalPolicy, UpdatesSavedMoverOnlyAndLeavesContinuationUnchanged) {
   const auto position = PositionFactory{}();
@@ -388,7 +377,8 @@ TEST(StaticEvalPolicy, TtCutoffSkipsEvaluationAndPolicyTraining) {
   auto child = parent;
   child.DoMove(CheckedMove(child, move));
   auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-  table->SetEntry(child, MoveFactory{}(child, "e7e5"), -1, 3, Bound::kUpper, 0);
+  table->SetEntry(child, MoveFactory{}(child, "e7e5"), ToTT(-1, 0), 3,
+                  Bound::kUpper, 0);
   Searcher searcher(parent, table);
   PolicyAccess::Play(searcher, 0, move, 20);
   searcher.SetPosition(child);
@@ -444,11 +434,12 @@ TEST(StaticEvalPolicy, NullSearchInvalidatesStaleQuietContext) {
     EXPECT_FALSE(context.parent_eval);
     return true;
   }};
-  const auto rfp_limit = Settings::PruneParameters::RFPSettings::kDepthLimit;
-  Settings::PruneParameters::RFPSettings::kDepthLimit = 0;
+  auto &rfp = Settings::current<RFP>;
+  const auto rfp_limit = rfp.depth_limit;
+  rfp.depth_limit = 0;
   EXPECT_FALSE((SearchNode<NodeType::kCut, PolicyStopCondition>{
       searcher, {12, 6, beta - 1, beta, 1}, stop}()));
-  Settings::PruneParameters::RFPSettings::kDepthLimit = rfp_limit;
+  rfp.depth_limit = rfp_limit;
   EXPECT_TRUE(observed);
   EXPECT_EQ(searcher.GetPosition().GetHash(), parent.GetHash());
 }
@@ -461,7 +452,7 @@ TEST(StaticEvalPolicy, SearchReplacesContextForLaterQuietSibling) {
        MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(parent)) {
     auto child = parent;
     child.DoMove(move);
-    table->SetEntry(child, MoveFactory{}(child, "e7e5"), -9999, 6,
+    table->SetEntry(child, MoveFactory{}(child, "e7e5"), ToTT(-9999, 0), 6,
                     Bound::kLower, 0);
   }
   Searcher searcher(parent, table);
@@ -487,4 +478,19 @@ TEST(StaticEvalPolicy, SearchReplacesContextForLaterQuietSibling) {
       searcher, {6, 3, 9999, 10000}, stop}()));
   EXPECT_TRUE(observed);
   EXPECT_EQ(searcher.GetPosition().GetHash(), parent.GetHash());
+}
+
+TEST(SingularExtensionStatistics, AbortedVerificationIsNotATtCut) {
+  const auto position = PositionFactory{}();
+  auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
+  table->SetEntry(position, MoveFactory{}(position, "e2e4"), ToTT(10000, 0), 4,
+                  Bound::kLower, 0);
+  Searcher searcher(position, table);
+  const PolicyStopCondition stop{
+      [&] { return searcher.GetSingularInfo().searches > 0; }};
+  EXPECT_FALSE((SearchNode<NodeType::kPV, PolicyStopCondition>{
+      searcher, {8, 7, -20000, 20000, 1}, stop}()));
+  EXPECT_EQ(searcher.GetSingularInfo().searches, 1u);
+  EXPECT_EQ(searcher.GetInfo().tt_cuts, 0u);
+  EXPECT_EQ(searcher.GetPosition().GetHash(), position.GetHash());
 }
