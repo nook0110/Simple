@@ -1,7 +1,5 @@
 #pragma once
-#include <algorithm>
 #include <array>
-#include <random>
 
 #include "Utility.h"
 
@@ -10,25 +8,63 @@ class Position;
 
 using Hash = std::uint64_t;
 
+class Mt19937_64 {
+ public:
+  constexpr explicit Mt19937_64(Hash seed) {
+    state_[0] = seed;
+    for (size_t i = 1; i < state_.size(); ++i) {
+      const auto previous = state_[i - 1];
+      state_[i] = 6364136223846793005ull * (previous ^ (previous >> 62)) + i;
+    }
+  }
+
+  [[nodiscard]] constexpr Hash operator()() {
+    if (index_ == state_.size()) Twist();
+    auto value = state_[index_++];
+    value ^= (value >> 29) & 0x5555555555555555ull;
+    value ^= (value << 17) & 0x71d67fffeda60000ull;
+    value ^= (value << 37) & 0xfff7eee000000000ull;
+    return value ^ (value >> 43);
+  }
+
+ private:
+  constexpr void Twist() {
+    constexpr Hash kLowerMask = (Hash{1} << 31) - 1;
+    constexpr Hash kUpperMask = ~kLowerMask;
+    for (size_t i = 0; i < state_.size(); ++i) {
+      const auto joined = (state_[i] & kUpperMask) |
+                          (state_[(i + 1) % state_.size()] & kLowerMask);
+      state_[i] = state_[(i + kRecurrenceOffset) % state_.size()] ^
+                  (joined >> 1) ^ ((joined & 1) ? 0xb5026f5aa96619e9ull : 0);
+    }
+    index_ = 0;
+  }
+
+  static constexpr size_t kStateSize = 312;
+  static constexpr size_t kRecurrenceOffset = 156;
+  std::array<Hash, kStateSize> state_{};
+  size_t index_ = state_.size();
+};
+
 struct Hasher {
   template <class RNG>
   explicit constexpr Hasher(RNG generator) {
-    auto generator_reference = std::reference_wrapper(generator);
+    const auto fill = [&generator](auto& values) {
+      for (auto& value : values) value = generator();
+    };
     for (auto& piece_type : psqt_hash) {
       for (auto& colored_board : piece_type) {
-        std::generate(colored_board.begin(), colored_board.end(),
-                      generator_reference);
+        fill(colored_board);
       }
     }
-    std::generate(en_croissant_hash.begin(), en_croissant_hash.end(),
-                  generator_reference);
+    fill(en_croissant_hash);
     for (auto& color : cr_hash) {
-      std::generate(color.begin(), color.end(), generator_reference);
+      fill(color);
     }
-    stm_hash = generator_reference();
+    stm_hash = generator();
   }
 
-  bool operator==(const Hasher&) const = default;
+  constexpr bool operator==(const Hasher&) const = default;
 
   ByPiece<ByPlayer<std::array<Hash, kBoardArea>>>
       psqt_hash{};
@@ -36,4 +72,6 @@ struct Hasher {
   ByPlayer<std::array<Hash, 4>> cr_hash{};
   Hash stm_hash;
 };
+extern const Hasher kZobristKeys;
+
 }  // namespace SimpleChessEngine

@@ -272,9 +272,9 @@ inline std::optional<Position> PositionFactory::TryParse(
     for (const auto side : kCastlingSides) {
       rook_squares[color][side] = rooks[color][side].value_or(BitIndex{0});
       cs_king[color][side] =
-          rook_between[kings[color]][kKingCastlingDestination[color][side]];
-      cs_rook[color][side] = rook_between[rook_squares[color][side]]
-                                         [kRookCastlingDestination[color][side]];
+          RookBetween(kings[color], kKingCastlingDestination[color][side]);
+      cs_rook[color][side] = RookBetween(rook_squares[color][side],
+                                         kRookCastlingDestination[color][side]);
     }
   }
   position.SetKingPositions(kings);

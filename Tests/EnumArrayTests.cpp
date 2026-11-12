@@ -24,6 +24,7 @@ static_assert(sizeof(ByPlayer<int>) == sizeof(std::array<int, kColors>));
 static_assert(sizeof(ByPiece<int>) == sizeof(std::array<int, kPieceTypes>));
 using ContinuationHistory = std::remove_cvref_t<
     decltype(std::declval<const Searcher&>().GetContinuationHistory())>;
+static_assert(std::is_trivially_copyable_v<ContinuationHistory>);
 static_assert(IndexedBy<ContinuationHistory, Piece>);
 static_assert(!IndexedBy<ContinuationHistory, Player>);
 static_assert(sizeof(ContinuationHistory) ==

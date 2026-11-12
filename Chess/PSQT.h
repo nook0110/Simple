@@ -4,8 +4,9 @@
 
 namespace SimpleChessEngine {
 // clang-format off
-  inline ByPlayer<ByPiece<std::array<TaperedEval, kBoardArea>>>
-    kPSQT = { { {
+consteval auto MakePSQT() {
+  ByPlayer<ByPiece<std::array<TaperedEval, kBoardArea>>>
+    table = { { {
         // White pieces table
         {{{// Empty squares values are irrelevant since kNone is not being placed
           // or removed at any time
@@ -80,18 +81,20 @@ namespace SimpleChessEngine {
     // Black pieces table is initialized symmetrically to the white pieces
     // table
 } } };
-// clang-format on
+  // clang-format on
 
-inline void InitPSQT() {
   for (auto piece : {Piece::kPawn, Piece::kKnight, Piece::kBishop, Piece::kRook,
                      Piece::kQueen, Piece::kKing}) {
     for (BitIndex square = 0; square < static_cast<BitIndex>(kBoardArea);
          ++square) {
       const auto [file, rank] = GetCoordinates(square);
       const BitIndex new_square = GetSquareIndex(file, 7 - rank);
-      kPSQT[Player::kBlack][piece][new_square] =
-          kPSQT[Player::kWhite][piece][square];
+      table[Player::kBlack][piece][new_square] =
+          table[Player::kWhite][piece][square];
     }
   }
+  return table;
 }
+
+inline constexpr auto kPSQT = MakePSQT();
 }  // namespace SimpleChessEngine

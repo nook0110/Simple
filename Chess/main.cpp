@@ -1,9 +1,7 @@
 #include <cstddef>
 #include <string_view>
 
-#include "Attacks.h"
 #include "Nnue/Nnue.h"
-#include "PSQT.h"
 #include "Settings.h"
 #include "UciCommunicator.h"
 
@@ -36,10 +34,6 @@ std::string program_info() {
 }
 
 int main(int argc, char **argv) {
-  SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kBishop>();
-  SimpleChessEngine::InitBetween<SimpleChessEngine::Piece::kRook>();
-  SimpleChessEngine::InitPawnAttacks();
-  SimpleChessEngine::InitPSQT();
   static_cast<void>(
       SimpleChessEngine::Nnue::Load(SimpleChessEngine::Nnue::kDefaultEvalFile));
 

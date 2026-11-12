@@ -22,7 +22,7 @@ jobs:
           apt-get install -y cmake git wget unzip
       - name: Build
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DSCE_WARNINGS_AS_ERRORS=ON
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DSCE_WARNINGS_AS_ERRORS=ON -DSCE_TARGET_ARCH=x86-64-v3 -DCMAKE_EXE_LINKER_FLAGS=-flto-partition=one
           cmake --build build -j2
       - name: Download and verify NNUE
         run: |
@@ -47,8 +47,10 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           expected=$(git log -1 --format=%B | sed -n 's/^Bench: \([0-9][0-9]*\)$/\1/p')
+          (cd build && ./SimpleChessEngine bench) | tee build/bench.log
+          actual=$(sed -n 's/^Nodes searched: \([0-9][0-9]*\)$/\1/p' build/bench.log)
+          echo "Expected bench signature: $expected; actual: $actual"
           [[ "$expected" =~ ^[0-9]+$ ]]
-          actual=$(cd build && ./SimpleChessEngine bench | sed -n 's/^Nodes searched: \([0-9][0-9]*\)$/\1/p')
           test "$actual" = "$expected"
 
   sanitizer:

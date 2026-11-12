@@ -354,9 +354,7 @@ inline void Searcher::InitStartOfSearch() {
 
 inline void Searcher::ClearHistories() {
   history_ = {};
-  std::ranges::fill(*continuation_history_ | std::views::join |
-                        std::views::join | std::views::join,
-                    0);
+  *continuation_history_ = {};
 }
 
 template <NodeType node_type, class ExitCondition>
