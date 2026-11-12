@@ -1,4 +1,5 @@
 #include "Attacks.h"
+
 #include <utility>
 
 #include "BitBoard.h"
@@ -60,6 +61,7 @@ consteval GeometryTables MakeGeometryTables() {
 }
 }
 
+alignas(kAttackTableAlignment)
 constinit const GeometryTables SimpleChessEngine::kGeometry =
     MakeGeometryTables();
 
@@ -76,6 +78,7 @@ template Bitboard SimpleChessEngine::GenerateAttackMask<Piece::kBishop>(
 template Bitboard SimpleChessEngine::GenerateAttackMask<Piece::kRook>(BitIndex,
                                                                       Bitboard);
 
+alignas(kAttackTableAlignment)
 constexpr std::array<Magic, kBoardArea> SimpleChessEngine::kBishopMagics = {
     {{Bitboard{0x0040201008040200}, Bitboard{0x007fbfbfbfbfbfff}, size_t{5378}},
      {Bitboard{0x0000402010080400}, Bitboard{0x0000a060401007fc}, size_t{4093}},
@@ -166,6 +169,7 @@ constexpr std::array<Magic, kBoardArea> SimpleChessEngine::kBishopMagics = {
      {Bitboard{0x0040201008040200}, Bitboard{0x007fff9fdf7ff813},
       size_t{16076}}}};
 
+alignas(kAttackTableAlignment)
 constexpr std::array<Magic, kBoardArea> SimpleChessEngine::kRookMagics = {
     {{Bitboard{0x000101010101017e}, Bitboard{0x00280077ffebfffe},
       size_t{26304}},
@@ -334,6 +338,7 @@ consteval auto MakeSliderAttacks() {
 }
 }
 
+alignas(kAttackTableAlignment)
 constinit const std::array<Bitboard, kSliderTableSize>
     SimpleChessEngine::kSliderAttacks = MakeSliderAttacks();
 

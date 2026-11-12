@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 
 #include "BitBoard.h"
 #include "Piece.h"
@@ -41,11 +42,13 @@ constexpr size_t GetMagicShift() {
   if constexpr (sliding_piece == Piece::kRook) return 64 - 12;
 }
 
+inline constexpr std::size_t kAttackTableAlignment = 64;
+
 /**
  * \brief
  *
  */
-struct Magic {
+struct alignas(kAttackTableAlignment / 2) Magic {
   Bitboard mask;
   Bitboard magic;
   size_t base_offset;
@@ -56,6 +59,8 @@ struct Magic {
                                              GetMagicShift<sliding_piece>());
   }
 };
+
+static_assert(sizeof(Magic) == kAttackTableAlignment / 2);
 
 inline constexpr size_t kSliderTableSize = 88772;
 extern const std::array<Magic, kBoardArea> kBishopMagics;
