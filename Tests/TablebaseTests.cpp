@@ -23,14 +23,18 @@ TEST(Syzygy, RejectsIllegalKings) {
   struct TablebaseGuard {
     ~TablebaseGuard() { Tablebase::Syzygy::Disable(); }
   } guard;
+  const auto expect_rejected = [&](const Position& position) {
+    EXPECT_FALSE(tablebase->RootMove(position));
+    EXPECT_FALSE(tablebase->Probe(position));
+    EXPECT_FALSE(tablebase->ProbeWdl(position));
+  };
   for (const auto* fen :
        {"8/8/8/4k3/8/8/2K5/4R3 w - - 0 1", "8/8/8/4k3/8/8/2K5/4Q3 w - - 0 1",
-        "8/8/8/4k3/8/8/2K5/4R2R w - - 0 1", "8/8/8/8/8/8/2K5/4R3 b - - 0 1"}) {
-    const auto position = PositionFactory{}(fen);
-    EXPECT_FALSE(tablebase->RootMove(position)) << fen;
-    EXPECT_FALSE(tablebase->Probe(position)) << fen;
-    EXPECT_FALSE(tablebase->ProbeWdl(position)) << fen;
+        "8/8/8/4k3/8/8/2K5/4R2R w - - 0 1"}) {
+    SCOPED_TRACE(fen);
+    expect_rejected(PositionFactory{}(fen));
   }
+  expect_rejected(Position{});
   const auto position = PositionFactory{}("8/8/8/4k3/8/8/2K5/R7 w - - 0 1");
   EXPECT_TRUE(tablebase->RootMove(position));
   EXPECT_EQ(tablebase->ProbeWdl(position), Tablebase::Wdl::kWin);

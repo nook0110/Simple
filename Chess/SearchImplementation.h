@@ -223,6 +223,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   }
 
   searcher_.debug_info_.searched_nodes++;
+  if constexpr (CountsNodes<ExitCondition>) exit_condition_.CountNode();
 
   if (ProbeTranspositionTable()) {
     searcher_.debug_info_.tt_hits++;

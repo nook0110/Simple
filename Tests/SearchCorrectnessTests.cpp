@@ -301,6 +301,38 @@ TEST(ProbCut, QuiescencePassesButPositiveDepthVerificationRejects) {
   ExpectProbCutPositionRestored(searcher.GetPosition(), position);
 }
 
+TEST(ProbCut, NodeBudgetIncludesQuiescenceAndVerification) {
+  const auto position = PositionFactory{}(kProbCutFen);
+  Searcher reference(position);
+  DepthCondition unlimited{8};
+  const auto expected = ProbCutTestAccess::Run(reference, unlimited);
+  ASSERT_EQ(expected, NodeExit::Cutoff(-95));
+  const auto& info = reference.GetInfo();
+  const auto nodes = info.searched_nodes + info.quiescence_nodes;
+  ASSERT_GT(info.probcut_qsearch_nodes, 0u);
+  ASSERT_GT(info.probcut_verification_nodes, 0u);
+
+  auto budget = std::make_shared<NodeBudget>(nodes + 1);
+  NodeCondition condition{8, {}, budget};
+  Searcher searcher(position);
+  EXPECT_EQ(ProbCutTestAccess::Run(searcher, condition), expected);
+  EXPECT_FALSE(budget->IsSpent());
+  budget->Spend();
+  EXPECT_TRUE(budget->IsSpent());
+  ExpectProbCutPositionRestored(searcher.GetPosition(), position);
+}
+
+TEST(ProbCut, NodeBudgetAbortRestoresScopedMove) {
+  const auto position = PositionFactory{}(kProbCutFen);
+  auto budget = std::make_shared<NodeBudget>(1);
+  NodeCondition condition{8, {}, budget};
+  Searcher searcher(position);
+  EXPECT_EQ(ProbCutTestAccess::Run(searcher, condition), NodeExit::Abort());
+  EXPECT_TRUE(budget->IsSpent());
+  EXPECT_EQ(searcher.GetInfo().probcut_candidates, 1u);
+  ExpectProbCutPositionRestored(searcher.GetPosition(), position);
+}
+
 TEST(ProbCut, QuiescenceRejectionDoesNotVerify) {
   const auto position = PositionFactory{}(kProbCutFen);
   Searcher searcher(position);

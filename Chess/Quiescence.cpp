@@ -27,6 +27,7 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
     searched_nodes_ = 0;
   }
   searched_nodes_++;
+  if constexpr (CountsNodes<ExitCondition>) exit_condition_.CountNode();
 
   if (IsTimeToExit()) {
     return std::nullopt;
@@ -206,6 +207,7 @@ bool Quiescence<ExitCondition>::IsTimeToExit() {
 template class Quiescence<TimeCondition>;
 template class Quiescence<DepthCondition>;
 template class Quiescence<Pondering>;
+template class Quiescence<NodeCondition>;
 
 template SearchResult Quiescence<TimeCondition>::Search<false>(
     Position& current_position, Eval alpha, const Eval beta,
@@ -217,6 +219,12 @@ template SearchResult Quiescence<DepthCondition>::Search<false>(
     Position& current_position, Eval alpha, const Eval beta,
     const Depth current_depth, bool pv_node);
 template SearchResult Quiescence<DepthCondition>::Search<true>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<NodeCondition>::Search<false>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<NodeCondition>::Search<true>(
     Position& current_position, Eval alpha, const Eval beta,
     const Depth current_depth, bool pv_node);
 template SearchResult Quiescence<Pondering>::Search<false>(

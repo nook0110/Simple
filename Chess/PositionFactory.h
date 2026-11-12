@@ -1,166 +1,298 @@
 #pragma once
+#include <algorithm>
+#include <array>
+#include <bitset>
+#include <charconv>
+#include <iterator>
+#include <optional>
 #include <sstream>
+#include <string>
+#include <string_view>
 #include <unordered_map>
+#include <vector>
 
 #include "BitBoard.h"
 #include "Position.h"
 #include "StreamUtility.h"
 
 namespace SimpleChessEngine {
+inline constexpr std::string_view kStartFen =
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 struct PositionFactory {
-  Position operator()(
-      const std::string &fen =
-          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") const;
+  [[nodiscard]] std::optional<Position> TryParse(std::string_view fen) const;
+  [[nodiscard]] Position operator()(std::string_view fen = kStartFen) const;
+
+ private:
+  static constexpr File kFiles = 8;
+  static constexpr Rank kRanks = 8;
+  static constexpr int kMaxPiecesPerSide = 16;
+  static constexpr int kMaxPawnsPerSide = 8;
+
+  using CastlingRightsBySide = std::array<std::bitset<2>, kColors>;
+  using RookSquares = std::array<std::array<std::optional<BitIndex>, 2>, kColors>;
+
+  struct Fields {
+    std::string board;
+    std::string side_to_move;
+    std::string castling;
+    std::string en_passant = "-";
+    std::string halfmove_clock = "0";
+    std::string fullmove_number = "1";
+  };
+
+  struct Placement {
+    std::array<BitIndex, kColors> kings{};
+    std::array<std::array<bool, kFiles>, kColors> back_rank_rooks{};
+  };
+
+  [[nodiscard]] static constexpr Rank BackRank(Player color) {
+    return color == Player::kWhite ? 0 : kRanks - 1;
+  }
+
+  [[nodiscard]] static std::optional<Fields> Split(std::string_view fen);
+  [[nodiscard]] static std::optional<Placement> PlacePieces(
+      std::string_view board, Position &position);
+  [[nodiscard]] static std::optional<Player> ParseSideToMove(
+      std::string_view text);
+  [[nodiscard]] static RookSquares FindCastlingRooks(
+      const Placement &placement);
+  [[nodiscard]] static std::optional<CastlingRightsBySide> ParseCastlingRights(
+      std::string_view text, const Placement &placement,
+      const RookSquares &rooks);
+  [[nodiscard]] static std::optional<BitIndex> ParseSquare(
+      std::string_view text);
+  [[nodiscard]] static bool IsEnPassantTarget(const Position &position,
+                                              BitIndex square);
+  [[nodiscard]] static std::optional<std::size_t> ParseNumber(
+      std::string_view text);
 };
 
 struct FenFactory {
   std::string operator()(const Position &position);
 };
 
-inline Position PositionFactory::operator()(const std::string &fen) const {
-  std::stringstream fen_stream;
+inline std::optional<PositionFactory::Fields> PositionFactory::Split(
+    std::string_view fen) {
+  std::istringstream stream{std::string{fen}};
+  const std::vector<std::string> tokens{
+      std::istream_iterator<std::string>{stream},
+      std::istream_iterator<std::string>{}};
+  if (tokens.size() < 3 || tokens.size() > 6) return std::nullopt;
 
-  fen_stream << fen;
+  Fields fields{tokens[0], tokens[1], tokens[2]};
+  if (tokens.size() > 3) fields.en_passant = tokens[3];
+  if (tokens.size() > 4) fields.halfmove_clock = tokens[4];
+  if (tokens.size() > 5) fields.fullmove_number = tokens[5];
+  return fields;
+}
+
+inline std::optional<PositionFactory::Placement> PositionFactory::PlacePieces(
+    std::string_view board, Position &position) {
+  Placement placement;
+  std::array<int, kColors> kings{};
+  std::array<int, kColors> pawns{};
+  std::array<int, kColors> pieces{};
+
+  Rank rank = kRanks - 1;
+  File file = 0;
+  for (const char symbol : board) {
+    if (symbol == '/') {
+      if (file != kFiles || rank == 0) return std::nullopt;
+      --rank;
+      file = 0;
+      continue;
+    }
+    if (symbol >= '1' && symbol <= '8') {
+      file += symbol - '0';
+      if (file > kFiles) return std::nullopt;
+      continue;
+    }
+
+    const auto entry = kCharToPiece.find(symbol);
+    if (entry == kCharToPiece.end() || file == kFiles) return std::nullopt;
+    const auto [piece, color] = entry->second;
+    const auto us = static_cast<size_t>(color);
+    const auto square = GetSquareIndex(file, rank);
+
+    if (++pieces[us] > kMaxPiecesPerSide) return std::nullopt;
+    if (piece == Piece::kKing) {
+      if (++kings[us] > 1) return std::nullopt;
+      placement.kings[us] = square;
+    }
+    if (piece == Piece::kPawn &&
+        (rank == 0 || rank == kRanks - 1 || ++pawns[us] > kMaxPawnsPerSide)) {
+      return std::nullopt;
+    }
+    if (piece == Piece::kRook && rank == BackRank(color)) {
+      placement.back_rank_rooks[us][file] = true;
+    }
+
+    position.PlacePiece(square, piece, color);
+    ++file;
+  }
+
+  if (rank != 0 || file != kFiles || kings != std::array{1, 1}) {
+    return std::nullopt;
+  }
+  return placement;
+}
+
+inline std::optional<Player> PositionFactory::ParseSideToMove(
+    std::string_view text) {
+  if (text == "w") return Player::kWhite;
+  if (text == "b") return Player::kBlack;
+  return std::nullopt;
+}
+
+inline PositionFactory::RookSquares PositionFactory::FindCastlingRooks(
+    const Placement &placement) {
+  RookSquares rooks{};
+  for (const auto color : {Player::kWhite, Player::kBlack}) {
+    const auto us = static_cast<size_t>(color);
+    const auto &back_rank_rooks = placement.back_rank_rooks[us];
+    const auto king_file = static_cast<File>(placement.kings[us] % kFiles);
+    for (File file = 0; file < king_file; ++file) {
+      if (back_rank_rooks[file]) {
+        rooks[us][static_cast<size_t>(CastlingSide::k000)] =
+            GetSquareIndex(file, BackRank(color));
+        break;
+      }
+    }
+    for (File file = kFiles - 1; file > king_file; --file) {
+      if (back_rank_rooks[file]) {
+        rooks[us][static_cast<size_t>(CastlingSide::k00)] =
+            GetSquareIndex(file, BackRank(color));
+        break;
+      }
+    }
+  }
+  return rooks;
+}
+
+inline std::optional<PositionFactory::CastlingRightsBySide>
+PositionFactory::ParseCastlingRights(std::string_view text,
+                                     const Placement &placement,
+                                     const RookSquares &rooks) {
+  CastlingRightsBySide rights;
+  if (text == "-") return rights;
+
+  constexpr std::string_view kSymbols = "KQkq";
+  const auto is_shredder_file = [](const char symbol) {
+    return (symbol >= 'A' && symbol <= 'H') || (symbol >= 'a' && symbol <= 'h');
+  };
+  for (const char symbol : text) {
+    const auto index = kSymbols.find(symbol);
+    if (index == std::string_view::npos) {
+      if (is_shredder_file(symbol)) continue;
+      return std::nullopt;
+    }
+
+    const auto color = index < 2 ? Player::kWhite : Player::kBlack;
+    const auto side = index % 2 == 0 ? CastlingSide::k00 : CastlingSide::k000;
+    const auto us = static_cast<size_t>(color);
+    const auto bit = static_cast<size_t>(side);
+    const bool king_on_back_rank =
+        placement.kings[us] / kFiles == BackRank(color);
+    if (rights[us].test(bit) || !king_on_back_rank || !rooks[us][bit]) {
+      return std::nullopt;
+    }
+    rights[us].set(bit);
+  }
+  return rights;
+}
+
+inline std::optional<BitIndex> PositionFactory::ParseSquare(
+    std::string_view text) {
+  if (text.size() != 2 || text[0] < 'a' || text[0] > 'h' || text[1] < '1' ||
+      text[1] > '8') {
+    return std::nullopt;
+  }
+  return GetSquareIndex(static_cast<File>(text[0] - 'a'),
+                        static_cast<Rank>(text[1] - '1'));
+}
+
+inline bool PositionFactory::IsEnPassantTarget(const Position &position,
+                                               const BitIndex square) {
+  const auto us = position.GetSideToMove();
+  const auto them = Flip(us);
+  const Rank target_rank = us == Player::kWhite ? kRanks - 3 : 2;
+  if (square / kFiles != target_rank) return false;
+
+  const auto forward = static_cast<BitIndex>(us == Player::kWhite ? kFiles : -kFiles);
+  const auto pushed_pawn = static_cast<BitIndex>(square - forward);
+  const auto pawn_origin = static_cast<BitIndex>(square + forward);
+  return position.GetPieceAt(pushed_pawn) == Piece::kPawn &&
+         (position.GetPieces(them) & SingleSquare(pushed_pawn)).Any() &&
+         position.GetPieceAt(square) == Piece::kNone &&
+         position.GetPieceAt(pawn_origin) == Piece::kNone;
+}
+
+inline std::optional<std::size_t> PositionFactory::ParseNumber(
+    std::string_view text) {
+  std::size_t number = 0;
+  const auto end = text.data() + text.size();
+  const auto [parsed_end, error] = std::from_chars(text.data(), end, number);
+  if (error != std::errc{} || parsed_end != end) return std::nullopt;
+  return number;
+}
+
+inline std::optional<Position> PositionFactory::TryParse(
+    std::string_view fen) const {
+  const auto fields = Split(fen);
+  if (!fields) return std::nullopt;
 
   Position position;
+  const auto placement = PlacePieces(fields->board, position);
+  if (!placement) return std::nullopt;
 
-  static constexpr size_t kBoardSize = 8;
+  const auto side_to_move = ParseSideToMove(fields->side_to_move);
+  if (!side_to_move) return std::nullopt;
+  position.SetSideToMove(*side_to_move);
 
-  std::string board;
+  const auto rooks = FindCastlingRooks(*placement);
+  const auto castling_rights =
+      ParseCastlingRights(fields->castling, *placement, rooks);
+  if (!castling_rights) return std::nullopt;
+  position.SetCastlingRights(*castling_rights);
 
-  fen_stream >> board;
-
-  auto current = board.begin();
-
-  std::array<BitIndex, kColors> kings{};
-  std::array<std::array<BitIndex, 2>, kColors> rooks{};
-  std::array<std::array<bool, kBoardSize>, kColors> back_rank_rooks{};
-
-  for (int row = kBoardSize - 1; row >= 0; --row) {
-    size_t column = 0;
-    while (column < kBoardSize) {
-      if (std::isdigit(*current)) {
-        // convert char to number
-        column += *current - '0';
-
-        ++current;
-        continue;
-      }
-
-      const auto &[piece, color] = kCharToPiece[*current];
-      auto square = static_cast<BitIndex>(row * kBoardSize + column);
-      position.PlacePiece(square, piece, color);
-
-      const auto us = static_cast<size_t>(color);
-
-      if (piece == Piece::kKing) {
-        kings[us] = square;
-      }
-
-      const auto back_rank = color == Player::kWhite ? 0 : kBoardSize - 1;
-      if (piece == Piece::kRook && static_cast<size_t>(row) == back_rank) {
-        back_rank_rooks[us][column] = true;
-      }
-
-      assert(piece != Piece::kNone);
-
-      ++column;
-      ++current;
-    }
-
-    // skip '/'
-    if (current != board.end()) ++current;
+  if (fields->en_passant != "-") {
+    const auto square = ParseSquare(fields->en_passant);
+    if (!square || !IsEnPassantTarget(position, *square)) return std::nullopt;
+    position.SetEnCroissantSquare(*square);
   }
 
-  std::string side_to_move;
-  fen_stream >> side_to_move;
+  const auto halfmove_clock = ParseNumber(fields->halfmove_clock);
+  const auto fullmove_number = ParseNumber(fields->fullmove_number);
+  if (!halfmove_clock || !fullmove_number) return std::nullopt;
 
-  if (side_to_move != "b")
-    position.SetSideToMove(Player::kWhite);
-  else
-    position.SetSideToMove(Player::kBlack);
-
-  // TODO: Attributes
-  std::string castling_rights_string;
-  fen_stream >> castling_rights_string;
-
-  std::array<std::bitset<2>, 2> castling_rights;
-
-  for (auto castling_right : castling_rights_string) {
-    switch (castling_right) {
-      case 'K':
-        castling_rights[static_cast<size_t>(Player::kWhite)] |=
-            static_cast<size_t>(CastlingRights::k00);
-        break;
-      case 'k':
-        castling_rights[static_cast<size_t>(Player::kBlack)] |=
-            static_cast<size_t>(CastlingRights::k00);
-        break;
-      case 'Q':
-        castling_rights[static_cast<size_t>(Player::kWhite)] |=
-            static_cast<size_t>(CastlingRights::k000);
-        break;
-      case 'q':
-        castling_rights[static_cast<size_t>(Player::kBlack)] |=
-            static_cast<size_t>(CastlingRights::k000);
-        break;
-      default:
-        break;
-    }
-  }
-
-  position.SetCastlingRights(castling_rights);
-
-  std::string en_croissant_square;
-  fen_stream >> en_croissant_square;
-  if (!en_croissant_square.empty() && en_croissant_square != "-") {
-    assert(en_croissant_square.size() == 2);
-    const auto file = static_cast<File>(en_croissant_square[0] - 'a');
-    const auto rank = static_cast<Rank>(en_croissant_square[1] - '1');
-    position.SetEnCroissantSquare(GetSquareIndex(file, rank));
-  }
-
-  size_t halfmove_clock = 0;
-  size_t fullmove_number = 1;
-  fen_stream >> halfmove_clock >> fullmove_number;
-  if (fullmove_number == 0) fullmove_number = 1;
-
+  const auto &kings = placement->kings;
+  std::array<std::array<BitIndex, 2>, kColors> rook_squares{};
   for (size_t us = 0; us < kColors; ++us) {
-    const auto back_rank =
-        us == static_cast<size_t>(Player::kWhite) ? 0 : kBoardSize - 1;
-    const auto king_file = static_cast<size_t>(kings[us]) % kBoardSize;
-    for (size_t file = 0; file < king_file; ++file) {
-      if (back_rank_rooks[us][file]) {
-        rooks[us][static_cast<size_t>(CastlingSide::k000)] =
-            static_cast<BitIndex>(back_rank * kBoardSize + file);
-        break;
-      }
-    }
-    for (size_t file = kBoardSize - 1; file > king_file; --file) {
-      if (back_rank_rooks[us][file]) {
-        rooks[us][static_cast<size_t>(CastlingSide::k00)] =
-            static_cast<BitIndex>(back_rank * kBoardSize + file);
-        break;
-      }
+    for (size_t side = 0; side < 2; ++side) {
+      rook_squares[us][side] = rooks[us][side].value_or(BitIndex{0});
     }
   }
-
   position.SetKingPositions(kings);
-  position.SetRookPositions(rooks);
+  position.SetRookPositions(rook_squares);
   std::array<std::array<Bitboard, 2>, kColors> cs_king = {
       {{RookBetween(kings[0], kKingCastlingDestination[0][0]),
         RookBetween(kings[0], kKingCastlingDestination[0][1])},
        {RookBetween(kings[1], kKingCastlingDestination[1][0]),
         RookBetween(kings[1], kKingCastlingDestination[1][1])}}};
   std::array<std::array<Bitboard, 2>, kColors> cs_rook = {
-      {{RookBetween(rooks[0][0], kRookCastlingDestination[0][0]),
-        RookBetween(rooks[0][1], kRookCastlingDestination[0][1])},
-       {RookBetween(rooks[1][0], kRookCastlingDestination[1][0]),
-        RookBetween(rooks[1][1], kRookCastlingDestination[1][1])}}};
+      {{RookBetween(rook_squares[0][0], kRookCastlingDestination[0][0]),
+        RookBetween(rook_squares[0][1], kRookCastlingDestination[0][1])},
+       {RookBetween(rook_squares[1][0], kRookCastlingDestination[1][0]),
+        RookBetween(rook_squares[1][1], kRookCastlingDestination[1][1])}}};
   position.SetCastlingSquares(cs_king, cs_rook);
 
-  position.Init(halfmove_clock, fullmove_number);
+  position.Init(*halfmove_clock, std::max<std::size_t>(*fullmove_number, 1));
   return position;
+}
+
+inline Position PositionFactory::operator()(std::string_view fen) const {
+  return TryParse(fen).value();
 }
 
 inline std::string SimpleChessEngine::FenFactory::operator()(

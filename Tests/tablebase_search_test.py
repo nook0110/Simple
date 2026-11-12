@@ -70,17 +70,22 @@ class UciEngine:
         self.send("isready")
         self.wait_for("readyok", timeout=60)
 
-    def search(self, fen: str, control: str, invalid: bool = False,
-               root_hit: bool = False) -> None:
+    def reject_fen(self, fen: str) -> None:
+        start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        self.send("position startpos")
+        self.send(f"position fen {fen}")
+        self.wait_for(re.escape(f"info string invalid fen {fen}"))
+        self.send("debug")
+        self.wait_for(re.escape(start))
+
+    def search(self, fen: str, control: str, root_hit: bool = False) -> None:
         self.send(f"position fen {fen}")
         start = len(self.lines)
         self.send(f"go {control}")
-        expected = "0000" if invalid else r"[a-h][1-8][a-h][1-8][qrbn]?"
+        expected = r"[a-h][1-8][a-h][1-8][qrbn]?"
         self.wait_for(rf"bestmove {expected}( ponder [a-h][1-8][a-h][1-8][qrbn]?)?",
                       timeout=1.0 if control == CLOCK else 2.0)
         lines = self.lines[start:]
-        if invalid and "info string invalid position: illegal kings" not in lines:
-            raise RuntimeError(f"invalid root was not rejected: {fen}")
         if root_hit and any(line.startswith("info depth ") for line in lines):
             raise RuntimeError(f"root tablebase probe failed: {fen}")
 
@@ -107,13 +112,15 @@ def run(executable: str) -> None:
             engine.send(f"setoption name SyzygyPath value {TABLEBASE}")
             engine.ready()
             for fen in INVALID_FENS:
-                for control in ("depth 2", "movetime 1000", CLOCK):
-                    engine.search(fen, control, invalid=True)
+                engine.reject_fen(fen)
             for fen in VALID_FENS:
                 for control in ("movetime 1000", CLOCK):
                     engine.search(fen, control, root_hit=True)
             for fen in (*INVALID_FENS, *VALID_FENS[:3]):
-                engine.send(f"position fen {fen}")
+                if fen in INVALID_FENS:
+                    engine.reject_fen(fen)
+                else:
+                    engine.send(f"position fen {fen}")
                 engine.send(f"go ponder {CLOCK}")
                 engine.ready()
                 engine.send("stop")
@@ -136,7 +143,7 @@ def run(executable: str) -> None:
                 engine.send(f"setoption name SyzygyPath value {TABLEBASE}")
                 engine.ready()
 
-        engine.send(f"position fen {INVALID_FENS[0]}")
+        engine.reject_fen(INVALID_FENS[0])
         engine.send(f"go ponder {CLOCK}")
         engine.ready()
         engine.send("quit")

@@ -20,7 +20,7 @@ TEST(KingLegality, RejectsMissingOrDuplicateKings) {
        {"8/8/8/8/8/8/8/8 w - - 0 1", "8/8/8/8/8/8/8/K7 w - - 0 1",
         "7k/8/8/8/8/8/8/8 w - - 0 1", "7k/8/8/8/8/8/8/KK6 w - - 0 1",
         "6kk/8/8/8/8/8/8/K7 w - - 0 1"}) {
-    EXPECT_FALSE(PositionFactory{}(fen).HasLegalKings()) << fen;
+    EXPECT_FALSE(PositionFactory{}.TryParse(fen)) << fen;
   }
 }
 
