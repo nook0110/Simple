@@ -78,8 +78,8 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
           : Move::None();
   MovePicker picker;
   picker.InitPicker(current_position, nullptr, current_depth, tt_move);
-  auto move = picker.SelectNextMove();
-  if (!move.IsValid() && !move_generator_.HasLegalMove(current_position)) {
+  auto next = picker.SelectNextMove();
+  if (!next.IsValid() && !move_generator_.HasLegalMove(current_position)) {
     return kDrawValue;
   }
 
@@ -105,7 +105,8 @@ SearchResult Quiescence<ExitCondition>::Search(Position& current_position,
 
   alpha = std::max(alpha, best_value);
 
-  for (; move.IsValid(); move = picker.SelectNextMove()) {
+  for (; next.IsValid(); next = picker.SelectNextMove()) {
+    const auto& move = *next;
     if (!current_position.StaticExchangeEvaluation(
             move, std::max(1, alpha - stand_pat - kSEEMargin))) {
       continue;
@@ -149,14 +150,15 @@ SearchResult Quiescence<ExitCondition>::SearchUnderCheck(
     Move& best_move) {
   MovePicker picker;
   picker.InitPicker(current_position, nullptr, current_depth, tt_move);
-  auto move = picker.SelectNextMove();
-  if (!move.IsValid()) {
+  auto next = picker.SelectNextMove();
+  if (!next.IsValid()) {
     return Score::MatedIn(
         static_cast<Depth>(std::min<size_t>(current_depth, kMaxSearchPly)));
   }
 
   Eval best_value = -Score::kMate;
-  for (; move.IsValid(); move = picker.SelectNextMove()) {
+  for (; next.IsValid(); next = picker.SelectNextMove()) {
+    const auto& move = *next;
     const auto irreversible_data = current_position.GetIrreversibleData();
 
     // make the move and search the tree

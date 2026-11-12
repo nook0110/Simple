@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "ExitCondition.h"
+#include "CheckedMove.h"
 #include "MoveFactory.h"
 #include "Nnue/Nnue.h"
 #include "PositionFactory.h"
@@ -256,7 +257,7 @@ TEST(QuiescenceTT, StoresPlyAdjustedMateAndTablebaseCaptureScores) {
   DepthCondition condition{4};
   for (const Eval child_value : {-Score::kMate, -Score::kTbWin}) {
     auto position = PositionFactory{}("k7/8/8/3p4/3R3p/8/8/K7 w - - 0 1");
-    const auto tt_move = MoveFactory{}(position, "d4h4");
+    const auto tt_move = CheckedMove(position, "d4h4");
     const Eval beta = position.Evaluate() + 1;
     QTable table;
     table.SetEntry(position, tt_move, ToTT(-20000, 0), 0, Bound::kLower, 1);

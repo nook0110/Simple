@@ -100,9 +100,9 @@ struct SearchNode {
   template <NodeType child_type, ReversibleMove PlayedMove>
   SearchResult SearchChild(const PlayedMove &move, SearchState child_state);
   template <NodeType expected_node_type>
-  SearchResult ProbeMove(const Move &move);
+  SearchResult ProbeMove(const LegalMove &move);
   template <NodeType expected_node_type>
-  NodeExit SearchFirstMove(const Move &move);
+  NodeExit SearchFirstMove(const LegalMove &move);
 
   [[nodiscard]] bool CanRFP() const;
   [[nodiscard]] bool CanLateMovePrune() const;
@@ -110,13 +110,14 @@ struct SearchNode {
   [[nodiscard]] bool PassesSEEPruning(const Move &move, bool is_quiet) const;
 
   NodeExit TryProbCut();
-  SearchResult SearchProbCutMove(const Move &move, Eval probcut_beta,
+  SearchResult SearchProbCutMove(const LegalMove &move, Eval probcut_beta,
                                  Depth child_depth);
   bool ProbeTranspositionTable();
   NodeExit TrySingularExtension();
 
   SearchResult PVSearch();
-  SearchResult SearchLateMove(int reduction);
+  SearchResult SearchLateMove(const LegalMove &move, bool is_quiet,
+                              int reduction);
 
   [[nodiscard]] bool CanNullMove() const
     requires(node_type == NodeType::kCut);
@@ -299,7 +300,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
     return GetEndGameScore();
   }
   if (const auto exit =
-          SearchFirstMove<kFirstChildNodeExpectedType>(first_move)) {
+          SearchFirstMove<kFirstChildNodeExpectedType>(*first_move)) {
     return exit.Result();
   }
 
@@ -336,8 +337,9 @@ NodeExit SearchNode<node_type, ExitCondition>::TryProbCut() {
   ++searcher_.debug_info_.probcut_tries;
   move_picker_.InitProbCut(GetCurrentPosition(), &searcher_, state_.ply);
   const Eval see_threshold = probcut_beta - GetStaticEval();
-  for (auto move = move_picker_.SelectProbCutMove(see_threshold);
-       move.IsValid(); move = move_picker_.SelectProbCutMove(see_threshold)) {
+  for (auto next = move_picker_.SelectProbCutMove(see_threshold); next;
+       next = move_picker_.SelectProbCutMove(see_threshold)) {
+    const auto& move = *next;
     ++searcher_.debug_info_.probcut_candidates;
     const auto value = SearchProbCutMove(move, probcut_beta, child_depth);
     if (!value || IsTimeToExit()) return NodeExit::Abort();
@@ -352,7 +354,7 @@ NodeExit SearchNode<node_type, ExitCondition>::TryProbCut() {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 SearchResult SearchNode<node_type, ExitCondition>::SearchProbCutMove(
-    const Move &move, const Eval probcut_beta, const Depth child_depth) {
+    const LegalMove &move, const Eval probcut_beta, const Depth child_depth) {
   searcher_.SetPlayedMove(state_.ply, move, position_info_.static_eval);
   auto &position = GetCurrentPosition();
   const ScopedMove made_move{position, move, position_info_.irreversible_data};
@@ -460,7 +462,7 @@ SearchResult SearchNode<node_type, ExitCondition>::SearchChild(
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <NodeType expected_node_type>
-SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const Move &move) {
+SearchResult SearchNode<node_type, ExitCondition>::ProbeMove(const LegalMove &move) {
   auto &current_position = GetCurrentPosition();
   auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
 
@@ -493,7 +495,7 @@ template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 template <NodeType expected_node_type>
 NodeExit SearchNode<node_type, ExitCondition>::SearchFirstMove(
-    const Move &move) {
+    const LegalMove &move) {
   static_assert(expected_node_type == kFirstChildNodeExpectedType);
   static_assert(expected_node_type != NodeType::kPV ||
                 expected_node_type == node_type);
@@ -544,8 +546,9 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
   const bool move_pruning_allowed =
       ply != 0 && !position_info_.is_under_check;
 
-  for (auto move = move_picker_.SelectNextMove(); move.IsValid();
-       move = move_picker_.SelectNextMove()) {
+  for (auto next = move_picker_.SelectNextMove(); next;
+       next = move_picker_.SelectNextMove()) {
+    const auto& move = *next;
     const bool is_quiet = move.IsQuiet(current_position);
     const bool can_prune =
         move_pruning_allowed && !Score::IsLoss(iteration_status_.best_eval);
@@ -579,10 +582,6 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
         continue;
       }
 
-      if (is_quiet) {
-        RecordSearchedQuiet(move);
-      }
-
       // Late Move Reduction
       int R = 0;
       if (lmr_conditions_met &&
@@ -613,7 +612,7 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
                        static_cast<int>(remaining_depth - 1));
       }
 
-      late_move_eval = SearchLateMove(R);
+      late_move_eval = SearchLateMove(move, is_quiet, R);
     }  // undo the move
     if (!late_move_eval) return std::nullopt;
 
@@ -658,8 +657,11 @@ SearchResult SearchNode<node_type, ExitCondition>::PVSearch() {
 template <NodeType node_type, class ExitCondition>
   requires StopSearchCondition<ExitCondition>
 SearchResult SearchNode<node_type, ExitCondition>::SearchLateMove(
-    const int reduction) {
+    const LegalMove &move, const bool is_quiet, const int reduction) {
   auto &[max_depth, remaining_depth, alpha, beta, ply, _] = state_;
+  if (is_quiet) {
+    RecordSearchedQuiet(move);
+  }
 
   auto temp_eval_optional = StartSubsearch<kZWSNodeType>(
       {max_depth, static_cast<Depth>(remaining_depth - 1 - reduction),

@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "MoveFactory.h"
+#include "CheckedMove.h"
 #include "MoveGenerator.h"
 #include "Nnue/Nnue.h"
 #include "Position.h"
@@ -59,12 +59,12 @@ TEST_P(NnueIncremental, RandomGamesMatchFullRefresh) {
   for (const auto& fen : fens) {
     for (int game = 0; game < 16; ++game) {
       Position position = PositionFactory{}(fen);
-      std::vector<std::pair<Move, Position::IrreversibleData>> history;
+      std::vector<std::pair<LegalMove, Position::IrreversibleData>> history;
       for (int ply = 0; ply < 160; ++ply) {
         ASSERT_TRUE(MatchesFullRefresh(position)) << fen << " ply " << ply;
         ++checked;
         const auto moves =
-            MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+            MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
         if (moves.empty()) break;
         const auto roll = random() % 12;
         if (roll == 0 && !history.empty()) {
@@ -143,7 +143,7 @@ TEST_P(NnueIncremental, SpecialMovesMatchFullRefresh) {
   for (const auto& [fen, coordinate] : cases) {
     Position position = PositionFactory{}(fen);
     ASSERT_TRUE(MatchesFullRefresh(position)) << fen;
-    const auto move = MoveFactory{}(position, coordinate);
+    const auto move = CheckedMove(position, coordinate);
     ASSERT_TRUE(position.IsLegal(move)) << fen << " " << coordinate;
     const auto data = position.GetIrreversibleData();
     position.DoMove(move);
@@ -182,13 +182,13 @@ TEST_P(NnueIncremental, MatchesStockfish19Oracle) {
 TEST_P(NnueIncremental, LazyUpdatesReloadAndFailedLoad) {
   Position position = PositionFactory{}();
   std::mt19937_64 random(20261111);
-  std::vector<std::pair<Move, Position::IrreversibleData>> history;
+  std::vector<std::pair<LegalMove, Position::IrreversibleData>> history;
   for (int ply = 0; ply < 120; ++ply) {
     if (ply % 11 == 0) {
       ASSERT_TRUE(MatchesFullRefresh(position));
     }
     const auto moves =
-        MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+        MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
     if (moves.empty()) break;
     const auto move = moves[random() % moves.size()];
     history.emplace_back(move, position.GetIrreversibleData());
@@ -210,7 +210,7 @@ TEST_P(NnueIncremental, LazyUpdatesReloadAndFailedLoad) {
   Nnue::Unload();
   for (int ply = 0; ply < 8; ++ply) {
     const auto moves =
-        MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+        MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
     const auto move = moves[random() % moves.size()];
     history.emplace_back(move, position.GetIrreversibleData());
     position.DoMove(move);

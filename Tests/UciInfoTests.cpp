@@ -6,12 +6,17 @@
 #include <string_view>
 #include <vector>
 
+#include "CheckedMove.h"
 #include "SimpleChessEngine.h"
 
 namespace SimpleChessEngine::UciInfoTests {
 TEST(PrincipalVariationInfo, ReportsIterationDepthForShortPV) {
   std::ostringstream output;
-  output << PrincipalVariationInfo{14, {Move{12, 28}, Move{52, 36}}};
+  auto position = PositionFactory{}();
+  const auto first = CheckedMove(position, "e2e4");
+  position.DoMove(first);
+  const auto second = CheckedMove(position, "e7e5");
+  output << PrincipalVariationInfo{14, {first, second}};
   EXPECT_EQ(output.str(), "info depth 14 pv e2e4 e7e5\n");
 }
 

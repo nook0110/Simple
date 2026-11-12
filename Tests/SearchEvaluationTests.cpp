@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 
+#include "CheckedMove.h"
 #include "ExitCondition.h"
 #include "MoveFactory.h"
 #include "PositionFactory.h"
@@ -236,7 +237,7 @@ TEST(StaticEvalPolicy, UpdatesSavedMoverOnlyAndLeavesContinuationUnchanged) {
   const auto position = PositionFactory{}();
   const auto move = MoveFactory{}(position, "e2e4");
   auto child = position;
-  child.DoMove(move);
+  child.DoMove(CheckedMove(child, move));
   Searcher searcher(position);
   PolicyAccess::Play(searcher, 0, move, 20);
   PolicyAccess::Play(searcher, 1, move, 20);
@@ -288,7 +289,7 @@ TEST(StaticEvalPolicy, ChildTrainsBeforeCutoffAndRestoresBoard) {
   const auto parent = PositionFactory{}();
   const auto move = MoveFactory{}(parent, "e2e4");
   auto child = parent;
-  child.DoMove(move);
+  child.DoMove(CheckedMove(child, move));
   const auto parent_eval = parent.Evaluate();
   const auto child_eval = child.Evaluate();
   Searcher searcher(parent);
@@ -309,7 +310,7 @@ TEST(StaticEvalPolicy, SuppressesNullMissingParentRootAndExclusion) {
   const auto parent = PositionFactory{}();
   const auto move = MoveFactory{}(parent, "e2e4");
   auto child = parent;
-  child.DoMove(move);
+  child.DoMove(CheckedMove(child, move));
   for (int test = 0; test < 4; ++test) {
     SCOPED_TRACE(test);
     Searcher searcher(parent);
@@ -340,7 +341,7 @@ TEST(StaticEvalPolicy,
     Searcher searcher(parent);
     PolicyAccess::Play(searcher, 0, move, parent.Evaluate());
     auto child = parent;
-    child.DoMove(move);
+    child.DoMove(CheckedMove(child, move));
     searcher.SetPosition(child);
     ProbePolicyNode(searcher);
     EXPECT_EQ(PolicyAccess::Entry(searcher, Player::kWhite, move), 0);
@@ -374,7 +375,7 @@ TEST(StaticEvalPolicy, TtCutoffSkipsEvaluationAndPolicyTraining) {
   const auto parent = PositionFactory{}();
   const auto move = MoveFactory{}(parent, "e2e4");
   auto child = parent;
-  child.DoMove(move);
+  child.DoMove(CheckedMove(child, move));
   auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
   table->SetEntry(child, MoveFactory{}(child, "e7e5"), ToTT(-1, 0), 3,
                   Bound::kUpper, 0);
@@ -448,7 +449,7 @@ TEST(StaticEvalPolicy, SearchReplacesContextForLaterQuietSibling) {
   const auto parent_eval = parent.Evaluate();
   auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
   for (const auto &move :
-       MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(parent)) {
+       MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(parent)) {
     auto child = parent;
     child.DoMove(move);
     table->SetEntry(child, MoveFactory{}(child, "e7e5"), ToTT(-9999, 0), 6,
@@ -469,7 +470,7 @@ TEST(StaticEvalPolicy, SearchReplacesContextForLaterQuietSibling) {
     EXPECT_TRUE(context.quiet);
     EXPECT_EQ(context.parent_eval, parent_eval);
     auto expected_child = parent;
-    expected_child.DoMove(context.move);
+    expected_child.DoMove(CheckedMove(expected_child, context.move));
     EXPECT_EQ(searcher.GetPosition().GetHash(), expected_child.GetHash());
     return true;
   }};

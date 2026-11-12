@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "MoveFactory.h"
+#include "CheckedMove.h"
 #include "PositionFactory.h"
 
 namespace SimpleChessEngine {
@@ -33,7 +33,7 @@ TEST(PositionState, VerifiesPinCacheAcrossMoveAndNullMoveUndo) {
   position.ComputePins(Player::kBlack);
   ExpectPinCacheUnchanged(position);
   const auto before = position.GetIrreversibleData();
-  const auto move = MoveFactory{}(position, "e8f8");
+  const auto move = CheckedMove(position, "e8f8");
   position.DoMove(move);
   ExpectPinCacheUnchanged(position);
   position.ComputePins(Player::kWhite);

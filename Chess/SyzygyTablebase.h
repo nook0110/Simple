@@ -6,7 +6,7 @@
 #include <mutex>
 #include <optional>
 
-#include "Move.h"
+#include "TypedMove.h"
 #include "Tablebase.h"
 
 namespace SimpleChessEngine {
@@ -23,7 +23,7 @@ class Syzygy {
   [[nodiscard]] std::optional<ProbeResult> Probe(
       const Position& position) const;
   [[nodiscard]] std::optional<Wdl> ProbeWdl(const Position& position) const;
-  [[nodiscard]] std::optional<Move> RootMove(const Position& position) const;
+  [[nodiscard]] std::optional<LegalMove> RootMove(const Position& position) const;
   [[nodiscard]] std::size_t MaxPieces() const { return max_pieces_; }
 
  private:

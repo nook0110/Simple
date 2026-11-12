@@ -5,6 +5,8 @@ import subprocess
 import sys
 
 CASES = [
+    ("reject short castling notation", ["position startpos moves O-O"], "info string illegal move O-O"),
+    ("reject long castling notation", ["position startpos moves O-O-O"], "info string illegal move O-O-O"),
     ("disable NNUE", ["setoption name EvalFile value none"], "info string NNUE disabled"),
     ("NNUE option is case insensitive", ["setoption name evalfile value none"], "info string NNUE disabled"),
     ("unknown option", ["setoption name Hash value 64"], "info string unknown option or invalid value"),
