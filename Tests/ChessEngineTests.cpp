@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <chrono>
+#include <string>
 #include <memory>
 #include <atomic>
 #include <thread>
@@ -140,6 +142,64 @@ TEST(BestMove, PrintsNullMoveWithoutLegalMoves) {
   DepthCondition condition{3};
   engine.ComputeBestMove(condition);
   EXPECT_NE(ss.str().find("bestmove 0000"), std::string::npos);
+}
+
+TEST(NodeCounting, ReportsNodesOfAllThreads) {
+  const auto position = PositionFactory{}();
+  const auto transposition_table =
+      std::make_shared<Searcher::SearcherTranspositionTable>();
+
+  std::stringstream helper_output;
+  std::vector<std::unique_ptr<ChessEngine>> helpers;
+  helpers.push_back(std::make_unique<ChessEngine>(
+      position, helper_output, transposition_table, false));
+  helpers.front()->SetNodePublication(true);
+  DepthCondition helper_condition{6};
+  helpers.front()->ComputeBestMove(helper_condition);
+
+  std::stringstream output;
+  ChessEngine engine(position, output, transposition_table);
+  engine.SetHelperEngines(helpers);
+  DepthCondition condition{6};
+  engine.ComputeBestMove(condition);
+
+  std::uint64_t reported_nodes = 0;
+  for (std::string line; std::getline(output, line);) {
+    std::istringstream words(line);
+    std::string prefix;
+    std::string field;
+    if (words >> prefix >> field && prefix == "info" && field == "nodes") {
+      words >> reported_nodes;
+    }
+  }
+  EXPECT_GT(helpers.front()->GetNodes(), 0U);
+  EXPECT_EQ(reported_nodes, engine.GetNodes() + helpers.front()->GetNodes());
+
+  const auto history = helpers.front()->GetSearcher().GetHistory();
+  helpers.front()->ResetNodes();
+  EXPECT_EQ(helpers.front()->GetNodes(), 0u);
+  EXPECT_EQ(helpers.front()->GetSearcher().GetHistory(), history);
+  engine.SetHelperEngines({});
+  EXPECT_EQ(engine.GetNodesOfAllThreads(), engine.GetNodes());
+}
+
+TEST(NodeCounting, AccumulatesAcrossSearchAttemptsUntilTheNextGo) {
+  Searcher searcher(PositionFactory{}());
+  searcher.InitStartOfSearch();
+  DepthCondition condition{3};
+  std::uint64_t nodes = 0;
+  for (const auto& [alpha, beta] :
+       {std::pair<Eval, Eval>{-10001, -10000},
+        std::pair<Eval, Eval>{-Score::kMate, Score::kMate},
+        std::pair<Eval, Eval>{10000, 10001}}) {
+    ASSERT_TRUE(searcher.Search<NodeType::kPV>(condition, 3, 3, alpha, beta));
+    const auto& info = searcher.GetInfo();
+    nodes += info.searched_nodes + info.quiescence_nodes;
+    EXPECT_EQ(searcher.GetNodes(), nodes);
+  }
+  EXPECT_GT(nodes, 0u);
+  searcher.InitStartOfSearch();
+  EXPECT_EQ(searcher.GetNodes(), 0u);
 }
 
 TEST_P(BestMoveTest, FindBestMove) {

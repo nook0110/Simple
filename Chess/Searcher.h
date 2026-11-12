@@ -18,6 +18,7 @@
 #include "KillerTable.h"
 #include "Move.h"
 #include "MoveGenerator.h"
+#include "NodeCounter.h"
 #include "NodeType.h"
 #include "PositionFactory.h"
 #include "Settings.h"
@@ -129,6 +130,8 @@ class Searcher {
     return null_move_info_;
   }
   [[nodiscard]] const DebugInfo &GetInfo() const { return debug_info_; }
+  [[nodiscard]] std::uint64_t GetNodes() const { return nodes_.Get(); }
+  void ResetNodes() noexcept { nodes_.Reset(); }
   [[nodiscard]] const auto &GetKillers() const { return killers_; }
   [[nodiscard]] const auto &GetHistory() const { return history_; }
   [[nodiscard]] const auto &GetContinuationHistory() const {
@@ -186,6 +189,12 @@ class Searcher {
   void AddRootEffort(const Move &move, std::uint64_t nodes,
                      std::optional<Eval> score);
 
+  template <class ExitCondition>
+  void CountQuiescenceNodes(std::size_t nodes) noexcept {
+    debug_info_.quiescence_nodes += nodes;
+    if constexpr (ReportsNodes<ExitCondition>) nodes_.Add(nodes);
+  }
+
   template <class Value>
   using PieceToHistory = ByPiece<std::array<Value, kBoardArea + 1>>;
   using ContinuationHistory = PieceToHistory<PieceToHistory<std::int32_t>>;
@@ -202,6 +211,7 @@ class Searcher {
   std::vector<RootMoveInfo> root_effort_;
 
   DebugInfo debug_info_;
+  NodeCounter nodes_;
   SingularInfo singular_info_;
   NullMoveInfo null_move_info_;
   Depth nmp_min_ply_ = 0;
@@ -336,6 +346,7 @@ inline void Searcher::AddRootEffort(const Move &move, std::uint64_t nodes,
 }
 
 inline void Searcher::InitStartOfSearch() {
+  nodes_.Reset();
   nmp_min_ply_ = 0;
   killers_.Clear();
   root_effort_.clear();
@@ -367,9 +378,11 @@ SearchResult SimpleChessEngine::Searcher::Search(
   null_move_info_ = {};
   ++age_;
 
-  return SearchNode<node_type, ExitCondition>{
+  const auto result = SearchNode<node_type, ExitCondition>{
       *this,
       {max_depth, remaining_depth, alpha, beta},
       stop_search_condition}();
+  if constexpr (!ReportsNodes<ExitCondition>) nodes_.Add(debug_info_.TotalNodes());
+  return result;
 }
 }  // namespace SimpleChessEngine

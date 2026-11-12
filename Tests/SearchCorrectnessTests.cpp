@@ -264,7 +264,8 @@ void ExpectProbCutPositionRestored(const Position& actual,
 
 TEST(ProbCut, BothSearchesPassAndReturnOriginalBetaWithoutParentEntry) {
   const auto position = PositionFactory{}(kProbCutFen);
-  DepthCondition condition{8};
+  DepthCondition underlying_condition{8};
+  NodeReportingCondition condition{underlying_condition};
   for (const auto node_type : {NodeType::kAll, NodeType::kCut}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
     Searcher searcher(position, table);
@@ -279,6 +280,7 @@ TEST(ProbCut, BothSearchesPassAndReturnOriginalBetaWithoutParentEntry) {
     EXPECT_EQ(info.probcut_qsearch_passes, 1u);
     EXPECT_EQ(info.probcut_cuts, 1u);
     EXPECT_GT(info.probcut_verification_nodes, 0u);
+    EXPECT_EQ(searcher.GetNodes(), info.searched_nodes + info.quiescence_nodes);
     EXPECT_LE(info.probcut_qsearch_nodes, info.quiescence_nodes);
     EXPECT_FALSE(table->GetNode(position).IsOccupied());
     ExpectProbCutPositionRestored(searcher.GetPosition(), position);

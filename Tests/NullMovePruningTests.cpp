@@ -266,8 +266,9 @@ TEST_F(NullMovePruning, UncappedReductionCanVerifyInQuiescence) {
   const auto beta = position.Evaluate() - 707;
   ASSERT_GE(beta, -788);
   auto budget = std::make_shared<NodeBudget>(4);
-  NodeCondition stop{16, {}, budget};
-  const auto result = SearchNode<NodeType::kCut, NodeCondition>{
+  NodeCondition underlying_condition{16, {}, budget};
+  NodeReportingCondition stop{underlying_condition};
+  const auto result = SearchNode<NodeType::kCut, decltype(stop)>{
       searcher, {16, 16, beta - 1, beta, 1}, stop}();
   ASSERT_TRUE(result);
   EXPECT_EQ(*result, beta);
@@ -276,6 +277,8 @@ TEST_F(NullMovePruning, UncappedReductionCanVerifyInQuiescence) {
   EXPECT_EQ(searcher.GetInfo().nmp_tries, 1u);
   EXPECT_EQ(searcher.GetInfo().nmp_cuts, 1u);
   EXPECT_EQ(searcher.GetNullMoveInfo().verifications, 1u);
+  EXPECT_EQ(searcher.GetNodes(), searcher.GetInfo().searched_nodes +
+                                    searcher.GetInfo().quiescence_nodes);
   EXPECT_EQ(searcher.GetPosition().GetHash(), position.GetHash());
   EXPECT_FALSE(budget->IsSpent());
   budget->Spend();

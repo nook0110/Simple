@@ -62,6 +62,7 @@ TEST(QuiescenceTT, MainSearchPassesPvFlagAndCountsQuiescenceCutoffs) {
   EXPECT_EQ(searcher.Search<NodeType::kCut>(condition, 0, 0, -1, 0),
             Score::MateIn(5));
   EXPECT_EQ(searcher.GetInfo().quiescence_nodes, 1u);
+  EXPECT_EQ(searcher.GetNodes(), 1u);
   EXPECT_EQ(searcher.GetInfo().searched_nodes, 0u);
   EXPECT_EQ(searcher.Search<NodeType::kPV>(condition, 0, 0, -Score::kMate,
                                            Score::kMate),

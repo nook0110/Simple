@@ -78,6 +78,7 @@ class SearchThread {
     ponder_start_ = std::chrono::steady_clock::now();
     pondering_.emplace(stop_signal_);
     StartPonderHelpers(info);
+    engine_.SetHelperEngines(helper_engines_);
     thread_ = std::thread([this, stop_signal = stop_signal_] {
       engine_.GoPonder(*pondering_);
       stop_signal->store(true, std::memory_order_relaxed);
@@ -1163,6 +1164,7 @@ inline void SearchThread::Start(const Info& info) {
           condition);
     });
   }
+  engine_.SetHelperEngines(helper_engines_);
 
   thread_ = std::thread([this, stop_signal = stop_signal_,
                          condition = GetCondition(info)]() mutable {
@@ -1184,7 +1186,10 @@ inline ChessEngine& SearchThread::AddHelperEngine(const Info& info,
   } else {
     helper_engines_[worker - 1]->SetPosition(info.position);
   }
-  return *helper_engines_[worker - 1];
+  auto& helper = *helper_engines_[worker - 1];
+  helper.ResetNodes();
+  helper.SetNodePublication(true);
+  return helper;
 }
 
 inline void SearchThread::StartPonderHelpers(const Info& info) {
@@ -1211,6 +1216,7 @@ inline void SearchThread::StopThread() {
     if (helper_thread.joinable()) helper_thread.join();
   }
   helper_threads_.clear();
+  engine_.SetHelperEngines({});
   helper_pondering_.clear();
   pondering_ = std::nullopt;
 }

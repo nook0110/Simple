@@ -8,3 +8,6 @@ concept StopSearchCondition = requires(const T& condition) {
 
 template <class T>
 concept CountsNodes = requires(const T& condition) { condition.CountNode(); };
+
+template <class T>
+concept ReportsNodes = requires { typename T::NodeReportingTag; };

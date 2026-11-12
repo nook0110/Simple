@@ -4,9 +4,13 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
+#include <functional>
 #include <limits>
+#include <memory>
 #include <numeric>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <syncstream>
 
@@ -162,6 +166,23 @@ class ChessEngine {
   }
 
   void GoPonder(Pondering& conditions) { ComputeBestMove(conditions); }
+
+  void SetHelperEngines(
+      std::span<const std::unique_ptr<ChessEngine>> helper_engines) {
+    helper_engines_ = helper_engines;
+    publishes_nodes_ = !helper_engines.empty();
+  }
+
+  [[nodiscard]] std::uint64_t GetNodes() const { return searcher_.GetNodes(); }
+  void ResetNodes() noexcept { searcher_.ResetNodes(); }
+  void SetNodePublication(bool enabled) noexcept { publishes_nodes_ = enabled; }
+
+  [[nodiscard]] std::uint64_t GetNodesOfAllThreads() const {
+    return std::ranges::fold_left(
+        helper_engines_ | std::views::transform(&ChessEngine::GetNodes),
+        GetNodes(), std::plus{});
+  }
+
   void NewGame() {
     searcher_.ClearHistories();
     previous_score_.reset();
@@ -183,6 +204,12 @@ class ChessEngine {
   }
 
  private:
+  void ComputeBestMoveImpl(NodeReportingCondition<TimeCondition>& conditions);
+  void ComputeBestMoveImpl(NodeReportingCondition<DepthCondition>& conditions);
+  void ComputeBestMoveImpl(NodeReportingCondition<NodeCondition>& conditions);
+  void ComputeBestMoveImpl(NodeReportingCondition<Pondering>& conditions);
+  void ComputeBestMoveImpl(SearchCondition auto& conditions);
+
   class EBFsInfo {
    public:
     void Update(std::size_t searched_nodes) {
@@ -221,9 +248,11 @@ class ChessEngine {
     PrintInfo(ScoreInfo{eval});
     PrincipalVariationInfo pv{current_depth, principal_variation};
     PrintInfo(pv);
-    PrintInfo(NodesInfo{info.TotalNodes()});
+    const auto nodes = GetNodesOfAllThreads();
+    PrintInfo(NodesInfo{nodes});
     PrintInfo(NodePerSecondInfo{
-        static_cast<std::size_t>(info.TotalNodes() / search_time.count())});
+        static_cast<std::size_t>(static_cast<double>(nodes) /
+                                 search_time.count())});
     for (const auto& [name, counter] : kDebugCounters) {
       if (counter != &DebugInfo::searched_nodes &&
           counter != &DebugInfo::quiescence_nodes) {
@@ -250,17 +279,27 @@ class ChessEngine {
   Move best_move_{Move::None()};
   std::optional<Move> ponder_move_;
   bool reporting_;
+  bool publishes_nodes_ = false;
   Depth initial_depth_;
   std::size_t thread_index_;
   std::optional<Eval> previous_score_;
   double previous_time_reduction_ =
       TimeManagementParameters::kInitialTimeReduction;
+  std::span<const std::unique_ptr<ChessEngine>> helper_engines_;
 };
 }  // namespace SimpleChessEngine
 
 namespace SimpleChessEngine {
-inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
-    SearchCondition auto& condition) {
+inline void ChessEngine::ComputeBestMove(SearchCondition auto& condition) {
+  if (publishes_nodes_) {
+    NodeReportingCondition reporting_condition{condition};
+    ComputeBestMoveImpl(reporting_condition);
+  } else {
+    ComputeBestMoveImpl(condition);
+  }
+}
+
+inline void ChessEngine::ComputeBestMoveImpl(SearchCondition auto& condition) {
   const TimePoint start_time = std::chrono::steady_clock::now();
   searcher_.InitStartOfSearch();
 

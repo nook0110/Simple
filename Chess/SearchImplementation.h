@@ -223,6 +223,7 @@ SearchResult SearchNode<node_type, ExitCondition>::operator()() {
   }
 
   searcher_.debug_info_.searched_nodes++;
+  if constexpr (ReportsNodes<ExitCondition>) searcher_.nodes_.Add(1);
   if constexpr (CountsNodes<ExitCondition>) exit_condition_.CountNode();
 
   if (ProbeTranspositionTable()) {
@@ -365,7 +366,7 @@ SearchResult SearchNode<node_type, ExitCondition>::SearchProbCutMove(
   const auto qvalue = quiescence.template Search<true>(
       position, -probcut_beta, -probcut_beta + 1,
       static_cast<Depth>(state_.ply + 1), false);
-  searcher_.debug_info_.quiescence_nodes += quiescence.GetSearchedNodes();
+  searcher_.template CountQuiescenceNodes<ExitCondition>(quiescence.GetSearchedNodes());
   searcher_.debug_info_.probcut_qsearch_nodes += quiescence.GetSearchedNodes();
   if (!qvalue || -*qvalue < probcut_beta) return qvalue;
 
@@ -392,8 +393,7 @@ SearchResult SearchNode<node_type, ExitCondition>::QuiescenceSearch() {
               current_position, state_.alpha, state_.beta, state_.ply,
               kIsPrincipalVariation);
 
-  searcher_.debug_info_.quiescence_nodes +=
-      quiescence_searcher.GetSearchedNodes();
+  searcher_.template CountQuiescenceNodes<ExitCondition>(quiescence_searcher.GetSearchedNodes());
 
   return eval;
 }

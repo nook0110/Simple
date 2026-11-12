@@ -49,6 +49,11 @@ target_include_directories(fathom PUBLIC ${fathom_SOURCE_DIR}/src)
 target_compile_definitions(fathom PRIVATE TB_NO_HELPER_API)
 target_link_libraries(fathom PRIVATE Threads::Threads)
 
+set_source_files_properties(
+    Chess/NodeReportingSearch.cpp
+    PROPERTIES COMPILE_OPTIONS -fno-lto
+)
+
 FILE(GLOB CHESS_SOURCES CONFIGURE_DEPENDS Chess/*.cpp Chess/Nnue/*.cpp)
 list(APPEND CHESS_SOURCES
     Chess/Nnue/Stockfish/attacks.cpp

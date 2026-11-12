@@ -221,4 +221,33 @@ struct Pondering {
   }
 };
 static_assert(SearchCondition<Pondering>);
+
+template <SearchCondition Condition>
+class NodeReportingCondition {
+ public:
+  using NodeReportingTag = void;
+
+  explicit NodeReportingCondition(Condition& condition) : condition_(condition) {}
+  bool IsTimeToExit() const { return condition_.IsTimeToExit(); }
+  bool ShouldContinueIteration() const {
+    return condition_.ShouldContinueIteration();
+  }
+  void Update(const IterationInfo& info) { condition_.Update(info); }
+  void CountNode() const requires CountsNodes<Condition> {
+    condition_.CountNode();
+  }
+  void WaitForPonderEnd() const
+    requires requires(const Condition& condition) { condition.WaitForPonderEnd(); }
+  {
+    condition_.WaitForPonderEnd();
+  }
+
+ private:
+  Condition& condition_;
+};
+static_assert(SearchCondition<NodeReportingCondition<DepthCondition>>);
+static_assert(ReportsNodes<NodeReportingCondition<DepthCondition>>);
+static_assert(!ReportsNodes<DepthCondition>);
+static_assert(!CountsNodes<NodeReportingCondition<DepthCondition>>);
+static_assert(CountsNodes<NodeReportingCondition<NodeCondition>>);
 }  // namespace SimpleChessEngine

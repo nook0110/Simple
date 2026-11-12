@@ -233,4 +233,33 @@ template SearchResult Quiescence<Pondering>::Search<false>(
 template SearchResult Quiescence<Pondering>::Search<true>(
     Position& current_position, Eval alpha, const Eval beta,
     const Depth current_depth, bool pv_node);
+
+template class Quiescence<NodeReportingCondition<TimeCondition>>;
+template SearchResult Quiescence<NodeReportingCondition<TimeCondition>>::Search<false>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<NodeReportingCondition<TimeCondition>>::Search<true>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template class Quiescence<NodeReportingCondition<DepthCondition>>;
+template SearchResult Quiescence<NodeReportingCondition<DepthCondition>>::Search<false>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<NodeReportingCondition<DepthCondition>>::Search<true>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template class Quiescence<NodeReportingCondition<NodeCondition>>;
+template SearchResult Quiescence<NodeReportingCondition<NodeCondition>>::Search<false>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<NodeReportingCondition<NodeCondition>>::Search<true>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template class Quiescence<NodeReportingCondition<Pondering>>;
+template SearchResult Quiescence<NodeReportingCondition<Pondering>>::Search<false>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
+template SearchResult Quiescence<NodeReportingCondition<Pondering>>::Search<true>(
+    Position& current_position, Eval alpha, const Eval beta,
+    const Depth current_depth, bool pv_node);
 }  // namespace SimpleChessEngine
