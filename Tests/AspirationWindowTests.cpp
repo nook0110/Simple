@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "AspirationWindow.h"
+#include "CheckedMove.h"
 #include "MoveFactory.h"
 #include "SimpleChessEngine.h"
 
@@ -280,9 +281,9 @@ TEST(AspirationSearch, FindsQueenSacrificeMateAtCompletedDepthEight) {
 
 TEST(AspirationSearch, PrintsCompletedDepthWhenPvIsShorter) {
   auto position = PositionFactory{}();
-  MoveGenerator::Moves moves{MoveFactory{}(position, "e2e4")};
+  MoveGenerator::Moves moves{CheckedMove(position, "e2e4")};
   position.DoMove(moves.front());
-  moves.push_back(MoveFactory{}(position, "e7e5"));
+  moves.push_back(CheckedMove(position, "e7e5"));
   std::ostringstream output;
   output << PrincipalVariationInfo{18, moves};
   EXPECT_EQ(output.str(), "info depth 18 pv e2e4 e7e5\n");

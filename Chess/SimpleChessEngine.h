@@ -38,7 +38,7 @@ struct NodePerSecondInfo {
 
 struct PrincipalVariationInfo {
   size_t current_depth = 0;
-  std::span<const Move> moves;
+  std::span<const LegalMove> moves;
 };
 
 struct BestMoveInfo {
@@ -282,7 +282,8 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
     finish(BestMoveInfo{Move::None(), std::nullopt});
     return;
   }
-  best_move_ = legal_moves.front();
+  auto legal_best_move = legal_moves.front();
+  best_move_ = legal_best_move;
   ponder_move_.reset();
   if (!condition.ShouldContinueIteration()) {
     finish(BestMoveInfo{best_move_, std::nullopt});
@@ -300,7 +301,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   DebugInfo info;
   Eval eval = position_.Evaluate();
   EBFsInfo ebfs;
-  MoveGenerator::Moves principal_variation{best_move_};
+  MoveGenerator::Moves principal_variation{legal_best_move};
   Depth trusted_depth = 0;
   Depth current_depth = initial_depth_;
   Depth last_best_move_depth = 0;
@@ -340,16 +341,18 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       }
 
       const auto move = searcher_.GetCurrentBestMove();
-      if (std::ranges::find(legal_moves, move) != legal_moves.end()) {
-        best_move_ = move;
+      if (const auto found = std::ranges::find(legal_moves, move);
+          found != legal_moves.end()) {
+        legal_best_move = *found;
+        best_move_ = legal_best_move;
       }
       eval = value;
       trusted_depth = searched_depth;
       Position pv_position = position_;
-      pv_position.DoMove(best_move_);
+      pv_position.DoMove(legal_best_move);
       principal_variation = searcher_.GetPrincipalVariation(
           static_cast<Depth>(searched_depth - 1), std::move(pv_position));
-      principal_variation.insert(principal_variation.begin(), best_move_);
+      principal_variation.insert(principal_variation.begin(), legal_best_move);
       ponder_move_ = principal_variation.size() > 1
                          ? std::optional<Move>{principal_variation[1]}
                          : std::nullopt;

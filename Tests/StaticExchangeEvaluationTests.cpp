@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "CheckedMove.h"
 #include "MoveFactory.h"
 #include "PositionFactory.h"
 
@@ -95,7 +96,7 @@ TEST(StaticExchangeEvaluation, RefreshesPinsAfterMoveAndRestoresOnUndo) {
   position.ComputePins(Player::kWhite);
   position.ComputePins(Player::kBlack);
   const auto pins = position.GetIrreversibleData();
-  const auto move = MoveFactory{}(position, "e8f8");
+  const auto move = CheckedMove(position, "e8f8");
   position.DoMove(move);
   ExpectSeeValue(position, "d1d5", -870);
   position.UndoMove(move, pins);

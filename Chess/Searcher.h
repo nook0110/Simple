@@ -223,11 +223,12 @@ inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
     const auto hashed_node = best_moves_->GetNode(position);
     if (!hashed_node.IsOccupied()) break;
     const auto legal_moves =
-        MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
-    if (std::ranges::find(legal_moves, hashed_node.move) == legal_moves.end())
+        MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
+    const auto found = std::ranges::find(legal_moves, hashed_node.move);
+    if (found == legal_moves.end())
       break;
-    position.DoMove(hashed_node.move);
-    answer.push_back(hashed_node.move);
+    position.DoMove(*found);
+    answer.push_back(*found);
   }
   return answer;
 }

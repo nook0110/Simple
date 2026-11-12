@@ -11,6 +11,7 @@
 
 #include "ExitCondition.h"
 #include "MoveFactory.h"
+#include "CheckedMove.h"
 #include "Nnue/Nnue.h"
 #include "PositionFactory.h"
 #include "Quiescence.h"
@@ -30,7 +31,7 @@ TEST(QuiescenceDraws, RepetitionInGameHistory) {
   auto position = PositionFactory{}("7k/8/6K1/8/8/8/8/1Q6 w - - 0 1");
   for (const auto* move : {"b1b2", "h8g8", "b2b1", "g8h8", "b1b2",
                            "h8g8", "b2b1", "g8h8"}) {
-    position.DoMove(MoveFactory{}(position, move));
+    position.DoMove(CheckedMove(position, move));
   }
   ASSERT_TRUE(position.DetectRepetition(0));
   DepthCondition condition{4};
@@ -42,7 +43,7 @@ TEST(QuiescenceDraws, RepetitionInGameHistory) {
 TEST(QuiescenceDraws, StalemateWithPinnedBishop) {
   auto position = PositionFactory{}("7k/5K1b/7Q/8/8/8/8/8 b - - 0 1");
   ASSERT_FALSE(position.IsUnderCheck());
-  ASSERT_TRUE(MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position)
+  ASSERT_TRUE(MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position)
                   .empty());
   DepthCondition condition{4};
   Quiescence search{condition};
@@ -104,7 +105,7 @@ TEST(SingularExtensions, ExclusionIgnoresBoundsAndPreservesFullNodeEntry) {
 TEST(SingularExtensions, ExcludingOnlyEvasionReturnsFailLow) {
   auto position = PositionFactory{}("r7/8/8/8/8/2k5/8/K7 w - - 0 1");
   const auto moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
   ASSERT_EQ(moves.size(), 1u);
   ASSERT_TRUE(position.IsUnderCheck());
   Searcher searcher(position);
@@ -416,12 +417,19 @@ TEST(ProbCut, TacticalPickerOrdersCapturesAndOmitsQuietsAndUnderpromotions) {
   Searcher searcher(position);
   MovePicker picker;
   picker.InitProbCut(position, &searcher, 1);
-  std::vector<Move> moves;
-  for (auto move = picker.SelectProbCutMove(-2000); move.IsValid();
-       move = picker.SelectProbCutMove(-2000)) {
+  std::vector<LegalMove> moves;
+  for (auto next = picker.SelectProbCutMove(-2000); next;
+       next = picker.SelectProbCutMove(-2000)) {
+    const auto& move = *next;
     moves.push_back(move);
     EXPECT_FALSE(move.IsQuiet(position));
     EXPECT_TRUE(!move.IsPromotion() || move.PromotionPiece() == Piece::kQueen);
+    const auto before = position;
+    const auto irreversible_data = position.GetIrreversibleData();
+    position.DoMove(move);
+    EXPECT_FALSE(position.IsUnderCheck(Flip(position.GetSideToMove())));
+    position.UndoMove(move, irreversible_data);
+    ExpectProbCutPositionRestored(position, before);
   }
   ASSERT_EQ(moves.size(), 3u);
   EXPECT_EQ(moves[0], MoveFactory{}(position, "d4d5"));
