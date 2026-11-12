@@ -68,7 +68,7 @@ class UciEngine:
 
     def ready(self) -> None:
         self.send("isready")
-        self.wait_for("readyok")
+        self.wait_for("readyok", timeout=60)
 
     def search(self, fen: str, control: str, invalid: bool = False,
                root_hit: bool = False) -> None:

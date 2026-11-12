@@ -104,7 +104,7 @@ TEST(QuiescenceTT, QuietTtMoveIsIgnoredOutsideCheck) {
 TEST(QuiescenceTT, CaptureTtMoveIsSearchedFirstAndStored) {
   auto position = PositionFactory{}("k7/8/8/3p4/3R3p/8/8/K7 w - - 0 1");
   const auto moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kQuiescence>(position);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kQuiescence>(position);
   ASSERT_GT(moves.size(), 1u);
   const auto tt_move = moves.back();
   ASSERT_TRUE(position.StaticExchangeEvaluation(tt_move, 1));
@@ -128,7 +128,7 @@ TEST(QuiescenceTT, QuietEvasionTtMoveIsSearchedFirstAndStored) {
   auto position = PositionFactory{}("k3r3/8/8/8/8/8/P7/4K3 w - - 0 1");
   ASSERT_TRUE(position.IsUnderCheck());
   const auto moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
   ASSERT_GT(moves.size(), 1u);
   const auto tt_move = moves.back();
   ASSERT_TRUE(tt_move.IsQuiet(position));

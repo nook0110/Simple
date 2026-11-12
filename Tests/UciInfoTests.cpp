@@ -16,7 +16,10 @@ TEST(PrincipalVariationInfo, ReportsIterationDepthForShortPV) {
   const auto first = CheckedMove(position, "e2e4");
   position.DoMove(first);
   const auto second = CheckedMove(position, "e7e5");
-  output << PrincipalVariationInfo{14, {first, second}};
+  Searcher::PrincipalVariation pv;
+  pv.unchecked_push_back(first);
+  pv.unchecked_push_back(second);
+  output << PrincipalVariationInfo{14, pv};
   EXPECT_EQ(output.str(), "info depth 14 pv e2e4 e7e5\n");
 }
 

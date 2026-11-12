@@ -9,17 +9,18 @@
 namespace SimpleChessEngine {
 template <>
 void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(
-    PseudoLegalMove*& moves, Position& position, Bitboard target) const;
+    PseudoLegalMoves& moves, Position& position, Bitboard target) const;
 
-template MoveGenerator::Moves MoveGenerator::GenerateMoves<
+template MoveGenerator::LegalMoves MoveGenerator::GenerateLegalMoves<
     MoveGenerator::Type::kAll>(Position& position) const;
-template MoveGenerator::Moves MoveGenerator::GenerateMoves<
+template MoveGenerator::LegalMoves MoveGenerator::GenerateLegalMoves<
     MoveGenerator::Type::kQuiescence>(Position& position) const;
+
 
 MoveGenerator::~MoveGenerator() = default;
 
-void MoveGenerator::GenerateCastling(PseudoLegalMove*& moves,
-                                      const Position& position) {
+void MoveGenerator::GenerateCastling(PseudoLegalMoves& moves,
+                                     const Position& position) {
   if (position.IsUnderCheck()) {
     return;
   }
@@ -33,14 +34,15 @@ void MoveGenerator::GenerateCastling(PseudoLegalMove*& moves,
       const auto side_idx = static_cast<size_t>(castling_side);
       const auto king_to = kKingCastlingDestination[color_idx][side_idx];
 
-      *moves++ = PseudoLegalMove(
-          Move::Make<MoveType::kCastling>(king_square, king_to));
+      moves.unchecked_push_back(PseudoLegalMove(
+          Move::Make<MoveType::kCastling>(king_square, king_to)));
     }
   }
 }
 
 template <Piece piece>
-void MoveGenerator::GenerateMovesForPiece(PseudoLegalMove*& moves, Position& position,
+void MoveGenerator::GenerateMovesForPiece(PseudoLegalMoves& moves,
+                                          Position& position,
                                           const Bitboard target) const {
   static_assert(piece != Piece::kPawn && piece != Piece::kKing);
 
@@ -52,7 +54,7 @@ void MoveGenerator::GenerateMovesForPiece(PseudoLegalMove*& moves, Position& pos
 
 template <>
 void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
-    PseudoLegalMove*& moves, Position& position, const Bitboard target) const {
+    PseudoLegalMoves& moves, Position& position, const Bitboard target) const {
   const auto us = position.GetSideToMove();
   const auto us_idx = static_cast<size_t>(us);
   const auto them = Flip(us);
@@ -77,7 +79,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
   while (push.Any()) {
     const auto to = push.PopFirstBit();
     const auto from = Shift(to, opposite_direction);
-    *moves++ = PseudoLegalMove(Move(from, to));
+    moves.unchecked_push_back(PseudoLegalMove(Move(from, to)));
   }
 
   auto double_push = Shift(double_push_pawns, direction) & valid_squares;
@@ -86,7 +88,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
   while (double_push.Any()) {
     const auto to = double_push.PopFirstBit();
     const auto from = Shift(Shift(to, opposite_direction), opposite_direction);
-    *moves++ = PseudoLegalMove(Move(from, to));
+    moves.unchecked_push_back(PseudoLegalMove(Move(from, to)));
   }
 
   const auto attacks =
@@ -113,7 +115,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
     while (attack_squares.Any()) {
       const auto to = attack_squares.PopFirstBit();
       const auto from = Shift(to, opposite_attacks[attack_direction]);
-      *moves++ = PseudoLegalMove(Move(from, to));
+      moves.unchecked_push_back(PseudoLegalMove(Move(from, to)));
     }
   }
 
@@ -126,7 +128,7 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
       if (attack_to.Any()) {
         const auto to = en_croissant_square.value();
         const auto from = Shift(to, opposite_attacks[attack_direction]);
-        *moves++ = PseudoLegalMove(Move::Make<MoveType::kEnPassant>(from, to));
+        moves.unchecked_push_back(PseudoLegalMove(Move::Make<MoveType::kEnPassant>(from, to)));
       }
     }
   }
@@ -140,14 +142,14 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
     const auto to = promotion_push.PopFirstBit();
     const auto from = Shift(to, opposite_direction);
 
-    *moves++ = PseudoLegalMove(
-        Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen));
-    *moves++ = PseudoLegalMove(
-        Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight));
-    *moves++ = PseudoLegalMove(
-        Move::Make<MoveType::kPromotion>(from, to, Piece::kRook));
-    *moves++ = PseudoLegalMove(
-        Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop));
+    moves.unchecked_push_back(PseudoLegalMove(
+        Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen)));
+    moves.unchecked_push_back(PseudoLegalMove(
+        Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight)));
+    moves.unchecked_push_back(PseudoLegalMove(
+        Move::Make<MoveType::kPromotion>(from, to, Piece::kRook)));
+    moves.unchecked_push_back(PseudoLegalMove(
+        Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop)));
   }
 
   for (size_t attack_direction = 0; attack_direction < attacks.size();
@@ -159,21 +161,22 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kPawn>(
       const auto to = attack_squares.PopFirstBit();
       const auto from = Shift(to, opposite_attacks[attack_direction]);
 
-      *moves++ = PseudoLegalMove(
-        Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen));
-      *moves++ = PseudoLegalMove(
-        Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight));
-      *moves++ = PseudoLegalMove(
-        Move::Make<MoveType::kPromotion>(from, to, Piece::kRook));
-      *moves++ = PseudoLegalMove(
-        Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop));
+      moves.unchecked_push_back(PseudoLegalMove(
+        Move::Make<MoveType::kPromotion>(from, to, Piece::kQueen)));
+      moves.unchecked_push_back(PseudoLegalMove(
+        Move::Make<MoveType::kPromotion>(from, to, Piece::kKnight)));
+      moves.unchecked_push_back(PseudoLegalMove(
+        Move::Make<MoveType::kPromotion>(from, to, Piece::kRook)));
+      moves.unchecked_push_back(PseudoLegalMove(
+        Move::Make<MoveType::kPromotion>(from, to, Piece::kBishop)));
     }
   }
 }
 
 template <MoveGenerator::Type type>
-PseudoLegalMove* MoveGenerator::GeneratePseudoLegal(Position& position,
-                                         PseudoLegalMove* moves) const {
+MoveGenerator::PseudoLegalMoves MoveGenerator::GeneratePseudoLegalMoves(
+    Position& position) const {
+  PseudoLegalMoves moves;
   const auto us = position.GetSideToMove();
   const auto them = Flip(us);
   auto target = ~position.GetPieces(us);
@@ -199,24 +202,17 @@ PseudoLegalMove* MoveGenerator::GeneratePseudoLegal(Position& position,
       target &= ray;
       pawn_target &= ray;
     }
-    auto* pawn_begin = moves;
     GenerateMovesForPiece<Piece::kPawn>(moves, position,
                                         pawn_target & ~position.GetPieces(us));
-    auto* pawn_end = moves;
-    moves = pawn_begin;
-    for (auto* p = pawn_begin; p != pawn_end; ++p) {
-      if constexpr (type == Type::kQuiets) {
-        if (p->IsEnPassant()) continue;
-      }
-      if (p->IsEnPassant() && checkers.Any()) {
-        const auto captured =
-            static_cast<BitIndex>(p->To() + (us == Player::kWhite ? -8 : 8));
-        if (!checkers.Test(captured) &&
-            !Between(king_square, checkers.GetFirstBit()).Test(p->To()))
-          continue;
-      }
-      *moves++ = *p;
-    }
+    erase_if(moves, [&](const PseudoLegalMove move) {
+      if (!move.IsEnPassant()) return false;
+      if constexpr (type == Type::kQuiets) return true;
+      if (checkers.None()) return false;
+      const auto captured =
+          static_cast<BitIndex>(move.To() + (us == Player::kWhite ? -8 : 8));
+      return !checkers.Test(captured) &&
+             !Between(king_square, checkers.GetFirstBit()).Test(move.To());
+    });
     auto generate = [&]<Piece piece>() {
       GenerateMovesForPiece<piece>(moves, position, target);
     };
@@ -233,40 +229,43 @@ PseudoLegalMove* MoveGenerator::GeneratePseudoLegal(Position& position,
 }
 
 template <MoveGenerator::Type type>
-MoveGenerator::Moves MoveGenerator::GenerateMoves(Position& position) const {
-  std::array<PseudoLegalMove, kMaxMovesPerPosition> moves;
-  auto* end = GeneratePseudoLegal<type>(position, moves.data());
+MoveGenerator::LegalMoves MoveGenerator::GenerateLegalMoves(
+    Position& position) const {
+  const auto pseudo_legal = GeneratePseudoLegalMoves<type>(position);
   position.ComputePins(position.GetSideToMove());
-  Moves legal;
-  legal.reserve(end - moves.data());
-  for (auto* p = moves.data(); p != end; ++p) {
-    if (position.IsLegal(*p)) legal.push_back(LegalMove(static_cast<Move>(*p)));
+  LegalMoves legal;
+  for (const auto move : pseudo_legal) {
+    if (position.IsLegal(move)) {
+      legal.unchecked_push_back(LegalMove(static_cast<Move>(move)));
+    }
   }
   return legal;
 }
 
 bool MoveGenerator::HasLegalMove(Position& position) const {
-  std::array<PseudoLegalMove, kMaxMovesPerPosition> moves;
-  auto* end = GeneratePseudoLegal<Type::kAll>(position, moves.data());
+  const auto pseudo_legal = GeneratePseudoLegalMoves<Type::kAll>(position);
   position.ComputePins(position.GetSideToMove());
-  return std::any_of(moves.data(), end,
-                     [&position](Move move) {
-                       return position.IsLegal(move);
-                     });
+  return std::ranges::any_of(pseudo_legal,
+                             [&position](const PseudoLegalMove move) {
+                               return position.IsLegal(move);
+                             });
 }
 
-template PseudoLegalMove* MoveGenerator::GeneratePseudoLegal<MoveGenerator::Type::kAll>(
-    Position&, PseudoLegalMove*) const;
-template PseudoLegalMove*
-MoveGenerator::GeneratePseudoLegal<MoveGenerator::Type::kCaptures>(Position&,
-                                                                   PseudoLegalMove*) const;
-template PseudoLegalMove* MoveGenerator::GeneratePseudoLegal<MoveGenerator::Type::kQuiets>(
-    Position&, PseudoLegalMove*) const;
-template PseudoLegalMove* MoveGenerator::GeneratePseudoLegal<
-    MoveGenerator::Type::kQuiescence>(Position&, PseudoLegalMove*) const;
+template MoveGenerator::PseudoLegalMoves
+MoveGenerator::GeneratePseudoLegalMoves<MoveGenerator::Type::kAll>(
+    Position&) const;
+template MoveGenerator::PseudoLegalMoves
+MoveGenerator::GeneratePseudoLegalMoves<MoveGenerator::Type::kCaptures>(
+    Position&) const;
+template MoveGenerator::PseudoLegalMoves
+MoveGenerator::GeneratePseudoLegalMoves<MoveGenerator::Type::kQuiets>(
+    Position&) const;
+template MoveGenerator::PseudoLegalMoves
+MoveGenerator::GeneratePseudoLegalMoves<MoveGenerator::Type::kQuiescence>(
+    Position&) const;
 
 template <>
-void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(PseudoLegalMove*& moves,
+void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(PseudoLegalMoves& moves,
                                                         Position& position,
                                                         Bitboard target) const {
   GenerateMovesFromSquare<Piece::kKing>(
@@ -275,7 +274,8 @@ void MoveGenerator::GenerateMovesForPiece<Piece::kKing>(PseudoLegalMove*& moves,
 }
 
 template <Piece piece>
-void MoveGenerator::GenerateMovesFromSquare(PseudoLegalMove*& moves, Position& position,
+void MoveGenerator::GenerateMovesFromSquare(PseudoLegalMoves& moves,
+                                            Position& position,
                                             const BitIndex from,
                                             Bitboard target) const {
   assert(position.GetPieceAt(from) == piece);
@@ -289,7 +289,7 @@ void MoveGenerator::GenerateMovesFromSquare(PseudoLegalMove*& moves, Position& p
 
   while (valid_moves.Any()) {
     const auto to = valid_moves.PopFirstBit();
-    *moves++ = PseudoLegalMove(Move(from, to));
+    moves.unchecked_push_back(PseudoLegalMove(Move(from, to)));
   }
 }
 }  // namespace SimpleChessEngine

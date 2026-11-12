@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <ranges>
 #include <set>
 
 #include "MoveGenerator.h"
@@ -41,11 +42,12 @@ TEST(StagedMovePicker, PseudoLegalValidationMatchesGenerator) {
   for (const auto* fen : kPositions) {
     SCOPED_TRACE(fen);
     auto position = PositionFactory{}(fen);
-    std::array<PseudoLegalMove, MoveGenerator::kMaxMovesPerPosition> generated;
-    auto* end = MoveGenerator{}.GeneratePseudoLegal<MoveGenerator::Type::kAll>(
-        position, generated.data());
     std::set<std::uint16_t> expected;
-    for (auto* p = generated.data(); p != end; ++p) expected.insert(p->Raw());
+    for (const auto move :
+         MoveGenerator{}.GeneratePseudoLegalMoves<MoveGenerator::Type::kAll>(
+             position)) {
+      expected.insert(move.Raw());
+    }
     for (unsigned raw = 0; raw < 65536; ++raw) {
       EXPECT_EQ(position.IsPseudoLegal(Move(static_cast<std::uint16_t>(raw))),
                 expected.contains(raw))
@@ -59,17 +61,17 @@ TEST(StagedMovePicker, CaptureAndQuietStagesPartitionLegalMoves) {
     SCOPED_TRACE(fen);
     auto position = PositionFactory{}(fen);
     const auto expected = LegalSet(position);
-    std::array<PseudoLegalMove, MoveGenerator::kMaxMovesPerPosition> generated;
-    auto* middle =
-        MoveGenerator{}.GeneratePseudoLegal<MoveGenerator::Type::kCaptures>(
-            position, generated.data());
-    auto* end =
-        MoveGenerator{}.GeneratePseudoLegal<MoveGenerator::Type::kQuiets>(
-            position, middle);
+    const MoveGenerator generator;
+    const auto captures =
+        generator.GeneratePseudoLegalMoves<MoveGenerator::Type::kCaptures>(
+            position);
+    const auto quiets =
+        generator.GeneratePseudoLegalMoves<MoveGenerator::Type::kQuiets>(
+            position);
     std::set<std::uint16_t> actual;
-    for (auto* p = generated.data(); p != end; ++p) {
-      if (!position.IsLegal(*p)) continue;
-      EXPECT_TRUE(actual.insert(p->Raw()).second);
+    for (const auto move : std::views::concat(captures, quiets)) {
+      if (!position.IsLegal(move)) continue;
+      EXPECT_TRUE(actual.insert(move.Raw()).second);
     }
     EXPECT_EQ(actual, expected);
   }
@@ -133,8 +135,8 @@ TEST(StagedMovePicker, QuiescenceTtMoveComesFirstWithoutDuplicates) {
     auto position = PositionFactory{}(fen);
     const auto expected =
         position.IsUnderCheck()
-            ? MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position)
-            : MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kQuiescence>(
+            ? MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position)
+            : MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kQuiescence>(
                   position);
     for (const auto tt_move : expected) {
       if (!position.IsUnderCheck() && !tt_move.IsEnPassant() &&

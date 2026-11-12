@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
             continue;
           }
           const auto moves =
-              MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+              MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
           const auto root_move = tablebase->RootMove(position);
           if (tablebase->ProbeWdl(position) && root_move &&
               std::ranges::find(moves, *root_move) != moves.end()) {
