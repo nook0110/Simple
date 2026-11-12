@@ -3,18 +3,12 @@
 #include <sstream>
 #include <string>
 
-#include "Attacks.h"
-#include "PSQT.h"
 #include "PositionFactory.h"
 #include "SyzygyTablebase.h"
 
 using namespace SimpleChessEngine;
 
 int main(int argc, char** argv) {
-  InitBetween<Piece::kBishop>();
-  InitBetween<Piece::kRook>();
-  InitPawnAttacks();
-  InitPSQT();
   if (argc < 3) {
     std::cerr << "usage: SCE_tbprobe syzygy-path fen\n";
     return 2;

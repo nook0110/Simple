@@ -60,6 +60,12 @@ set_source_files_properties(
 )
 list(REMOVE_ITEM CHESS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Chess/main.cpp)
 
+set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Chess/Attacks.cpp APPEND PROPERTY COMPILE_OPTIONS
+    "$<$<CXX_COMPILER_ID:GNU>:-fconstexpr-ops-limit=100000000>"
+    "$<$<CXX_COMPILER_ID:GNU>:-fconstexpr-cache-depth=0>"
+    "$<$<CXX_COMPILER_ID:Clang>:-fconstexpr-steps=20000000>"
+)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Chess)
 
 # Single library shared by the main project and the tests
