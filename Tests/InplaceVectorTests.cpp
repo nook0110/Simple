@@ -28,3 +28,22 @@ TEST(InplaceVector, BackRefersToLastElementAfterErasure) {
   EXPECT_EQ(std::as_const(values).back(), 2);
   EXPECT_EQ(values.size(), 2);
 }
+
+static_assert([] {
+  InplaceVector<int, 3> values;
+  values.unchecked_push_back(1);
+  values.unchecked_push_back(2);
+  values.unchecked_push_front(values.back());
+  return values.size() == 3 && values.front() == 2 && values[1] == 1 &&
+         values.back() == 2;
+}());
+
+TEST(InplaceVector, PushFrontPreservesAliasedValue) {
+  InplaceVector<int, 3> values;
+  values.unchecked_push_back(1);
+  values.unchecked_push_back(2);
+  values.unchecked_push_front(values.back());
+  EXPECT_EQ(values.front(), 2);
+  EXPECT_EQ(values[1], 1);
+  EXPECT_EQ(values.back(), 2);
+}

@@ -73,6 +73,14 @@ class InplaceVector {
     return elements_[size_++] = value;
   }
 
+  constexpr reference unchecked_push_front(const T& value) noexcept {
+    assert(size_ < N);
+    const T inserted = value;
+    std::move_backward(begin(), end(), end() + 1);
+    ++size_;
+    return front() = inserted;
+  }
+
   template <class Predicate>
   friend constexpr size_type erase_if(InplaceVector& vector,
                                       Predicate predicate) {

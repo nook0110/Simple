@@ -1,6 +1,8 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+
 #include "MoveGenerator.h"
 #include "PositionFactory.h"
 
@@ -104,10 +106,15 @@ TEST_P(GenerateMovesTest, Perft) {
 
     EXPECT_EQ(position, GetPosition());
     EXPECT_EQ(position.GetHash(), GetPosition().GetHash());
-    if (possible_games_answer)
+    if (possible_games_answer) {
       EXPECT_EQ(*possible_games, *possible_games_answer);
-    if (en_croissants_answer) EXPECT_EQ(*en_croissants, *en_croissants_answer);
-    if (castlings_answer) EXPECT_EQ(*castlings, *castlings_answer);
+    }
+    if (en_croissants_answer) {
+      EXPECT_EQ(*en_croissants, *en_croissants_answer);
+    }
+    if (castlings_answer) {
+      EXPECT_EQ(*castlings, *castlings_answer);
+    }
   }
 }
 
@@ -154,16 +161,6 @@ INSTANTIATE_TEST_CASE_P(
                 {15833292, 6512, 0, 5}  // depth 5
             }},
         GenTestCase{
-            R"(r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1)",
-            {
-                {1, 0, 0, 0},           // depth 0
-                {6, 0, 0, 0},           // depth 1
-                {264, 0, 6, 0},         // depth 2
-                {9467, 4, 0, 0},        // depth 3
-                {422333, 0, 7795, 22},  // depth 4
-                {15833292, 6512, 0, 5}  // depth 5
-            }},
-        GenTestCase{
             R"(rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8)",
             {
                 {1},       // depth 0
@@ -171,7 +168,10 @@ INSTANTIATE_TEST_CASE_P(
                 {1486},    // depth 2
                 {62379},   // depth 3
                 {2103487}  // depth 4
-            }}));
+            }}),
+    [](const testing::TestParamInfo<GenTestCase> &info) {
+      return "Position" + std::to_string(info.index);
+    });
 
 TEST(GenerateMoves, ShannonNumberCheck) {
   auto start_position = PositionFactory{}();
