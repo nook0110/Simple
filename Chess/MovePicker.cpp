@@ -1,7 +1,7 @@
 #include "MovePicker.h"
 
 #include <algorithm>
-#include <limits>
+#include <iterator>
 
 #include "Position.h"
 #include "Searcher.h"
@@ -28,19 +28,16 @@ constexpr int PromotionRank(Piece promotion) {
 }
 }  // namespace
 
-void MovePicker::PartialInsertionSort(ScoredMove* begin, ScoredMove* end,
-                                      std::int64_t limit) {
-  if (begin == end) return;
-  for (auto *sorted_end = begin, *p = begin + 1; p < end; ++p) {
-    if (p->score >= limit) {
-      const auto tmp = *p;
-      *p = *++sorted_end;
-      auto* q = sorted_end;
-      for (; q != begin && (q - 1)->score < tmp.score; --q) {
-        *q = *(q - 1);
-      }
-      *q = tmp;
+void MovePicker::SortByScore(ScoredRange moves) {
+  if (moves.empty()) return;
+  for (auto next = std::next(moves.begin()); next != moves.end(); ++next) {
+    const ScoredMove inserted = *next;
+    auto slot = next;
+    for (; slot != moves.begin() && std::prev(slot)->score < inserted.score;
+         --slot) {
+      *slot = *std::prev(slot);
     }
+    *slot = inserted;
   }
 }
 
@@ -61,27 +58,21 @@ void MovePicker::InitPicker(Position& position, const Searcher* searcher,
 }
 
 void MovePicker::Generate(bool quiet) {
-  std::array<PseudoLegalMove, MoveGenerator::kMaxMovesPerPosition> generated;
-  auto* begin = generated.data();
-  PseudoLegalMove* end;
-  const MoveGenerator generator;
-  if (quiet) {
-    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kQuiets>(
-        *position_, begin);
-  } else if (!searcher_ && evasions_) {
-    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kAll>(*position_,
-                                                                   begin);
-  } else if (!searcher_) {
-    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kQuiescence>(
-        *position_, begin);
-  } else {
-    end = generator.GeneratePseudoLegal<MoveGenerator::Type::kCaptures>(
-        *position_, begin);
-  }
+  const auto generated = [this, quiet] {
+    using enum MoveGenerator::Type;
+    const MoveGenerator generator;
+    if (quiet) return generator.GeneratePseudoLegalMoves<kQuiets>(*position_);
+    if (!searcher_ && evasions_) {
+      return generator.GeneratePseudoLegalMoves<kAll>(*position_);
+    }
+    if (!searcher_) {
+      return generator.GeneratePseudoLegalMoves<kQuiescence>(*position_);
+    }
+    return generator.GeneratePseudoLegalMoves<kCaptures>(*position_);
+  }();
   current_ = quiet ? bad_end_ : 0;
   end_ = current_;
-  for (auto* p = begin; p != end; ++p) {
-    const auto move = *p;
+  for (const auto move : generated) {
     if (move == tt_move_ || move == excluded_move_ ||
         (quiet && std::ranges::find(killers_, move) != killers_.end()))
       continue;
@@ -103,8 +94,7 @@ void MovePicker::Generate(bool quiet) {
     moves_[end_++] = {move, score};
   }
   if (searcher_) {
-    PartialInsertionSort(moves_.data() + current_, moves_.data() + end_,
-                         std::numeric_limits<std::int64_t>::min());
+    SortByScore({moves_.begin() + current_, moves_.begin() + end_});
   }
 }
 
@@ -168,10 +158,11 @@ MaybeLegalMove MovePicker::SelectNextMove() {
               !position_->IsLegal(move, blockers_))
             continue;
           if (!move.IsQuiet(*position_)) {
-            auto* found = std::find_if(
-                moves_.data(), moves_.data() + bad_end_,
-                [move](const auto& data) { return data.move == move; });
-            if (found == moves_.data() + bad_end_) continue;
+            const ScoredRange bad_captures{moves_.begin(),
+                                           moves_.begin() + bad_end_};
+            const auto found =
+                std::ranges::find(bad_captures, move, &ScoredMove::move);
+            if (found == bad_captures.end()) continue;
             found->move = Move::None();
           }
           killers_[index] = move;

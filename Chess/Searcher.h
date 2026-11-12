@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -136,7 +137,10 @@ class Searcher {
   [[nodiscard]] std::uint64_t GetRootEffort(const Move &move) const;
   [[nodiscard]] RootScore GetRootScore(const Move &move) const;
 
-  [[nodiscard]] MoveGenerator::Moves GetPrincipalVariation(
+  using PrincipalVariation =
+      InplaceVector<LegalMove, std::numeric_limits<Depth>::max()>;
+
+  [[nodiscard]] PrincipalVariation GetPrincipalVariation(
       Depth max_depth, Position position) const;
 
  private:
@@ -216,9 +220,9 @@ inline const Position &Searcher::GetPosition() const { return current_position_;
 
 inline const Move &Searcher::GetCurrentBestMove() const { return best_move_; }
 
-inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
-                                                     Position position) const {
-  MoveGenerator::Moves answer;
+inline Searcher::PrincipalVariation Searcher::GetPrincipalVariation(
+    Depth max_depth, Position position) const {
+  PrincipalVariation answer;
   for (Depth i = 0; i < max_depth; ++i) {
     const auto hashed_node = best_moves_->GetNode(position);
     if (!hashed_node.IsOccupied()) break;
@@ -228,7 +232,7 @@ inline MoveGenerator::Moves Searcher::GetPrincipalVariation(Depth max_depth,
     if (found == legal_moves.end())
       break;
     position.DoMove(*found);
-    answer.push_back(*found);
+    answer.unchecked_push_back(*found);
   }
   return answer;
 }

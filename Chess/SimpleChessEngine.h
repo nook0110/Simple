@@ -215,7 +215,7 @@ class ChessEngine {
   };
 
   void PrintInfo(const DebugInfo& info, Eval eval, Depth current_depth,
-                 const MoveGenerator::Moves& principal_variation,
+                 const Searcher::PrincipalVariation& principal_variation,
                  std::chrono::duration<double> search_time) {
     if (!reporting_) return;
     PrintInfo(ScoreInfo{eval});
@@ -278,7 +278,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   }
 
   const auto legal_moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position_);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position_);
   if (legal_moves.empty()) {
     finish(BestMoveInfo{Move::None(), std::nullopt});
     return;
@@ -302,7 +302,8 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
   DebugInfo info;
   Eval eval = position_.Evaluate();
   EBFsInfo ebfs;
-  MoveGenerator::Moves principal_variation{legal_best_move};
+  Searcher::PrincipalVariation principal_variation;
+  principal_variation.unchecked_push_back(legal_best_move);
   Depth trusted_depth = 0;
   Depth current_depth = initial_depth_;
   Depth last_best_move_depth = 0;
@@ -353,7 +354,7 @@ inline void SimpleChessEngine::ChessEngine::ComputeBestMove(
       pv_position.DoMove(legal_best_move);
       principal_variation = searcher_.GetPrincipalVariation(
           static_cast<Depth>(searched_depth - 1), std::move(pv_position));
-      principal_variation.insert(principal_variation.begin(), legal_best_move);
+      principal_variation.unchecked_push_front(legal_best_move);
       ponder_move_ = principal_variation.size() > 1
                          ? std::optional<Move>{principal_variation[1]}
                          : std::nullopt;

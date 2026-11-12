@@ -75,7 +75,7 @@ TEST(HistoryPersistence, SecondGoDecaysButterflyAndPreservesContinuation) {
     auto position = searcher.GetPosition();
     const auto side = static_cast<std::size_t>(position.GetSideToMove());
     for (const auto move :
-         MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position)) {
+         MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position)) {
       EXPECT_EQ(searcher.GetQuietScore(move, 2),
                 expected[side][move.From()][move.To()]);
     }

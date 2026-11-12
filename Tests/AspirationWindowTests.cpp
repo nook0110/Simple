@@ -281,9 +281,10 @@ TEST(AspirationSearch, FindsQueenSacrificeMateAtCompletedDepthEight) {
 
 TEST(AspirationSearch, PrintsCompletedDepthWhenPvIsShorter) {
   auto position = PositionFactory{}();
-  MoveGenerator::Moves moves{CheckedMove(position, "e2e4")};
+  Searcher::PrincipalVariation moves;
+  moves.unchecked_push_back(CheckedMove(position, "e2e4"));
   position.DoMove(moves.front());
-  moves.push_back(CheckedMove(position, "e7e5"));
+  moves.unchecked_push_back(CheckedMove(position, "e7e5"));
   std::ostringstream output;
   output << PrincipalVariationInfo{18, moves};
   EXPECT_EQ(output.str(), "info depth 18 pv e2e4 e7e5\n");

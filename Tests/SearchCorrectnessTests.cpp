@@ -449,11 +449,11 @@ TEST(ProbCut, TacticalPickerOrdersCapturesAndOmitsQuietsAndUnderpromotions) {
   Searcher searcher(position);
   MovePicker picker;
   picker.InitProbCut(position, &searcher, 1);
-  std::vector<LegalMove> moves;
+  MoveGenerator::LegalMoves moves;
   for (auto next = picker.SelectProbCutMove(-2000); next;
        next = picker.SelectProbCutMove(-2000)) {
     const auto& move = *next;
-    moves.push_back(move);
+    moves.unchecked_push_back(move);
     EXPECT_FALSE(move.IsQuiet(position));
     EXPECT_TRUE(!move.IsPromotion() || move.PromotionPiece() == Piece::kQueen);
     const auto before = position;

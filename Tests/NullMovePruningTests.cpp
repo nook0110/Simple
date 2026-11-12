@@ -179,7 +179,7 @@ TEST_F(NullMovePruning, AcceptsConvertedMinimumBetaInclusively) {
 TEST_F(NullMovePruning, StaticEvalAtBetaSetsImprovingForLaterPruning) {
   auto position = PositionFactory{}();
   const auto moves =
-      MoveGenerator{}.GenerateMoves<MoveGenerator::Type::kAll>(position);
+      MoveGenerator{}.GenerateLegalMoves<MoveGenerator::Type::kAll>(position);
   ASSERT_EQ(moves.size(), 20u);
   for (const Eval gap : {0, -1}) {
     const auto beta = position.Evaluate() - gap;
