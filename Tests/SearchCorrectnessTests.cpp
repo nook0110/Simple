@@ -6,6 +6,7 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <tuple>
 #include <vector>
 
 #include "ExitCondition.h"
@@ -22,7 +23,7 @@ TEST(QuiescenceDraws, ExpiredFiftyMoveClock) {
   auto position = PositionFactory{}("7k/8/6K1/8/8/8/8/1Q6 w - - 100 51");
   DepthCondition condition{4};
   Quiescence search{condition};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 1),
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 1),
             kDrawValue);
 }
 
@@ -35,7 +36,7 @@ TEST(QuiescenceDraws, RepetitionInGameHistory) {
   ASSERT_TRUE(position.DetectRepetition(0));
   DepthCondition condition{4};
   Quiescence search{condition};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 1),
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 1),
             kDrawValue);
 }
 
@@ -46,7 +47,7 @@ TEST(QuiescenceDraws, StalemateWithPinnedBishop) {
                   .empty());
   DepthCondition condition{4};
   Quiescence search{condition};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 1),
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 1),
             kDrawValue);
 }
 
@@ -54,8 +55,8 @@ TEST(QuiescenceDraws, MateOverridesExpiredFiftyMoveClock) {
   auto position = PositionFactory{}("7k/6Q1/6K1/8/8/8/8/8 b - - 100 51");
   DepthCondition condition{4};
   Quiescence search{condition};
-  EXPECT_EQ(search.Search<true>(position, kMateValue, -kMateValue, 1),
-            kMateValue + 1);
+  EXPECT_EQ(search.Search<true>(position, -Score::kMate, Score::kMate, 1),
+            Score::MatedIn(1));
 }
 
 TEST(TranspositionTable, LaterMoveCutoffStoresCurrentScore) {
@@ -72,7 +73,7 @@ TEST(TranspositionTable, LaterMoveCutoffStoresCurrentScore) {
     const auto node = table->GetNode(position);
     if (node.IsOccupied() && node.bound == Bound::kLower) {
       ++cutoffs;
-      EXPECT_GE(node.score, beta) << "beta=" << beta;
+      EXPECT_GE(FromTT(node.score, 0), beta) << "beta=" << beta;
     }
   }
   EXPECT_GT(cutoffs, 0u);
@@ -84,7 +85,7 @@ TEST(SingularExtensions, ExclusionIgnoresBoundsAndPreservesFullNodeEntry) {
   DepthCondition condition{8};
   for (const auto bound : {Bound::kLower, Bound::kExact, Bound::kUpper}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-    table->SetEntry(position, excluded, 10000, 3, bound, 0);
+    table->SetEntry(position, excluded, ToTT(10000, 0), 3, bound, 0);
     Searcher searcher(position, table);
     const auto result = SearchNode<NodeType::kAll, DepthCondition>{
         searcher, {8, 3, 499, 500, 1}, condition, excluded}();
@@ -93,7 +94,7 @@ TEST(SingularExtensions, ExclusionIgnoresBoundsAndPreservesFullNodeEntry) {
     EXPECT_GT(searcher.GetInfo().searched_nodes, 1u);
     const auto node = table->GetNode(position);
     EXPECT_EQ(node.move, excluded);
-    EXPECT_EQ(node.score, 10000);
+    EXPECT_EQ(FromTT(node.score, 0), 10000);
     EXPECT_EQ(node.depth, 3);
     EXPECT_EQ(node.bound, bound);
     EXPECT_EQ(searcher.GetPosition().GetHash(), position.GetHash());
@@ -125,15 +126,15 @@ TEST(SingularExtensions, ExtendsOnlyEligibleLowerBounds) {
     Eval score;
     bool eligible;
   };
-  for (const auto test : {
-           Case{Bound::kLower, 4, 10000, true},
-           Case{Bound::kExact, 4, 10000, true},
-           Case{Bound::kUpper, 4, 10000, false},
-           Case{Bound::kLower, 3, 10000, false},
-           Case{Bound::kLower, 4, -kMateValue - 10, false},
-           Case{Bound::kLower, 4, kTablebaseWinValue - 10, false}}) {
+  for (const auto test : {Case{Bound::kLower, 4, 10000, true},
+                          Case{Bound::kExact, 4, 10000, true},
+                          Case{Bound::kUpper, 4, 10000, false},
+                          Case{Bound::kLower, 3, 10000, false},
+                          Case{Bound::kLower, 4, Score::MateIn(10), false},
+                          Case{Bound::kLower, 4, Score::TbWinIn(10), false}}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-    table->SetEntry(position, move, test.score, test.depth, test.bound, 0);
+    table->SetEntry(position, move, ToTT(test.score, 0), test.depth, test.bound,
+                    0);
     Searcher searcher(position, table);
     const auto result = SearchNode<NodeType::kPV, DepthCondition>{
         searcher, {8, 7, -20000, 20000, 1}, condition}();
@@ -148,7 +149,7 @@ TEST(SingularExtensions, MultiCutAndNegativeExtension) {
   DepthCondition condition{8};
   for (const Eval beta : {-11000, -10001}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-    table->SetEntry(position, move, -10000, 4, Bound::kLower, 0);
+    table->SetEntry(position, move, ToTT(-10000, 0), 4, Bound::kLower, 0);
     Searcher searcher(position, table);
     const auto result = SearchNode<NodeType::kPV, DepthCondition>{
         searcher, {8, 7, beta - 1, beta, 1}, condition}();
@@ -167,13 +168,13 @@ TEST(SingularExtensions, CancelledSearchPreservesEntryAndPosition) {
   const auto position = PositionFactory{}();
   const auto move = MoveFactory{}(position, "e2e4");
   auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-  table->SetEntry(position, move, 10000, 4, Bound::kLower, 0);
+  table->SetEntry(position, move, ToTT(10000, 0), 4, Bound::kLower, 0);
   Searcher searcher(position, table);
   const auto result = SearchNode<NodeType::kPV, DepthCondition>{
       searcher, {8, 7, -20000, 20000, 1}, condition}();
   EXPECT_FALSE(result);
   EXPECT_EQ(searcher.GetSingularInfo().searches, 0u);
-  EXPECT_EQ(table->GetNode(position).score, 10000);
+  EXPECT_EQ(FromTT(table->GetNode(position).score, 0), 10000);
   EXPECT_EQ(table->GetNode(position).depth, 4);
   EXPECT_EQ(searcher.GetPosition().GetHash(), position.GetHash());
 }
@@ -188,10 +189,10 @@ TEST(SingularExtensions, FindsMateInTwoAndThree) {
     SearchResult score;
     for (Depth depth = 1; depth <= 8; ++depth) {
       score = searcher.Search<NodeType::kPV>(condition, depth, depth,
-                                           kMateValue, -kMateValue);
+                                             -Score::kMate, Score::kMate);
       ASSERT_TRUE(score);
     }
-    EXPECT_EQ(*score, -kMateValue - distance) << fen;
+    EXPECT_EQ(*score, Score::MateIn(distance)) << fen;
   }
 }
 
@@ -214,10 +215,9 @@ TEST(SingularExtensions, ReportsTriggerCounts) {
     std::uint64_t nodes = 0, extensions = 0, multi_cuts = 0;
     for (Depth depth = 1; depth <= 11; ++depth) {
       const auto score = searcher.Search<NodeType::kPV>(
-          condition, depth, depth, kMateValue, -kMateValue);
+          condition, depth, depth, -Score::kMate, Score::kMate);
       ASSERT_TRUE(score);
-      nodes += searcher.GetInfo().searched_nodes +
-               searcher.GetInfo().quiescence_nodes;
+      nodes += searcher.GetInfo().TotalNodes();
       extensions += searcher.GetSingularInfo().extensions;
       multi_cuts += searcher.GetSingularInfo().multi_cuts;
     }
@@ -232,17 +232,20 @@ TEST(SingularExtensions, ReportsTriggerCounts) {
 namespace SimpleChessEngine {
 struct ProbCutTestAccess {
   template <NodeType node_type = NodeType::kAll, class ExitCondition>
-  static std::optional<SearchResult> Run(
-      Searcher& searcher, const ExitCondition& condition,
-      SearchState state = {8, 5, -96, -95, 1}, bool improving = false,
-      std::optional<Move> excluded = std::nullopt,
-      std::optional<Eval> static_eval = std::nullopt) {
+  static NodeExit Run(Searcher& searcher, const ExitCondition& condition,
+                      SearchState state = {8, 5, -96, -95, 1},
+                      bool improving = false,
+                      std::optional<Move> excluded = std::nullopt,
+                      std::optional<Eval> static_eval = std::nullopt) {
     SearchNode<node_type, ExitCondition> node{searcher, state, condition,
                                               excluded};
     node.ProbeTranspositionTable();
     node.evaluation_trend_.improving = improving;
-    node.position_info_.static_eval = static_eval;
-    return node.CheckProbCut();
+    if (!node.position_info_.is_under_check) {
+      node.position_info_.static_eval =
+          static_eval ? *static_eval : node.ComputeStaticEval();
+    }
+    return node.TryProbCut();
   }
 };
 }
@@ -261,7 +264,8 @@ void ExpectProbCutPositionRestored(const Position& actual,
 
 TEST(ProbCut, BothSearchesPassAndReturnOriginalBetaWithoutParentEntry) {
   const auto position = PositionFactory{}(kProbCutFen);
-  DepthCondition condition{8};
+  DepthCondition underlying_condition{8};
+  NodeReportingCondition condition{underlying_condition};
   for (const auto node_type : {NodeType::kAll, NodeType::kCut}) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
     Searcher searcher(position, table);
@@ -269,9 +273,7 @@ TEST(ProbCut, BothSearchesPassAndReturnOriginalBetaWithoutParentEntry) {
         node_type == NodeType::kAll
             ? ProbCutTestAccess::Run<NodeType::kAll>(searcher, condition)
             : ProbCutTestAccess::Run<NodeType::kCut>(searcher, condition);
-    ASSERT_TRUE(result);
-    ASSERT_TRUE(*result);
-    EXPECT_EQ(**result, -95);
+    EXPECT_EQ(result, NodeExit::Cutoff(-95));
     const auto& info = searcher.GetInfo();
     EXPECT_EQ(info.probcut_tries, 1u);
     EXPECT_EQ(info.probcut_candidates, 1u);
@@ -290,8 +292,9 @@ TEST(ProbCut, QuiescencePassesButPositiveDepthVerificationRejects) {
       PositionFactory{}("7r/6k1/8/8/4p3/2N5/PP6/K7 w - - 0 1");
   Searcher searcher(position);
   DepthCondition condition{8};
-  EXPECT_FALSE(
-      ProbCutTestAccess::Run(searcher, condition, {8, 5, -1096, -1095, 1}));
+  EXPECT_EQ(
+      ProbCutTestAccess::Run(searcher, condition, {8, 5, -1096, -1095, 1}),
+      NodeExit::Continue());
   const auto& info = searcher.GetInfo();
   EXPECT_EQ(info.probcut_candidates, 1u);
   EXPECT_EQ(info.probcut_qsearch_passes, 1u);
@@ -305,14 +308,14 @@ TEST(ProbCut, NodeBudgetIncludesQuiescenceAndVerification) {
   Searcher reference(position);
   DepthCondition unlimited{8};
   const auto expected = ProbCutTestAccess::Run(reference, unlimited);
-  ASSERT_TRUE(expected);
+  ASSERT_EQ(expected, NodeExit::Cutoff(-95));
   const auto& info = reference.GetInfo();
   const auto nodes = info.searched_nodes + info.quiescence_nodes;
   ASSERT_GT(info.probcut_qsearch_nodes, 0u);
   ASSERT_GT(info.probcut_verification_nodes, 0u);
 
   auto budget = std::make_shared<NodeBudget>(nodes + 1);
-  DepthCondition condition{8, {}, budget};
+  NodeCondition condition{8, {}, budget};
   Searcher searcher(position);
   EXPECT_EQ(ProbCutTestAccess::Run(searcher, condition), expected);
   EXPECT_FALSE(budget->IsSpent());
@@ -321,12 +324,24 @@ TEST(ProbCut, NodeBudgetIncludesQuiescenceAndVerification) {
   ExpectProbCutPositionRestored(searcher.GetPosition(), position);
 }
 
+TEST(ProbCut, NodeBudgetAbortRestoresScopedMove) {
+  const auto position = PositionFactory{}(kProbCutFen);
+  auto budget = std::make_shared<NodeBudget>(1);
+  NodeCondition condition{8, {}, budget};
+  Searcher searcher(position);
+  EXPECT_EQ(ProbCutTestAccess::Run(searcher, condition), NodeExit::Abort());
+  EXPECT_TRUE(budget->IsSpent());
+  EXPECT_EQ(searcher.GetInfo().probcut_candidates, 1u);
+  ExpectProbCutPositionRestored(searcher.GetPosition(), position);
+}
+
 TEST(ProbCut, QuiescenceRejectionDoesNotVerify) {
   const auto position = PositionFactory{}(kProbCutFen);
   Searcher searcher(position);
   DepthCondition condition{8};
-  EXPECT_FALSE(ProbCutTestAccess::Run(searcher, condition, {8, 5, 904, 905, 1},
-                                      false, std::nullopt, 1000));
+  EXPECT_EQ(ProbCutTestAccess::Run(searcher, condition, {8, 5, 904, 905, 1},
+                                   false, std::nullopt, 1000),
+            NodeExit::Continue());
   const auto& info = searcher.GetInfo();
   EXPECT_EQ(info.probcut_candidates, 1u);
   EXPECT_EQ(info.probcut_qsearch_passes, 0u);
@@ -340,7 +355,7 @@ TEST(ProbCut, NoTacticalCandidate) {
   const auto position = PositionFactory{}();
   Searcher searcher(position);
   DepthCondition condition{8};
-  EXPECT_FALSE(ProbCutTestAccess::Run(searcher, condition));
+  EXPECT_EQ(ProbCutTestAccess::Run(searcher, condition), NodeExit::Continue());
   EXPECT_EQ(searcher.GetInfo().probcut_tries, 1u);
   EXPECT_EQ(searcher.GetInfo().probcut_candidates, 0u);
   EXPECT_EQ(searcher.GetInfo().quiescence_nodes, 0u);
@@ -351,32 +366,35 @@ TEST(ProbCut, SkipsRootPvCheckExclusionShallowAndDecisiveWindows) {
   const auto position = PositionFactory{}(kProbCutFen);
   DepthCondition condition{8};
   const auto excluded = MoveFactory{}(position, "d4d5");
-  constexpr Eval decisive = kTablebaseWinValue - kMaxSearchPly;
+  constexpr Eval decisive = Score::kDecisive;
   for (const auto state :
        {SearchState{8, 5, -96, -95, 0}, SearchState{8, 4, -96, -95, 1},
-        SearchState{8, 5, kMateValue, kMateValue + 1, 1},
-        SearchState{8, 5, -kMateValue - 2, -kMateValue - 1, 1},
+        SearchState{8, 5, -Score::kMate, Score::MatedIn(1), 1},
+        SearchState{8, 5, Score::MateIn(2), Score::MateIn(1), 1},
         SearchState{8, 5, decisive - 1, decisive, 1},
         SearchState{8, 5, -decisive - 1, -decisive, 1},
         SearchState{8, 5, decisive - 96, decisive - 95, 1},
         SearchState{8, 5, decisive - 50, decisive - 49, 1}}) {
     Searcher searcher(position);
-    EXPECT_FALSE(ProbCutTestAccess::Run(searcher, condition, state));
+    EXPECT_EQ(ProbCutTestAccess::Run(searcher, condition, state),
+              NodeExit::Continue());
     EXPECT_EQ(searcher.GetInfo().probcut_tries, 0u);
   }
   for (const auto pv : {false, true}) {
     Searcher searcher(position);
     if (pv) {
-      EXPECT_FALSE(ProbCutTestAccess::Run<NodeType::kPV>(searcher, condition));
+      EXPECT_EQ(ProbCutTestAccess::Run<NodeType::kPV>(searcher, condition),
+                NodeExit::Continue());
     } else {
-      EXPECT_FALSE(ProbCutTestAccess::Run(
-          searcher, condition, {8, 5, -96, -95, 1}, false, excluded));
+      EXPECT_EQ(ProbCutTestAccess::Run(searcher, condition, {8, 5, -96, -95, 1},
+                                       false, excluded),
+                NodeExit::Continue());
     }
     EXPECT_EQ(searcher.GetInfo().probcut_tries, 0u);
   }
   Searcher checked(PositionFactory{}("k3r3/8/8/8/8/8/P7/4K3 w - - 0 1"));
   ASSERT_TRUE(checked.GetPosition().IsUnderCheck());
-  EXPECT_FALSE(ProbCutTestAccess::Run(checked, condition));
+  EXPECT_EQ(ProbCutTestAccess::Run(checked, condition), NodeExit::Continue());
   EXPECT_EQ(checked.GetInfo().probcut_tries, 0u);
 }
 
@@ -390,17 +408,17 @@ TEST(ProbCut, TtVetoRespectsDepthThresholdScoreAndDecisiveBand) {
   };
   for (const auto test :
        {Case{1, -1, false}, Case{2, -1, true}, Case{2, 0, false},
-        Case{2, 1, false}, Case{2, kTablebaseWinValue - 10, false},
-        Case{2, -kTablebaseWinValue + 10, false},
-        Case{2, kMateValue + 10, false}}) {
+        Case{2, 1, false}, Case{2, Score::TbWinIn(10), false},
+        Case{2, Score::TbLossIn(10), false},
+        Case{2, Score::MatedIn(10), false}}) {
     for (const auto bound : {Bound::kLower, Bound::kUpper, Bound::kExact}) {
       auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
-      table->SetEntry(position, Move::None(), ToTTScore(test.value, 1),
-                      test.depth, bound, 0);
+      table->SetEntry(position, Move::None(), ToTT(test.value, 1), test.depth,
+                      bound, 0);
       Searcher searcher(position, table);
-      ProbCutTestAccess::Run(searcher, condition);
+      std::ignore = ProbCutTestAccess::Run(searcher, condition);
       EXPECT_EQ(searcher.GetInfo().probcut_tries, test.veto ? 0u : 1u);
-      EXPECT_EQ(table->GetNode(position).score, ToTTScore(test.value, 1));
+      EXPECT_EQ(table->GetNode(position).score, ToTT(test.value, 1));
       ExpectProbCutPositionRestored(searcher.GetPosition(), position);
     }
   }
@@ -420,8 +438,8 @@ TEST(ProbCut, SeeBoundaryUsesImprovingMarginInLocalUnits) {
     for (const Eval extra : {0, 1}) {
       Searcher searcher(position);
       const Eval beta = position.Evaluate() + gain + extra - margin;
-      ProbCutTestAccess::Run(searcher, condition, {8, 5, beta - 1, beta, 1},
-                             improving);
+      std::ignore = ProbCutTestAccess::Run(
+          searcher, condition, {8, 5, beta - 1, beta, 1}, improving);
       EXPECT_EQ(searcher.GetInfo().probcut_candidates, extra == 0 ? 1u : 0u);
       ExpectProbCutPositionRestored(searcher.GetPosition(), position);
     }
@@ -471,9 +489,7 @@ TEST(ProbCut, CancelledProbeRestoresPositionAndSuppressesCutoff) {
   DepthCondition condition{8, stop};
   auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
   Searcher searcher(position, table);
-  const auto result = ProbCutTestAccess::Run(searcher, condition);
-  ASSERT_TRUE(result);
-  EXPECT_FALSE(*result);
+  EXPECT_EQ(ProbCutTestAccess::Run(searcher, condition), NodeExit::Abort());
   EXPECT_EQ(searcher.GetInfo().probcut_candidates, 1u);
   EXPECT_EQ(searcher.GetInfo().probcut_qsearch_nodes, 1u);
   EXPECT_EQ(searcher.GetInfo().quiescence_nodes, 1u);

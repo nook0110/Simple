@@ -1,33 +1,61 @@
 #pragma once
 
+#include <sys/mman.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <cstdlib>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <new>
-#include <sys/mman.h>
 
 #include "Hasher.h"
 #include "Move.h"
+#include "Nnue/Nnue.h"
 #include "Position.h"
+#include "Score.h"
+#include "Settings.h"
 
 namespace SimpleChessEngine {
 inline constexpr Eval kNoStaticEval = -8192;
 
-inline Eval TTScorePlyAdjustment(const Eval value, const Depth ply) {
-  return std::abs(value) >= kTablebaseWinValue - kMaxSearchPly
-             ? ((value > 0) - (value < 0)) * ply
-             : 0;
+[[nodiscard]] inline std::uint64_t StaticEvalContext() {
+  return (static_cast<std::uint64_t>(Nnue::Generation()) << 32) |
+         static_cast<std::uint32_t>(Settings::EvaluationParameters::nnue_scale);
 }
 
-inline Eval ToTTScore(const Eval value, const Depth ply) {
-  return value + TTScorePlyAdjustment(value, ply);
+template <size_t TableSizeMB>
+class TranspositionTable;
+
+class TTScore {
+ public:
+  constexpr TTScore() = default;
+
+  friend constexpr bool operator==(TTScore, TTScore) = default;
+
+ private:
+  constexpr explicit TTScore(const Eval stored) : stored_(stored) {}
+
+  [[nodiscard]] static constexpr Eval PlyAdjustment(const Eval value,
+                                                    const Depth ply) {
+    return Score::IsDecisive(value) ? ((value > 0) - (value < 0)) * ply : 0;
+  }
+
+  friend constexpr TTScore ToTT(Eval value, Depth ply);
+  friend constexpr Eval FromTT(TTScore score, Depth ply);
+  template <size_t TableSizeMB>
+  friend class TranspositionTable;
+
+  Eval stored_ = 0;
+};
+
+[[nodiscard]] constexpr TTScore ToTT(const Eval value, const Depth ply) {
+  return TTScore{value + TTScore::PlyAdjustment(value, ply)};
 }
 
-inline Eval FromTTScore(const Eval value, const Depth ply) {
-  return value - TTScorePlyAdjustment(value, ply);
+[[nodiscard]] constexpr Eval FromTT(const TTScore score, const Depth ply) {
+  return score.stored_ - TTScore::PlyAdjustment(score.stored_, ply);
 }
 
 enum class Bound : std::uint8_t {
@@ -44,7 +72,7 @@ inline std::uint8_t operator&(const Bound lhs, const Bound rhs) {
 struct Node {
   Hash true_hash{};
   Move move{Move::None()};
-  Eval score{};
+  TTScore score{};
   Depth depth{};
   Bound bound{Bound::kNone};
   std::uint8_t age{};
@@ -96,11 +124,10 @@ class TranspositionTable {
   TranspositionTable() : table_(Allocate()) {}
 
   [[nodiscard]] bool Contains(const Position& position) const {
-    const Node node = GetNode(position);
-    return node.IsOccupied() && node.true_hash == position.GetHash();
+    return GetNode(position).IsOccupied();
   }
 
-  void SetEntry(const Position& position, const Move& move, const Eval score,
+  void SetEntry(const Position& position, const Move& move, const TTScore score,
                 const Depth depth, const Bound bound, const Age age,
                 const Eval static_eval = kNoStaticEval,
                 const std::uint64_t eval_context = 0) {
@@ -177,8 +204,8 @@ class TranspositionTable {
   }
 
   static constexpr std::uint64_t Pack(const Node& node) {
-    assert(node.score >= -(1 << 17) && node.score < (1 << 17));
-    const auto score = static_cast<std::uint32_t>(node.score) & 0x3FFFF;
+    assert(node.score.stored_ >= -(1 << 17) && node.score.stored_ < (1 << 17));
+    const auto score = static_cast<std::uint32_t>(node.score.stored_) & 0x3FFFF;
     const auto static_eval =
         static_cast<std::uint32_t>(
             node.static_eval > kNoStaticEval && node.static_eval < -kNoStaticEval
@@ -197,10 +224,9 @@ class TranspositionTable {
     return Node{
         hash,
         Move{static_cast<std::uint16_t>(payload)},
-        static_cast<Eval>((static_cast<std::int32_t>(
-                              (payload >> 16) & 0x3FFFF) ^
-                          0x20000) -
-                         0x20000),
+        TTScore{static_cast<Eval>(
+            (static_cast<std::int32_t>((payload >> 16) & 0x3FFFF) ^ 0x20000) -
+            0x20000)},
         static_cast<Depth>((payload >> 48) & 0x3F),
         static_cast<Bound>((payload >> 54) & 0x3),
         static_cast<std::uint8_t>(payload >> 56),
@@ -231,10 +257,7 @@ class TranspositionTable {
     void* mapping = mmap(nullptr, kMemoryBytes, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
     if (mapping == MAP_FAILED) std::abort();
-    if (madvise(mapping, kMemoryBytes, MADV_HUGEPAGE) != 0) {
-      munmap(mapping, kMemoryBytes);
-      std::abort();
-    }
+    static_cast<void>(madvise(mapping, kMemoryBytes, MADV_HUGEPAGE));
     return std::unique_ptr<Cluster[], MappingDeleter>{
         ::new (mapping) Cluster[kClusterCount]};
   }

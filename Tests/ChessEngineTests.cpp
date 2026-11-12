@@ -84,7 +84,7 @@ TEST(FiftyMoveRule, MateOnTheLastMoveStillCounts) {
       condition, 2, 2, std::numeric_limits<Eval>::min() / 2,
       std::numeric_limits<Eval>::max() / 2);
   ASSERT_TRUE(result.has_value());
-  EXPECT_GT(*result, kTablebaseWinValue);
+  EXPECT_GT(*result, Score::kTbWin);
 }
 
 TEST(TimeManagement, ReturnsLegalMoveWithoutTime) {
@@ -153,6 +153,7 @@ TEST(NodeCounting, ReportsNodesOfAllThreads) {
   std::vector<std::unique_ptr<ChessEngine>> helpers;
   helpers.push_back(std::make_unique<ChessEngine>(
       position, helper_output, transposition_table, false));
+  helpers.front()->SetNodePublication(true);
   DepthCondition helper_condition{6};
   helpers.front()->ComputeBestMove(helper_condition);
 
@@ -189,7 +190,7 @@ TEST(NodeCounting, AccumulatesAcrossSearchAttemptsUntilTheNextGo) {
   std::uint64_t nodes = 0;
   for (const auto& [alpha, beta] :
        {std::pair<Eval, Eval>{-10001, -10000},
-        std::pair<Eval, Eval>{kMateValue, -kMateValue},
+        std::pair<Eval, Eval>{-Score::kMate, Score::kMate},
         std::pair<Eval, Eval>{10000, 10001}}) {
     ASSERT_TRUE(searcher.Search<NodeType::kPV>(condition, 3, 3, alpha, beta));
     const auto& info = searcher.GetInfo();

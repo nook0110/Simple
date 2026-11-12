@@ -14,14 +14,13 @@ using namespace SimpleChessEngine;
 namespace {
 class NullMovePruning : public testing::Test {
  protected:
-  NullMovePruning() { Settings::PruneParameters::RFPSettings::kDepthLimit = 0; }
-  ~NullMovePruning() override {
-    Settings::PruneParameters::RFPSettings::kDepthLimit = rfp_depth_limit_;
-  }
+  NullMovePruning() { rfp_.depth_limit = 0; }
+  ~NullMovePruning() override { rfp_.depth_limit = rfp_depth_limit_; }
 
  private:
-  const Depth rfp_depth_limit_ =
-      Settings::PruneParameters::RFPSettings::kDepthLimit;
+  Settings::PruneParameters::RFPSettings &rfp_ =
+      Settings::current<Settings::PruneParameters::RFPSettings>;
+  const Depth rfp_depth_limit_ = rfp_.depth_limit;
 };
 
 struct SearchTestCondition {
@@ -53,8 +52,8 @@ SearchTestCondition ObserveVerification(const Searcher &searcher,
 void StoreNullBound(Searcher::SearcherTranspositionTable &table,
                     Position position, Eval beta, Depth depth) {
   position.DoMove(NullMove{});
-  table.SetEntry(position, MoveFactory{}(position, "e7e5"), -beta, depth,
-                 Bound::kUpper, 0);
+  table.SetEntry(position, MoveFactory{}(position, "e7e5"), ToTT(-beta, 0),
+                 depth, Bound::kUpper, 0);
 }
 }
 
@@ -188,8 +187,8 @@ TEST_F(NullMovePruning, StaticEvalAtBetaSetsImprovingForLaterPruning) {
     for (const auto &move : moves) {
       auto child = position;
       child.DoMove(move);
-      table->SetEntry(child, MoveFactory{}(child, "e7e5"), -beta + 1, 1,
-                      Bound::kLower, 0);
+      table->SetEntry(child, MoveFactory{}(child, "e7e5"), ToTT(-beta + 1, 0),
+                      1, Bound::kLower, 0);
     }
     Searcher searcher(position, table);
     const auto stop = StopAfterNodes(searcher, 21);
@@ -220,7 +219,7 @@ TEST_F(NullMovePruning, AdaptiveReductionUsesDepthMinusR) {
       auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
       StoreNullBound(*table, position, beta,
                      static_cast<Depth>(test.child_depth - !sufficient_depth));
-      table->SetEntry(position, MoveFactory{}(position, "e2e4"), beta,
+      table->SetEntry(position, MoveFactory{}(position, "e2e4"), ToTT(beta, 0),
                       test.child_depth, Bound::kLower, 0);
       Searcher searcher(position, table);
       const auto stop = StopAfterNodes(searcher, sufficient_depth ? 3u : 2u);
@@ -267,8 +266,9 @@ TEST_F(NullMovePruning, UncappedReductionCanVerifyInQuiescence) {
   const auto beta = position.Evaluate() - 707;
   ASSERT_GE(beta, -788);
   auto budget = std::make_shared<NodeBudget>(4);
-  DepthCondition stop{16, {}, budget};
-  const auto result = SearchNode<NodeType::kCut, DepthCondition>{
+  NodeCondition underlying_condition{16, {}, budget};
+  NodeReportingCondition stop{underlying_condition};
+  const auto result = SearchNode<NodeType::kCut, decltype(stop)>{
       searcher, {16, 16, beta - 1, beta, 1}, stop}();
   ASSERT_TRUE(result);
   EXPECT_EQ(*result, beta);
@@ -292,7 +292,7 @@ TEST_F(NullMovePruning, VerificationMustConfirmTheNullCutoff) {
     auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
     StoreNullBound(*table, position, beta, 3);
     table->SetEntry(position, MoveFactory{}(position, "e2e4"),
-                    confirmed ? beta : beta - 1, 3,
+                    ToTT(confirmed ? beta : beta - 1, 0), 3,
                     confirmed ? Bound::kLower : Bound::kUpper, 0);
     Searcher searcher(position, table);
     const auto stop = StopAfterNodes(searcher, 3);
@@ -316,7 +316,7 @@ TEST_F(NullMovePruning, VerificationPlyLimitIsLocalNonrecursiveAndRestored) {
   const auto beta = position.Evaluate() - 101;
   auto table = std::make_shared<Searcher::SearcherTranspositionTable>();
   StoreNullBound(*table, position, beta, 3);
-  table->SetEntry(position, MoveFactory{}(position, "e2e4"), beta, 3,
+  table->SetEntry(position, MoveFactory{}(position, "e2e4"), ToTT(beta, 0), 3,
                   Bound::kLower, 0);
   Searcher searcher(position, table);
   bool observed = false;
